@@ -26,8 +26,8 @@
 DMAGIC EQU SVCFMT*256+'D'
 DF EQU $0100     ; LOADCOM staging base
 DDEP EQU 2       ; dependency count
-DFLG EQU 3       ; bit 0 removable, bits
-                 ; 1-7 RST 1-7 claimed
+DFLG EQU 3       ; bit 0 removable, bit
+                 ; 7 RST 7 claimed
 DREM EQU 4       ; header-relative
                  ; REMOVE
 DSIZ EQU 6       ; header/image bytes
@@ -86,7 +86,7 @@ SLFAIL:
 ; No loader rollback of REMOVE effects.
 ; REMOVE must undo any partial changes
 ; before returning carry set.
-; Success frees claimed restart slots,
+; Success frees a claimed RST 7 slot,
 ; restores REGHEAD/SVCHEAD and the top,
 ; increments SVCGEN and resets vectors
 ; into the freed pages.
@@ -298,32 +298,25 @@ SVCR1:
   ld (hl),a
   jr SVCR1
 
-; Check claimed RST 1-7 slots at
-; 0008h-0038h before the move or INIT.
-; Reject the load if a claimed slot
-; already contains JP.
+; Before the move or INIT: a service
+; may claim RST 7 alone (flags bit 7).
+; Reject a claim of RST 1 to 6, bits 1
+; to 6, and an RST 7 claim while 0038h
+; already holds a JP.
 
 SVCMOV:
-
   ld a,(DF+DFLG)
-  ld hl,8        ; RST1 slot
-  ld de,8
-  srl a          ; drop removable bit
-
-SVCMC:
-  srl a          ; carry: claimed slot
-  jr nc,SVCMN
-  ld c,a         ; the claims left
-  ld a,(hl)
+  and $FE        ; the claims
+  jr z,SVCMN     ; none
+  cp $80         ; RST 7 alone?
+  scf
+  ret nz         ; RST 1 to 6: refused
+  ld a,(RST7)
   cp $C3         ; JP already installed
   scf
   ret z          ; as SLFAIL
-  ld a,c
 
 SVCMN:
-  add hl,de      ; the next slot
-  or a           ; claims remain?
-  jr nz,SVCMC
 
 ; Save copy size before DOLD overwrites
 ; DSIZ.
@@ -517,26 +510,17 @@ SVCSHUT:
   ld (SVCBSY),a
   ret
 
-; Clear the first byte of each RST slot
-; claimed by service page H. PZSWP then
-; restores slot defaults.
-; Clobbers AF, DE and HL. Returns D=0.
+; Clear 0038h's first byte if service
+; page H claimed RST 7. PZSWP then
+; restores its default. Clobbers AF and
+; L.
 
 SVCFRE:
   ld l,DFLG
-  ld a,(hl)      ; RST1-7 claim bitmap
-  ld hl,8        ; RST 1's slot
-  ld de,8        ; slot stride, D=0 byte
-  srl a          ; drop removable bit
-
-SVCUC:
-  srl a          ; carry: claimed slot
-  jr nc,SVCUN
-  ld (hl),d      ; mark for default
-
-SVCUN:
-  add hl,de      ; ADD keeps SRL Z
-  jr nz,SVCUC    ; claims remain
+  bit 7,(hl)     ; RST 7 claimed?
+  ret z
+  xor a
+  ld (RST7),a    ; mark for default
   ret
 
 ; Call the header-relative offset stored
