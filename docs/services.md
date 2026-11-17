@@ -32,7 +32,7 @@ loader ignores what follows its relocation data.
 | 0 | 1 | Magic, `44h` | `JP BENTRY`, 3 bytes |
 | 1 | 1 | Format version, 4 (`SVCFMT`) | |
 | 2 | 1 | Number of dependencies | |
-| 3 | 1 | Flags: bit 0 removable, bits 1 to 7 claim `RST 1` to `RST 7` | The same; 0 if a hook kept the pages |
+| 3 | 1 | Flags: bit 0 removable, bit 7 claims `RST 7`; bits 1 to 6, which claimed `RST 1` to `RST 6` before, must be 0 | The same; 0 if a hook kept the pages |
 | 4 | 2 | `REMOVE`, from the header's start | The same |
 | 6 | 2 | Header and image, in bytes | The registry's head before it |
 | 8 | 2 | Extra memory after the image, not cleared | Low byte: the owner before it, a page, 0 at the last |
@@ -84,7 +84,7 @@ the console alone.
 asks to be entered: the next section. Text after the name is the entry's tail;
 no switch is parsed. A second `NAME.SVC` of a file already in, with no such
 record, installs a second copy, as it always has: the loader compares no name. A
-service claiming a slot is refused the second time with `SVCRC` 0, since the slot
+service claiming `RST 7` is refused the second time with `SVCRC` 0, since the slot
 holds the first copy's `JP`; a second `GLCD.SVC` fails at its `INIT` and says
 `GLCD.SVC?`, except in a startup line with `CON:` at `CRT:`, where it passes
 quietly as above.
@@ -257,7 +257,8 @@ A load runs only with no `INIT` or `REMOVE` running, which `SVCBSY` says. In ord
 2. Each dependency must be installed, at its least version or above.
 3. Each stack's figure must fit the room left.
 4. The image is relocated and any fixup past it refused.
-5. A restart vector claimed in the flags must not hold a `JP`.
+5. The flags may claim `RST 7` alone, and `0038h` must not then hold a `JP`. A claim of
+   any of `RST 1` to `RST 6` is refused whatever the slots hold.
 6. The header and image move to their pages and `(0006h)` is lowered.
 7. `INIT` runs. `PZTOP` is untouched, so a warm boot during `INIT` puts the
    ceiling back by itself.
@@ -461,21 +462,31 @@ names are the way in.
 
 ## Restart vectors and interrupts
 
+The eight restart vectors are shared out (Origo KD-434):
+
+| Vector | Whose |
+| --- | --- |
+| `RST 1` to `RST 5`, `0008h` to `0028h` | Any program's. A program that takes one saves the three bytes it replaces and puts them back on every exit; warm boot does not keep them |
+| `RST 6`, `0030h` | The debugger's breakpoints. `BAZA.COM` takes it, with `RST 1` to `RST 5`, while it compiles: an accepted exception for a system tool, since debugging `BAZA.COM` under the debugger isn't planned, and open, to be revisited if it is |
+| `RST 7`, `0038h` | The interrupt vector, and the only one a service may claim |
+
 Memory above the TPA is of three kinds: service resident memory, the workspace with
 the RAM BIOS table, and the ROM. At cold boot, at every warm boot, after an unload and
-after a failed `INIT`, a sweep of `0008h` to `003Fh` keeps a `JP` whose target is above
-`PZTOP`, and gives anything else its default: seven zeros and a `RET`, or `EI; RETI` at
-`0038h`, the rest of that vector zero. The bound keeps all three kinds, and a jump into
-a service's header past its entry. The sweep rewrites `0038h` a byte at a time with
-interrupts as it finds them, so `REMOVE` turns a source off before it returns.
+after a failed `INIT`, a sweep gives `RST 1` to `RST 6` their defaults, seven zeros and
+a `RET`, whatever they hold, so a program's vector never outlives it. At `0038h` it keeps
+a `JP` whose target is above `PZTOP` and clears the five bytes after it, and gives
+anything else `EI; RETI` and zeros. The bound keeps all three kinds, and a jump into a
+service's header past its entry. The sweep rewrites `0038h` a byte at a time with
+interrupts as it finds them, a `RET` standing there until the `EI` goes in last, so
+`REMOVE` turns a source off before it returns.
 
-A service claims `RST 1` to `RST 7` by flags bits 1 to 7. A load whose claimed slot
-holds a `JP` is refused with nothing changed, `SVCRC` 0. `INIT` writes the vector
-itself, so a write it didn't declare goes unseen, the rule that binds `TNDRVR`'s table,
-and a `JP` a finished program left into ROM counts as held until a reset. Unload gives
-the claimed slots their defaults whatever they hold, and sweeps. A jump the service set
-outside its pages in a slot it didn't claim is `REMOVE`'s to restore. A failed `INIT`
-has its claimed slots cleared the same way, and runs no `REMOVE`, so any other jump, and
+A service claims `RST 7` by flags bit 7. A load whose claim finds a `JP` at `0038h` is
+refused with nothing changed, `SVCRC` 0, and so is a file whose flags set any of bits 1
+to 6, the claims of `RST 1` to `RST 6` format 4 once allowed: the command says
+`NAME.SVC?`, in a startup line too. `INIT` writes the vector itself, so a write it
+didn't declare goes unseen, the rule that binds `TNDRVR`'s table. Unload gives a
+claimed `0038h` its default whatever it holds, and sweeps. A failed `INIT` has its
+claimed `0038h` cleared the same way, and runs no `REMOVE`, so any other jump, and
 turning off any interrupt source, are `INIT`'s duty. A
 source left on under the default `EI; RETI` repeats for ever, and a warm boot inside
 `INIT` leaves one on. A reset forgets the service and clears its vectors.
