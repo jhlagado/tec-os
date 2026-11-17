@@ -9,8 +9,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ABI, ROOT, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
-import { DIRCOM, SHELL, at, code, owners, pageOf, shellCard, shellMachine, word } from "./lib/shell.mjs";
+import { ABI, ROOT, program, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { CODES, DIRCOM, HELLO, SAY, SHELL, at, code, owners, shellCard, shellMachine, word } from "./lib/shell.mjs";
 
 const RINGFIL = (await program("ringfil")).bytes;
 const W = "\x17";
@@ -217,4 +217,64 @@ test("SL8 SHELL.SVC is 10 pages; the TPA with it is 43,776 on the starter card",
   assert.equal(word(m, 6), 0xac00);
   assert.equal(word(m, 6) - 0x100, 43776);
   assert.ok(DIRCOM.bytes.length < 0x800 - 0x100, "DIR.COM's image under its table");
+});
+
+// What SHELL.SVC's own CD printed at 4d7795e, each line typed in turn on a
+// card of SYSTEM on A:, WORK on B: and GAMES on none: the ROM's CD now does
+// the work, and the shell keeps the labels.
+const CDS = [
+  ["CD ?", "CD ?\r\r\n\r\nSYSTEM      A:\r\nWORK       \r\nGAMES       B:\r\nA:SYSTEM>"],
+  ["CD B:GAMES", "CD B:GAMES\r\r\nB:GAMES\r\nA:SYSTEM>"],
+  ["CD A:WORK", "CD A:WORK\r\r\nCD FAILED\r\n\r\nA:SYSTEM>"],
+  ["CD GAMES", "CD GAMES\r\r\nGAMES is on B:\r\n\r\nA:SYSTEM>"],
+  ["B:", "B:\r\r\nB:GAMES>"],
+  ["CD", "CD\r\r\nB:GAMES\r\nB:GAMES>"],
+  ["A:", "A:\r\r\nA:SYSTEM>"],
+  ["CD A:SYSTEM", "CD A:SYSTEM\r\r\nA:SYSTEM\r\nA:SYSTEM>"],
+  ["CD NOPE", "CD NOPE\r\r\nNOPE?\r\n\r\nA:SYSTEM>"],
+];
+
+test("SL10 CD is the ROM's and prints what the shell's printed, the labels in the prompt kept", () => {
+  const m = shellMachine(shellCard({}, { image: standardCard([{ geometry: "G1M", label: "GAMES" }]) }));
+  for (const [line, want] of CDS) assert.equal(at(m, line), want, line);
+});
+
+test("SL10 from a script, CD NAME on the script's own drive is CD? and the script goes on", () => {
+  const script = Buffer.from("CD GAMES\r\nCD A:GAMES\r\nCD ?\r\nCD B:GAMES\r\nSAY\r\n\x1a", "latin1");
+  const m = shellMachine(shellCard({ "S.CMD": script }, { image: standardCard([{ geometry: "G1M", label: "GAMES" }]) }));
+  const t = at(m, "S.CMD");
+  assert.equal((t.match(/\r\nCD\?\r\n/g) ?? []).length, 2, "CD GAMES and CD A:GAMES on A:, the script's");
+  assert.match(t, /GAMES {6} B:|B:GAMES\r\n/, "CD B:GAMES runs");
+  assert.match(t, /SAY\r\n/, "and the script goes on");
+  assert.match(at(m, "B:"), /B:GAMES>$/, "the prompt's label read again");
+});
+
+/** The paths card: the same files in the same order in either build, only SHELL.SVC differing. */
+function pathsCard() {
+  const image = standardCard();
+  const a = volume(image, "A");
+  const script = Buffer.from(Array.from({ length: 10 }, () => "TYPE HELLO.TXT\r\n").join("") + "\x1a", "latin1");
+  for (const [n, b] of Object.entries({ "SHELL.SVC": SHELL.file, "DIR.COM": DIRCOM.bytes, ...CODES, "SAY.COM": SAY, "HELLO.TXT": HELLO, "RUN.CMD": script })) a.write(n, b);
+  a.write("STARTUP.CMD", startupFile("SHELL.SVC"));
+  return image;
+}
+
+// T-states from Enter to the prompt at 4d7795e on pathsCard, with a
+// DIR.COM of 1,433 bytes on it, each line typed twice and the second timed.
+// A typed line now pays HSTORE's ring through RINGIO, about 0.13 ms a
+// character; a script's lines and a chain's later pieces pay nothing.
+const BASE = [["ECHO HI", 250985, 4800], ["RUN.CMD", 7379213, 10000], ["TYPE HELLO.TXT!TYPE HELLO.TXT!TYPE HELLO.TXT!TYPE HELLO.TXT", 2546723, 40000], ["SAY", 351744, 3600]];
+
+test("SL9 the ordinary path: a typed line pays the ring's bytes, its pieces and a script's lines nothing more", () => {
+  const m = shellMachine(pathsCard());
+  for (const [line, base, allowance] of BASE) {
+    at(m, line);
+    m.type(line);
+    const t0 = m.cycles;
+    m.mark = m.output.length;
+    m.type("\r");
+    m.runUntil(() => m.ready() && /\r\n[A-P]:\S*>$/.test(m.text(m.mark)), 2e9, line);
+    const took = m.cycles - t0;
+    assert.ok(took <= base + allowance, `${line}: ${took} T-states against ${base} and ${allowance} more`);
+  }
 });

@@ -1,5 +1,5 @@
 // The starter card built by tools/media.mjs is also the Viewer's card:
-// fifteen source/pinned files on A:, booting to the shell. BAZA builds
+// sixteen source, built and pinned files on A:, booting to the shell. BAZA builds
 // BOUNCE's game, TAS builds DEMO and HELLO3 from source, and MON3.SVC loads
 // HELLO3's generated image. The web host upgrades older system services.
 // Emulator evidence; external programs are pinned in test/inputs.json.
@@ -10,7 +10,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GLCD_SVC, ROOT, boot, volume, SHELL_SVC } from "./lib/fixtures.mjs";
+import { DIR_COM, GLCD_SVC, ROOT, boot, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 import { digitsOf, find, hello3, lcdRows, line, mon3Svc, svcMutant } from "./lib/mon3.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
@@ -41,7 +41,8 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly fifteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+// Sixteen since KD-435 put DIR.COM, the shell's sized DIR, on the card.
+test("the starter card holds exactly sixteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   check(BAZA);
@@ -51,6 +52,7 @@ test("the starter card holds exactly fifteen files, each by its hash, the PICO99
   const want = {
     "STARTUP.CMD": Buffer.from("SHELL.SVC\r\nGLCD.SVC\r\n\x1a", "latin1"),
     "SHELL.SVC": SHELL_SVC,
+    "DIR.COM": DIR_COM,
     "GLCD.SVC": GLCD_SVC,
     "TAS.COM": readFileSync(TAS.path),
     "TED.COM": readFileSync(TED.path),

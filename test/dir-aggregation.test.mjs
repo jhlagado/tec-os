@@ -6,7 +6,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createContainer } from "../tools/lib/container.mjs";
 import { GLCD_SVC, volume } from "./lib/fixtures.mjs";
-import { SHELL, GUARDS, shellCard, shellMachine, shellVariant, pageOf, at, code, word } from "./lib/shell.mjs";
+import { DIRCOM, SHELL, GUARDS, dirVariant, shellCard, shellMachine, pageOf, at, code, word } from "./lib/shell.mjs";
+
+// Sized DIR is A:DIR.COM since KD-435: its table starts at TBASE, the page
+// after its image, where it started at 0100h in the shell, and its symbols
+// are absolute. The rows below that named 0100h, 0102h, 0240h or 2240h, the
+// shell's symbols in its page, or an edit of the shell were restated by
+// these names, and an edit of DIR.COM's sources.
+const D = DIRCOM.symbols;
+const T = D.DCOUNT;
 
 const PROMPT = /\r\n\d*[A-P](:\S*)?>$/;
 GUARDS.on = true;
@@ -29,10 +37,11 @@ function rawEntry(v, i, { name, ex = 0, s1 = 0, s2 = 0, rc = 0, user = 0, system
 /**
  * A four-drive card with SYSTEM on A: and WORK, of GEOMETRY, on B:, whose
  * directory starts with ENTRIES as raw entries and then holds BFILES. FILES
- * go on A: with the shell, SVC's file; VARIANT says SVC is an altered shell.
- * The machine at its first prompt, the image and B:'s volume.
+ * go on A: with the shell, SVC's file, and DIR's DIR.COM; VARIANT says SVC
+ * is an altered shell. The machine at its first prompt, the image and B:'s
+ * volume.
  */
-function fresh({ geometry = "G8M", entries = [], files = {}, bFiles = {}, svc = SHELL, variant = false, startup = ["SHELL.SVC"], opts = {} } = {}) {
+function fresh({ geometry = "G8M", entries = [], files = {}, bFiles = {}, svc = SHELL, dir = DIRCOM, variant = false, startup = ["SHELL.SVC"], opts = {} } = {}) {
   const image = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
     { geometry, label: "WORK", mount: "B" },
@@ -40,7 +49,7 @@ function fresh({ geometry = "G8M", entries = [], files = {}, bFiles = {}, svc = 
   const b = volume(image, "B");
   entries.forEach((entry, i) => rawEntry(b, i, entry));
   for (const [name, bytes] of Object.entries(bFiles)) b.write(name, bytes);
-  shellCard(files, { image, shell: svc.file, startup });
+  shellCard({ "DIR.COM": dir.bytes, ...files }, { image, shell: svc.file, startup });
   if (!variant) assert.deepEqual(Buffer.from(svc.file), readFileSync(new URL("../dist/files/SHELL.SVC", import.meta.url)), "the card's shell is the one media builds");
   const m = shellMachine(image, { ...opts, noWait: true });
   m.runUntil(() => {
@@ -108,12 +117,12 @@ function list(m, line = "DIR B:", { via = "serial", hook } = {}) {
 
 function tableGuard(m) {
   const end = word(m, 6);
-  assert.ok(m.classicBankIn && end >= 0x2240);
+  assert.ok(m.classicBankIn && end >= D.DLIMIT);
   for (let a = 0x100; a < end; a++) m.write(a, 0xa5);
-  const body = Buffer.from(Array.from({ length: end - 0x2240 }, (_, i) => m.read(0x2240 + i)));
+  const body = Buffer.from(Array.from({ length: end - D.DLIMIT }, (_, i) => m.read(D.DLIMIT + i)));
   return () => {
-    assert.deepEqual(Buffer.from(Array.from({ length: end - 0x2240 }, (_, i) => m.read(0x2240 + i))), body, "table never reaches the rest of the TPA");
-    assert.ok(Array.from({ length: 0x2a }, (_, i) => m.read(0x116 + i)).every(value => value === 0xa5), "unused header bytes remain untouched");
+    assert.deepEqual(Buffer.from(Array.from({ length: end - D.DLIMIT }, (_, i) => m.read(D.DLIMIT + i))), body, "table never reaches the rest of the TPA");
+    assert.ok(Array.from({ length: 0x2a }, (_, i) => m.read(T + 0x16 + i)).every(value => value === 0xa5), "unused header bytes remain untouched");
   };
 }
 
@@ -220,47 +229,46 @@ test("DIR table: fast path starts three searches and never BDOS 35", () => {
   assert.deepEqual(pairs(r.text), [["BIG.DAT", 40960]]);
   assert.equal(r.counters.searchFirst, 3);
   assert.equal(r.counters.size, 0);
-  assert.equal(word(m, 0x100), 1);
-  assert.equal(word(m, 0x102), 0x250);
+  assert.equal(word(m, T), 1);
+  assert.equal(word(m, T + 2), D.DNODE + 16);
 });
 
 test("DIR table: refused workspace uses legacy without TPA writes", async () => {
-  const edits = [["  ld hl,($0006)\n", "  ld hl,$223F\n"]];
-  const svc = await shellVariant(edits);
-  const { m } = fresh({ svc, variant: true, geometry: "G1M", entries: [{ name: "X.DAT", rc: 1 }, { name: "X.DAT", ex: 1, rc: 2 }] });
+  const edits = [["  ld hl,($0006)\n", "  ld hl,DLIMIT-1\n"]];
+  const dir = await dirVariant(edits);
+  const { m } = fresh({ dir, geometry: "G1M", entries: [{ name: "X.DAT", rc: 1 }, { name: "X.DAT", ex: 1, rc: 2 }] });
   const check = tableGuard(m), r = list(m);
   check();
   assert.deepEqual(pairs(r.text), [["X.DAT", 16640]]);
-  assert.ok(Array.from({ length: 0x2140 }, (_, i) => m.read(0x100 + i)).every(value => value === 0xa5));
+  assert.ok(Array.from({ length: 0x2140 }, (_, i) => m.read(T + i)).every(value => value === 0xa5));
   assert.ok(r.counters.size > 0);
 });
 
 test("DIR table: capacity fallback restarts before printing rows", async () => {
-  const edits = [["DLIMIT EQU $2240", "DLIMIT EQU $0250"]];
-  const svc = await shellVariant(edits);
-  const { m } = fresh({ svc, variant: true, entries: [{ name: "A.DAT", rc: 1 }, { name: "B.DAT", rc: 2 }, { name: "C.DAT", rc: 3 }] });
+  const edits = [["DLIMIT EQU TBASE+$2140", "DLIMIT EQU TBASE+$0150"]];
+  const dir = await dirVariant(edits);
+  const { m } = fresh({ dir, entries: [{ name: "A.DAT", rc: 1 }, { name: "B.DAT", rc: 2 }, { name: "C.DAT", rc: 3 }] });
   const check = tableGuard(m), r = list(m);
   check();
   assert.deepEqual(pairs(r.text), [["A.DAT", 128], ["B.DAT", 256], ["C.DAT", 384]]);
   assert.match(r.text, /3 files, 768 bytes/);
   assert.deepEqual([r.text.match(/ files?, /g).length, r.text.match(/ free on /g).length], [1, 1], "one summary and one free line after the restart");
-  assert.ok(Array.from({ length: 0x1ff0 }, (_, i) => m.read(0x250 + i)).every(value => value === 0xa5));
-  assert.equal(m.read(pageOf(m) + svc.symbols.DFAST), 0);
+  assert.ok(Array.from({ length: 0x1ff0 }, (_, i) => m.read(D.DNODE + 16 + i)).every(value => value === 0xa5));
+  assert.equal(m.read(dir.symbols.DFAST), 0);
 });
 
 test("DIR table: invalid links and cycles fail without hanging", () => {
   for (const kind of ["below", "misaligned", "unallocated", "cycle"]) {
     const { m } = fresh({ entries: [{ name: "A.DAT", rc: 1 }, { name: "B.DAT", rc: 2 }, { name: "C.DAT", rc: 3 }] });
     let injected = false;
-    const p = pageOf(m);
     const r = list(m, "DIR B:", { hook: n => {
-      if (injected || n.pc !== p + SHELL.symbols.DAF1 || word(n, 0x100) !== 1) return;
-      assert.notDeepEqual(Array.from({ length: 11 }, (_, i) => n.read(0x104 + i)), Array.from({ length: 11 }, (_, i) => n.read(0x240 + i)));
+      if (injected || n.pc !== D.DAF1 || word(n, T) !== 1) return;
+      assert.notDeepEqual(Array.from({ length: 11 }, (_, i) => n.read(D.DKEY + i)), Array.from({ length: 11 }, (_, i) => n.read(D.DNODE + i)));
       const head = n.cpu.cpu.h << 8 | n.cpu.cpu.l;
-      assert.ok(head >= 0x140 && head < 0x240 && !(head & 1));
-      const pointer = kind === "below" ? 0x100 : kind === "misaligned" ? 0x241 : kind === "unallocated" ? word(n, 0x102) : 0x240;
+      assert.ok(head >= D.DHEAD && head < D.DNODE && !(head & 1));
+      const pointer = kind === "below" ? T : kind === "misaligned" ? D.DNODE + 1 : kind === "unallocated" ? word(n, T + 2) : D.DNODE;
       n.write(head, pointer & 255); n.write(head + 1, pointer >> 8);
-      if (kind === "cycle") { n.write(0x24e, 0x40); n.write(0x24f, 2); }
+      if (kind === "cycle") { n.write(D.DNODE + 14, D.DNODE & 255); n.write(D.DNODE + 15, D.DNODE >> 8); }
       injected = true;
     } });
     assert.ok(injected, kind);
@@ -274,13 +282,12 @@ test("DIR table: invalid links and cycles fail without hanging", () => {
 
 test("DIR table: an absent marked key is refused before a zero-size row", () => {
   const { m } = fresh({ geometry: "G1M", entries: [{ name: "A.DAT", rc: 1 }, { name: "A.DAT", ex: 1, rc: 2 }] });
-  const p = pageOf(m);
   let injected = false;
   const r = list(m, "DIR B:", { hook: n => {
-    if (injected || n.pc !== p + SHELL.symbols.DAGGET) return;
-    assert.equal(word(n, p + SHELL.symbols.DNUM), 0, "before the first filename row");
-    assert.equal(word(n, 0x100), 1);
-    n.write(0x240, n.read(0x240) ^ 1);
+    if (injected || n.pc !== D.DAGGET) return;
+    assert.equal(word(n, D.DNUM), 0, "before the first filename row");
+    assert.equal(word(n, T), 1);
+    n.write(D.DNODE, n.read(D.DNODE) ^ 1);
     injected = true;
   } });
   assert.ok(injected);
@@ -295,8 +302,8 @@ test("DIR table: all 512 colliding keys stay within the reservation", { timeout:
   const { m } = fresh({ entries }), check = tableGuard(m), r = list(m);
   check();
   assert.deepEqual(pairs(r.text), names.map((name, i) => [name, (128 + (i & 127)) * 128]));
-  assert.equal(word(m, 0x100), 512);
-  assert.equal(word(m, 0x102), 0x2240);
+  assert.equal(word(m, T), 512);
+  assert.equal(word(m, T + 2), D.DLIMIT);
   t.diagnostic(JSON.stringify({ scope: "functional maximal-chain observation", files: 512, cycles: r.cycles, counters: r.counters }));
   assert.equal(r.counters.searchFirst, 3);
   assert.equal(r.counters.size, 0);
@@ -315,12 +322,12 @@ test("DIR table mutant: without the maximum, a file is sized by its first entry 
   const normal = list(fresh({ geometry: "G1M", entries }).m);
   assert.deepEqual(pairs(normal.text), right);
   assert.equal(normal.counters.size, 0, "from the table, not BDOS 35");
-  const first = await shellVariant([["  jp DAGMAX      ; coalesce same key", "  ret"]]);
-  const kept = list(fresh({ geometry: "G1M", entries, svc: first, variant: true }).m);
+  const first = await dirVariant([["  jp DAGMAX      ; coalesce same key", "  ret"]]);
+  const kept = list(fresh({ geometry: "G1M", entries, dir: first }).m);
   assert.deepEqual(pairs(kept.text), [["LATER.DAT", 16384], ["EARLY.DAT", 33920]], "the first entry met");
   assert.equal(kept.counters.size, 0);
-  const last = await shellVariant([["  jr c,DAMEND    ; candidate was smaller\n", ""]]);
-  const taken = list(fresh({ geometry: "G1M", entries, svc: last, variant: true }).m);
+  const last = await dirVariant([["  jr c,DAMEND    ; candidate was smaller\n", ""]]);
+  const taken = list(fresh({ geometry: "G1M", entries, dir: last }).m);
   assert.deepEqual(pairs(taken.text), [["LATER.DAT", 33920], ["EARLY.DAT", 16384]], "the last entry met");
   assert.equal(taken.counters.size, 0);
 });
@@ -364,14 +371,14 @@ test("DIR table: no name and 511 names stay within the reservation", { timeout: 
     assert.deepEqual(pairs(r.text), []);
     assert.match(r.text, /NO FILE/);
     assert.equal(r.result, 0xff00);
-    assert.equal(word(m, 0x100), 0, "the table's count");
+    assert.equal(word(m, T), 0, "the table's count");
   }
   const names = Array.from({ length: 511 }, (_, i) => `N${String(i).padStart(4, "0")}.DAT`);
   const { m } = fresh({ entries: names.map((name, i) => ({ name, ex: 1, rc: i & 127 })) }), check = tableGuard(m), r = list(m);
   check();
   assert.deepEqual(pairs(r.text), names.map((name, i) => [name, (128 + (i & 127)) * 128]));
-  assert.equal(word(m, 0x100), 511);
-  assert.equal(word(m, 0x102), 0x2230, "one node's room left");
+  assert.equal(word(m, T), 511);
+  assert.equal(word(m, T + 2), D.DLIMIT - 16, "one node's room left");
   assert.equal(r.counters.searchFirst, 3);
   assert.equal(r.counters.size, 0);
 });

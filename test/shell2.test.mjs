@@ -713,7 +713,8 @@ function deepestWalk(shell = SHELL) {
   for (let address = base; address < top; address++) m.write(address, 0xa5);
   m.write(page + s.LBL, 0);
   assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(page + s.LINE + 4 + i)), [0x31, top & 255, top >> 8]);
-  assert.deepEqual(Array.from({ length: 12 }, (_, i) => m.read(page + s.VW1 + i)), [0x7b, 0x32, (page + s.VIDX) & 255, (page + s.VIDX) >> 8, 0x21, (page + s.CFCB) & 255, (page + s.CFCB) >> 8, 0x0e, 11, 0xcd, m.sym("ABICALL") & 255, m.sym("ABICALL") >> 8]);
+  // KD-435: the walk keeps its index on the stack, where it kept it in VIDX.
+  assert.deepEqual(Array.from({ length: 9 }, (_, i) => m.read(page + s.VW1 + i)), [0xd5, 0x21, (page + s.CFCB) & 255, (page + s.CFCB) >> 8, 0x0e, 11, 0xcd, m.sym("ABICALL") & 255, m.sym("ABICALL") >> 8]);
   const workerBottom = m.sym("HKSTKB"), workerTop = m.sym("HKSTKT"), workerGuard = Array.from({ length: 2 }, (_, i) => m.read(m.sym("HKGRD") + i));
   assert.equal(workerBottom - m.sym("HKGRD"), 2); assert.equal(workerTop - workerBottom, 56);
   assert.deepEqual(workerGuard, [0, 0], "cold workspace clear initializes the private guard");
@@ -818,13 +819,14 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
     }
     return { tpa: word(m, 6) - 0x100, glcd: m.read(m.sym("CONMOD")) === 3, n: owners(m).length };
   };
-  assert.equal(tpa(["SHELL.SVC"]).tpa, 41984, "with the shell");
-  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 41216, "and GLCD.SVC");
-  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 37120, "and MON3.SVC");
+  // KD-435: the shell's seven pages fewer, 1,792 bytes up on each figure.
+  assert.equal(tpa(["SHELL.SVC"]).tpa, 43776, "with the shell");
+  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 43008, "and GLCD.SVC");
+  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 38912, "and MON3.SVC");
   // The three together on a GLCD board, in three orders, the GLCD the console.
   for (const [startup, typed] of [[["SHELL.SVC", "GLCD.SVC", "MON3.SVC"], []], [["SHELL.SVC", "MON3.SVC", "GLCD.SVC"], []], [["GLCD.SVC"], ["SHELL.SVC", "MON3.SVC"]]]) {
     const r = tpa(startup, typed);
-    assert.deepEqual(r, { tpa: 36352, glcd: true, n: 3 }, startup.concat(typed).join(", "));
+    assert.deepEqual(r, { tpa: 38144, glcd: true, n: 3 }, startup.concat(typed).join(", "));
   }
 });
 
@@ -1209,7 +1211,8 @@ test("S2-12 no mount.com", () => {
   assert.ok(!names.includes("HELLO3.BIN"));
   assert.ok(names.includes("CAVBASIC.BAS"));
   assert.ok(!names.includes("CAVBASIC.COM"), "readers compile the supplied source");
-  assert.equal(names.length, 15);
+  assert.ok(names.includes("DIR.COM"), "the shell's DIR, a transient since KD-435");
+  assert.equal(names.length, 16);
 });
 
 test("S2-12 instruction", () => {
@@ -1227,7 +1230,7 @@ test("S2-12 tpa", () => {
   const bare = shellMachine(card);
   assert.equal(word(bare, 6) - 0x100, 46_536, "bare: four drives' vectors");
   const m = shellMachine(starterImage());
-  assert.equal(word(m, 6) - 0x100, 41_984, "with the shell, the starter card's STARTUP.CMD");
+  assert.equal(word(m, 6) - 0x100, 43_776, "with the shell, the starter card's STARTUP.CMD (41,984 before KD-435)");
 });
 
 /** A card of the drives field's absence, built from the starter recipe without it: its machine under the shell. */
