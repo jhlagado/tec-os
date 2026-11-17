@@ -464,13 +464,13 @@ fails if a bounded pass frees no slot (`a40d482:docs/recovery.md:206-222`).
 
 ### Current retained-data observation
 
-With ROM `e3478808` and its fifteen-file starter, the same shortened
+With ROM `35893cab` and its fifteen-file starter, the same shortened
 card still has a readable WORK directory, while its first data block is
 outside the backend. The capture sends `COPY STARTUP.CMD B:X.CMD`, acknowledges
 its error with one explicit `x`, then sends `DIR B:`. No further key is
 supplied.
 
-<!-- TEC-OS d473360, ROM e3478808: node tools/capture.mjs --card nodata.img '@start COPY STARTUP.CMD B:X.CMD' '@key x' '@start DIR B:'. Complete captured console transcript. The cache's state after each step was read from the same host model. -->
+<!-- TEC-OS 426bb14, ROM 35893cab: node tools/capture.mjs --card nodata.img '@start COPY STARTUP.CMD B:X.CMD' '@key x' '@start DIR B:'. Complete captured console transcript. The cache's state after each step was read from the same host model. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
