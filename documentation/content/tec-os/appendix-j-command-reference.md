@@ -534,7 +534,7 @@ program the tail ` X` and runs nothing after it
 `TAS` and `BAZA` both set the failure return code `FF00h` when a build
 fails. A failed BAZA compile leaves an existing `NAME.COM` unchanged, and a
 failed TAS build normally keeps its earlier outputs
-(`46cf3f1:docs/compatibility.md:225-226`, `Baza 5f6b58d:README.md:32-37`,
+(`46cf3f1:docs/compatibility.md:225-226`, `Baza 5f6b58d:README.md:32-38`,
 `Thorium 2299dfc:docs/language.md:17-20`).
 [Make a small program](02-make-a-small-program.md) and
 [Build a BASIC program](03-build-a-basic-program.md) use them.
