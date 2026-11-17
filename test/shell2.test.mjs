@@ -17,7 +17,7 @@ import { check, pinned } from "./lib/inputs.mjs";
 import { MUTANTS } from "./lib/coalesce.mjs";
 import { cacheState, fileBlock } from "./lib/cache-pending.mjs";
 import { publicContext } from "./lib/public-caller.mjs";
-import { SHELL, at, code, owners, pageOf, shellCard, shellMachine, shellVariant, word } from "./lib/shell.mjs";
+import { SHELL, at, code, dirVariant, find, owners, pageOf, romMutant, shellCard, shellMachine, shellVariant, word } from "./lib/shell.mjs";
 
 const P = /\r\n\d*[A-P](:\S*)?>$/;
 const sym = SHELL.symbols;
@@ -164,9 +164,14 @@ test("S2-6 cannot mount", () => {
   assert.match(run(m, "CD C:"), /\r\nC:PROJECTS\r\n/, "C: keeps its volume");
 });
 
+// KD-435: CD is the ROM's, so M3 and MR are ROM mutants of RCMDCD's same
+// branches, where they were edits of the shell's CD.
 test("S2-6 mutant: M3, CD without its other-drive refusal, mounts a volume twice and is refused", async () => {
-  const v = await shellVariant([["  inc a          ; FFh: on no drive\n  jr nz,CDELSE   ; on another drive", "  inc a\n  nop\n  nop"]]);
-  const m = machine({ shell: v.file });
+  const rom = romMutant((b, at) => {
+    const i = find(b, at("RCN4"), [0x3c, 0x20, null]); // INC A, JR NZ,RCDELSE
+    b[i + 1] = 0; b[i + 2] = 0;
+  });
+  const m = machine({ opts: rom });
   run(m, "B:");
   const t = run(m, "CD SYSTEM");
   assert.doesNotMatch(t, /SYSTEM is on A:/);
@@ -174,8 +179,11 @@ test("S2-6 mutant: M3, CD without its other-drive refusal, mounts a volume twice
 });
 
 test("S2-6 mutant: MR, CD of the volume already there going on to mount it, is refused as on another drive", async () => {
-  const v = await shellVariant([["  jr z,CDSHOW    ; already there", "  nop\n  nop"]]);
-  const m = machine({ shell: v.file });
+  const rom = romMutant((b, at) => {
+    const i = find(b, at("RCN4"), [0xbe, 0x28, null]); // CP (HL), JR Z,RCDSHOW
+    b[i + 1] = 0; b[i + 2] = 0;
+  });
+  const m = machine({ opts: rom });
   assert.match(run(m, "CD SYSTEM"), /SYSTEM is on A:/);
   assert.equal(code(m), 0xff00);
 });
@@ -217,9 +225,13 @@ test("S2-6 cd after cd ?", () => {
   assert.match(cdAfterList(), /^CD\r\r\nA:SYSTEM\r\nA:SYSTEM>$/, "d:NAME alone, no list");
 });
 
-test("S2-6 mutant: the prompt's walk keeping CD ?'s list flag lists the card inside CD's output", async () => {
-  const v = await shellVariant([["  call z,VWALKQ  ; the labels first", "  call z,VWALK"]]);
-  assert.match(cdAfterList(v.file), /WORK +B:/);
+// KD-435: the shell's walk only reads the labels, with no list flag to keep,
+// so the mutant of the flag kept has nothing to edit. The row now holds
+// that the walk has none: the list is the ROM's CD's.
+test("S2-6 the prompt's walk lists nothing: CD ?'s list is the ROM's", () => {
+  assert.equal(SHELL.symbols.VLIST, undefined);
+  assert.equal(SHELL.symbols.CDLIST, undefined);
+  assert.match(cdAfterList(), /^CD\r\r\nA:SYSTEM\r\nA:SYSTEM>$/);
 });
 
 /**
@@ -246,10 +258,9 @@ test("S2-6 cd list stopped", () => {
   assert.match(r.next, /\r\nB:LAST>$/);
 });
 
-test("S2-6 mutant: a CD ? stopped at [more] leaving its part-read labels valid shows B:>", async () => {
-  const v = await shellVariant([["  jr c,VWSTOP    ; stopped", "  ret c"]]);
-  assert.match(listStopped(v.file).next, /\r\nB:>$/);
-});
+// KD-435: a stopped CD ? is the ROM's walk, whose labels are its own
+// scratch; the shell's walk is never stopped, so the mutant of a part-read
+// table has nothing to edit. "S2-6 cd list stopped" holds the prompt.
 
 // --- S2-4's CD row: a mount whose flush fails --------------------------------
 
@@ -345,17 +356,22 @@ function describes(shell) {
   return { prompts, cd };
 }
 
+// KD-435: CD is the ROM's, whose walk reads the five and is refused the
+// sixth index, and the shell's prompt then reads its labels again: 12, where
+// the shell's own CD read 6 and wrote its table.
 test("S2-8 labels not read at each prompt", () => {
-  assert.deepEqual(describes(), { prompts: 0, cd: 6 }, "none at a prompt; CD alone reads the five and is refused the sixth index");
+  assert.deepEqual(describes(), { prompts: 0, cd: 12 }, "none at a prompt; CD alone: the ROM's walk and the prompt's, each five and the sixth refused");
 });
 
 test("S2-8 mutant: MW, DRVLBL walking whatever the table holds, reads the card at every prompt", async () => {
-  const v = await shellVariant([["  ld a,(LBL)\n  or a\n  call z,VWALKQ", "  xor a\n  or a\n  call z,VWALKQ"]]);
+  const v = await shellVariant([["  ld a,(LBL)\n  or a\n  call z,VWALK", "  xor a\n  or a\n  call z,VWALK"]]);
   assert.ok(describes(v.file).prompts > 0);
 });
 
-test("S2-8 mutant: CD NAME not writing the label table leaves the prompt on the old volume", async () => {
-  const v = await shellVariant([["  ldir           ; copied in", "  nop\n  nop"]]);
+// KD-435: the shell no longer writes the label; it marks the table to be read
+// again before it hands CD to the ROM. The mutant leaves the mark out.
+test("S2-8 mutant: CD NAME not marking the label table leaves the prompt on the old volume", async () => {
+  const v = await shellVariant([["  ld (LBL),a     ; labels read again", "  nop\n  nop\n  nop"]]);
   const m = machine({ shell: v.file });
   assert.doesNotMatch(run(m, "CD GAMES"), /\r\nA:GAMES>$/);
 });
@@ -402,14 +418,14 @@ function listing(m, line) {
 }
 
 /** The starter card's A: files under the shell, a sparse file and BIG.DAT of four G8M entries on B:. */
-function sized(shell) {
+function sized(shell, dir) {
   const image = four();
   const a = volume(image, "A");
   const starter = new Uint8Array(readFileSync(new URL("../dist/starter.img", import.meta.url)));
   const s = volume(starter, "A");
   for (const f of s.list()) a.write(f.name, s.read(f.name));
   volume(image, "B").write("BIG.DAT", new Uint8Array(100 * 1024).fill(2));
-  const m = machine({ image, files: { "SP.COM": SP, "S35.COM": S35 }, shell });
+  const m = machine({ image, files: { "SP.COM": SP, "S35.COM": S35, ...(dir ? { "DIR.COM": dir.bytes } : {}) }, shell });
   run(m, "SP X.DAT");
   return m;
 }
@@ -426,19 +442,21 @@ test("S2-9 sizes are bdos 35's", () => {
 });
 
 // BDOS 35 sizes a marked file only in the legacy engine now, so M4 is
-// built on a shell held in that engine: one that finds no room for the table.
-const LEGACY = ["  ld hl,($0006)\n", "  ld hl,$223F\n"];
+// built on a DIR held in that engine: one that finds no room for the table.
+// Sized DIR is DIR.COM since KD-435: these are DIR.COM variants, where they
+// were shell variants, and the table's end is DLIMIT, where it was 2240h.
+const LEGACY = ["  ld hl,($0006)\n", "  ld hl,DLIMIT-1\n"];
 
 test("S2-9 mutant: M4, the legacy engine's size from the entry with no BDOS 35, misses the sparse file's", async () => {
-  const legacy = await shellVariant([LEGACY]);
-  assert.deepEqual(rows(run(sized(legacy.file), "DIR X.DAT")), [["X.DAT", 128128]], "the legacy engine, by BDOS 35");
-  const v = await shellVariant([LEGACY, ["  call DOSSEQ    ; 35: its size\n  DB 35*2+0      ; its size", "  ld hl,0\n  ld (FCBONE+34),hl"]]);
-  assert.notDeepEqual(rows(run(sized(v.file), "DIR X.DAT")), [["X.DAT", 128128]]);
+  const legacy = await dirVariant([LEGACY]);
+  assert.deepEqual(rows(run(sized(undefined, legacy), "DIR X.DAT")), [["X.DAT", 128128]], "the legacy engine, by BDOS 35");
+  const v = await dirVariant([LEGACY, ["  call DOSSEQ    ; 35: its size\n  DB 35*2+0      ; its size", "  ld hl,0\n  ld (FCBONE+34),hl"]]);
+  assert.notDeepEqual(rows(run(sized(undefined, v), "DIR X.DAT")), [["X.DAT", 128128]]);
 });
 
 test("S2-9 mutant: the marks pass left out sizes the sparse file and BIG.DAT from their first entries", async () => {
-  const v = await shellVariant([["  or (hl)        ; marked\n  ld (hl),a      ; set", "  or (hl)        ; marked\n  nop"]]);
-  const m = sized(v.file);
+  const v = await dirVariant([["  or (hl)        ; marked\n  ld (hl),a      ; set", "  or (hl)        ; marked\n  nop"]]);
+  const m = sized(undefined, v);
   assert.notDeepEqual(rows(run(m, "DIR X.DAT")), [["X.DAT", 128128]]);
   assert.notDeepEqual(rows(run(m, "DIR B:BIG.DAT")), [["BIG.DAT", 102400]]);
 });
@@ -613,16 +631,19 @@ test("S2-10 tail upper case", () => {
 const extra = (svc) => svc.file[8] | (svc.file[9] << 8);
 const pages = (svc) => Math.ceil((svc.image + extra(svc)) / 256);
 
+// KD-435: ten pages, the ring in EXPAND 1; the row held 17 and a ring
+// aligned in the shell's last page.
 test("S2-11 size", (t) => {
-  assert.ok(pages(SHELL) <= 17, `SHELL.SVC in 17 pages: ${SHELL.image} + ${extra(SHELL)}`);
-  assert.ok(SHELL.image + extra(SHELL) <= 4352);
-  assert.equal(sym.RING % 256, 0, "the ring's page aligned");
+  assert.ok(pages(SHELL) <= 10, `SHELL.SVC in 10 pages: ${SHELL.image} + ${extra(SHELL)}`);
+  assert.ok(SHELL.image + extra(SHELL) <= 2560);
+  assert.equal(sym.RING, undefined, "no ring in its pages");
   // A reading, not a gate: 14 pages is the aim.
-  t.diagnostic(`image ${SHELL.image}, file ${SHELL.file.length}, extra RAM ${extra(SHELL)}, ${pages(SHELL)} pages, ${sym.RING - sym.STKTOP} bytes of room; ${SHELL.image + extra(SHELL) - 14 * 256} bytes over 14 pages`);
+  t.diagnostic(`image ${SHELL.image}, file ${SHELL.file.length}, extra RAM ${extra(SHELL)}, ${pages(SHELL)} pages, ${pages(SHELL) * 256 - SHELL.image - extra(SHELL)} bytes of room; ${SHELL.image + extra(SHELL) - 14 * 256} bytes over 14 pages`);
 });
 
+// KD-435: HREC and HSTORE take the shell's own stack; it declared BDOS 6.
 test("S2-11 declared stacks", () => {
-  assert.deepEqual([...SHELL.file.subarray(12, 15)], [6, 0, 0], "BDOS 6, BIOS 0, CCP 0");
+  assert.deepEqual([...SHELL.file.subarray(12, 15)], [0, 0, 0], "BDOS 0, BIOS 0, CCP 0");
 });
 
 /** A real thirty-block refused queue drives the shell's cold label walk. */
@@ -1313,16 +1334,16 @@ test("S2-13 docs", () => {
   assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
   for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
-    "a TPA of 41,984 bytes"])
+    "a TPA of 43,776 bytes"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);
   const container = flat("docs/container-format.md");
   assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
   assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
   const compat = flat("docs/compatibility.md");
-  for (const s of ["46,536 bytes", "41,984", "41,216"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  for (const s of ["46,536 bytes", "43,776", "43,008"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
-  assert.match(flat("docs/mon3.md"), /from `A500h` to `9200h`, and the TPA from 41,984 bytes to \*\*37,120\*\*/);
-  assert.match(flat("docs/mon3.md"), /it is `8F00h`, a TPA of \*\*36,352\*\*/);
+  assert.match(flat("docs/mon3.md"), /from `AC00h` to `9900h`, and the TPA from 43,776 bytes to \*\*38,912\*\*/);
+  assert.match(flat("docs/mon3.md"), /it is `9600h`, a TPA of \*\*38,144\*\*/);
   // The figures are measured ones: no doc speaks of a projection or of a qualification still to come.
   for (const n of ["README.md", "docs/shell.md", "docs/compatibility.md", "docs/memory-map.md", "docs/mon3.md"])
     assert.doesNotMatch(flat(n), /\bprojects? (word|A500h|text|41,|these)|projected|projections?\b|pending (current )?runtime|qualification must confirm|to be confirmed/i, `${n}: measured figures, stated plainly`);
