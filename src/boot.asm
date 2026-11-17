@@ -75,19 +75,16 @@ COLDNC:
   ld hl,BANNER
   call PUTS
 
-; No PICO console: the banner went to
-; serial. Now ask for UC1, the LCD with
-; the matrix keyboard. Without the
-; keyboard the next console call falls
-; back to TTY and writes that back.
+; The banner went to serial. Now ask
+; for UC1, the LCD with the matrix
+; keyboard, the board's own console,
+; with or without a PICO9918. Without
+; the keyboard the next console call
+; falls back to TTY and writes that
+; back.
 
-  ld hl,IOBYTE
-  ld a,(hl)
-  or a
-  jr nz,COLDU
-  ld (hl),CMUC1
-
-COLDU:
+  ld a,CMUC1
+  ld (IOBYTE),a
   call MEMINIT
 
 ; Cold card setup and DIAG retry reset

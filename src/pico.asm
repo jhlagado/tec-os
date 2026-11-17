@@ -45,9 +45,9 @@ PITPLN EQU $-PITPL
 ; after its successful VDP probe,
 ; HL=CONDEV. Without CDMTX, return. Copy
 ; PITPL, initialise width and publish
-; PIVEC/REGHEAD. Set IOBYTE=CMCRT, other
-; fields zero. CONMOD stays CMTTY for
-; next-call selection/programming.
+; PIVEC/REGHEAD, so that CON CRT finds
+; it. Cold boot starts on the LCD, not
+; here. CONMOD stays CMTTY.
 ; Changes AF, BC, DE and HL.
 
 PISTART:
@@ -63,8 +63,6 @@ PISTART:
   ld (PIVEC),hl
   ld hl,PIREC
   ld (REGHEAD),hl
-  ld a,CMCRT
-  ld (IOBYTE),a
   ret
 
 ; Set the PICO console width.
