@@ -64,6 +64,11 @@ through the same routine, and the GLCD's driver asks for each glyph it draws; a 
 before ABI 5.2 refuses number 17 and the driver's `INIT` with it. Serial and the LCD
 need no font.
 
+**An older `GLCD.SVC` on a card** asks for 15 at `INIT`, gets the refusal and is
+refused itself: its startup line says `GLCD.SVC?`, and a board with only the GLCD has
+no GLCD console, its prompt on the serial terminal and the LCD. Copy this build's
+`GLCD.SVC` onto the card, from a new starter card or `dist/`, to have it back.
+
 ## The shell hook
 
 | C | Arguments | Returns |
