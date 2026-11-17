@@ -23,11 +23,13 @@ for(const shell of [false,true])for(const matrix of [false,true]){
   const m=fixture(shell,matrix);
   m.type('TYPE ');assert.equal(held(m),'TYPE ');
   const pos=()=>[m.read(m.sym('VROW')),m.read(m.sym('VCOL'))];
-  const before=pos(),mark=m.output.length;
-  m.type(matrix?'\x03\x04':'\x1b[A\x1b[B');
-  assert.equal(held(m),'TYPE ');
-  assert.deepEqual(pos(),before);
-  assert.equal(m.text(mark),'','no navigation byte is echoed');
+  for(const key of matrix?['\x03','\x04']:['\x1b[A','\x1b[B']){
+   const before=pos(),mark=m.output.length;
+   m.type(key);
+   assert.equal(held(m),'TYPE ');
+   assert.deepEqual(pos(),before);
+   assert.equal(m.text(mark),'','no navigation byte is echoed');
+  }
   m.type('ONE.TXT\r');
   assert.match(m.expect(/A(:\S*)?>$/),/ARROW-CANARY/);
   assert.deepEqual(m.violations,[]);
