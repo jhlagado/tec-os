@@ -92,7 +92,7 @@ cp dist/starter.img lines.img
 node tools/tecvol.mjs put lines.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 30e6528, ROM e3478808: node tools/capture.mjs --card lines.img. Complete captured console transcript. -->
+<!-- TEC-OS d473360, ROM e3478808: node tools/capture.mjs --card lines.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -132,7 +132,7 @@ cp dist/starter.img bare.img
 node tools/tecvol.mjs put bare.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 30e6528, ROM e3478808: node tools/capture.mjs --card bare.img. Complete captured console transcript. -->
+<!-- TEC-OS d473360, ROM e3478808: node tools/capture.mjs --card bare.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -320,7 +320,7 @@ cp dist/starter.img cut.img
 node tools/tecvol.mjs put cut.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 30e6528, ROM e3478808: node tools/capture.mjs --card cut.img. Complete captured console transcript. -->
+<!-- TEC-OS d473360, ROM e3478808: node tools/capture.mjs --card cut.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -345,7 +345,7 @@ cp dist/starter.img long.img
 node tools/tecvol.mjs put long.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 30e6528, ROM e3478808: node tools/capture.mjs --card long.img. Complete captured console transcript. -->
+<!-- TEC-OS d473360, ROM e3478808: node tools/capture.mjs --card long.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -358,7 +358,7 @@ A:SYSTEM>DIR *.CMD
 
 STARTUP.CMD      256
 1 file, 256 bytes
-911360 free on A:SYSTEM
+909312 free on A:SYSTEM
 A:SYSTEM>CD ?
 
 SYSTEM      A:
@@ -449,7 +449,7 @@ printf 'DIR\n' > startup.cmd
 node tools/tecvol.mjs put spare.img SPARE startup.cmd --text
 ```
 
-<!-- TEC-OS 30e6528, ROM e3478808: node tools/capture.mjs --card spare.img 'CD A:SPARE' @reset. Complete captured console transcript. -->
+<!-- TEC-OS d473360, ROM e3478808: node tools/capture.mjs --card spare.img 'CD A:SPARE' @reset. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
