@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { makeSvc } from "../../tools/lib/svc.mjs";
 import { assembleProgram } from "../../tools/lib/assemble.mjs";
 import { Machine } from "./machine.mjs";
@@ -37,7 +37,11 @@ export async function shellVariant(edits) {
   return makeSvc(resolve(dir, "shell.asm"), { work: resolve(ROOT, "build/svc") });
 }
 
-/** Each of FILES' sources with EDITS, each [old, new] standing once in them together, written beside the build in DIR. */
+/**
+ * Each of FILES' sources with EDITS, each [old, new] standing once in them
+ * together, written beside the build in DIR, abi.inc included from the tree
+ * by a path relative to DIR, as a program's assembly requires.
+ */
 function edited(files, edits, dir) {
   const text = Object.fromEntries(files.map((n) => [n, readFileSync(resolve(ROOT, "drivers", n), "utf8")]));
   for (const [old, now] of edits) {
@@ -47,7 +51,7 @@ function edited(files, edits, dir) {
     text[hits[0]] = text[hits[0]].replace(old, now);
   }
   mkdirSync(dir, { recursive: true });
-  for (const [n, t] of Object.entries(text)) writeFileSync(resolve(dir, n), t.replace('%INCLUDE "../src/abi.inc"', `%INCLUDE "${resolve(ROOT, "src/abi.inc")}"`));
+  for (const [n, t] of Object.entries(text)) writeFileSync(resolve(dir, n), t.replace('%INCLUDE "../src/abi.inc"', `%INCLUDE "${relative(dir, resolve(ROOT, "src/abi.inc"))}"`));
 }
 
 /** DIR.COM from drivers/dir.asm: { bytes, symbols }, absolute, at 0100h. */

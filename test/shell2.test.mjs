@@ -309,8 +309,10 @@ test("S2-7 mutant: M5, the script's FCB left on drive 0, reads its next record f
   assert.doesNotMatch(driveChangeScript(v), /two\r\n/);
 });
 
+// KD-435: the refusal is the shell's last test before it hands CD to the
+// ROM; the mutant hands every CD over.
 test("S2-7 mutant: without the script-drive refusal, CD of the script's own drive is taken", async () => {
-  const v = await shellVariant([["  jp z,BADW      ; the script's own", "  nop\n  nop\n  nop"]]);
+  const v = await shellVariant([["  jr nz,CDHAND   ; another drive", "  jr CDHAND"]]);
   const m = machine({ files: { "G.CMD": script("CD A:GAMES", "ECHO after") }, shell: v.file });
   m.mark = m.output.length;
   m.type("G.CMD\r");
@@ -762,7 +764,7 @@ function deepestWalk(shell = SHELL) {
     if (m.pc === 0x122) { publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.equal(m.cpu.cpu.a, 0x78); assert.equal(++returnedKey, 1); }
     if (m.pc === m.sym("ABICALL") && m.cpu.cpu.c === 11) {
       publicContext(m); assert.equal(pendingDescriptor, null); assert.equal(m.cpu.cpu.e, 0); assert.equal(m.cpu.cpu.h << 8 | m.cpu.cpu.l, page + s.CFCB);
-      assert.equal(word(m, m.cpu.cpu.sp), page + s.VW1 + 12); assert.equal(snapshot("TNDESC real full-cache pressure").queue.length, 30);
+      assert.equal(word(m, m.cpu.cpu.sp), page + s.VW1 + 9); assert.equal(snapshot("TNDESC real full-cache pressure").queue.length, 30);
       pendingDescriptor = { sp: m.cpu.cpu.sp, back: word(m, m.cpu.cpu.sp), attempts: attempts.length, allocations: [] };
     }
     if (pendingDescriptor && m.pc === m.sym("CTAKE")) {
