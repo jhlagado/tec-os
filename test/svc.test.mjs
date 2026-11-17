@@ -535,7 +535,7 @@ test("the relocation data decodes to the same fixups by delta, and a long gap ta
 test("the table has no removal: function 2 is refused and the service stays", async () => {
   const t = await machine();
   t.load((await svc()).file);
-  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 17 }).carry, 1); // past the last, TNSHELL
+  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 18 }).carry, 1); // past the last, TNGLYPH
   assert.equal(t.find("DEMO").carry, 0);
 });
 
