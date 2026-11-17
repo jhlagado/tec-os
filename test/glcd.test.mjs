@@ -10,8 +10,9 @@
 // The two screens that show DIR B:'s rows were retaken when DIR came to print
 // the name and type together; the other eighteen are as they were.
 // KS48 keeps this historical oracle on its original-font input. Only the
-// historical pixel workload uses a disposable FONT-span restoration. Other
-// GLCD tests and Compact alias/rendering tests use the unmodified production ROM.
+// historical pixel workload serves the original font's rows at FNTGLY, the
+// ROM's one reader of its packed font. Other GLCD tests and Compact
+// alias/rendering tests use the unmodified production ROM.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -19,15 +20,12 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
-import {restoreHistoricalFont,validateHistoricalFont,historicalFontContext} from "./lib/historical-font.mjs";
+import {substituteHistoricalFont} from "./lib/historical-font.mjs";
 import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay, withShell } from "./lib/fixtures.mjs";
 
 const referenceBytes = readFileSync(resolve(ROOT, "test/glcd-screens.json"));
 assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"4af172005735ae5552fe065bdb10e8080c322e08b68ca81b9ac6dabb0c51f64b","the historical command list and oracle, with the two DIR screens retaken");
 const REF = JSON.parse(referenceBytes);
-// Bind the clone to this build's untouched input, not to a permanent ROM pin.
-const productionInput = romFor();
-const historicalContext = historicalFontContext(productionInput.rom,productionInput.symbols);
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "conout", "fill"];
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 
@@ -44,12 +42,9 @@ async function card() {
 /** A GLCD board at its first prompt, the GLCD console loaded; or, with
  *  matrix false, a serial board on the same card, which never loads it. */
 async function board({ matrix = true, historicalFont = false } = {}) {
-  let { rom, symbols } = romFor();
-  if (historicalFont) {
-    const original=readFileSync(resolve(ROOT,"format/font-original.bin"));
-    rom=restoreHistoricalFont(rom,symbols.get("FONT")-0xc000,original,historicalContext);
-  }
+  const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: await card(), clock: TEST_CLOCK, matrix });
+  if (historicalFont) m.glyphCalls = substituteHistoricalFont(m, readFileSync(resolve(ROOT, "format/font-original.bin")));
   m.historicalFont = historicalFont;
   m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
@@ -171,21 +166,16 @@ async function workloadRun({ historicalFont = false } = {}) {
 const workload = workloadRun(); // production input for TPA/CONOUT-stack readings
 
 test("the resident GLCD draws every screen of the workload as the driver did, byte for byte", { timeout: 1_800_000 }, async () => {
-  const {rom:selected,symbols}=romFor(),at=symbols.get("FONT")-0xc000;
-  const original=readFileSync(resolve(ROOT,"format/font-original.bin")),before=Buffer.from(selected);
-  const restored=restoreHistoricalFont(selected,at,original,historicalContext);
-  assert.deepEqual(Buffer.from(selected),before,"production source buffer unchanged");
-  assert.throws(()=>restoreHistoricalFont(selected,at,undefined,historicalContext),/original font required/);
+  const {rom:selected}=romFor(),before=Buffer.from(selected);
+  const original=readFileSync(resolve(ROOT,"format/font-original.bin")),probe={sym:()=>0,cpu:{cpu:{}}};
+  assert.throws(()=>substituteHistoricalFont(probe,undefined),/original font required/);
   const wrongOriginal=Buffer.from(original);wrongOriginal[0]^=8;
-  assert.throws(()=>restoreHistoricalFont(selected,at,wrongOriginal,historicalContext),/original font identity/);
-  assert.throws(()=>restoreHistoricalFont(selected,at,selected.subarray(at,at+768),historicalContext),/original font identity/);
-  const wrongSelected=Buffer.from(selected);wrongSelected[0]^=1;
-  assert.throws(()=>restoreHistoricalFont(wrongSelected,at,original,historicalContext),/selected production identity/);
-  const outside=Buffer.from(restored);outside[0]^=1;
-  assert.throws(()=>validateHistoricalFont(selected,outside,at,original,historicalContext),/unchanged native prefix/);
-  assert.throws(()=>validateHistoricalFont(selected,selected,at,original,historicalContext),/exact historical font bytes/);
+  assert.throws(()=>substituteHistoricalFont(probe,wrongOriginal),/original font identity/);
+  assert.throws(()=>substituteHistoricalFont(probe,original.subarray(0,384)),/original font size/);
   const { m, screens } = await workloadRun({ historicalFont: true });
   assert.equal(m.historicalFont, true);
+  assert.ok(m.glyphCalls() > 0, "the GLCD's glyphs came from the original font");
+  assert.deepEqual(Buffer.from(romFor().rom), before, "the production ROM unchanged");
   assert.deepEqual(screens, REF.screens, `historical-font input: the ST7920's graphics RAM against ${REF.from}'s driver`);
   assert.deepEqual(m.violations, []);
 });

@@ -682,7 +682,8 @@ export const MUTANTS_KS38B = [
 // KS36c: one mutant a part (KG44).
 const CPM3 = ["test/cpm3.test.mjs"];
 export const MUTANTS_KS36C = [
-  { name: "the font: service 15 one glyph out", ...ks34("src/services.asm", ["HWSFONT: LD HL,FONT"], ["HWSFONT: LD HL,FONT+8"], ["test/glcd.test.mjs"]) },
+  { name: "the font: FNTGLY one glyph out", ...ks34("src/services.asm", ["LD DE,FONT", "ADD HL,DE"], ["LD DE,FONT+4", "ADD HL,DE"], ["test/compact-display.test.mjs"]) },
+  { name: "the font: the last wide glyph's fifth column lost", ...ks34("src/services.asm", ["LD BC,4", "CPIR"], ["LD BC,3", "CPIR"], ["test/compact-display.test.mjs"]) },
   { name: "the startup rule: quiet for TNEBAD, not TNENODV", ...ks34(CCPF, ["AND H", "XOR TNENODV"], ["AND H", "XOR TNEBAD"], ["test/startup.test.mjs"]) },
   { name: "the startup rule: quiet typed too, STFLAG not read", ...ks34(CCPF, ["LD A,(STFLAG)", "AND H"], ["LD A,$FF", "AND H"], ["test/startup.test.mjs"]) },
   { name: "CON's aliases: GLCD taken for CRT:", ...ks34(CCPF, ["CPL", "ADD A,12"], ["CPL", "ADD A,10"], ["test/console.test.mjs"]) },

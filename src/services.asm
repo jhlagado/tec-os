@@ -523,68 +523,81 @@ RTCR1:
 ; 7 of B complements them; low bits
 ; below 20h give a space. FONT holds two
 ; rows a byte, the upper in the high
-; nibble; FONTW the glyphs with a fifth
-; column and its rows, bit 7 the top.
-; The PICO's pattern load uses it too.
-; Returns A=0, Z, NC. Keeps DE. Changes
-; BC.
+; nibble. FONTW lists the glyphs with a
+; fifth column, then the rows that have
+; it, bit 0 the bottom. The PICO's
+; pattern load uses it too. Returns A=0,
+; Z, NC. Keeps DE. Changes BC.
 
 FNTGLY:
   push de
+  ex de,hl       ; DE: the destination
   ld a,b
   rla            ; bit 7 into carry
   sbc a,a        ; FFh complements
-  ld e,a
+  ld c,a
   ld a,b
   and $7F
-  push hl        ; the destination
+  push af        ; the code, for FONTW
+  sub $20
+  jr nc,FNTG1    ; 20h..7Fh
+  xor a          ; controls: a space
+
+FNTG1:
+  ld l,a
+  ld h,0
+  add hl,hl
+  add hl,hl      ; four bytes a glyph
+  push de
+  ld de,FONT
+  add hl,de
+  pop de
+  ld b,4         ; two rows a byte
+
+FNTG2:
+  ld a,(hl)
+  and $F0        ; the upper row
+  xor c
+  ld (de),a
+  inc de
+  ld a,(hl)
+  add a,a
+  add a,a
+  add a,a
+  add a,a        ; the lower row
+  xor c
+  ld (de),a
+  inc de
+  inc hl
+  djnz FNTG2
+  pop af
+  push de        ; past the rows
   ld hl,FONTW
   ld bc,4        ; four wide glyphs
   cpir
-  ld d,b         ; none: no fifth
-  jr nz,FNTG1
+  jr nz,FNTG5    ; not one of them
   inc hl
   inc hl
   inc hl         ; to its rows
-  ld d,(hl)
-
-FNTG1:
-  sub $20
-  jr nc,FNTG2    ; 20h..7Fh
-  xor a          ; controls: a space
-
-FNTG2:
-  ld l,a
-  ld h,b         ; B is 0
-  add hl,hl
-  add hl,hl      ; four bytes a glyph
-  ld bc,FONT
-  add hl,bc
-  ld b,8         ; eight rows
+  ld b,(hl)
+  ex de,hl
 
 FNTG3:
-  ld a,(hl)
-  bit 0,b        ; odd rows: the low
-  jr z,FNTG4     ; nibble, then on
-  add a,a
-  add a,a
-  add a,a
-  add a,a        ; low nibble up
-  inc hl
+  dec hl         ; up from the bottom
+  srl b          ; this row's fifth?
+  jr c,FNTG4
+  jr nz,FNTG3    ; more above
+  jr FNTG5
 
 FNTG4:
-  and $F0
-  xor e          ; complemented
-  sla d          ; its fifth column?
-  jr nc,FNTG5
-  xor 8
+  ld a,(hl)
+  xor 8          ; the fifth column
+  ld (hl),a
+  inc b
+  dec b          ; more above?
+  jr nz,FNTG3
 
 FNTG5:
-  ex (sp),hl     ; to the destination
-  ld (hl),a
-  inc hl
-  ex (sp),hl
-  djnz FNTG3
   pop hl         ; HL past the rows
   pop de
   xor a
