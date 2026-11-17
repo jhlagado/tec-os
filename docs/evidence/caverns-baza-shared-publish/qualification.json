@@ -1,0 +1,10 @@
+{
+  "status": "WIP: native compile and structural size audit pass; gameplay, two strict runs and Viewer trial pending",
+  "compilerCommit": "eee4ee6",
+  "COMBytes": 29056,
+  "logicalBytes": 28946,
+  "sourceUnchanged": true,
+  "shellTPA": 41984,
+  "dynamicSpaceBeforeInitialAllocations": 12270,
+  "plan": "Origo studies/p3-tec-os/release-roadmap.md, Phase 3b"
+}

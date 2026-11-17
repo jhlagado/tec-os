@@ -34,7 +34,8 @@ export function layout(){
    const legacy=game[i]===0x11&&game.readUInt16LE(i+1)===n&&game[i+3]===1&&game.readUInt16LE(i+4)===0&&game[i+6]===0xcd;
    const target=game.readUInt16LE(i+1)-256;
    const compact=game[i]===0xcd&&game.readUInt16LE(i+3)===n&&game.readUInt16LE(i+5)===0&&target>=0&&game.subarray(target,target+10).equals(Buffer.from([0xe3,0x5e,0x23,0x56,0x23,0x4e,0x23,0x46,0x23,0xe3]));
-   if(legacy||compact)found.push(i+256);
+   const restart=game[i]===0xcf&&game.readUInt16LE(i+1)===n;
+   if(legacy||compact||restart)found.push(i+256);
   }
   assert.equal(found.length,1,'unique BASIC line '+n);return found[0];
  }

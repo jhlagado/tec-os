@@ -1,0 +1,20 @@
+{
+  "compilerSha256": "f8d4b8944be95451faa7aa0bc99e611f6793b7d4a8e413344e951e26ede07498",
+  "librarySha256": "29c07740630069921f93581c8527d5db057c63a073a95b37c7a020df92ae5e38",
+  "results": [
+    {
+      "name": "TIMES",
+      "bytes": 9216,
+      "sha256": "02a675a09ecd50e604e574755dcc15925809a0442e0b257f748bef92dbcb7714",
+      "stdout": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>baza times\r\r\n|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\bCOM written\r\n\r\nA:SYSTEM>",
+      "violations": []
+    },
+    {
+      "name": "BOUNCE",
+      "bytes": 16000,
+      "sha256": "68d9e9a1a3e327f94e9632bf827e66bd51f14ef715d7bf1d2a104007d349c0f0",
+      "stdout": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>baza bounce\r\r\n|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\bCOM written\r\n\r\nA:SYSTEM>",
+      "violations": []
+    }
+  ]
+}

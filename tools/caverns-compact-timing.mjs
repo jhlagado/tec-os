@@ -8,7 +8,7 @@ const commands=['take compass','inventory','north','west','west','south','west',
 function run(path){
  const image=new Uint8Array(fs.readFileSync(ROOT+'/dist/starter.img'));volume(image,'A').write('CAVBASIC.COM',fs.readFileSync(path));
  const bytes=fs.readFileSync(path);let context;
- for(let i=0;i<bytes.length-13;i++)if(bytes[i]===0xed&&bytes[i+1]===0x53&&bytes[i+4]===0xed&&bytes[i+5]===0x43&&bytes[i+8]===0xc9&&bytes.subarray(i+9,i+13).equals(Buffer.from('BZ01')))context=bytes.readUInt16LE(i+2);
+ for(let i=0;i<bytes.length-13;i++)if(bytes[i]===0xed&&bytes[i+1]===0x53&&bytes[i+4]===0xed&&bytes[i+5]===0x43&&bytes[i+8]===0xc9&&bytes.readUInt16LE(i+6)===bytes.readUInt16LE(i+2)+2)context=bytes.readUInt16LE(i+2);
  assert.ok(context,'source recorder context');
  const m=boot(image,{tms:true,matrix:true,width:80});let gcCalls=0;const step=m.step.bind(m);m.step=()=>{const gc=m.read(context+22)|m.read(context+23)<<8;if(gc>0&&m.pc===gc)gcCalls++;return step();};
  function keys(cmd){const mark=m.output.length,start=m.cycles,gcStart=gcCalls;m.enqueueInput(cmd+'\r','matrix');m.runUntilChecked(()=>{m.pumpInput();return !m.pending?.length&&((m.waitingForInput()&&m.text().endsWith('? '))||m.ready());},500000000,cmd);return {command:cmd,cycles:m.cycles-start,gcCalls:gcCalls-gcStart,output:m.text(mark)};}
