@@ -707,8 +707,10 @@ LINHC:
   jr LINHC
 
 ; Consume a terminal key without
-; inserting its escape bytes or moving
-; the cursor. CSI and SS3 share the
+; inserting its escape bytes. Plain up
+; and down use shell prompt history.
+; Other navigation is ignored.
+; CSI and SS3 share the
 ; final-byte range. A control key ends
 ; an incomplete sequence through its
 ; normal line-editing handler.
@@ -726,15 +728,38 @@ LINESC:
 
 LINCSI:
   call GETCHAR
+  cp 'A'         ; plain up: older
+  jr z,LINUP
+  cp 'B'         ; plain down: newer
+  jr z,LINDOWN
+  jr LINCSCK
+
+LINCSIN:
+  call GETCHAR   ; no history modifiers
+
+LINCSCK:
   cp $1B         ; restart the prefix
   jr z,LINESC
   cp SPACE       ; control: normal edit
   jp c,LINKEY
   cp $40         ; parameters/intermediates
-  jr c,LINCSI
+  jr c,LINCSIN
   cp $7F         ; DEL/high byte: normal
   jp nc,LINKEY
   jp LINLOOP     ; final consumed
+
+LINUP:
+  ld c,CTRLW     ; existing older action
+  jr LINARH
+
+LINDOWN:
+  ld c,CTRLN     ; existing newer action
+
+LINARH:
+  ld a,(HFLAG)   ; shell prompt only
+  or a
+  jp z,LINLOOP   ; program or bare CCP
+  jp LINHIST     ; no additional frame
 
 ; Function 11: return 1 for pending or
 ; BIOS-ready input, otherwise 0. An

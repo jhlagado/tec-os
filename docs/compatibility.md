@@ -147,8 +147,10 @@ leave the code at 0, and the line goes on. The shell's built-ins:
   emptied by a reset. A line equal to the newest is not stored again, and nor is
   one holding a 0. Programs receive ^W and ^N as characters in the buffer,
   and their lines are not kept.
-- Function 10 consumes terminal navigation sequences without echo or storage.
-  This applies to the shell, ROM prompt and program line input. A lone Escape
+- Function 10 consumes terminal navigation escape bytes without storing or
+  echoing them. At the shell prompt plain Up/Down recalls older/newer commands
+  through the existing ^W/^N history. Bare ROM and program line input ignore
+  navigation; raw character input retains it. A lone Escape
   is ignored. `ESC [` and `ESC O` start CSI and SS3 sequences, so manually
   typed text with those prefixes is interpreted the same way. CR and editing
   controls recover from an unfinished sequence. Raw BIOS and BDOS character

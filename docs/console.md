@@ -41,9 +41,11 @@ there is always a console. The 20 × 4 LCD is never the console.
 
 The shell, ROM prompt and programs using BDOS function 10 share the line
 editor. It consumes terminal key sequences without storing or echoing them.
-Up and down leave the command and cursor in place. Other CSI and SS3 keys,
-including left, right, Home and End, are also ignored. The shell's history
-keys remain Ctrl-W and Ctrl-N.
+At the shell prompt plain Up recalls older commands and Down newer ones,
+just like Ctrl-W and Ctrl-N. Recall replaces the current partial line; down
+past the newest gives an empty line. Bare CCP and program line input ignore
+arrows. Other CSI and SS3 keys, including modified arrows, left, right,
+Home and End, remain ignored.
 
 A lone Escape is ignored. An Escape followed by `[` or `O` begins a sequence,
 including when those characters were typed by hand. Enter or an editing
