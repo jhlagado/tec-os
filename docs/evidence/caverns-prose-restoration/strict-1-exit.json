@@ -1,0 +1,11 @@
+{
+  "command": "STRICT=1 npm test",
+  "children": [
+    {
+      "pid": 42643,
+      "state": "Z",
+      "exitCode": 0
+    }
+  ],
+  "queuedDuplicateRunCancelled": true
+}

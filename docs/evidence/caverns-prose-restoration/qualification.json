@@ -1,5 +1,5 @@
 {
-  "status": "WIP: source prose reviewed against gate states; two fresh combined strict runs pending",
+  "status": "WIP: first combined strict run passes all 1433 tests; independent second run and isolated Viewer gate pending",
   "sourceFile": "programs/CAVERNS.BAS",
   "comFile": "programs/CAVERNS.COM",
   "compiler": "eee4ee6846add13c0ea120fbf2de8be0ec08c0b1",
@@ -16,5 +16,17 @@
   "assemblyArtifact": "programs/CAVASM.COM",
   "starterSourceOnly": true,
   "physicalHardwareTested": false,
-  "stoppedCombinedRun": "Stopped without claiming qualification to remove a stale barred-door assertion in room prose; existing dynamic door message retained."
+  "stoppedCombinedRun": "Stopped without claiming qualification to remove a stale barred-door assertion in room prose; existing dynamic door message retained.",
+  "strictRuns": [
+    {
+      "index": 1,
+      "tests": 1433,
+      "pass": 1433,
+      "fail": 0,
+      "skipped": 0,
+      "commandExitCode": 0,
+      "logSha256": "bdd1cee60a0cbb0ac17a1557f0a00b91a3cf3d67ca8419f81f0b47adb703e027",
+      "codeCommit": "9b25a0cf"
+    }
+  ]
 }

@@ -1,0 +1,22 @@
+[
+  {
+    "scenario": "blast door",
+    "command": "light bomb with candle",
+    "output": "light bomb with candle\r\nBOOM! The door is torn from its hinges. The passage east is open.\r\n\r\nYou stand before an oak doorway in the eastern wall, its heavy timber bound\r\nwith iron. The entrance looks formidable. The passage south returns to the\r\ncavern.\r\nEast doorway blasted open.\r\n\r\n? "
+  },
+  {
+    "scenario": "blast door",
+    "command": "light bomb with candle",
+    "output": "light bomb with candle\r\nNot here.\r\n\r\nYou stand before an oak doorway in the eastern wall, its heavy timber bound\r\nwith iron. The entrance looks formidable. The passage south returns to the\r\ncavern.\r\nEast doorway blasted open.\r\n\r\n? "
+  },
+  {
+    "scenario": "full quest 5a4a1234",
+    "command": "north",
+    "output": "north\r\n\r\nYou stand before an oak doorway in the eastern wall, its heavy timber bound\r\nwith iron. The entrance looks formidable. The passage south returns to the\r\ncavern.\r\nEast: iron-bound door, barred within. Try explosives.\r\n\r\n? "
+  },
+  {
+    "scenario": "full quest 5a4a1234",
+    "command": "light bomb with candle",
+    "output": "light bomb with candle\r\nBOOM! The door is torn from its hinges. The passage east is open.\r\n\r\nYou stand before an oak doorway in the eastern wall, its heavy timber bound\r\nwith iron. The entrance looks formidable. The passage south returns to the\r\ncavern.\r\nEast doorway blasted open.\r\n\r\n? "
+  }
+]
