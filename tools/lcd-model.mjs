@@ -16,7 +16,7 @@ import { makeSvc } from "./lib/svc.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const MODEL = join(ROOT, "test/model/lcd");
-const MAIN = 16016; // main's ROM, the base every figure is a difference from
+const MAIN = 15717; // the ROM this branch is built on, without SAVE and USER: every figure is a difference from it
 
 function figures(patch) {
   const dir = mkdtempSync(join(tmpdir(), "lcd-model-"));

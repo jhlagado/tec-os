@@ -1,0 +1,85 @@
+diff -ruN a/src/console.asm b/src/console.asm
+--- a/src/console.asm
++++ b/src/console.asm
+@@ -349,6 +349,7 @@
+ 
+ BCONOUT:
+   call CONSEL
++  call LCMIR     ; on the LCD's last row
+   call VTOWN
+   ret nz
+   ld a,(CONMOD)
+diff -ruN a/src/lcd.asm b/src/lcd.asm
+--- a/src/lcd.asm
++++ b/src/lcd.asm
+@@ -185,6 +185,43 @@
+   ld bc,20*256+LCDDAT
+   ret
+ 
++; While another console is in use, show
++; the line being written on the LCD's
++; last row: printable C at the next of
++; its 20 cells, LF blanks the row. Keeps
++; BC and DE. Changes AF and HL.
++
++LCMIR:
++  call LCDCON
++  ret z          ; the LCD is the console
++  ld hl,LCMCOL
++  ld a,c
++  cp 10
++  jr z,LCMLF
++  sub ' '
++  cp $7F-' '
++  ret nc         ; not printable
++  ld a,(hl)
++  cp 20
++  ret nc         ; the row is full
++  inc (hl)
++  push bc
++  ld c,a
++  ld b,3
++  call LCSEL
++  pop bc
++  ld a,c
++  jp LCDD
++
++LCMLF:
++  ld (hl),0
++  push bc
++  ld bc,3*256+0
++  ld hl,LCMBLK   ; twenty blanks
++  call LCDROW
++  pop bc
++  ret
++
+ ; Mark row 3 ROM-owned (CDWRD), then
+ ; attempt HL's zero-terminated text.
+ ; Returns B=3; otherwise as LCDROW.
+diff -ruN a/src/ram.asm b/src/ram.asm
+--- a/src/ram.asm
++++ b/src/ram.asm
+@@ -89,8 +89,9 @@
+                  ; entries
+ PIREC: DS 13     ; 13-byte registry tail
+ PITIE: DS 1      ; tracked supported IE
+-  DS 1           ; remaining LBUF pad:
+-                 ; keeps shown at 42
++LCMCOL: DS 1     ; the LCD mirror's
++                 ; column; keeps shown
++                 ; at 42
+ PITPD: DS 1      ; drawn: 0 or PITPG
+ PITPS: DS 1      ; shown: 0 or PITPG
+ PIMV: DS 1       ; 1 builds hidden page
+diff -ruN a/src/text.asm b/src/text.asm
+--- a/src/text.asm
++++ b/src/text.asm
+@@ -51,6 +51,8 @@
+ 
+ CONHDR:
+   DB "CON: ",'$'
++LCMBLK:
++  DB "                    ",0
+ PRESSK:
+   DB "Press a key",'$'
+ FILEEX:

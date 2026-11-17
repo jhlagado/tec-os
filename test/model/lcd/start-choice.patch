@@ -1,0 +1,66 @@
+diff -ruN a/src/boot.asm b/src/boot.asm
+--- a/src/boot.asm
++++ b/src/boot.asm
+@@ -122,6 +122,7 @@
+   ldir
+   call SHOWVOL
+   call LCDVOLS
++  call STCHOOSE
+   xor a
+   ld (PZDU),a
+ 
+@@ -166,6 +167,42 @@
+   ld c,a
+   jp CCPENT
+ 
++; On the LCD console at cold boot offer
++; the others: C for the PICO9918, S for
++; serial, any other key or about three
++; seconds for the LCD. A keypad key held
++; for STARTUP.CMD's skip skips this too.
++; C with no PICO9918 keeps the LCD.
++; Changes AF/BC/DE/HL.
++
++STCHOOSE:
++  call LCDCON
++  ret nz         ; not the LCD
++  in a,(STSPORT)
++  and $40
++  ret z          ; the keypad's skip
++  ld hl,STCMSG   ; "C=CRT S=TTY? "
++  call PUTS
++  ld hl,KWPOLL*3/10
++  call KEYWT
++  push af
++  call PUTCRLF
++  pop af
++  ret z          ; no key: the LCD
++  and $DF        ; upper case
++  ld b,CMTTY
++  cp 'S'
++  jr z,STCH1
++  cp 'C'
++  ret nz         ; the LCD
++  ld a,(PIVEC+1)
++  or a
++  ret z          ; no PICO9918
++  ld b,CMCRT
++
++STCH1:
++  jp CONFLD
++
+ ; Recognise old layout by reading RAM,
+ ; never executing it. Require JP
+ ; RAMBIOS+3 at 0000h, JP at 0005h and JP
+diff -ruN a/src/text.asm b/src/text.asm
+--- a/src/text.asm
++++ b/src/text.asm
+@@ -51,6 +51,8 @@
+ 
+ CONHDR:
+   DB "CON: ",'$'
++STCMSG:
++  DB "C=CRT S=TTY? ",0
+ PRESSK:
+   DB "Press a key",'$'
+ FILEEX:

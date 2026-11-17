@@ -1,0 +1,54 @@
+diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
+--- a/src/cpm/ccpcmd.asm
++++ b/src/cpm/ccpcmd.asm
+@@ -226,6 +226,30 @@
+   call CONFLD
+   jr CONSHOW
+ 
++; A startup line that would move the
++; console off the LCD first offers to
++; stay: "Key=LCD" and about three
++; seconds. A key keeps the LCD and ends
++; the line. Keeps B. Changes AF/DE/HL.
++
++CONOFR:
++  ld a,(STFLAG)
++  or a
++  ret z          ; typed: no offer
++  call LCDCON
++  ret nz         ; not on the LCD
++  ld a,b
++  cp CMUC1
++  ret z          ; to UC1: no offer
++  push bc
++  ld de,KEYLCD   ; "Key=LCD "
++  call PUTSTR
++  ld hl,KWPOLL*3/10
++  call KEYWT
++  pop bc
++  ret z          ; no key: on with it
++  jp STARTED     ; a key: the LCD stays
++
+ ; Select B through CONFLD. UC1 calls
+ ; GLCLD to reuse/load a driver, with
+ ; C=0 for the name GLCD. The field is
+@@ -239,6 +263,7 @@
+ ; setup when CDMTX is clear.
+ 
+ CONFL:
++  call CONOFR    ; a startup line: LCD?
+   call CONFLD    ; write requested mode
+   ld a,b
+   cp CMUC1       ; UC1 wants a display
+diff -ruN a/src/text.asm b/src/text.asm
+--- a/src/text.asm
++++ b/src/text.asm
+@@ -51,6 +51,8 @@
+ 
+ CONHDR:
+   DB "CON: ",'$'
++KEYLCD:
++  DB "Key=LCD ",'$'
+ PRESSK:
+   DB "Press a key",'$'
+ FILEEX:
