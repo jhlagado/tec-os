@@ -778,8 +778,8 @@ function onStarter(command, { logged = "B" } = {}) {
   if (put) {
     assert.equal(file.length, 4096); assert.deepEqual(file, putBytes(16), "all sixteen pages hold PUT's known bytes");
   } else {
-    assert.match(text, /COM written\r\n/); assert.equal(file.length, 17408);
-    assert.equal(sha(file), "45e7829412750d0e5b8b114135c9170fa6c26262f0c2d450b94d616ae764efcd", "the complete pinned compiler result");
+    assert.match(text, /COM written\r\n/); assert.equal(file.length, 16000);
+    assert.equal(sha(file), "68d9e9a1a3e327f94e9632bf827e66bd51f14ef715d7bf1d2a104007d349c0f0", "the complete pinned compiler result");
   }
   for (const c of t.commits) {
     assert.ok(c.published.length <= file.length);
@@ -801,12 +801,12 @@ function onStarter(command, { logged = "B" } = {}) {
 function checkBounceWrites(b) {
   const data = b.writes.map((block, i) => [block, b.fn[i]]).filter(([block]) => !b.dir.has(block));
   const times = data.reduce((n, [block]) => n.set(block, (n.get(block) ?? 0) + 1), new Map());
-  // The independently hash-checked 17,408-byte COM has 136 CP/M records:
-  // 34 complete 512-byte blocks and no partial block.
-  assert.equal(times.size, 34);
-  assert.deepEqual([...times.values()], Array(34).fill(4),
-    "every block progresses four acknowledged versions");
-  assert.equal(data.length, 136); assert.equal(b.writes.length - data.length, 6);
+  // The independently hash-checked 16,000-byte COM has 125 CP/M records:
+  // 31 complete 512-byte blocks and one final single-record block.
+  assert.equal(times.size, 32);
+  assert.deepEqual([...times.values()].sort((a, b) => a - b), [1, ...Array(31).fill(4)],
+    "full blocks progress four acknowledged versions; the final partial block progresses once");
+  assert.equal(data.length, 125); assert.equal(b.writes.length - data.length, 6);
   assert.ok(b.writes.length <= 168, `${b.writes.length} BOUNCE card writes`);
 }
 

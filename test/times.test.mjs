@@ -4,8 +4,9 @@
 // and names in lower case. BAZA builds it on TEC-OS and TIMES runs on the
 // PICO9918 at 40 columns, turns away a number outside 1 to 12 and returns
 // to the prompt. With GLCD.SVC loaded and a JP held in RST 1, BAZA takes
-// RST 1 while it compiles and gives the held JP back, TIMES runs, and the
-// GLCD is still the console. A failed compile's return code stops a chained
+// RST 1 while it compiles and gives the held JP back, TIMES takes it while
+// it runs and gives it back, RST 6 stays as it was, and the GLCD is still
+// the console. A failed compile's return code stops a chained
 // line, and a compile onto a read-only drive fails through BAZA's own exit.
 // Emulator evidence. BAZA.COM and BAZA.RTL are pinned inputs (test/inputs.json).
 
@@ -64,25 +65,26 @@ function holdRst1(m) {
   return held;
 }
 
-/** Keys for M, each when it waits for one, then until it waits with nothing queued and DONE holds. */
-function keys(m, s, what, done) {
+/** Keys for M, each when it waits for one, then until it waits with nothing queued and DONE holds; EACH runs at every step. */
+function keys(m, s, what, done, each = () => {}) {
   m.enqueueInput(s, "matrix");
-  m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), LIMIT, what);
+  m.runUntilChecked(() => (m.pumpInput(), each(), !m.pending?.length && m.waitingForInput() && done()), LIMIT, what);
 }
 
 /**
  * BAZA TIMES, then TIMES answered TEC, 13 and 7: the console's output from
- * the run. DURING runs at each step of the build.
+ * the run. DURING runs at each step of the build, RUNNING at each step of
+ * TIMES.
  */
-function buildAndRun(m, during = () => {}) {
+function buildAndRun(m, during = () => {}, running = () => {}) {
   let mark = m.output.length;
   m.enqueueInput("baza times\r", "matrix");
   m.runUntilChecked(() => (m.pumpInput(), during(), !m.pending?.length && m.waitingForInput() && /COM written\r\n/.test(m.text(mark)) && m.ready()), LIMIT, "BAZA's build");
   mark = m.output.length;
-  keys(m, "times\r", "the first question", () => /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
-  keys(m, "TEC\r", "the second question", () => /PICK A NUMBER, 1 TO 12\? $/.test(m.text(mark)));
-  keys(m, "13\r", "the question again", () => /PLEASE PICK 1 TO 12\.\r\nPICK A NUMBER, 1 TO 12\? $/.test(m.text(mark)));
-  keys(m, "7\r", "the table and the prompt", () => m.ready());
+  keys(m, "times\r", "the first question", () => /WHAT IS YOUR NAME\? $/.test(m.text(mark)), running);
+  keys(m, "TEC\r", "the second question", () => /PICK A NUMBER, 1 TO 12\? $/.test(m.text(mark)), running);
+  keys(m, "13\r", "the question again", () => /PLEASE PICK 1 TO 12\.\r\nPICK A NUMBER, 1 TO 12\? $/.test(m.text(mark)), running);
+  keys(m, "7\r", "the table and the prompt", () => m.ready(), running);
   return m.text(mark);
 }
 
@@ -137,11 +139,17 @@ test("with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it com
   const rst1 = () => [0, 1, 2].map((i) => m.read(0x08 + i));
   const rest = () => Array.from({ length: 0x28 }, (_, i) => m.read(0x10 + i)); // RST 2 to RST 6, 10h-37h
   const others = rest();
-  let taken;
+  let taken, claimed = false, rst6 = true;
   const run = buildAndRun(m, () => {
     if (!taken && rst1().some((b, i) => b !== held[i])) taken = rst1();
+  }, () => {
+    claimed ||= rst1().some((b, i) => b !== held[i]);
+    rst6 &&= rest().slice(0x20).every((b, i) => b === others[0x20 + i]);
   });
   assert.ok(taken, "BAZA took RST 1 while it compiled");
+  // BAZA's runtime takes RST 1 to 5 while the program runs, never RST 6.
+  assert.ok(claimed, "TIMES took RST 1 while it ran");
+  assert.ok(rst6, "RST 6 as it was at every step of TIMES");
   assert.deepEqual(rst1(), held, "the held JP after BAZA and TIMES");
   assert.deepEqual(rest(), others, "RST 2 to RST 6 after BAZA and TIMES");
   assert.ok(run.includes(RUN.join("\r\n") + "\r\n"), run);
