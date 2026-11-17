@@ -162,8 +162,7 @@ WRITERC:
 ; result through RETA.
 
 FNREADSQ:
-  call READSEQ
-  ret            ; A result in A and HL
+  jp READSEQ     ; A result in A and HL
 
 ; Read PARAM's FCB record CR into DMA.
 ; Advance CR after a successful read.

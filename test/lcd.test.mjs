@@ -1,0 +1,437 @@
+// The character LCD as a console: the ROM's own 20 x 4 console for UC1 on
+// the runtime's panel, and LCD.SVC's 40 x 4 on two host panels of two
+// controllers (host/lcd40.mjs), one written here and one made of the
+// runtime's own controllers. Prototype tests for the LCD console model: each
+// names the proposed gate it measures. Emulator evidence only.
+
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { resolve } from "node:path";
+import { Machine } from "./lib/machine.mjs";
+import { ABI, GLCD_SVC, ROOT, TEST_CLOCK, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
+import { makeSvc } from "../tools/lib/svc.mjs";
+
+const LCD_SVC = (await makeSvc(resolve(ROOT, "drivers/lcd.asm"), { work: resolve(ROOT, "build/svc") })).file;
+const BANNER = "\r\nTEC-OS 0.1 for TEC-1G\r\n";
+
+/** A machine at its first prompt. files: name to bytes on A:. shell: SHELL.SVC and its startup line. */
+function start({ files = {}, card = true, shell = false, prompt = /A(:\S*)?>$/, ...opts } = {}) {
+  const { rom, symbols } = romFor();
+  const image = card ? standardCard() : undefined;
+  if (image && shell) withShell(image);
+  if (image) for (const [n, b] of Object.entries(files)) volume(image, "A").write(n, b);
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, glcd: false, ...opts });
+  // Every read of the LCD's data port, the panel's display memory read back,
+  // and every data byte written while LCDROW runs with the LCD as the console.
+  m.lcdReads = 0;
+  m.statusWrites = 0;
+  m.statusCalls = 0;
+  const { ioRead, ioWrite } = m.cpu.hardware;
+  m.cpu.hardware.ioRead = (port) => {
+    if ((port & 0xff) === 0x84) m.lcdReads += 1;
+    return ioRead(port);
+  };
+  let inRow = -1;
+  m.cpu.hardware.ioWrite = (port, value) => {
+    if (inRow >= 0 && (port & 0xff) === 0x84) m.statusWrites += 1;
+    return ioWrite(port, value);
+  };
+  const lcdrow = m.sym("LCDROW");
+  const vhgt = m.sym("VHGT");
+  const step = m.step.bind(m);
+  m.step = () => {
+    const sp = m.cpu.cpu.sp & 0xffff;
+    if (inRow >= 0 && sp > inRow) inRow = -1;
+    if (m.pc === lcdrow && m.read(vhgt) === 4) {
+      inRow = sp;
+      m.statusCalls += 1;
+    }
+    return step();
+  };
+  if (!card) return m;
+  m.expect(prompt, { from: 0, maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first prompt");
+  return m;
+}
+
+const rows = (m) => m.lcdScreen().map((l) => l.trimEnd());
+const rows40 = (m) => m.lcd40Screen().map((l) => l.trimEnd());
+const geometry = (m) => [m.read(m.sym("VWID")), m.read(m.sym("VHGT"))];
+const entry = (m) => m.read(6) | (m.read(7) << 8);
+const text = (lines) => Buffer.from(lines.join("\r\n") + "\r\n\x1a", "latin1");
+const lcd = (m) => m.tec1g.state.lcdCtrl;
+/** Run on until the LCD's rows satisfy TEST while a key is awaited. */
+const until = (m, testRows, what) => m.runUntil(() => m.waitingForInput() && testRows(rows(m)), 40_000_000, what);
+/** The line BDOS function 10 is reading, as typed so far. */
+const lineTaken = (m) => String.fromCharCode(...Array.from({ length: m.read(m.sym("LINCNT")) }, (_, i) => m.read(m.lineBuf + 2 + i)));
+
+// A program that asks TNLCD to write row 1 and keeps the result at 0130h.
+const RAWLCD = Uint8Array.from([
+  0x06, 0x01, 0x21, 0x40, 0x01, 0x0e, ABI.TNLCD, 0xcd, ABI.ABICALL & 0xff, ABI.ABICALL >> 8, 0x32, 0x30, 0x01, 0xc9,
+  ...new Array(0x32).fill(0),
+  ...Buffer.from("RAW ROW FROM PROGRAM", "latin1"),
+]);
+
+// INFO through the table: L, H and B kept at 0130h.
+const INFO = Uint8Array.from([0x0e, ABI.TNINFO, 0xcd, ABI.ABICALL & 0xff, ABI.ABICALL >> 8, 0x22, 0x30, 0x01, 0x78, 0x32, 0x32, 0x01, 0xc9]);
+
+/** A program that registers a table of COLS by ROWS on UC1, at 8000h, whose routines only return. Result at 0130h. */
+const register = (cols, rowCount) =>
+  Uint8Array.from([
+    0x21, 0x00, 0x80, 0x06, 0x07, 0x36, 0x10, 0x23, 0x36, 0x80, 0x23, 0x10, 0xf8, 0x36, cols, 0x23, 0x36, rowCount,
+    0x3e, 0xc9, 0x32, 0x10, 0x80, 0x06, 0x03, 0x21, 0x00, 0x80, 0x0e, ABI.TNDRVR, 0xcd, ABI.ABICALL & 0xff, ABI.ABICALL >> 8, 0x32, 0x30, 0x01, 0xc9,
+  ]);
+
+// A program that sends the LCD commands 05h (shift with each write), 0Fh
+// (cursor and blink), 18h twice (the display two columns left) and 48h (a
+// CGRAM address), each after the busy flag clears, and returns.
+const MODES = Uint8Array.from([...[0x05, 0x0f, 0x18, 0x18, 0x48].flatMap((c) => [0xdb, 0x04, 0x07, 0x38, 0xfb, 0x3e, c, 0xd3, 0x04]), 0xc9]);
+
+test("LC-1 with the matrix keyboard and no PICO9918 a reset starts on the LCD, 20 x 4, at no cost in TPA", () => {
+  const serial = start();
+  const m = start({ matrix: true, files: { "INFO.COM": INFO } });
+  assert.equal(m.read(m.sym("CONMOD")), 3, "UC1 in effect");
+  assert.equal(m.read(3) & 3, 3, "and in the IOBYTE");
+  assert.deepEqual(geometry(m), [20, 4]);
+  assert.deepEqual(rows(m), ["A: SYSTEM", "B: WORK", "", "A>"]);
+  assert.equal(m.serialText(), BANNER, "the banner on the serial line, and nothing after it");
+  assert.equal(entry(m), entry(serial), "the BDOS entry where a serial board has it");
+  assert.equal(lcd(m).lcdCursorOn, true, "the hardware cursor at the prompt");
+  assert.equal(lcd(m).lcdAddr, 0xd4 + 2, "on the cell after A>");
+  m.command("INFO");
+  assert.deepEqual([m.read(0x130), m.read(0x131)], [20, 4], "INFO's L and H");
+  assert.equal(m.read(0x132) & 0x04, 0, "no GLCD bit");
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-1 the Matrix switch off keeps the serial console, and a PICO9918 is preferred", () => {
+  const serial = start();
+  assert.equal(serial.read(serial.sym("CONMOD")), 0);
+  assert.deepEqual(rows(serial).slice(0, 3), ["TEC-OS 0.1  TEC-1G", "A: SYSTEM", "B: WORK"], "the LCD shows status");
+  const pico = start({ matrix: true, tms: true });
+  assert.equal(pico.read(pico.sym("CONMOD")), 1);
+  assert.deepEqual(rows(pico).slice(0, 3), ["TEC-OS 0.1  TEC-1G", "A: SYSTEM", "B: WORK"]);
+  assert.equal(pico.serialText(), "", "its banner on the PICO9918");
+});
+
+test("LC-1 CON TTY in STARTUP.CMD gives a keyboard board the serial console, and serial bytes do not reach the LCD's console", () => {
+  const tty = start({ matrix: true, files: { "STARTUP.CMD": startupFile("CON TTY") } });
+  assert.equal(tty.read(tty.sym("CONMOD")), 0);
+  assert.match(tty.serialText(), /CON: TTY:\r\nA>$/);
+  const m = start({ matrix: true });
+  const before = m.output.length;
+  m.tec1g.queueSerial([..."DIR\r"].map((c) => c.charCodeAt(0)));
+  const end = m.cycles + 8_000_000;
+  m.runUntil(() => m.cycles >= end, 9_000_000, "two seconds at the prompt");
+  assert.equal(m.output.length, before, "nothing echoed");
+  assert.deepEqual(rows(m), ["A: SYSTEM", "B: WORK", "", "A>"]);
+});
+
+test("LC-2 characters, wrap, CR, LF and clear at 20 columns", () => {
+  const m = start({ matrix: true, files: { "T.TXT": text(["12345678901234567890AB", "a\tb\tc\tZ"]), "W.TXT": text(["12345678901234567890", "x"]), "F.TXT": Buffer.from("one\r\n\x0ctwo\r\n\x1a", "latin1") } });
+  m.command("TYPE T.TXT");
+  // A full row wraps at the next character. The BDOS spreads its tabs to
+  // columns 8, 16 and 24, so the Z is on a row of its own.
+  assert.deepEqual(rows(m), ["a       b       c", "    Z", "", "A>"]);
+  m.command("TYPE W.TXT");
+  assert.deepEqual(rows(m), ["12345678901234567890", "x", "", "A>"], "a full row and CR LF leave no blank row");
+  m.command("TYPE F.TXT");
+  assert.deepEqual(rows(m), ["two", "", "A>", ""], "form feed clears and homes");
+});
+
+test("LC-3 a scroll moves the rows by reading the panel's own memory", () => {
+  const m = start({ matrix: true, files: { "S.TXT": text(["row one", "row two", "row three", "row four", "row five"]) } });
+  const before = m.lcdReads;
+  m.command("TYPE S.TXT");
+  assert.deepEqual(rows(m), ["row four", "row five", "", "A>"]);
+  assert.ok(m.lcdReads - before >= 5 * 3 * 20, `${m.lcdReads - before} cells read back`);
+});
+
+test("LC-3 the screen is the same on a panel whose address counter steps as a real controller's does", () => {
+  const files = { "S.TXT": text(["row one", "12345678901234567890AB", "row three", "row four", "row five"]) };
+  const runtime = start({ matrix: true, files });
+  const real = start({ matrix: true, lcdReal: true, files });
+  for (const m of [runtime, real]) {
+    m.command("TYPE S.TXT");
+    m.command("DIR");
+  }
+  assert.deepEqual(rows40(real), rows(runtime));
+  assert.deepEqual([rows(runtime)[0], rows(runtime)[3]], ["A>DIR", "A>"]);
+});
+
+test("LC-4 a typed line: echo, backspace, ^U, ^R, and the cursor where the next key goes", () => {
+  const m = start({ matrix: true });
+  m.type("DIX");
+  until(m, (r) => r[3] === "A>DIX", "the echo");
+  assert.equal(lcd(m).lcdAddr, 0xd4 + 5);
+  m.type("\bR");
+  until(m, (r) => r[3] === "A>DIR", "the backspace");
+  m.type("\x15CON");
+  until(m, (r) => r[3] === "CON", "^U");
+  assert.equal(rows(m)[2], "A>DIR#");
+  m.type("\x12");
+  until(m, (r) => r[2] === "CON#" && r[3] === "CON", "^R");
+  m.type("\r");
+  m.expect(/CON: UC1:\r\nA>$/);
+  assert.equal(lcd(m).lcdCursorOn, true);
+});
+
+test("LC-4 backspace crosses the wrap: the screen shows the line that will be taken", () => {
+  const m = start({ matrix: true });
+  m.type("ABCDEFGHIJKLMNOPQRSTUVW");
+  until(m, (r) => r[3] === "STUVW", "the wrapped line");
+  assert.equal(rows(m)[2], "A>ABCDEFGHIJKLMNOPQR");
+  m.type("\b\b\b\b\b\b\b");
+  until(m, (r) => r[3] === "" && r[2] === "A>ABCDEFGHIJKLMNOP", "seven characters erased across the wrap");
+  assert.equal(lineTaken(m), "ABCDEFGHIJKLMNOP");
+  assert.equal(lcd(m).lcdAddr, 0x94 + 18, "the cursor after the P, on the row above");
+  m.type("XYZ");
+  until(m, (r) => r[2] === "A>ABCDEFGHIJKLMNOPXY" && r[3] === "Z", "typed across the wrap again");
+  assert.equal(lineTaken(m), "ABCDEFGHIJKLMNOPXYZ");
+});
+
+test("LC-4 under the shell's prompt a wrapped line is erased, recalled and replaced with the screen in step", () => {
+  const m = start({ matrix: true, shell: true, prompt: />$/, files: { "LINES.TXT": text(["one"]) } });
+  const prompt = rows(m).findLast((r) => r !== "");
+  assert.equal(prompt, "A:SYSTEM>");
+  m.type("TYPE LINES.TXT");
+  until(m, (r) => r.includes("TXT"), "the line wrapped after LINES.");
+  assert.ok(rows(m).includes("A:SYSTEM>TYPE LINES."));
+  m.type("\b\b\b\b\b\b");
+  until(m, (r) => r.includes("A:SYSTEM>TYPE LIN") && !r.includes("TXT"), "six characters erased across the wrap");
+  assert.equal(lineTaken(m), "TYPE LIN");
+  m.type("ES.TXT\r");
+  m.expect(/one\r\n[\s\S]*>$/, { maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the prompt after TYPE");
+  const last = (r, n) => r.filter((x) => x !== "").slice(-n);
+  m.type("\x17"); // ^W: the line before
+  until(m, (r) => lineTaken(m) === "TYPE LINES.TXT" && last(r, 2).join("|") === "A:SYSTEM>TYPE LINES.|TXT", "the recalled line, wrapped");
+  m.type("\x0e"); // ^N: the line after it, none
+  until(m, (r) => lineTaken(m) === "" && last(r, 1)[0] === "A:SYSTEM>", "both rows of the recalled line erased");
+  m.type("DIR");
+  until(m, (r) => last(r, 1)[0] === "A:SYSTEM>DIR", "the new line");
+  assert.equal(lineTaken(m), "DIR");
+});
+
+test("LC-4 a line longer than the screen is taken whole", () => {
+  const m = start({ matrix: true });
+  const long = "ECHO" + "ABCDEFGHIJ".repeat(9); // 94 characters with the prompt: more than 80 cells
+  m.type(long);
+  until(m, (r) => r[3] !== "" && r[3] === long.slice(-r[3].length) && r[3].length === ("A>" + long).length % 20, "the line's tail on the last row");
+  assert.equal(lineTaken(m), long);
+  m.mark = m.output.length;
+  m.type("\r");
+  assert.match(m.expect(/A>$/), new RegExp(`${long}\\?`), "the CCP names the whole word");
+});
+
+test("LC-5 CON LCD and CON LCD 20 select it; CON LCD 40 is refused with nothing changed", () => {
+  const m = start({ matrix: true, tms: true });
+  assert.match(m.command("CON LCD"), /CON: UC1:/);
+  assert.deepEqual(geometry(m), [20, 4]);
+  assert.equal(rows(m)[0], "CON: UC1:");
+  assert.match(m.command("CON PICO"), /CON: CRT:/);
+  assert.match(m.command("CON LCD 20"), /CON: UC1:/);
+  assert.match(m.command("CON LCD 40"), /\r\n40\?\r\n/);
+  assert.equal(m.read(m.sym("CONMOD")), 3, "still the LCD");
+  assert.deepEqual(geometry(m), [20, 4]);
+  for (const line of ["CON LCD 2", "CON LCD 200", "CON LCD20", "CON LCDX"]) assert.match(m.command(line), /\?\r\n/, line);
+  assert.match(m.command("CON TTY"), /CON: TTY:/);
+  assert.equal(m.read(m.sym("CONMOD")), 0);
+});
+
+test("LC-5 CON LCD is refused while GLCD.SVC holds UC1, and UNLOAD gives UC1 back to the LCD", () => {
+  const { rom, symbols } = romFor();
+  const image = standardCard();
+  volume(image, "A").write("GLCD.SVC", GLCD_SVC);
+  volume(image, "A").write("INFO.COM", INFO);
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, matrix: true });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first prompt");
+  assert.deepEqual(geometry(m), [20, 4], "the LCD until the driver loads");
+  assert.match(m.command("CON UC1"), /CON: UC1:/);
+  assert.deepEqual(geometry(m), [21, 8], "CON UC1 loads the GLCD's driver, as it always has");
+  m.command("INFO");
+  assert.equal(m.read(0x132) & 0x04, 0x04, "the GLCD bit");
+  assert.match(m.command("CON LCD"), /LCD\?/);
+  assert.deepEqual(geometry(m), [21, 8]);
+  assert.match(m.command("CON GLCD"), /CON: UC1:/);
+  m.command("UNLOAD");
+  assert.deepEqual(geometry(m), [20, 4], "the LCD again");
+  assert.ok(rows(m).includes("A>"));
+});
+
+test("LC-5 a table a program registers on UC1 under the LCD takes the console at the next call", () => {
+  const m = start({ matrix: true, files: { "REG.COM": register(10, 5) } });
+  m.command("REG");
+  assert.equal(m.read(0x130), 0, "registered");
+  assert.deepEqual(geometry(m), [10, 5], "the table's size");
+  assert.equal(m.read(m.sym("VPUTV")) | (m.read(m.sym("VPUTV") + 1) << 8), 0x8010, "and its routines");
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+});
+
+test("LC-5 UC1 asked for with no keyboard, and CRT with no PICO9918, fall back to serial", () => {
+  const none = start({});
+  assert.match(none.command("CON LCD"), /CON: TTY:/);
+  assert.match(none.command("CON UC1"), /CON: TTY:/);
+  const lcdBoard = start({ matrix: true });
+  assert.match(lcdBoard.command("CON CRT"), /CON: TTY:/);
+  assert.equal(lcdBoard.read(lcdBoard.sym("CONMOD")), 0);
+});
+
+test("LC-6 the raw row service is refused while the LCD is the console, and works again after CON TTY", () => {
+  const m = start({ matrix: true, files: { "RAW.COM": RAWLCD } });
+  m.command("RAW");
+  assert.equal(m.read(0x130), ABI.TNENODV, "TNENODV");
+  assert.ok(!rows(m).some((r) => r.includes("RAW ROW")), "nothing written");
+  m.command("CON TTY");
+  m.command("RAW");
+  assert.equal(m.read(0x130), 0);
+  assert.equal(rows(m)[1], "RAW ROW FROM PROGRAM");
+});
+
+test("LC-6 once the LCD is the console no status text is written: the labels, GLCD? and CARD? at a retry", () => {
+  const m = start({ matrix: true });
+  assert.ok(m.statusCalls >= 2, "the two labels were asked for");
+  m.command("CON GLCD"); // no GLCD.SVC: the word GLCD? is asked for
+  assert.ok(m.statusCalls >= 3);
+  assert.equal(m.statusWrites, 0, "and no byte of them reached the panel");
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  const d = start({ matrix: true, card: false });
+  d.expect(/R retry> $/, { from: 0, maxCycles: 200_000_000 });
+  d.mark = d.output.length;
+  d.typeMatrix("R");
+  d.expect(/R retry> $/, { maxCycles: 200_000_000 });
+  assert.ok(d.statusCalls >= 2, "the banner and CARD? were asked for at the retry");
+  assert.equal(d.statusWrites, 0);
+});
+
+test("LC-6 four rows mean the LCD: a four-row table on UC1 stops the raw row service, an eight-row one does not", () => {
+  const four = start({ matrix: true, files: { "REG.COM": register(16, 4), "RAW.COM": RAWLCD } });
+  four.command("REG");
+  four.command("RAW");
+  assert.equal(four.read(0x130), ABI.TNENODV);
+  const eight = start({ matrix: true, files: { "REG.COM": register(16, 8), "RAW.COM": RAWLCD } });
+  eight.command("REG");
+  eight.command("RAW");
+  assert.equal(eight.read(0x130), 0);
+  assert.equal(rows(eight)[1], "RAW ROW FROM PROGRAM");
+});
+
+test("LC-7 a warm boot keeps the screen and the console, and a reset starts it again", () => {
+  const m = start({ matrix: true, files: { "RAW.COM": RAWLCD } });
+  m.command("RAW"); // a program's exit is a warm boot
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  assert.deepEqual(rows(m).slice(-3), ["A>RAW", "", "A>"]);
+  m.reset();
+  m.expect(/A(:\S*)?>$/, { maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the prompt after the reset");
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  assert.deepEqual(rows(m), ["A: SYSTEM", "B: WORK", "", "A>"]);
+});
+
+test("LC-7 a program's entry mode, blink, CGRAM address and display shift are gone after its exit", () => {
+  const m = start({ matrix: true, files: { "MODES.COM": MODES } });
+  m.command("MODES");
+  const s = lcd(m);
+  assert.deepEqual([s.lcdEntryIncrement, s.lcdEntryShift], [true, false], "addresses rise, no shift with a write");
+  assert.equal(s.lcdCursorBlink, false, "no blink");
+  assert.equal(s.lcdAddrMode, "ddram", "the display's memory addressed");
+  assert.equal(s.lcdDisplayShift, 0, "the display not shifted");
+  assert.deepEqual(rows(m).slice(-3), ["A>MODES", "", "A>"]);
+  assert.equal(s.lcdAddr, 0xd4 + 2, "the cursor after the prompt");
+});
+
+test("LC-8 with no card the retry prompt is on the LCD, its long line wrapped, and the matrix keyboard's R retries", () => {
+  const m = start({ matrix: true, card: false });
+  m.expect(/R retry> $/, { from: 0, maxCycles: 200_000_000 });
+  assert.deepEqual(rows(m), ["No volume mounted, e", "rror 01", "R retry>", ""]);
+  assert.equal(m.serialText(), BANNER);
+  m.mark = m.output.length;
+  m.typeMatrix("R");
+  m.expect(/R retry> $/, { maxCycles: 200_000_000 });
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  assert.ok(rows(m).includes("R retry> R"), "the first prompt and its key are still on the screen");
+});
+
+test("LC-9 [more] pages three lines at a time under the shell, and twenty-three on a PICO9918", () => {
+  const files = { "L.TXT": text(Array.from({ length: 30 }, (_, i) => `line ${i + 1}`)) };
+  const m = start({ matrix: true, shell: true, prompt: />$/, files });
+  m.mark = m.output.length;
+  m.type("TYPE L.TXT\r");
+  m.expect(/\[more\]$/, { maxCycles: 200_000_000 });
+  assert.deepEqual(rows(m), ["line 1", "line 2", "line 3", "[more]"]);
+  m.mark = m.output.length;
+  m.type(" ");
+  m.expect(/\[more\]$/, { maxCycles: 200_000_000 });
+  assert.deepEqual(rows(m), ["line 4", "line 5", "line 6", "[more]"]);
+  const pico = start({ matrix: true, tms: true, shell: true, prompt: />$/, files });
+  pico.mark = pico.output.length;
+  pico.type("TYPE L.TXT\r");
+  const page = pico.expect(/\[more\]$/, { maxCycles: 200_000_000 });
+  assert.equal(page.split("\r\n").filter((l) => /^line \d+$/.test(l)).length, 23);
+});
+
+for (const panel of [true, "runtime"]) {
+  const name = panel === true ? "the host's two-controller panel" : "a panel of two of the runtime's controllers";
+  test(`LC-10 LCD.SVC on ${name} is 40 x 4, and UNLOAD gives UC1 back to the ROM's console`, () => {
+    const { rom, symbols } = romFor();
+    const image = standardCard();
+    const a = volume(image, "A");
+    a.write("LCD.SVC", LCD_SVC);
+    a.write("STARTUP.CMD", startupFile("LCD.SVC"));
+    a.write("INFO.COM", INFO);
+    a.write("S.TXT", text(["0123456789012345678901234567890123456789XY"]));
+    const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, matrix: true, glcd: false, lcd40: panel });
+    m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
+    m.runUntil(() => m.ready(), 200_000_000, "the first prompt");
+    assert.deepEqual(geometry(m), [40, 4]);
+    assert.equal(entry(m) & 0xff, 0, "a loaded driver's page");
+    m.command("TYPE S.TXT");
+    // Written on row 3, the second controller's, and scrolled up to row 0, the first's.
+    assert.deepEqual(rows40(m), ["0123456789012345678901234567890123456789", "XY", "", "A>"], "rows moved from one controller to the other");
+    assert.deepEqual(m.lcd40.cursor(), { row: 3, col: 2 }, "the cursor on the second controller alone");
+    m.command("INFO");
+    assert.deepEqual([m.read(0x130), m.read(0x131)], [40, 4], "INFO's L and H");
+    assert.equal(m.read(0x132) & 0x04, 0, "no GLCD bit for a four-row driver");
+    assert.match(m.command("CON LCD 40"), /CON: UC1:/);
+    assert.match(m.command("CON LCD 20"), /\r\n20\?\r\n/);
+    assert.match(m.command("CON GLCD"), /\r\nGLCD\?\r\n/, "CON GLCD is refused: another display's driver holds UC1");
+    assert.deepEqual(geometry(m), [40, 4]);
+    assert.match(m.command("CON TTY"), /CON: TTY:/);
+    assert.match(m.command("CON GLCD"), /\r\nGLCD\?\r\n/);
+    assert.equal(m.read(m.sym("CONMOD")), 0, "and nothing changed");
+    assert.match(m.command("CON UC1"), /CON: UC1:/);
+    assert.deepEqual(geometry(m), [40, 4], "CON UC1 selects what holds UC1");
+    m.command("UNLOAD");
+    assert.deepEqual(geometry(m), [20, 4], "the ROM's console");
+    assert.deepEqual(m.violations, []);
+  });
+}
+
+test("LC-10 LCD.SVC is refused, with nothing loaded, unless two separate controllers answer", () => {
+  // The 20 x 4 panel; that panel seen at the second ports too; and no panel.
+  for (const [what, opts] of [
+    ["one controller", {}],
+    ["one controller at both ports", { lcdReal: "aliased" }],
+    ["no panel", { lcd: false }],
+  ]) {
+    const typed = start({ matrix: true, files: { "LCD.SVC": LCD_SVC }, ...opts });
+    const before = entry(typed);
+    assert.match(typed.command("LCD.SVC"), /LCD\.SVC\?/, what);
+    assert.equal(entry(typed), before, `${what}: nothing loaded`);
+    assert.deepEqual(geometry(typed), [20, 4], `${what}: the ROM's console stays`);
+    const quiet = start({ matrix: true, files: { "LCD.SVC": LCD_SVC, "STARTUP.CMD": startupFile("LCD.SVC") }, ...opts });
+    assert.doesNotMatch(quiet.text(0), /LCD\.SVC\?/, `${what}: quiet from a startup line`);
+    assert.equal(entry(quiet), before);
+  }
+});
+
+test("LC-11 a panel that never answers costs bounded time and leaves the console running", () => {
+  const m = start({ matrix: true, lcd: false, files: { "S.TXT": text(["row one", "row two", "row three", "row four", "row five"]) } });
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  const from = m.cycles;
+  m.command("TYPE S.TXT");
+  // 11,635,414 measured: the bound is a quarter over it.
+  assert.ok(m.cycles - from < 14_600_000, `${m.cycles - from} T-states for five lines and their scrolls`);
+  assert.match(m.command("CON TTY"), /CON: TTY:/);
+});

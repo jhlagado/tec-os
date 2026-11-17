@@ -150,7 +150,12 @@ NPAD:     DS    1
 NMTX:     DS    1
 
 ; Three block buffers: BUFS keeps a
-; block's saved contents in SD8.
+; block's saved contents in SD8. Each
+; starts an even page, which the SD
+; driver's block read needs; the build
+; checks it.
+
+  ORG $1200
 
 BUFA:     DS    512
 BUFB:     DS    512

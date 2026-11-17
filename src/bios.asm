@@ -391,7 +391,6 @@ CDI:
 ; saved state and returns A=0 success or
 ; 1 error. DMA is needed only through
 ; this call. Change BC/DE/HL and flags.
-; A full cache fill also changes I.
 
 BREAD:
   call CDI
@@ -413,7 +412,7 @@ BREAD:
 ; warm boot, remount or eviction. Falls
 ; into BRET: A=0 success or 1 error,
 ; interrupt state restored. Change
-; BC/DE/HL/F, and I on a full pre-read.
+; BC/DE/HL/F.
 
 BWRITE:
   call CDI

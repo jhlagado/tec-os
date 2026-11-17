@@ -1,0 +1,53 @@
+diff -ruN a/src/boot.asm b/src/boot.asm
+--- a/src/boot.asm
++++ b/src/boot.asm
+@@ -124,7 +124,6 @@
+   ld bc,BIOSLEN
+   ldir
+   call SHOWVOL
+-  call LCDVOLS
+   xor a
+   ld (PZDU),a
+ 
+diff -ruN a/src/lcd.asm b/src/lcd.asm
+--- a/src/lcd.asm
++++ b/src/lcd.asm
+@@ -230,38 +230,6 @@
+   inc hl
+   jr LCDS
+ 
+-; Show A:/B: labels on LCD rows 1/2.
+-; A missing volume or descriptor-read
+-; failure leaves that row unchanged.
+-; LINEBUF is scroll scratch: no console
+-; call while its label text is live.
+-; Changes AF, BC, DE, HL, IX.
+-
+-LCDVOLS:
+-  ld c,0
+-
+-LCDV:
+-  push bc
+-  call DRVDESC   ; Z: IX=descriptor
+-  pop bc
+-  jr nz,LCDVN    ; absent/read error
+-  ld hl,LINEBUF
+-  call DRVLAB
+-  push bc
+-  ld a,c
+-  inc a
+-  ld b,a
+-  ld hl,LINEBUF
+-  call LCDROW
+-  pop bc
+-
+-LCDVN:
+-  inc c
+-  ld a,c
+-  cp 2
+-  jr c,LCDV
+-  ret
+-
+ ; Format C's drive letter, ": ", the
+ ; 11 raw label bytes at IX+DLABEL and
+ ; a zero into 15 writable bytes at HL.

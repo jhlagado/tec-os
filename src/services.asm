@@ -130,6 +130,9 @@ HWSDD:
 
 ; LCD: B=row 0-3, HL -> 20 raw bytes.
 ; B>=4 returns TNEBAD before effects.
+; While the LCD is the console the
+; panel is the console's: TNENODV, and
+; nothing is written.
 ; Row 3 clears CDWRD so ROM cleanup
 ; cannot erase the program's text.
 ; All 20 bytes, including zero, are sent
@@ -143,6 +146,9 @@ HWSLCD:
   cp 4
   ld a,TNEBAD
   jr nc,HWERR
+  call LCDCON
+  ld a,TNENODV
+  jr z,HWERR
   push hl
   ld a,b
   cp 3
@@ -151,19 +157,16 @@ HWSLCD:
   res 7,(hl)
 
 HWSL1:
-  ld hl,LCDROWS
-  ld e,b
-  ld d,0
-  add hl,de
-  ld a,(hl)
-  call LCDC
+  push bc
+  ld c,0
+  call LCSEL     ; the row's address
+  pop bc
   pop hl
   ld b,20
 
 HWSLC:
-  call LCDWAIT
   ld a,(hl)
-  out (LCDDAT),a
+  call LCDD
   inc hl
   djnz HWSLC
   xor a

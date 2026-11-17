@@ -1,0 +1,99 @@
+diff -ruN a/src/lcd.asm b/src/lcd.asm
+--- a/src/lcd.asm
++++ b/src/lcd.asm
+@@ -86,6 +86,8 @@
+   jr z,LCVP1     ; a cursor flip
+   and $7F
+   ld e,a
++  call LCSADR
++  ld (hl),e      ; the copy's cell
+   call LCSEL
+   ld a,e
+   jr LCDD
+@@ -140,33 +142,63 @@
+   ret c
+   ret z
+   ld e,a         ; cells to blank
++  call LCSADR
++  push hl
+   call LCSEL
++  pop hl
+ 
+ LCVC1:
++  ld (hl),' '    ; in the copy too
++  inc hl
+   ld a,' '
+   call LCDD
+   dec e
+   jr nz,LCVC1
+   ret
+ 
++; HL = the copy's cell for row B,
++; column C. Keeps BC and DE.
++
++LCSADR:
++  ld a,b
++  add a,a
++  add a,a
++  add a,b        ; 5 x row
++  add a,a
++  add a,a        ; 20 x row
++  add a,c
++  add a,LOW(LCDSCR)
++  ld l,a
++  ld a,HIGH(LCDSCR)
++  adc a,0
++  ld h,a
++  ret
++
+ ; Console row read: row B into LINEBUF,
+-; from the panel's own display memory,
+-; which is the only copy of the screen.
+-; Changes AF, BC and HL.
++; from the copy. The panel is not read.
++; Changes AF, BC, DE and HL.
+ 
+ LCVRD:
+-  call LCVROW
+-
+-LCVR1:
+-  call LCDWAIT
+-  ini            ; a cell in, B counts
+-  jr nz,LCVR1
++  ld c,0
++  call LCSADR
++  ld de,LINEBUF
++  ld bc,20
++  ldir
+   ret
+ 
+-; Console row write: LINEBUF to row B.
+-; Changes AF, BC and HL.
++; Console row write: LINEBUF to row B,
++; in the copy and on the panel.
++; Changes AF, BC, DE and HL.
+ 
+ LCVWR:
++  ld c,0
++  push bc
++  call LCSADR
++  ex de,hl
++  ld hl,LINEBUF
++  ld bc,20
++  ldir
++  pop bc
+   call LCVROW
+ 
+ LCVW1:
+diff -ruN a/src/ram.asm b/src/ram.asm
+--- a/src/ram.asm
++++ b/src/ram.asm
+@@ -115,6 +115,8 @@
+ 
+ LINEBUF:
+   DS 80          ; 80-byte row buffer
++LCDSCR: DS 80    ; the LCD console's
++                 ; own copy of its text
+ VPUTV: DS 2      ; copied driver vectors
+ VGETV: DS 2
+ VCLRV: DS 2

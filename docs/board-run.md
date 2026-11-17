@@ -1,3 +1,22 @@
+# Board checks
+
+## First check with TEC-OS in the ROM socket: the LCD console scrolls
+
+The LCD console keeps its text only in the panel, and scrolls by reading rows
+back from it. No board has yet shown that read, so check it before anything
+else that uses the LCD console.
+
+1. Fit the TEC-OS ROM and a starter card. Turn the Matrix switch on. Use a
+   board with no PICO9918, or type `CON LCD`.
+2. The LCD shows the drives and `A>`. Type `DIR`.
+3. **Good:** the listing scrolls up a row at a time and each row that moves
+   up reads as it did below.
+4. **Bad:** rows that have moved up show wrong or blank characters, while
+   each new bottom row is right. The panel's data cannot be read on this
+   board. Report it: the console then needs its other form, which keeps a
+   copy of the 80 characters in RAM. That form takes 80 bytes from every
+   program's memory and about 45 more bytes of ROM.
+
 # A board run of the diagnostics
 
 A short checklist for running the diagnostics on a TEC-1G with MON3 in the

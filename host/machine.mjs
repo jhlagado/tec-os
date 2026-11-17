@@ -14,6 +14,7 @@ import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
 import { getMatrixCombosForAscii } from "@jhlagado/debug80-runtime/platforms/tec1g/matrix-keymap";
 import { Ds1302 } from "@jhlagado/debug80-runtime/platforms/tec1g/ds1302";
 import { toLatin1 } from "../tools/lib/bytes.mjs";
+import { Lcd20x4, Lcd40x4, Lcd40x4Runtime } from "./lcd40.mjs";
 
 const MODIFIER_KEY = { shift: 0, ctrl: 1, fn: 2 };
 
@@ -45,8 +46,15 @@ export class Machine {
    * fitted, so bit 3 changes nothing; expands: 1 when EXPAND 1 is not (a
    * 16 KiB U9), so bit 2 changes nothing. ROM, the boot overlay and PROTECT
    * (4000h-7FFFh) behave as before.
+   * lcd: false for a machine with no character LCD: its busy flag never
+   * clears. lcd40: true for a 40 x 4 panel on two controllers in place of the
+   * runtime's 20 x 4 (host/lcd40.mjs), or "runtime" for the same panel made
+   * of two of the runtime's controllers; read through lcd40Screen(). lcdReal:
+   * true for a 20 x 4 panel whose address counter steps as a real
+   * controller's does, or "aliased" for that panel answering at the 40 x 4's
+   * second ports as well; read through the same call.
    */
-  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, glcd = true, windowRam = true, rtc = true, clock, ram96 = false, mains = 2, expands = 2, onSdWrite }) {
+  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, glcd = true, lcd = true, lcd40 = false, lcdReal = false, windowRam = true, rtc = true, clock, ram96 = false, mains = 2, expands = 2, onSdWrite }) {
     this.symbols = symbols;
     // output: every byte the BIOS was asked to put on the console, whichever
     // device is in use. serial: the bytes that left the serial port.
@@ -119,12 +127,17 @@ export class Machine {
       };
     }
     const base = this.tec1g.ioHandlers;
+    const now = () => machine.cycles;
+    this.lcd40 = lcd40 === "runtime" ? new Lcd40x4Runtime(now) : lcd40 ? new Lcd40x4(now) : lcdReal ? new Lcd20x4(now, { aliased: lcdReal === "aliased" }) : null;
     const io = {
       read: (port) => {
         const p = port & 0xff;
         if (p === SD_PORT) return this.sd ? this.sd.read() : 0xff;
         if (p === RTC_PORT) return this.rtc ? this.rtc.read() : 0xff;
         if (!glcd && (p === 0x07 || p === 0x87)) return 0xff;
+        if (!lcd && (p === 0x04 || p === 0x84)) return 0xff;
+        const panel = this.lcd40?.read(p);
+        if (panel !== undefined) return panel;
         return base.read(port);
       },
       write: (port, value) => {
@@ -136,6 +149,8 @@ export class Machine {
           if (this.rtc) this.rtc.write(value & 0xff);
           return;
         }
+        if (!lcd && ((port & 0xff) === 0x04 || (port & 0xff) === 0x84)) return;
+        if (this.lcd40?.write(port & 0xff, value & 0xff)) return;
         base.write(port, value);
       },
       tick: base.tick,
@@ -480,6 +495,17 @@ export class Machine {
     return lines;
   }
 
+
+  /** The character LCD as four rows of text: the runtime's 20 x 4 panel. */
+  lcdScreen() {
+    const d = this.tec1g.state.lcdCtrl.lcd;
+    return [0, 1, 2, 3].map((r) => String.fromCharCode(...d.slice(r * 20, r * 20 + 20)));
+  }
+
+  /** The host panel's four rows, on a machine made with lcd40 or lcdReal. */
+  lcd40Screen() {
+    return this.lcd40.screen();
+  }
 
   /** Type text on the matrix keyboard: each key goes down until TEC-OS takes it. */
   typeMatrix(text, maxCycles = 50_000_000) {

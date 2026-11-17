@@ -161,6 +161,14 @@ VIDHOOK:
   ld (hl),e
   inc hl
   ld (hl),d
+
+; If this mode is in effect, as UC1 is
+; while the LCD serves it, choose the
+; console again at the next call, so
+; the new table takes it.
+
+  ld a,l
+  call VIDHF1
   ld hl,LINEBUF
   or a
   ret

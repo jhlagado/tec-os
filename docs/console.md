@@ -23,9 +23,13 @@ width, a width after another name, or no PICO9918 console, and the command is
 refused with nothing changed; but a line from `STARTUP.CMD` on a board with no
 PICO9918 console passes quietly, as a service's line for an absent device
 does, and a `:` line after it runs. The BIOS acts on a change at the
-next console call: it clears and homes the new screen. `CRT:` or `UC1:`
-without its display or the keyboard falls back to the serial terminal, so
-there is always a console. The 20 × 4 LCD is never the console.
+next console call: it clears and homes the new screen. `CRT:` without the
+PICO9918, or either display's mode without the matrix keyboard, falls back to
+the serial terminal. `UC1:` with no driver loaded is the 20 × 4 LCD with the
+matrix keyboard: a reset with the Matrix switch on and no PICO9918 starts
+there, after sending the banner to the serial line, and then the serial line
+is not read. The Matrix switch off at a reset always gives the serial
+console.
 
 | Device | Direction | Present when | Status |
 | --- | --- | --- | --- |

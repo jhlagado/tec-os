@@ -34,7 +34,7 @@ CONSKIP:
   jr nz,CONSKIP
   inc b
   ld a,b
-  cp 6           ; six name records
+  cp 7           ; seven name records
   jr nz,CONNXT
 
 CONBAD:
@@ -74,20 +74,20 @@ CONCMP:
   jr nz,CONCMP   ; four-letter alias
 
 ; Map matched CON index to B mode: 0..3
-; unchanged, GLCD 4->UC1 3 and PICO
-; 5->CRT 1 (11-2B). Discard the saved
-; argument word and consume an optional
-; colon. HL then points at following
-; text.
+; unchanged, GLCD 5->UC1 3 and PICO
+; 6->CRT 1 (13-2B). LCD stays 4 until
+; CONLCD. Discard the saved argument
+; word and consume an optional colon.
+; HL then points at following text.
 
 CONMAT:
   pop af         ; discard saved pointer
   ld a,b
-  cp 4
-  jr c,CONHIT    ; 0..3 already modes
+  cp 5
+  jr c,CONHIT    ; modes, and the LCD
   add a,a
   cpl
-  add a,12       ; 11-2B: aliases
+  add a,14       ; 13-2B: aliases
   ld b,a         ; selected mode
 
 CONHIT:
@@ -109,8 +109,12 @@ CONEND:
   call CMDSKIP   ; record width operand
   jr z,CONNW     ; spaces only: no width
   ld a,b
-  cp CMCRT       ; CRT/PICO width only
+  cp CMCRT       ; CRT/PICO width, or
+  jr z,CONWN
+  cp 4           ; the LCD's
   jr nz,CONBAD
+
+CONWN:
   ld a,(hl)      ; first decimal digit
   sub '0'
   cp 10          ; reject nondigit
@@ -130,6 +134,13 @@ CONEND:
   inc hl
   push af        ; width across calls
   call ENDCHK    ; reject suffix
+  bit 2,b
+  jr z,CONPW     ; PICO's width
+  pop bc         ; B = the LCD's
+  ld c,b
+  jr CONLCD
+
+CONPW:
 
 ; FIND PICO at minimum PICOWVER through
 ; TNFIND. Keep the width across
@@ -139,7 +150,7 @@ CONEND:
 ; without changing CON. Width validation
 ; has not run yet (KD-173).
 
-  ld de,CONNAMS+20
+  ld de,CONNAMS+24
   ld bc,PICOWVER*256+TNFIND
   call ABICALL   ; FIND result table
   pop bc         ; B=saved width
@@ -166,28 +177,69 @@ CONWD:
   ld l,a
   ld a,b
   call VHLJP     ; width call: A=B
-  jr c,CONBAD    ; carry: refused
+  jr c,CONLB     ; carry: refused
   ld b,CMCRT     ; width set: CRT mode
   jr CONFL
 
 CONNW:
   call ENDCHK    ; name-only suffix
+  bit 2,b
+  jr z,CONFL
+  ld c,0         ; the LCD, no width
+
+; CON LCD: UC1 must be a four-row LCD,
+; the ROM's own console or a loaded
+; driver's table. C is the width asked
+; for, 0 for none, and it must be that
+; panel's columns. Otherwise BADCMD with
+; nothing changed. No driver is loaded.
+
+CONLCD:
+  ld hl,(GLVEC)
+  ld a,h
+  or l
+  jr nz,CONLT    ; a loaded driver's
+  ld hl,LCVTAB   ; none: the ROM's
+
+CONLT:
+  ld de,14       ; columns, then rows
+  add hl,de
+  ld a,c
+  or a
+  jr z,CONLR     ; no width asked
+  cp (hl)
+  jr nz,CONLB    ; not this panel's
+
+CONLR:
+  inc hl
+  ld a,(hl)
+  cp 4
+  jr z,CONLOK    ; UC1 is an LCD
+
+CONLB:
+  jp BADCMD      ; the later refusals
+
+CONLOK:
+  ld b,CMUC1
+  call CONFLD
+  jr CONSHOW
 
 ; Select B through CONFLD. UC1 calls
-; GLCLD to reuse/load GLCD. After a
-; returned failure, GLCLD copies
-; then-current CONMOD through B into CON
-; bits, keeping other IOBYTE fields. It
-; reads no pre-call snapshot. CONHDR
-; output triggers routing. Report
-; resulting CONMOD and enter MAINLOOP.
-; Cold PISTART skips PIVEC setup when
-; CDMTX is clear.
+; GLCLD to reuse/load a driver, with
+; C=0 for the name GLCD. The field is
+; written first, so that a driver loaded
+; by a startup line finds UC1 asked for.
+; After a failure GLCLD copies the
+; then-current CONMOD back into the CON
+; bits. CONHDR output triggers routing.
+; Report resulting CONMOD and enter
+; MAINLOOP. Cold PISTART skips PIVEC
+; setup when CDMTX is clear.
 
 CONFL:
   call CONFLD    ; write requested mode
   ld a,b
-  cp CMUC1       ; UC1 requires GLCD
+  cp CMUC1       ; UC1 wants a display
   call z,GLCLD   ; load/reuse driver
 
 CONSHOW:

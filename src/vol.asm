@@ -36,8 +36,7 @@ MENOA EQU $2A    ; no volume mounted as
 ; drive A mounted, or an ME* code/NZ
 ; with DRVTAB, DRVIDX and BUFOK clear.
 ; Use MNBUF/MNT* and the shared cache.
-; Change AF/BC/DE/HL/IX. Full
-; metadata reads also set I=0.
+; Change AF/BC/DE/HL/IX.
 
 MOUNT:
   call UNMOUNT
@@ -370,9 +369,8 @@ MNTERR:
 ; Otherwise refill it from the card.
 ; Return A=0/Z with MNTLN/MNTCB set, or
 ; NZ with MNTCB=FFh. Change AF/BC/DE/HL.
-; A full payload fill sets I=0. Caller
-; supplies safe bank/stack state and
-; maskable exclusion. DI does not
+; Caller supplies safe bank/stack state
+; and maskable exclusion. DI does not
 ; exclude NMI.
 
 MNBLK:
@@ -504,10 +502,9 @@ MNS1:
 ; shared MNBUF. Return A=0/Z, carry
 ; clear and IX=MNBUF, or NZ without a
 ; valid IX result on read failure.
-; Change AF/BC/DE/HL. A full metadata
-; fill sets I=0. Later metadata reads,
-; sums or MNBUF use invalidate the
-; descriptor contents. Block 0 slots
+; Change AF/BC/DE/HL. Later metadata
+; reads, sums or MNBUF use invalidate
+; the descriptor contents. Block 0 slots
 ; 1..15 hold indices 0..14, then sixteen
 ; descriptors per block: index+1 is
 ; block*16+slot; DSCBLK0 must be 15.

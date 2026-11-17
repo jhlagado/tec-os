@@ -41,14 +41,29 @@ KBSPEC: DB $0A,$0D,$0D, $0C,$1B,$1B, $0D,$20,$20, $0E,$27,$22, $3F,$5C,$7C
 KBSHIFT:
   DB "<_>?)!@#$%^&*( : +"
 
-; LCD initialisation commands and
-; row-address commands for caller-valid
-; rows 0-3.
+; LCD initialisation commands: 8-bit and
+; two lines, display on with no cursor,
+; addresses rising, home, clear. The
+; console's restore sends all but the
+; clear. Then the row-address commands
+; for caller-valid rows 0-3.
 
-LCDSEQ: DB $38,$0C,$06,$01
+LCDSEQ: DB $38,$0C,$06,$02,$01
 
 LCDROWS:
   DB $80,$C0,$94,$D4
+
+; The LCD console's table, as CONSWV
+; copies one: six terminal words, no
+; page function, columns and rows.
+; Its get is HWSPX, which returns 0:
+; the terminal reads a cell only to
+; flip the cursor, and LCVPUT takes the
+; 80h that follows as that flip.
+
+LCVTAB: DW LCVPUT,HWSPX,LCVCLR,LCVRST,LCVRD,LCVWR
+  DW 0
+  DB 20,4
 
 ; Built-in command records: keyword
 ; bytes, NUL, then LE handler word. A
