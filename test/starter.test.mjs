@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import { GLCD_SVC, ROOT, boot, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 import { fontBytes } from "../tools/lib/font.mjs";
+import { bounceSource } from "../tools/lib/bounce-source.mjs";
 import { digitsOf, find, hello3, lcdRows, line, mon3Svc, svcMutant } from "./lib/mon3.mjs";
 import { assembleProgram } from "../tools/lib/assemble.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
@@ -27,8 +28,10 @@ const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip;
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 const text = (name) => textAt(`programs/${name}`);
-// Baza's examples/BOUNCE.BAS is LF text: the card holds it as CP/M text, as TIMES.BAS.
-const bounceText = () => Buffer.from(readFileSync(BOUNCE.path, "latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
+// The starter adapts the pinned LF
+// example to the glyph service, then
+// holds it as CP/M text.
+const bounceText = () => Buffer.from(bounceSource(ROOT).toString("latin1").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 
 let built;
 /** The starter card and its recipe, made once by tools/media.mjs. */
@@ -72,6 +75,7 @@ test("the starter card holds exactly seventeen files, each by its hash, the PICO
     "SNAKE9.BIN": snake.bytes,
   };
   const a = volume(card, "A");
+  assert.equal(sha(bounceText()), "9d9092748d11be539c86e79ba591849191540812c4342f601ac9c1de065fc0d6", "the adapted CP/M source pin");
   assert.deepEqual(a.list().map((f) => f.name).sort(), Object.keys(want).sort());
   assert.deepEqual(recipe.components.map((c) => c.name).sort(), Object.keys(want).sort());
   for (const [name, bytes] of Object.entries(want)) {
@@ -111,15 +115,7 @@ test("the web page's card is the starter card, byte for byte, its instruction na
 // BOUNCE.BAS, Baza's CALL demonstration, on a card as the Viewer runs it: the
 // PICO9918 at 40 columns and the matrix keyboard. What it checks follows
 // Baza's tools/qualify-call-demo.mjs.
-// At ABI 5.2 the ROM's font is packed and service 15 gives no table (Origo
-// KD-436): the pinned BOUNCE.BAS copies 768 bytes from whatever HL holds.
-// bounce17 is the change Baza's example needs, its lines 50 and 170 taking
-// each glyph through service 17; the card's file waits for Baza's.
-const bounce17 = (bytes) => Buffer.from(bytes.toString("latin1")
-  .replace("DEF CALL ft = ROM 15", "DEF CALL gl = ROM 17")
-  .replace('170 CALL ft: f = REG("HL"): CALL vw, hl = 256, de = f, bc = 768', '170 g$ = "12345678": FOR c% = 32 TO 127: CALL gl, b = c%, hl = g$: CALL vw, hl = 256 + 8 * (c% - 32), de = g$, bc = 8: NEXT'), "latin1");
-
-function bounceRound(card, { pinnedCom = true } = {}) {
+function bounceRound(card) {
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   const vdp = () => m.tec1g.state.display.tms9918.stateSnapshot();
   const run = (cycles) => {
@@ -136,10 +132,9 @@ function bounceRound(card, { pinnedCom = true } = {}) {
   keys("baza bounce\r", "BAZA's build", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
   assert.match(m.text(mark), /COM written\r\n/);
   const com = Buffer.from(volume(card, "A").read("BOUNCE.COM"));
-  if (pinnedCom) {
-    assert.equal(com.length, 16000, "BOUNCE.COM's length");
-    assert.equal(sha(com), "68d9e9a1a3e327f94e9632bf827e66bd51f14ef715d7bf1d2a104007d349c0f0", "BOUNCE.COM as the pinned BAZA compiles it");
-  }
+  // The adapted source's compiled length and hash, retaken from the build.
+  assert.equal(com.length, 16000, "adapted BOUNCE.COM's length");
+  assert.equal(sha(com), "68d9e9a1a3e327f94e9632bf827e66bd51f14ef715d7bf1d2a104007d349c0f0", "adapted BOUNCE.COM as the pinned BAZA compiles it");
   m.enqueueInput("bounce\r", "matrix");
   m.runUntil(() => (m.pumpInput(), !m.pending?.length), 50_000_000, "the command line");
   run(150_000_000);
@@ -197,10 +192,7 @@ function bounceRound(card, { pinnedCom = true } = {}) {
 
 test("on the card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with sprites, W/A/S/D and the arrow keys move the ship, ESC [ Z moves nothing, and Q gives the display back at A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
   check(BOUNCE);
-  const card = Uint8Array.from(starter().card);
-  const a = volume(card, "A");
-  a.write("BOUNCE.BAS", bounce17(Buffer.from(a.read("BOUNCE.BAS"))));
-  bounceRound(card, { pinnedCom: false });
+  bounceRound(Uint8Array.from(starter().card));
 });
 
 // The card holds the demo as source only: TAS DEMO makes the pinned
@@ -397,7 +389,8 @@ test("on the card at 40 columns, TED BOUNCE.BAS scrolls sideways along its longe
     m.enqueueInput(s, "matrix");
     m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 3_000_000_000, what);
   };
-  const source = readFileSync(BOUNCE.path, "latin1").replace(/\n$/, "").split("\n");
+  const source = Buffer.from(volume(card, "A").read("BOUNCE.BAS")).toString("latin1")
+    .split("\x1a", 1)[0].replace(/\r\n/g, "\n").replace(/\n$/, "").split("\n");
   const n = source.reduce((best, l, i) => (l.length > source[best].length ? i : best), 0);
   const len = source[n].length;
   assert.ok(len > 40, "a line longer than the screen");
