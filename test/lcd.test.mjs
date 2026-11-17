@@ -296,7 +296,7 @@ test("LC-5 a program registering UC1 under LCD leaves the selected LCD intact", 
   assert.equal(m.read(m.sym("CONMOD")), 3);
 });
 
-test("LC-5 UC1 asked for with no keyboard, and CRT with no PICO9918, fall back to serial", () => {
+test("LC-5 no matrix keeps serial and an unavailable PICO leaves the LCD selected", () => {
   const none = start({});
   assert.match(none.command("CON LCD"), /CON: TTY:/);
   assert.match(none.command("CON UC1"), /CON: TTY:/);
@@ -692,5 +692,73 @@ test("LC-23 program return does not replay the cold console choice", () => {
   const m = start({ matrix: true, files: { "RETURN.COM": Uint8Array.of(0xc9) } });
   assert.doesNotMatch(m.command("RETURN"), /L=LCD C=CRT S=TTY/);
   assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
+  assert.deepEqual(m.violations, []);
+});
+
+
+test("LC-23 cold choice can select and confirm PICO before a missing card is accessed", () => {
+  const m = start({ matrix: true, tms: true, card: false });
+  m.expect(/L=LCD C=CRT S=TTY$/, { from: 0, maxCycles: 200_000_000 });
+  m.typeMatrix("C");
+  m.expect(/Press a key$/, { maxCycles: 200_000_000 });
+  m.typeMatrix(" ");
+  m.expect(/R retry> $/, { maxCycles: 200_000_000 });
+  assert.equal(m.read(m.sym("CONMOD")), 1);
+  assert.deepEqual(geometry(m), [40, 24]);
+  assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-22 releasing Fn before card access still bypasses the startup script", () => {
+  const { rom, symbols } = romFor();
+  const image = standardCard();
+  volume(image, "A").write("STARTUP.CMD", startupFile("TYPE MARK.TXT"));
+  volume(image, "A").write("MARK.TXT", text(["SHOULD NOT RUN"]));
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, matrix: true, glcd: false });
+  m.tec1g.applyMatrixKey(0, 2, true);
+  m.runUntil(() => m.pc === m.sym("COLDRT"), 200_000_000, "the first card access");
+  assert.equal(m.read(m.sym("CONOLD")) & 0x40, 0x40);
+  m.tec1g.applyMatrixKey(0, 2, false);
+  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the prompt");
+  assert.doesNotMatch(m.text(0), /L=LCD|SHOULD NOT RUN/);
+  assert.equal(m.read(m.sym("CONOLD")) & 0xc0, 0);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-23 program return retains its console and repeats neither cold choice nor startup", () => {
+  const m = start({ matrix: true, files: { "BACK.COM": Uint8Array.of(0xc9) } });
+  const output = m.command("BACK");
+  assert.doesNotMatch(output, /L=LCD C=CRT S=TTY/);
+  assert.deepEqual(geometry(m), [20, 4]);
+  assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-24 a busy first controller cannot pass the explicit 40-column proof through a stale Z flag", () => {
+  const m = start({ matrix: true, lcd40: true });
+  const read = m.cpu.hardware.ioRead;
+  m.cpu.hardware.ioRead = (port) => (port & 0xff) === 4 ? read(port) | 0x80 : read(port);
+  assert.match(m.command("CON LCD 40"), /LCD40\?/);
+  assert.deepEqual(geometry(m), [20, 4]);
+  assert.equal(m.read(m.sym("LCDPRF")), 0);
+  assert.deepEqual(m.violations, []);
+});
+
+
+test("LC-20 warm boot from EXPAND 1 clears classic transaction state without writing its banked counterpart", () => {
+  const m = start({ matrix: true, ram96: true });
+  const state = m.sym("CONOLD");
+  m.write(state, 0x83);
+  m.expand[1][state - 0x8000] = 0xd7;
+  const bank1 = m.sysCtrl | 4;
+  m.write(0x40, bank1);
+  m.cpu.hardware.ioWrite(0xff, bank1);
+  m.cpu.cpu.pc = m.sym("WBOOTR");
+  m.runUntil(() => m.ready(), 200_000_000, "warm boot to the LCD prompt");
+  assert.equal(m.sysCtrl & 4, 0);
+  assert.equal(m.read(state) & 0x80, 0);
+  assert.equal(m.expand[1][state - 0x8000], 0xd7);
+  assert.deepEqual(m.expand1Writes, []);
   assert.deepEqual(m.violations, []);
 });

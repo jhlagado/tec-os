@@ -143,11 +143,11 @@ DIAGNZ:
 
 WBOOTR:
   di
-  ld hl,CONOLD
-  res 7,(hl)     ; no abandoned question
   ld a,LATCLAS
   ld (LATCHV),a
   out (SYSLAT),a
+  ld hl,CONOLD
+  res 7,(hl)     ; classic state is visible
   xor a
   ld (HKDEP),a
   ld (HKBUSY),a
