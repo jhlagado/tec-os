@@ -110,7 +110,7 @@ cp dist/starter.img start.img
 node tools/tecvol.mjs put start.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card start.img. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card start.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

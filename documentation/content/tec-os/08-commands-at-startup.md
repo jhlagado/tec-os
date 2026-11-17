@@ -92,7 +92,7 @@ cp dist/starter.img lines.img
 node tools/tecvol.mjs put lines.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card lines.img. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card lines.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -132,7 +132,7 @@ cp dist/starter.img bare.img
 node tools/tecvol.mjs put bare.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card bare.img. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card bare.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -320,7 +320,7 @@ cp dist/starter.img cut.img
 node tools/tecvol.mjs put cut.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card cut.img. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card cut.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -345,7 +345,7 @@ cp dist/starter.img long.img
 node tools/tecvol.mjs put long.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card long.img. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card long.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -449,7 +449,7 @@ printf 'DIR\n' > startup.cmd
 node tools/tecvol.mjs put spare.img SPARE startup.cmd --text
 ```
 
-<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card spare.img 'CD A:SPARE' @reset. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card spare.img 'CD A:SPARE' @reset. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

@@ -111,7 +111,7 @@ listed, erased or run from the prompt. In this example NOTES.TXT is in area
 3 of WORK, put there from the PC with `tecvol put card.img B NOTES.TXT
 --text --user 3`. Neither `DIR` nor `TYPE` finds it:
 
-<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card build/area.img 'DIR B:' 'TYPE B:NOTES.TXT'. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card build/area.img 'DIR B:' 'TYPE B:NOTES.TXT'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

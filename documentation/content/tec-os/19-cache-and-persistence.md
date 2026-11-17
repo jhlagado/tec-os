@@ -470,7 +470,7 @@ outside the backend. The capture sends `COPY STARTUP.CMD B:X.CMD`, acknowledges
 its error with one explicit `x`, then sends `DIR B:`. No further key is
 supplied.
 
-<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card nodata.img '@start COPY STARTUP.CMD B:X.CMD' '@key x' '@start DIR B:'. Complete captured console transcript. The cache's state after each step was read from the same host model. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card nodata.img '@start COPY STARTUP.CMD B:X.CMD' '@key x' '@start DIR B:'. Complete captured console transcript. The cache's state after each step was read from the same host model. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
