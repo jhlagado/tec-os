@@ -31,7 +31,7 @@ const prosePatterns=prose.map(([text,id])=>[new RegExp([...text.replace(/\s+/g,'
 function normal(s){
  s=s.replace(/\r\n/g,'\n').replace(/(ERROR IN|BREAK IN) \d+/g,'$1 <line>');
  for(const [pattern,id]of prosePatterns)s=s.replace(pattern,'<room-'+id+'>');
- return s.replace('CAVERNS by John Hardy (c) 1982-83','CAVERNS by John Hardy (c) 1983');
+ return s.replace(/(<room-\d+>)\n+/g,'$1\n').replace('CAVERNS by John Hardy (c) 1982-83','CAVERNS by John Hardy (c) 1983');
 }
 
 function encodeOld(s){const b=Buffer.from(encodeScenario(s));Buffer.from(old.comSha256,'hex').copy(b,8,0,8);b.writeUInt16LE(0,6);let sum=0;for(let i=0;i<128;i++)if(i!==6&&i!==7)sum+=b[i];b.writeUInt16LE(sum,6);return b;}
