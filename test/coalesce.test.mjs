@@ -802,11 +802,13 @@ function checkBounceWrites(b) {
   const data = b.writes.map((block, i) => [block, b.fn[i]]).filter(([block]) => !b.dir.has(block));
   const times = data.reduce((n, [block]) => n.set(block, (n.get(block) ?? 0) + 1), new Map());
   // The independently hash-checked 16,000-byte COM has 125 CP/M records:
-  // 31 complete 512-byte blocks and one final single-record block.
+  // 31 complete 512-byte blocks and one final single-record block. It fits
+  // one 16 KiB extent, so the directory is written three times: the make,
+  // the close and the rename.
   assert.equal(times.size, 32);
   assert.deepEqual([...times.values()].sort((a, b) => a - b), [1, ...Array(31).fill(4)],
     "full blocks progress four acknowledged versions; the final partial block progresses once");
-  assert.equal(data.length, 125); assert.equal(b.writes.length - data.length, 6);
+  assert.equal(data.length, 125); assert.equal(b.writes.length - data.length, 3);
   assert.ok(b.writes.length <= 168, `${b.writes.length} BOUNCE card writes`);
 }
 
