@@ -1,5 +1,5 @@
 {
-  "status": "Qualified in native emulation and browser; main/Pages publication in progress",
+  "status": "Automated work complete: qualified, pushed to both main branches, exact tested standalone pushed to hosting branch.",
   "sourceFile": "programs/CAVERNS.BAS",
   "comFile": "programs/CAVERNS.COM",
   "compiler": "eee4ee6846add13c0ea120fbf2de8be0ec08c0b1",
@@ -65,5 +65,15 @@
       "command vocabulary"
     ],
     "proseStateReconciliation": "Original atmosphere retained; modern gate/rope/castle/door rules win on conflicts"
-  }
+  },
+  "firmwareIntegrationCommit": "1dd75f5bc97672d71a885010ba3aff9c2f598d6c",
+  "viewerMainCommit": "e2248c9bb5886d22c31ec669ff0c3d6ef691b79f",
+  "viewerPublishedSourceCommit": "d90925012de391a6b7e1c5dbddd011820dcd44e8",
+  "hostingCommit": "0a02a27d8ce1a16332562e9766595e0d530d82f8",
+  "liveHttpVerification": {
+    "verified": false,
+    "reason": "Executor CONNECT proxy returned HTTP 403 before reaching the public site",
+    "exactUploadedPayloadVerifiedViaGit": true
+  },
+  "finalAuthorReadThrough": "pending"
 }

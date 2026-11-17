@@ -41,3 +41,10 @@ separate earlier failed/stopped attempts from the two complete passing runs.
 The host-copy timing failure under concurrent CPU load is retained by the
 Viewer; CPU isolation passed the same limits, with no gate weakened. Physical
 TEC-1G and the author's final read-through remain human-stage checks.
+
+The qualified work is on main in TEC-OS and the Viewer. The exact main-built,
+fresh-browser-tested standalone is pushed to the hosting branch with matching
+build details. The executor's CONNECT proxy refuses the public URL, so uploaded
+bytes are verified via Git and the live HTTP response is not claimed as seen.
+Download any existing Viewer card before choosing New starter card; a reload
+preserves old files rather than substituting the renamed, restored source.

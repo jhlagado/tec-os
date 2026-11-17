@@ -1,5 +1,5 @@
 {
-  "status": "Both full strict runs passed; review and main integration pending",
+  "status": "Qualified historical compiler-only phase; integrated with final restored prose on main",
   "compilerCommit": "eee4ee6",
   "COMBytes": 29056,
   "logicalBytes": 28946,
@@ -34,5 +34,7 @@
       "skipped": 0,
       "logSha256": "ce6fc8c242f12495653e48e95cef0d5e6274288a4bbdcaa51edca1455e7c5b1a"
     }
-  ]
+  ],
+  "recordScope": "Before prose restoration: sizes, hashes and unchanged-source statements are historical",
+  "finalIntegration": "../caverns-prose-restoration/qualification.json"
 }

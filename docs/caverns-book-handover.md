@@ -20,15 +20,15 @@ Chromium Viewer compiles the exact executable from a source-only starter,
 plays the opening and restores an exported checkpoint in independent storage.
 These are native-emulator and browser observations, not physical-board tests.
 Physical TEC-1G testing and the author's final prose/gameplay read-through
-remain outstanding. Final receiving pins are recorded as integration closes;
-no new public version or release tag is assigned here.
+remain outstanding. Final receiving pins and publication receipts are recorded below; no new
+public version or release tag is assigned here.
 
 ## Exact artifacts
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Restored source and rendering change | jhlagado/tec-os, 9b25a0cf72585bd6f0fedd290a2e4a45f45f3b53 |
-| Current firmware integration | jhlagado/tec-os, ae61d294; current main merged; runtime source at the qualified code pin |
+| Qualified source and artifacts | jhlagado/tec-os, 1dd75f5bc97672d71a885010ba3aff9c2f598d6c |
+| Firmware code pin | jhlagado/tec-os, 1dd75f5bc97672d71a885010ba3aff9c2f598d6c; runtime source unchanged from tested 9b25a0cf |
 | Source on SYSTEM | programs/CAVERNS.BAS |
 | Verification executable, excluded from starter | programs/CAVERNS.COM; 37,248 bytes |
 | Exact source, compiler, RTL, executable identities | test/caverns-basic.json |
@@ -36,7 +36,9 @@ no new public version or release tag is assigned here.
 | Main-volume recipe and image | dist/starter.recipe.json, revision 17; dist/starter.img |
 | Compiler/runtime pair | jhlagado/baza, eee4ee6846add13c0ea120fbf2de8be0ec08c0b1; dist/BAZA.COM and dist/BAZA.RTL |
 | Editor and dependency pins | TED.COM and compiler/runtime in test/inputs.json |
-| Viewer receiving work | jhlagado/tec-os-viewer, 617ec47; final main pin/publication follows |
+| Published Viewer source | jhlagado/tec-os-viewer, d90925012de391a6b7e1c5dbddd011820dcd44e8 |
+| Viewer qualification/publication receipts | jhlagado/tec-os-viewer, e2248c9bb5886d22c31ec669ff0c3d6ef691b79f; docs/evidence/caverns-prose-restoration/ |
+| Hosting branch | gh-pages, 0a02a27d8ce1a16332562e9766595e0d530d82f8; exact tested standalone bytes |
 | Development checkpoints | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 | Assembly comparison, development only | programs/CAVASM.COM |
 
@@ -115,5 +117,6 @@ BASIC Caverns is the intended public worked example. The starter supplies
 CAVERNS.BAS and CAVERNS.TXT; users create CAVERNS.COM by compiling it. The
 assembly build CAVASM.COM and development checkpoint loader/files remain
 excluded. Their presence in the repository does not imply gameplay parity or
-public-release qualification. No public-site deployment or physical-board
-qualification is claimed by this handover.
+public-release qualification. The tested standalone is pushed to the hosting branch. The cloud CONNECT
+proxy blocks live HTTP confirmation, so the actual public response remains
+part of the author review. Physical-board qualification is not claimed.
