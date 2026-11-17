@@ -1,10 +1,12 @@
-; Matrix keys for PICO9918 and GLCD. The
-; console polls port FEh by row. Key k
-; is row k/8, bit k%8. One low address
-; bit in the high byte picks the row.
-; Keys 0-2 are Shift, Ctrl and Fn. Key 7
-; toggles Caps Lock. A held key does not
-; repeat.
+; Matrix keys for the LCD, PICO9918 and
+; GLCD. The console polls port FEh by
+; row. Key k is row k/8, bit k%8. One
+; low address bit in the high byte picks
+; the row. Keys 0-2 are Shift, Ctrl and
+; Fn. Key 7 toggles Caps Lock. Fn+Space
+; swaps the console between the LCD's
+; or GLCD's UC1 and the PICO9918. A
+; held key does not repeat.
 
 ; Poll up to eight rows for a new key.
 ; Starts at KBMASK. NZ ends the poll:
@@ -112,6 +114,16 @@ KBMOD:
   jr KBDELIV
 
 KBNOARR:
+  ld a,e
+  cp $0D         ; Space
+  jr nz,KBNA1
+  dec d          ; with Fn, key 2?
+  dec d
+  jr z,KBSWAP
+  inc d          ; D back for KBASCII
+  inc d
+
+KBNA1:
   call KBASCII
   or a
   jr z,KBNONE    ; no character
@@ -126,6 +138,35 @@ KBDELIV:
 KBNONE:
   xor a          ; Z: no character
   ret
+
+; Fn+Space: the console to the other
+; matrix display, the LCD's or GLCD's
+; UC1 and the PICO9918's CRT, at once.
+; No PICO9918, or a program's claim on
+; it: nothing. Serial is not in the
+; swap. The key is not delivered.
+
+KBSWAP:
+  ld a,(VCLAIM)
+  or a
+  jr nz,KBNONE   ; the PICO9918 claimed
+  ld a,(CONMOD)
+  xor 2          ; UC1 and CRT swap
+  cp CMCRT
+  jr nz,KBSW1    ; to UC1: always there
+  ld hl,PIVEC+1
+  inc (hl)
+  dec (hl)       ; Z: no PICO9918
+  jr z,KBNONE
+
+KBSW1:
+  push af
+  call CURHIDE   ; off the old screen
+  pop bc
+  call CONFLD    ; B: the CON field
+  call CONSEL    ; the new screen now
+  call CURSHOW
+  jr KBNONE
 
 KBCAPS:
   ld hl,LATCHV
