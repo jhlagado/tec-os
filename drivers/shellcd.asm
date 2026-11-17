@@ -45,7 +45,9 @@ CD1:
   ld a,(SFCB)    ; the script's drive
   dec a          ; from 0
   cp c
-  jp z,BADW      ; the script's own
+  jr nz,CDHAND   ; another drive
+  call CRLF      ; after the line
+  jp BADW        ; the script's own
 
 CDHAND:
   jp HAND        ; the ROM's CD

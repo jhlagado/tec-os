@@ -223,7 +223,7 @@ test("SL8 SHELL.SVC is 10 pages; the TPA with it is 43,776 on the starter card",
 // card of SYSTEM on A:, WORK on B: and GAMES on none: the ROM's CD now does
 // the work, and the shell keeps the labels.
 const CDS = [
-  ["CD ?", "CD ?\r\r\n\r\nSYSTEM      A:\r\nWORK       \r\nGAMES       B:\r\nA:SYSTEM>"],
+  ["CD ?", "CD ?\r\r\n\r\nSYSTEM      A:\r\nWORK        B:\r\nGAMES      \r\nA:SYSTEM>"],
   ["CD B:GAMES", "CD B:GAMES\r\r\nB:GAMES\r\nA:SYSTEM>"],
   ["CD A:WORK", "CD A:WORK\r\r\nCD FAILED\r\n\r\nA:SYSTEM>"],
   ["CD GAMES", "CD GAMES\r\r\nGAMES is on B:\r\n\r\nA:SYSTEM>"],
@@ -232,6 +232,7 @@ const CDS = [
   ["A:", "A:\r\r\nA:SYSTEM>"],
   ["CD A:SYSTEM", "CD A:SYSTEM\r\r\nA:SYSTEM\r\nA:SYSTEM>"],
   ["CD NOPE", "CD NOPE\r\r\nNOPE?\r\n\r\nA:SYSTEM>"],
+  ["CD ?", "CD ?\r\r\n\r\nSYSTEM      A:\r\nWORK       \r\nGAMES       B:\r\nA:SYSTEM>"],
 ];
 
 test("SL10 CD is the ROM's and prints what the shell's printed, the labels in the prompt kept", () => {
@@ -242,10 +243,8 @@ test("SL10 CD is the ROM's and prints what the shell's printed, the labels in th
 test("SL10 from a script, CD NAME on the script's own drive is CD? and the script goes on", () => {
   const script = Buffer.from("CD GAMES\r\nCD A:GAMES\r\nCD ?\r\nCD B:GAMES\r\nSAY\r\n\x1a", "latin1");
   const m = shellMachine(shellCard({ "S.CMD": script }, { image: standardCard([{ geometry: "G1M", label: "GAMES" }]) }));
-  const t = at(m, "S.CMD");
-  assert.equal((t.match(/\r\nCD\?\r\n/g) ?? []).length, 2, "CD GAMES and CD A:GAMES on A:, the script's");
-  assert.match(t, /GAMES {6} B:|B:GAMES\r\n/, "CD B:GAMES runs");
-  assert.match(t, /SAY\r\n/, "and the script goes on");
+  // What the shell's own CD printed at 4d7795e for the same script.
+  assert.equal(at(m, "S.CMD"), "S.CMD\r\r\n\r\nA:SYSTEM>CD GAMES\r\r\nCD?\r\n\r\nA:SYSTEM>CD A:GAMES\r\r\nCD?\r\n\r\nA:SYSTEM>CD ?\r\r\n\r\nSYSTEM      A:\r\nWORK        B:\r\nGAMES      \r\nA:SYSTEM>CD B:GAMES\r\r\nB:GAMES\r\nA:SYSTEM>SAY\r\r\nSAY\r\nA:SYSTEM>");
   assert.match(at(m, "B:"), /B:GAMES>$/, "the prompt's label read again");
 });
 

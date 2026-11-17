@@ -199,8 +199,9 @@ test("on a GLCD board (0006h) is three pages lower than with the driver, and no 
   // Three pages under the shell's seventeen, which are under the stub's page. The reference's own
   // figure, REF.bdosVector - 306h, held until the stub moved up 479 bytes, and the
   // shell took its pages.
+  // The shell is ten pages since KD-435; it was seventeen.
   const stub = word(m, m.sym("STUBAD"));
-  assert.equal(bdosVector, ((stub >> 8) - 17 - 3) << 8);
+  assert.equal(bdosVector, ((stub >> 8) - 10 - 3) << 8);
 });
 
 test("a program on the CCP stack calls CONOUT directly in what the stack leaves it, CCPSTN less the return word, and the BDOS stack keeps a quarter free", { timeout: 1_800_000 }, async (t) => {

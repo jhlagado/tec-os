@@ -214,7 +214,9 @@ test("SH11 TYPE fills a 24-row, 40-column screen before pausing, and long lines 
 test("SH11 a long DIR pauses too", () => {
   const image = withShell(standardCard(), "GLCD.SVC");
   const a = volume(image, "A");
-  for (let i = 0; i < 29; i += 1) a.write(`F${i}.DAT`, new Uint8Array(1)); // with SHELL.SVC, GLCD.SVC and STARTUP.CMD, 32
+  // With SHELL.SVC, DIR.COM (KD-435), GLCD.SVC and STARTUP.CMD, 32: one
+  // file fewer than before DIR.COM came to the shell's cards.
+  for (let i = 0; i < 28; i += 1) a.write(`F${i}.DAT`, new Uint8Array(1));
   const m = boot(image, { matrix: true });
   m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 400_000_000, "the GLCD's prompt");
   m.mark = m.output.length;

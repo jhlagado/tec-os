@@ -107,14 +107,16 @@ const WAS = {
 test("without USER the ROM is smaller, SHELL.SVC is 17 pages and no TPA row is smaller", () => {
   const census = JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
   assert.ok(census.rom.used < WAS.used, `${census.rom.used} bytes used, fewer than ${WAS.used}`);
-  assert.deepEqual([census.rom.used, census.rom.free], [15713, 671], "the ROM's bytes used and free");
+  // KD-435's stage adds 50 ROM bytes and takes SHELL.SVC to 10 pages: the
+  // rows held 15,713 used, 671 free, 17 pages and 42,752 under the shell.
+  assert.deepEqual([census.rom.used, census.rom.free], [15763, 621], "the ROM's bytes used and free");
   for (const row of ["twoVolume", "starter"]) assert.ok(census.ram.cards[row].tpa >= WAS.tpa[row], `${row}: TPA ${census.ram.cards[row].tpa}`);
   const top = (m) => m.read(6) | (m.read(7) << 8);
   const bare = top(boot(card())), shelled = top(boot(card({ shell: true })));
   const pages = (bare >> 8) - (shelled >> 8);
-  assert.equal(pages, 17, "the pages SHELL.SVC takes from the TPA");
-  assert.ok(pages <= 17, "no more than 17");
-  assert.equal(shelled - 0x100, 42752, "the TPA under the shell on the two-volume card, as before");
+  assert.equal(pages, 10, "the pages SHELL.SVC takes from the TPA");
+  assert.ok(pages <= 10, "no more than 10");
+  assert.equal(shelled - 0x100, 44544, "the TPA under the shell on the two-volume card");
 });
 
 /** T-states from a warm boot's first instruction to the prompt, and from a typed command to its program's first instruction. */
@@ -148,7 +150,10 @@ test("the ordinary command path is no slower without USER: to the prompt after a
   t.diagnostic(JSON.stringify({ now, was: WAS.path, kept }));
   for (const k of ["bare", "shell"]) {
     assert.ok(now[k].warm <= WAS.path[k].warm, `${k}: ${now[k].warm} T-states from a warm boot to the prompt, ${WAS.path[k].warm} before`);
-    assert.ok(now[k].program <= WAS.path[k].program, `${k}: ${now[k].program} T-states from a typed command to the program, ${WAS.path[k].program} before`);
+    // KD-435: a typed line under the shell pays HSTORE's ring through RINGIO,
+    // 997 T-states for X; the allowance is 1,200.
+    const allowance = k === "shell" ? 1200 : 0;
+    assert.ok(now[k].program <= WAS.path[k].program + allowance, `${k}: ${now[k].program} T-states from a typed command to the program, ${WAS.path[k].program} before`);
     assert.ok(kept[k].warm > WAS.path[k].warm, `${k}: the ROM kept from before, which sets the area at each entry, is over that figure to the prompt: ${kept[k].warm}`);
   }
 });
