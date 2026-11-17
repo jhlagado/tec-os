@@ -263,18 +263,17 @@ CONSHOW:
   call PUTSTR
   ld hl,KWPOLL   ; about ten seconds
   call KEYWT     ; NZ: a key came
+  push af
+  ld de,CRLFMSG  ; the question's line
+  call PUTSTR    ; ends either way
+  pop af
   pop bc
-  jr nz,CONOK
+  jr nz,CONMAIN  ; kept
   call CONFLD    ; the console before
   call CONREP    ; reported there
 
 CONMAIN:
   jp MAINLOOP
-
-CONOK:
-  ld de,CRLFMSG
-  call PUTSTR
-  jr CONMAIN
 
 ; Print CON: and the effective console's
 ; name, then CR LF. The first output
