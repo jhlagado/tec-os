@@ -679,6 +679,16 @@ export const MUTANTS_KS38B = [
   { name: "PUTCHAR: BC not kept", ...ks34(CCPF, ["PUTCHAR:", "PUSH BC", "PUSH HL", "LD C,2", "CALL BDOS", "POP HL", "POP BC"], ["PUTCHAR:", "NOP", "PUSH HL", "LD C,2", "CALL BDOS", "POP HL", "NOP"], ["test/commands.test.mjs", "test/ccp-operands.test.mjs"]) },
 ];
 
+// KD-434: services claim RST 7 alone, and the sweep clears RST 1 to 6. The same
+// five run as byte patches in test/svc.test.mjs ("restart mutant").
+export const MUTANTS_KD434 = [
+  { name: "M1 the sweep stopping after RST 1", ...ks34(B, ["CP $38", "JR NZ,RSTCLR"], ["CP $10", "JR NZ,RSTCLR"], VEC) },
+  { name: "M5 the sweep stopping before RST 6", ...ks34(B, ["CP $38", "JR NZ,RSTCLR"], ["CP $30", "JR NZ,RSTCLR"], [...VEC, "test/system.test.mjs"]) },
+  { name: "M2 a claim of RST 1 to 6 let through", ...ks34("src/loader.asm", ["SCF", "RET NZ"], ["SCF", "NOP"], VEC) },
+  { name: "M3 the release not clearing 0038h", ...ks34("src/loader.asm", ["LD (RST7),A"], ["NOP"], VEC) },
+  { name: "M4 the keep test at 0038h inverted", ...ks34(B, ["CCF", "RET NC"], ["CCF", "RET C"], VEC) },
+];
+
 // KS36c: one mutant a part (KG44).
 const CPM3 = ["test/cpm3.test.mjs"];
 export const MUTANTS_KS36C = [

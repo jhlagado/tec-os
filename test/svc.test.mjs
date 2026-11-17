@@ -952,14 +952,18 @@ test("makeSvc copies in a file included below the ORG, and those it includes, an
   rmSync(dir, { recursive: true });
 });
 
-// Restart vectors. The sweep keeps a jump at or above the top's page, at warm
-// boot, after an unload and after a failed INIT; a declared slot that holds a
-// jump refuses the load.
+// Restart vectors (Origo KD-434). RST 1 to 5 are programs', RST 6 the
+// debugger's, RST 7 the interrupt vector, and a service may claim RST 7 alone.
+// At warm boot, after an unload and after a failed INIT the sweep gives RST 1 to
+// 6 their defaults whatever they hold, and keeps a jump at 0038h above the top;
+// a claim of RST 7 while 0038h holds a jump refuses the load, and a claim of
+// any of RST 1 to 6 refuses it whatever the slots hold.
 const slot = (m, at) => Array.from({ length: 8 }, (_, i) => m.read(at + i));
 const DEFAULT = [0, 0, 0, 0, 0, 0, 0, 0xc9];
 const DEFAULT38 = [0xfb, 0xed, 0x4d, 0, 0, 0, 0, 0];
 const jp = (a) => [0xc3, a & 0xff, a >> 8];
 const pokes = (t, at, bytes) => bytes.forEach((b, i) => t.m.write(at + i, b));
+const LOW6 = [0x08, 0x10, 0x18, 0x20, 0x28, 0x30];
 
 test("a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h", async () => {
   const t = await machine();
@@ -975,42 +979,50 @@ test("a jump into a service is kept over warm boot, and RST 38h reaches a kept 0
   assert.equal(t.m.read(base + d.symbols.RESULT), 0x5a);
 });
 
-test("the bound: a jump at or below the top goes, and one above it stays", async () => {
+for (const [what, target, kept] of [["at or below the top goes", -1, false], ["at the top goes", 0, false], ["above the top stays", 1, true]]) {
+  test(`the bound at 0038h: a jump ${what}`, async () => {
+    const t = await machine();
+    t.load((await svc()).file);
+    t.prompt();
+    const at = ((t.head() >> 8) << 8) + target;
+    pokes(t, 0x38, jp(at));
+    t.warmBoot();
+    assert.deepEqual(slot(t.m, 0x38), kept ? [...jp(at), 0, 0, 0, 0, 0] : DEFAULT38);
+  });
+}
+
+test("the bound with no service: a jump at 0038h into the stub's page below the stub goes, one past it stays", async () => {
+  for (const [target, kept] of [[-1, false], [0, false], [3, true]]) {
+    const t = await machine();
+    const at = t.word(t.m.sym("STUBAD")) + target;
+    pokes(t, 0x38, jp(at));
+    t.warmBoot();
+    assert.deepEqual(slot(t.m, 0x38), kept ? [...jp(at), 0, 0, 0, 0, 0] : DEFAULT38, `target ${at.toString(16)}`);
+  }
+});
+
+test("RST 1 to 6 take their defaults at warm boot whatever they hold: a jump into a service, the ROM or the workspace", async () => {
   const t = await machine();
-  t.load((await svc()).file);
+  const d = await svc({ V_VEC: 1, VECAT: 0x38, FLAGS: 0x81 });
+  t.load(d.file);
   t.prompt();
-  const page = t.head() >> 8;
-  pokes(t, 0x10, jp((page << 8) - 1));
-  pokes(t, 0x18, jp(page << 8));
-  pokes(t, 0x20, jp((page << 8) + 1));
+  const into = [t.head() + d.symbols.VHAND, t.m.sym("ABICALL"), t.word(t.m.sym("STUBAD")) + 3, 0xffff, t.head() + 1, 0x4000];
+  LOW6.forEach((at, i) => pokes(t, at, jp(into[i])));
   t.warmBoot();
-  assert.deepEqual(slot(t.m, 0x10), DEFAULT);
-  assert.deepEqual(slot(t.m, 0x18), DEFAULT);
-  assert.deepEqual(slot(t.m, 0x20), [...jp((page << 8) + 1), 0, 0, 0, 0, 0]);
+  for (const at of LOW6) assert.deepEqual(slot(t.m, at), DEFAULT, `slot ${at.toString(16)}`);
+  assert.equal(t.m.read(0x38), 0xc3, "the service's RST 7 kept");
 });
 
-test("the bound with no service: a jump into the stub's page below the stub goes", async () => {
+test("UNLOAD gives a vector into its pages and its RST 7 claim their defaults, and reports success", async () => {
   const t = await machine();
-  const stub = t.word(t.m.sym("STUBAD"));
-  pokes(t, 0x10, jp(stub - 1));
-  pokes(t, 0x18, jp(stub));
-  pokes(t, 0x20, jp(stub + 3));
-  t.warmBoot();
-  assert.deepEqual(slot(t.m, 0x10), DEFAULT);
-  assert.deepEqual(slot(t.m, 0x18), DEFAULT);
-  assert.deepEqual(slot(t.m, 0x20), [...jp(stub + 3), 0, 0, 0, 0, 0]);
-});
-
-test("UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success", async () => {
-  const t = await machine();
-  t.load((await svc({ V_VEC: 1, VECAT: 0x10, FLAGS: 0x05 })).file);
+  t.load((await svc({ V_VEC: 1, VECAT: 0x38, FLAGS: 0x81 })).file);
   t.prompt();
   const hw = t.m.sym("ABICALL");
-  pokes(t, 0x20, jp(hw)); // undeclared, outside its pages: REMOVE's to restore
-  pokes(t, 0x10, jp(hw)); // declared: goes whatever it holds
+  pokes(t, 0x38, jp(hw)); // declared: goes whatever it holds
+  pokes(t, 0x20, jp(hw)); // RST 4: a program's, goes at the sweep
   assert.doesNotMatch(t.unload(), /UNLOAD\?/);
-  assert.deepEqual(slot(t.m, 0x10), DEFAULT);
-  assert.deepEqual(slot(t.m, 0x20), [...jp(hw), 0, 0, 0, 0, 0]);
+  assert.deepEqual(slot(t.m, 0x38), DEFAULT38);
+  assert.deepEqual(slot(t.m, 0x20), DEFAULT);
 });
 
 test("a vector into freed pages goes at UNLOAD with no declaration", async () => {
@@ -1023,53 +1035,123 @@ test("a vector into freed pages goes at UNLOAD with no declaration", async () =>
 
 test("a failed INIT's vector goes with its pages", async () => {
   const t = await machine();
-  const r = t.load((await svc({ V_VEC: 1, V_VECFL: 1 })).file);
+  const r = t.load((await svc({ V_VEC: 1, V_VECFL: 1, VECAT: 0x38 })).file);
   assert.deepEqual([r.carry, r.rc], [1, 1]);
-  assert.deepEqual(slot(t.m, 8), DEFAULT);
+  assert.deepEqual(slot(t.m, 0x38), DEFAULT38);
 });
 
-test("a failed INIT's claimed slot goes, even with a jump outside its pages, so a retry loads", async () => {
+test("a failed INIT's claimed RST 7 goes, even with a jump outside its pages, so a retry loads", async () => {
   const t = await machine();
-  const r = t.load((await svc({ V_VEC: 1, V_VECX: 1, V_VECFL: 1, FLAGS: 3 })).file);
+  const r = t.load((await svc({ V_VEC: 1, V_VECX: 1, V_VECFL: 1, VECAT: 0x38, FLAGS: 0x81 })).file);
   assert.deepEqual([r.carry, r.rc], [1, 1]);
-  assert.deepEqual(slot(t.m, 8), DEFAULT);
-  assert.equal(t.load((await svc({ V_VEC: 1, FLAGS: 3 })).file).carry, 0);
+  assert.deepEqual(slot(t.m, 0x38), DEFAULT38);
+  assert.equal(t.load((await svc({ V_VEC: 1, VECAT: 0x38, FLAGS: 0x81 })).file).carry, 0);
 });
 
 test("a warm boot inside INIT takes the vector it set", async () => {
   const t = await machine();
-  assert.equal(t.load((await svc({ V_VEC: 1, V_WB: 1 })).file).back, false);
+  assert.equal(t.load((await svc({ V_VEC: 1, V_WB: 1, VECAT: 0x38 })).file).back, false);
   t.m.runUntil(() => t.m.waitingForInput(), 200_000_000, "the prompt");
-  assert.deepEqual(slot(t.m, 8), DEFAULT);
+  assert.deepEqual(slot(t.m, 0x38), DEFAULT38);
 });
 
-test("a second claim is refused with nothing changed", async () => {
+test("a second claim of RST 7 is refused with nothing changed", async () => {
   const t = await machine();
-  t.load((await svc({ V_VEC: 1, FLAGS: 3 })).file);
-  const x = transaction(t, (await svc({ V_VEC: 1, FLAGS: 3, HDRNAME: '"SECOND  "', RECNAME: '"SECOND  "' })).file);
+  t.load((await svc({ V_VEC: 1, VECAT: 0x38, FLAGS: 0x81 })).file);
+  const x = transaction(t, (await svc({ V_VEC: 1, VECAT: 0x38, FLAGS: 0x81, HDRNAME: '"SECOND  "', RECNAME: '"SECOND  "' })).file);
   assert.deepEqual([x.r.carry, x.r.rc], [1, 0]);
   assert.deepEqual(x.differs(), []);
 });
 
-test("a claim on a free slot installs, and format 3's flags of 1 claim nothing", async () => {
+test("a claim of RST 7 on a free slot installs, flags of 1 claim nothing, and a claim of RST 1 to 6 is refused with nothing changed", async () => {
   const t = await machine();
-  t.poke(0x10, 0);
-  assert.equal(t.load((await svc({ FLAGS: 0xfe })).file).carry, 0);
-  t.prompt();
+  t.poke(0x38, 0);
+  assert.equal(t.load((await svc({ FLAGS: 0x81 })).file).carry, 0);
   const held = await machine();
   pokes(held, 0x08, jp(held.m.sym("ABICALL")));
   assert.equal(held.load((await svc({ FLAGS: 1 })).file).carry, 0);
+  for (const flags of [0x03, 0x05, 0x09, 0x11, 0x21, 0x41, 0xc1, 0xfe]) {
+    const u = await machine();
+    const x = transaction(u, (await svc({ FLAGS: flags })).file);
+    assert.deepEqual([x.r.carry, x.r.rc], [1, 0], `flags ${flags.toString(16)}`);
+    assert.deepEqual(x.differs(), [], `flags ${flags.toString(16)}: nothing changed`);
+  }
 });
 
 test("a service with a vector is gone at a recognised reset, and the vector with it", async () => {
   const image = standardCard();
-  volume(image, "A").write("VEC.SVC", (await svc({ V_VEC: 1, VECAT: 0x10, FLAGS: 5 })).file);
+  volume(image, "A").write("VEC.SVC", (await svc({ V_VEC: 1, VECAT: 0x38, FLAGS: 0x81 })).file);
   const m = boot(image);
   m.command("VEC.SVC");
-  assert.equal(m.read(0x10), 0xc3);
+  assert.equal(m.read(0x38), 0xc3);
   m.reset();
   m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 200_000_000 });
-  assert.deepEqual(slot(m, 0x10), DEFAULT);
+  assert.deepEqual(slot(m, 0x38), DEFAULT38);
+  assert.equal(m.read(m.sym("SVCHEAD")), 0);
+});
+
+// The rule's mutants (Origo KD-434, lean-rom-mon3 gates RC-2 to RC-4), each a
+// byte patch of the build's ROM found from a symbol, and the row each fails.
+function patched(bytes, from, find, put) {
+  const at = bytes.indexOf(Buffer.from(find), from);
+  assert.ok(at >= from && at < from + 0x80, `the mutant's bytes ${Buffer.from(find).toString("hex")}`);
+  Buffer.from(put).copy(bytes, at);
+}
+async function mutantMachine(patch) {
+  const { rom, symbols } = romFor();
+  const bytes = Buffer.from(rom);
+  patch(bytes, (n) => symbols.get(n) - 0xc000);
+  const m = new Machine({ rom: bytes, symbols, sdImage: standardCard(), clock: TEST_CLOCK });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  return bench(m, { direct: true });
+}
+const sweptLow = async (t) => {
+  t.load((await svc()).file);
+  t.prompt();
+  LOW6.forEach((at) => pokes(t, at, jp(t.m.sym("ABICALL"))));
+  t.warmBoot();
+  return LOW6.every((at) => slot(t.m, at).every((b, i) => b === DEFAULT[i]));
+};
+const claimRefused = async (t) => {
+  const r = t.load((await svc({ FLAGS: 0x03 })).file);
+  return r.carry === 1 && r.rc === 0;
+};
+const unloadFrees = async (t) => {
+  t.load((await svc({ V_VEC: 1, VECAT: 0x38, FLAGS: 0x81 })).file);
+  t.prompt();
+  pokes(t, 0x38, jp(t.m.sym("ABICALL")));
+  t.unload();
+  return slot(t.m, 0x38).every((b, i) => b === DEFAULT38[i]);
+};
+const keptAbove = async (t) => {
+  t.load((await svc()).file);
+  t.prompt();
+  const at = ((t.head() >> 8) << 8) + 1;
+  pokes(t, 0x38, jp(at));
+  t.warmBoot();
+  return slot(t.m, 0x38)[0] === 0xc3;
+};
+for (const [name, patch, scenario] of [
+  ["M1 the sweep stopping after RST 1", (b, at) => patched(b, at("RSTZERO"), [0xfe, 0x38, 0x20], [0xfe, 0x10, 0x20]), sweptLow],
+  ["M5 the sweep stopping before RST 6", (b, at) => patched(b, at("RSTZERO"), [0xfe, 0x38, 0x20], [0xfe, 0x30, 0x20]), sweptLow],
+  ["M2 a claim of RST 1 to 6 let through", (b, at) => patched(b, at("SVCMOV"), [0x37, 0xc0], [0x37, 0x00]), claimRefused],
+  ["M3 the release not clearing 0038h", (b, at) => patched(b, at("SVCFRE"), [0x32, 0x38, 0x00], [0x00, 0x00, 0x00]), unloadFrees],
+  ["M4 the keep test at 0038h inverted", (b, at) => patched(b, at("RSTZERO"), [0x3f, 0xd0], [0x3f, 0xd8]), keptAbove],
+]) {
+  test(`restart mutant ${name}: the build passes the row and the mutant fails it`, async () => {
+    assert.equal(await scenario(await machine()), true, "the build");
+    assert.equal(await scenario(await mutantMachine(patch)), false, "the mutant");
+  });
+}
+
+test("a file claiming RST 1 says NAME.SVC? at the prompt and installs nothing", async () => {
+  const image = standardCard();
+  volume(image, "A").write("RST1.SVC", (await svc({ FLAGS: 0x03 })).file);
+  const m = boot(image);
+  const top = m.read(6) | (m.read(7) << 8);
+  assert.match(m.command("RST1.SVC"), /RST1\.SVC\?/);
+  assert.equal(m.read(6) | (m.read(7) << 8), top, "(0006h) unchanged");
   assert.equal(m.read(m.sym("SVCHEAD")), 0);
 });
 
