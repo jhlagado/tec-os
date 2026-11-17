@@ -328,12 +328,6 @@ test("S2-8 prompt", () => {
   assert.match(run(m, ""), /\r\nB:>$/, "d:>");
 });
 
-test("S2-8 prompt with user", () => {
-  const m = machine();
-  run(m, "B:");
-  assert.match(run(m, "USER 3"), /\r\n3B:WORK>$/);
-});
-
 test("S2-8 bare prompt", () => {
   const image = four();
   shellCard({}, { image, startup: [] });
@@ -505,30 +499,6 @@ test("S2-9 dir /w", () => {
   assert.match(t, /K free/, "the ROM's wide listing");
   assert.equal(rows(t).length, 0);
   assert.match(run(m, "DIR /X"), /\r\nDIR\?\r\n/, "another switch refused");
-});
-
-// Sized DIR builds its table of names from 0100h, over the program a SAVE
-// would write. DIR /W is the ROM's listing, which works in the record at
-// 0080h and leaves the program where it is.
-test("S2-9 save after dir", () => {
-  const prog = Uint8Array.from({ length: 256 }, (_, i) => i || 0xc9);
-  const image = four();
-  const m = machine({ image, files: { "PROG.COM": prog } });
-  const saved = (name) => [...volume(image, "A").read(name)];
-  const tpa = () => Array.from({ length: 256 }, (_, i) => m.read(0x100 + i));
-  run(m, "PROG");
-  assert.deepEqual(tpa(), [...prog], "the program, loaded and returned");
-  run(m, "DIR /W");
-  assert.deepEqual(tpa(), [...prog], "DIR /W leaves 0100h");
-  run(m, "SAVE 1 WIDE.COM");
-  assert.deepEqual(saved("WIDE.COM"), [...prog], "SAVE after DIR /W writes the program");
-  const names = volume(image, "A").list().length;
-  assert.equal(rows(listing(m, "DIR")).length, names);
-  assert.notDeepEqual(tpa(), [...prog], "sized DIR changes 0100h");
-  assert.equal(word(m, 0x100), names, "its count of names at 0100h");
-  run(m, "SAVE 1 SIZED.COM");
-  assert.notDeepEqual(saved("SIZED.COM"), [...prog], "SAVE after a sized DIR writes DIR's table");
-  assert.deepEqual(saved("SIZED.COM").slice(0, 2), [names, 0]);
 });
 
 test("S2-9 more", () => {
@@ -865,7 +835,7 @@ const BASE11 = { nothing: 4928, onB: 8_661_934, onA: 8_859_172 };
 
 const QUALIFIED_POLL = (() => {
   const asset = JSON.parse(readFileSync(new URL("./fixtures/rom-qualified-shell2.json", import.meta.url), "utf8"));
-  assert.equal(asset.sourceCommit, "c4ec0f4950446f92b658643ee23b63e2c02bb33b");
+  assert.equal(asset.sourceCommit, "be50c71c85af55f2a8f5132824c41a4ef2cf7fda");
   const rom = Buffer.from(asset.rom, "base64"), entries = Object.entries(asset.symbols).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
   assert.equal(createHash("sha256").update(rom).digest("hex"), "a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1");
   assert.equal(createHash("sha256").update(JSON.stringify(entries)).digest("hex"), "9d86c0e1825833902eacfeb749612c3d0ef2c9d73f6cc71545f52924a82210e1");
@@ -1004,8 +974,8 @@ test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
   const qualifiedB = bdos11("B", QUALIFIED_POLL), qualifiedA = bdos11("A", QUALIFIED_POLL);
   const b = bdos11("B"), a = bdos11("A");
   t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
-  assert.deepEqual(qualifiedB, { nothing: 4963, worst: 8_737_742 });
-  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_202_670 });
+  assert.deepEqual(qualifiedB, { nothing: 4963, worst: 8_737_688 });
+  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_202_616 });
   for (const [drive, current, qualified] of [["B", b, qualifiedB], ["A", a, qualifiedA]])
     assert.ok(current.nothing - qualified.nothing <= 360, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
   assert.ok(b.worst / qualifiedB.worst - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / qualifiedB.worst - 1) * 100).toFixed(2)} % over qualified`);
@@ -1105,10 +1075,10 @@ test("S2-11 mutant: MNC and MTW, as the bdos 11 cost sees them", { timeout: 600_
   const nativeA = bdos11("A"), mtw = bdos11("A", MUTANTS.mtw());
   const nativePass = refusedShellInputPass(), doubled = refusedShellInputPass(MUTANTS.mtw());
   t.diagnostic(JSON.stringify({ nativeB, mnc, nativeA, mtw, nativePasses: nativePass.cut.passes, mutantPasses: doubled.cut.passes }));
-  assert.ok(nativeB.nothing - 4963 <= 360); assert.ok(nativeB.worst / 8_737_742 - 1 <= 0.01);
+  assert.ok(nativeB.nothing - 4963 <= 360); assert.ok(nativeB.worst / 8_737_688 - 1 <= 0.01);
   assert.ok(mnc.nothing - 4963 > 360, `MNC: ${mnc.nothing} T with nothing changed`);
-  assert.ok(mnc.worst / 8_737_742 - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
-  assert.ok(nativeA.worst / 9_202_670 - 1 <= 0.05); assert.deepEqual(mtw, nativeA, "healthy polling is a recorded MTW timing nonkill");
+  assert.ok(mnc.worst / 8_737_688 - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
+  assert.ok(nativeA.worst / 9_202_616 - 1 <= 0.05); assert.deepEqual(mtw, nativeA, "healthy polling is a recorded MTW timing nonkill");
   oneShellInputPass(nativePass); assert.equal(doubled.cut.passes.length, 2);
   assert.equal(doubled.finalCardSHA256, nativePass.finalCardSHA256);
   assert.throws(() => oneShellInputPass(doubled), error => {
@@ -1255,7 +1225,7 @@ test("S2-12 tpa", () => {
   const card = starterImage();
   volume(card, "A").write("STARTUP.CMD", Buffer.from("\x1a", "latin1"));
   const bare = shellMachine(card);
-  assert.equal(word(bare, 6) - 0x100, 46_533, "bare: four drives' vectors");
+  assert.equal(word(bare, 6) - 0x100, 46_536, "bare: four drives' vectors");
   const m = shellMachine(starterImage());
   assert.equal(word(m, 6) - 0x100, 41_984, "with the shell, the starter card's STARTUP.CMD");
 });
@@ -1339,14 +1309,14 @@ test("S2-13 docs", () => {
   ]) assert.ok(recovery.includes(s), `recovery.md: ${s}`);
   assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
-  for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`3B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
-    "at 0100h–223Fh, so it overwrites a program left there", "Use `DIR /W` before `SAVE`", "a TPA of 41,984 bytes"])
+  for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
+    "a TPA of 41,984 bytes"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);
   const container = flat("docs/container-format.md");
   assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
   assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
   const compat = flat("docs/compatibility.md");
-  for (const s of ["46,533 bytes", "41,984", "41,216", "**`DIR` before `SAVE`.**", "`DIR /W`, the ROM's listing, uses only the record at 0080h"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  for (const s of ["46,536 bytes", "41,984", "41,216"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
   assert.match(flat("docs/mon3.md"), /from `A500h` to `9200h`, and the TPA from 41,984 bytes to \*\*37,120\*\*/);
   assert.match(flat("docs/mon3.md"), /it is `8F00h`, a TPA of \*\*36,352\*\*/);

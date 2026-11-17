@@ -7,14 +7,14 @@ nav_group: "Writing programs"
 
 # 11. Memory for programs
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -189,8 +189,8 @@ limits:
 | Addresses | What is there |
 | --- | --- |
 | `0000h–00FFh` | Page zero, with the CP/M jumps and buffers |
-| `0100h–B6C4h` | Your program, up to 46,533 bytes on the starter card |
-| `B6C5h–BFFFh` | TEC-OS's working memory |
+| `0100h–B6C7h` | Your program, up to 46,536 bytes on the starter card |
+| `B6C8h–BFFFh` | TEC-OS's working memory |
 | `C000h–FFFFh` | The ROM, which holds TEC-OS itself |
 
 The card and services give the boundaries below. The first two rows use the
@@ -200,11 +200,11 @@ example has four G8M volumes created with `tecvol create`. A holds `TOP.COM`,
 
 | Card | Services | Word at `0006h` | TPA in bytes | Largest `.COM` that loads |
 | --- | --- | --- | ---: | ---: |
-| starter card | none | `B6C5h` | 46,533 | 46,336 |
+| starter card | none | `B6C8h` | 46,536 | 46,336 |
 | starter card | `GLCD.SVC` | `B300h` | 45,568 | 45,568 |
 | starter card | `SHELL.SVC` | `A500h` | 41,984 | 41,984 |
 | starter card | `SHELL.SVC`, `GLCD.SVC` | `A200h` | 41,216 | 41,216 |
-| four G8M volumes | none | `B6C5h` | 46,533 | 46,336 |
+| four G8M volumes | none | `B6C8h` | 46,536 | 46,336 |
 | four G8M volumes | `GLCD.SVC`, `SHELL.SVC` | `A200h` | 41,216 | 41,216 |
 
 An allocation vector reserves a bit per allocation block so the BDOS can find
@@ -216,15 +216,19 @@ Chapter 18 explains how the card's drive count sets the reservation.
 Services allocate whole 256-byte pages below the preceding boundary's page.
 Each installs a BDOS jump at its base and the jump at `0005h` points there. On
 the bare starter card GLCD.SVC occupies `B300h–B5FFh`. Its 768 bytes also
-exclude the alignment gap at `B600h–B6C4h`, reducing the TPA by 965 bytes.
+exclude the alignment gap at `B600h–B6C7h`, reducing the TPA by 968 bytes.
 Later services allocate below the first. Startup's seventeen-page `SHELL.SVC`
 leaves `A500h`, or 41,984 bytes. Adding GLCD leaves 41,216
-(`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/memory-map.md:12-22`, `TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/shell.md:23-31`,
-`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/compatibility.md:3-16`). MON3.SVC uses 19 pages. Alone it lowers
-`B6C5h` to `A300h`, leaving 41,472 bytes, or 40,704 after GLCD. After the
+(`TEC-OS 02c98077b680e789e5c9d6e5f8bc4cc1e09f6fe5:docs/memory-map.md:12-22`, `TEC-OS 02c98077b680e789e5c9d6e5f8bc4cc1e09f6fe5:docs/shell.md:23-31`,
+`TEC-OS 02c98077b680e789e5c9d6e5f8bc4cc1e09f6fe5:docs/compatibility.md:3-16`). MON3.SVC uses 19 pages. Alone it lowers
+`B6C8h` to `A300h`, leaving 41,472 bytes, or 40,704 after GLCD. After the
 shell it leaves `9200h` and 37,120 bytes. Adding GLCD lowers it
 to `8F00h` with 36,352 bytes, in any order of installing the three
-(`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/mon3.md:47-58`).
+(`TEC-OS 1cded94eed6a077bd0cddea4554c2a2245c40a5a:docs/mon3.md:47-58`).
+The cited revisions give `B6C5h` and 46,533 bytes for the bare starter card.
+The ROM has since lost its SAVE command and the three workspace bytes SAVE
+used, so the bare boundary and TPA are three bytes higher. A service's
+page-aligned boundary is unchanged.
 
 AREA subtracts the program start, `0100h`, from the boundary to print the
 available byte count:
@@ -314,7 +318,7 @@ instead of loading another record across that ceiling. An oversized file fails
 with the same name and question mark as a missing program.
 
 On the bare starter card the last loaded record ends at `B5FFh`. The largest
-COM is therefore 46,336 bytes, 197 below the 46,533-byte TPA. A page-aligned
+COM is therefore 46,336 bytes, 200 below the 46,536-byte TPA. A page-aligned
 service boundary has no such gap. This loading limit includes record padding.
 Storage allocated after entry may extend to the byte below the word at
 `0006h`.
@@ -328,7 +332,7 @@ also provide exit jumps, console selection and BIOS scratch:
 | --- | --- |
 | `0000h–0002h` | Jump to the BIOS warm-boot entry at `BF03h` |
 | `0003h` | IOBYTE, the CP/M device-selection byte described in Chapter 17 |
-| `0004h` | Current drive in bits 0–3 and user area in bits 4–7 |
+| `0004h` | Current drive in bits 0–3. Bits 4–7, CP/M's user area, are zero |
 | `0005h–0007h` | BDOS jump, with the TPA boundary in its address word |
 | `0008h–0037h` | Restart vectors for `RST 08h` through `RST 30h` |
 | `0038h–003Ah` | Default `EI`/`RETI` for interrupt mode 1, unless a qualifying jump is retained |
@@ -339,10 +343,11 @@ also provide exit jumps, console selection and BIOS scratch:
 | `006Ch–007Bh` | Second argument's name fields, overlapping the first FCB |
 | `0080h–00FFh` | Command tail, then the default DMA buffer |
 
-Before launching a program the CCP writes the current drive and user area to
-`0004h`. Warm boot restores selection from that byte so a program can supply a
-different exit drive or user area there. A drive that is unavailable falls
-back to A (`241b438:src/cpm/ccp.asm:352-370`, `241b438:src/cpm/ccp.asm:32-100`).
+Before launching a program the CCP writes the current drive to `0004h`,
+with a zero user nibble. Warm boot restores the drive from that byte so a
+program can supply a different exit drive there. The user nibble is not
+read: every prompt is in user area 0. A drive that is unavailable falls
+back to A (`b95b2a9:src/cpm/ccp.asm:352-370`, `b95b2a9:src/cpm/ccp.asm:32-100`).
 
 The command tail begins with a length byte followed by capitalised text,
 including the space after the command name. A read into the default DMA buffer
@@ -358,62 +363,6 @@ remains current.
 TED uses that byte when prefixing chained tool names. Loaded from A while B is
 current, it supplies `A:TAS` and `A:TED`. The source stays on B. Chapter 13
 explains how those commands are supplied.
-
-## SAVE as a memory snapshot
-
-`SAVE` stores bytes already in RAM. It does not assemble source. Its decimal
-count is in 256-byte pages beginning at `0100h`, so `SAVE 2 TWO.COM` stores
-`0100h–02FFh`, or 512 bytes. This was CP/M 2.2's way to retain debugger-loaded
-or patched code. A zero count creates an empty file.
-
-The saved bytes are whatever a preceding program loaded or left in memory. A
-valid count is at most 255 and ends before the page containing the BDOS entry.
-Appendix J gives the command syntax. The shell's `DIR` with sizes is one such
-preceding program: it builds its table of names at `0100h`–`223Fh`, so a SAVE
-after it writes that table. `DIR /W` leaves memory as it was
-(`TEC-OS df0e269b376e45cdf7859b842c4a44e44cbca7da:docs/shell.md:223-229`).
-
-With the seventeen-page startup shell at `A500h`, this starter-card run could
-save 164 pages. The next page would cross the limit so 165 was rejected:
-
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs B: 'SAVE 2 TWO.COM' 'SAVE 165 BIG.COM' 'SAVE 164 BIG.COM' DIR. Complete captured console transcript. -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM
-B: WORK
-C: PROJECTS
-
-A>SHELL.SVC
-
-A:SYSTEM>GLCD.SVC
-
-A:SYSTEM>B:
-B:WORK>SAVE 2 TWO.COM
-B:WORK>SAVE 165 BIG.COM
-165?
-
-B:WORK>SAVE 164 BIG.COM
-B:WORK>DIR
-
-TWO.COM          512
-BIG.COM        41984
-2 files, 42496 bytes
-8323072 free on B:WORK
-B:WORK>
-```
-
-`SAVE 320 X.COM` also fails with `320?` because 320 exceeds 255. SAVE erases
-an existing file of the selected name before creating its replacement. A full
-directory gives `NO SPACE` before creation. If space runs out later, SAVE
-closes the partial file before reporting `NO SPACE`. A returned close failure
-gives that message too. In default BDOS error mode a physical write error can
-instead abort through warm boot. A successfully closed partial file retains
-the records written.
-
-CP/M 2.2's SAVE leaves a partial file open, which can omit its final extent's
-records from the directory. TEC-OS attempts the close to avoid that loss.
-Closing file state and flushing cached card writes remain separate operations
-as Chapter 10 explains.
 
 ## Restart vectors and interrupts
 
@@ -449,10 +398,10 @@ read it even while EXPAND 1 hides the workspace. Any program writing port
 stale bits. Leave both untouched unless changing the latch. Cold boot clears
 page zero and initialises the copy. TEC-OS leaves `0041h–004Fh` unused
 afterwards. MON3.SVC reserves those bytes during a session and releases them
-at `EXIT` or warm boot (`241b438:docs/memory-map.md:34-41`).
+at `EXIT` or warm boot (`b95b2a9:docs/memory-map.md:34-41`).
 
 Cold boot clears EXPAND 1 and prepares the following cache storage
-(`241b438:docs/memory-map.md:83-96`):
+(`b95b2a9:docs/memory-map.md:83-96`):
 
 | Addresses | Contents |
 | --- | --- |
@@ -478,7 +427,7 @@ bytes are zero and execute through to ROM at `C000h`. The reset entry tests
 the high byte at `0002h` and selects warm boot instead of cold boot. Warm boot
 restores EXPAND 0 and attempts queued data. Failed acknowledged lines remain
 available; continuation is dropped and a separate reporter describes pending
-state (`a40d482:src/cache.asm:638-649`). Chapter 10 explains the file-state limits.
+state (`0701241:src/cache.asm:638-649`). Chapter 10 explains the file-state limits.
 
 Recovery depends on the page-zero jump and bank bytes remaining intact. It
 cannot repair overwritten cache data. Reset and BIOS function 0 take the cold
@@ -592,7 +541,7 @@ node tools/tecvol.mjs put con.img B key.com
 
 The serial capture supplies `a`, `Z`, `^C`, Esc and Return:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card con.img '@start B:KEY' $'@key aZ\x03\x1b\x0d'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card con.img '@start B:KEY' $'@key aZ\x03\x1b\x0d'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

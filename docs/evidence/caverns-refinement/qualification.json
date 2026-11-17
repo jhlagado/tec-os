@@ -34,8 +34,8 @@
     "sourceOnlyStarterCompiled": true,
     "downloadedCOMMatchesQualified": true,
     "exportAndFreshContextRestore": true,
-    "viewerCommit": "346d5c65e3106e4a5196d8e540947832eacf1f40",
-    "tecOSCommit": "8f88b8c597024a4ec676501a657b473994067502",
+    "viewerCommit": "7dee8f32e2bcca0d1139c79ea2bd0d2e102bbdfe",
+    "tecOSCommit": "2bd6b0a0c4f046cede63bcfedeec8f8885091954",
     "viewerNativeTests": 2
   }
 }

@@ -7,14 +7,14 @@ nav_group: "Using the machine"
 
 # 1. First session
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the eee4ee6 payload; integration qualification is recorded
      separately. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -42,7 +42,7 @@ with this configuration. Unused blank rows are omitted from the excerpts.
 Power-on starts TEC-OS and displays the system name. The three names below
 it identify the card volumes available for files:
 
-<!-- TEC-OS 241b438, ROM c9586263: owned-input stock PICO capture03, boot. 40-column text; right-hand blanks and empty bottom rows omitted. Raw rows/registers/VRAM and receipt: Origo studies/p3-tec-os/evidence/book-stock-pico-capture03/. -->
+<!-- TEC-OS b95b2a9, ROM c9586263: owned-input stock PICO capture03, boot. 40-column text; right-hand blanks and empty bottom rows omitted. Raw rows/registers/VRAM and receipt: Origo studies/p3-tec-os/evidence/book-stock-pico-capture03/. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -192,7 +192,7 @@ SAMPLE and the assembler for the next command.
 The command needs only SAMPLE because TAS supplies the file types.
 A completed assembly produces this message:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'TAS SAMPLE'. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --board pico --screen 'TAS SAMPLE'. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -217,7 +217,7 @@ only after you assemble it again.
 The command `SAMPLE` loads and starts `SAMPLE.COM`. Its greeting and screen
 size appear before it returns to the prompt:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'TAS SAMPLE' SAMPLE. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --board pico --screen 'TAS SAMPLE' SAMPLE. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -253,7 +253,7 @@ A program can accept a record into cache before it reaches SD. Ordinary OS
 calls give queued data an opportunity to progress and required input attempts
 to drain it. Cold reset and power loss still discard changes left only in RAM;
 there is no timer that keeps writing while a program owns the CPU
-(`a40d482:docs/recovery.md:25-67`).
+(`0701241:docs/recovery.md:25-67`).
 
 Finish the program and wait for the prompt before switching off, pressing
 reset or removing the card. A running program may hold new changes
@@ -265,7 +265,7 @@ failure on the original initialised backend and await `Cache clear` before
 reset. That notice does not close a file, repair rejected metadata, complete
 browser storage or prove physical durability. Reinserting a card is not
 permission to replay retained data onto it
-(`a40d482:docs/recovery.md:69-117`, `a40d482:docs/recovery.md:206-222`).
+(`0701241:docs/recovery.md:69-117`, `0701241:docs/recovery.md:206-222`).
 
 Keep a separate copy of valuable work. [Chapter 6](06-cards-on-the-pc.md)
 explains card copies and recovery and
@@ -300,7 +300,7 @@ First build the supplied HELLO3.ASM at the CP/M prompt with
 `GO` runs it. HELLO3 prints four lines on the 20 × 4 LCD through MON-3's
 calls, then beeps:
 
-<!-- TEC-OS b3134cf test/starter.test.mjs:219, the LCD rows the host-model
+<!-- TEC-OS 9ade2fe test/starter.test.mjs:219, the LCD rows the host-model
      test checks, trailing spaces removed. Not a separate capture. -->
 ```text
 MON-3 ON TEC-OS

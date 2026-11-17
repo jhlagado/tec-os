@@ -33,7 +33,7 @@ function parse(raw) {
       assert.deepEqual([...b], [0, 0, 0, 1, 255]);
       assert.equal(i, rows.length - 1, "one EOF at the end");
     } else {
-      assert.equal(b[3], 0, "TAS emits data00 and EOF01, no invented entry record");
+      assert.equal(b[3], 0, "TAS emits data (type 00) and end-of-file (type 01) records, no invented entry record");
       assert.ok(b[0] > 0 && b[0] <= 16 && address + b[0] <= 0x10000);
       for (let j = 0; j < b[0]; j++) {
         assert.equal(map.has(address + j), false, "no repeated native output address");

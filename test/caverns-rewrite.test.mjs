@@ -43,7 +43,7 @@ async function pair(s){
   a.write('CAVLOAD.COM',read(baseline?'test/fixtures/caverns-baseline/CAVLOAD.COM':'build/caverns/CAVLOAD.COM'));
   a.write('TEST.CAV',baseline?encodeOld(s):encodeScenario(s));
   // The 39,808-byte baseline needs the 42,496 bytes the fifteen-page shell left, and the shell with sized DIR
-  // leaves 41,984, so the baseline alone runs with no shell loaded, in the bare ROM's 46,533.
+  // leaves 41,984, so the baseline alone runs with no shell loaded, in the bare ROM's 46,536.
   if(baseline)a.write('STARTUP.CMD',startupFile('GLCD.SVC'));
   const m=boot(image,{tms:true,matrix:true,width:80});const out=keys(m,'cavload test');machines.push({m,f:baseline?old:basic,l:baseline?oldLayout:l,out});
  }
@@ -128,7 +128,7 @@ test('rewrite matches baseline output, complete state and RNG across checkpoints
 test('long-input resource behaviour is recorded separately from gameplay equivalence',{timeout:120000},async()=>{
  const [a,b]=await pair(scenario());const input='x'.repeat(254);
  const before=keys(a.m,input),after=keys(b.m,input);
- // The baseline's memory limit here was a property of the fifteen-page shell's 42,496 bytes: in the bare 46,533 it takes the line and answers eh?.
+ // The baseline's memory limit here was a property of the fifteen-page shell's 42,496 bytes: in the bare 46,536 it takes the line and answers eh?.
  assert.doesNotMatch(before,/OUT OF MEMORY|ERROR IN/);assert.match(before,/eh\?/);assert.equal(scalar(a.m,a.f,'A%'),1);assert.ok(a.m.waitingForInput());
  if(/OUT OF MEMORY/.test(after))assert.ok(b.m.ready(),'resource failure exits cleanly');
  else{assert.doesNotMatch(after,/ERROR IN/);assert.equal(scalar(b.m,b.f,'A%'),1);assert.ok(b.m.waitingForInput());}

@@ -7,14 +7,14 @@ nav_group: "Reference"
 
 # Appendix H. The service file format
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -44,39 +44,39 @@ The header and image are assembled together for page 0. At installation the load
 a page boundary and adds that page number at each relocation position.
 The card stores whole 128-byte records, but trailing record padding lies
 outside the relocation data. It is not decoded as another gap
-(`241b438:src/loader.asm:267-299`, `241b438:src/loader.asm:326-348`).
+(`b95b2a9:src/loader.asm:267-299`, `b95b2a9:src/loader.asm:326-348`).
 
 ## The header
 
-The loader's field definitions are at `241b438:src/loader.asm:26-46`. The final
+The loader's field definitions are at `b95b2a9:src/loader.asm:26-46`. The final
 column gives the check applied to each field. Any failed check rejects the
 load. A name has no content check.
 
 | Offset | Bytes | Contents | The loader's check |
 | ---: | ---: | --- | --- |
-| 0 | 1 | The letter `D`, `44h` | Offsets 0 and 1 together are the word `0444h` (`241b438:src/loader.asm:146-149`) |
+| 0 | 1 | The letter `D`, `44h` | Offsets 0 and 1 together are the word `0444h` (`b95b2a9:src/loader.asm:146-149`) |
 | 1 | 1 | The format, 4 | See offset 0 |
-| 2 | 1 | The number of dependencies | The entries, 9 bytes each after the image, end within the records read (`241b438:src/loader.asm:200-223`) |
-| 3 | 1 | Flags: bit 0 removable. Bits 1 to 7 claim `RST 1` to `RST 7` | No claimed vector holds a `JP` already (`241b438:src/loader.asm:308-329`) |
-| 4 | 2 | `REMOVE`, from the header's start | From 25 to below the size at offset 6 (`241b438:src/loader.asm:166-168`, `241b438:src/loader.asm:627-634`) |
-| 6 | 2 | The size of the header and image | The header and image end within the records read (`241b438:src/loader.asm:153-156`, `241b438:src/loader.asm:609-617`) |
-| 8 | 2 | Extra memory after the image, not cleared | The pages for the image and the extra memory start at a page from `80h` up and below the page containing the top of the transient program area (TPA) (`241b438:src/loader.asm:185-195`) |
-| 10 | 2 | The size of the relocation data | The data ends within the records read (`241b438:src/loader.asm:225-229`) |
-| 12 | 3 | Stack bytes added: BDOS, BIOS, CCP | Each is at most the room left on that stack, `SVCLIM`'s figure less what the services in have taken (`241b438:src/loader.asm:230-258`) |
-| 15 | 2 | `INIT`, from the header's start | As `REMOVE` (`241b438:src/loader.asm:160-162`) |
+| 2 | 1 | The number of dependencies | The entries, 9 bytes each after the image, end within the records read (`b95b2a9:src/loader.asm:200-223`) |
+| 3 | 1 | Flags: bit 0 removable. Bits 1 to 7 claim `RST 1` to `RST 7` | No claimed vector holds a `JP` already (`b95b2a9:src/loader.asm:308-329`) |
+| 4 | 2 | `REMOVE`, from the header's start | From 25 to below the size at offset 6 (`b95b2a9:src/loader.asm:166-168`, `b95b2a9:src/loader.asm:627-634`) |
+| 6 | 2 | The size of the header and image | The header and image end within the records read (`b95b2a9:src/loader.asm:153-156`, `b95b2a9:src/loader.asm:609-617`) |
+| 8 | 2 | Extra memory after the image, not cleared | The pages for the image and the extra memory start at a page from `80h` up and below the page containing the top of the transient program area (TPA) (`b95b2a9:src/loader.asm:185-195`) |
+| 10 | 2 | The size of the relocation data | The data ends within the records read (`b95b2a9:src/loader.asm:225-229`) |
+| 12 | 3 | Stack bytes added: BDOS, BIOS, CCP | Each is at most the room left on that stack, `SVCLIM`'s figure less what the services in have taken (`b95b2a9:src/loader.asm:230-258`) |
+| 15 | 2 | `INIT`, from the header's start | As `REMOVE` (`b95b2a9:src/loader.asm:160-162`) |
 | 17 | 8 | The name, padded with spaces | None |
 
 The loader compares the first two bytes, as a word, with `DMAGIC`, which is
-`SVCFMT * 256 + 'D'` (`241b438:src/loader.asm:26-28`). `SVCFMT` is 4, from `abi.inc`,
-and a file of any other format fails the load (`241b438:src/abi.inc:242-247`).
+`SVCFMT * 256 + 'D'` (`b95b2a9:src/loader.asm:26-28`). `SVCFMT` is 4, from `abi.inc`,
+and a file of any other format fails the load (`b95b2a9:src/abi.inc:242-247`).
 
 The source supplies the service's name, flags, extra-memory request and
 stack declarations. `TAS` on the card or `makeSvc` on the PC fills the
-measured fields and routine offsets (`241b438:tools/lib/svc.mjs:170-179`):
+measured fields and routine offsets (`b95b2a9:tools/lib/svc.mjs:170-179`):
 
 | Field | Written by |
 | --- | --- |
-| The letter `D` | The source, as `DB 'D',SVCFMT,0,1` with `abi.inc` included (`241b438:drivers/glcd.asm:26-35`) |
+| The letter `D` | The source, as `DB 'D',SVCFMT,0,1` with `abi.inc` included (`b95b2a9:drivers/glcd.asm:26-35`) |
 | The format | The source. `makeSvc` overwrites it with 4. Pinned TAS preserves it |
 | The number of dependencies | `makeSvc` writes the count. Pinned TAS writes it when `DEPS` exists |
 | The flags | The source |
@@ -88,7 +88,7 @@ measured fields and routine offsets (`241b438:tools/lib/svc.mjs:170-179`):
 
 Leave the measured sizes, dependency count and routine-offset fields zero in the
 source. Supply `SVCFMT` in the format byte. `makeSvc` overwrites that byte with
-its own format value (`241b438:tools/lib/svc-format.mjs:3`, `241b438:tools/lib/svc.mjs:170`).
+its own format value (`b95b2a9:tools/lib/svc-format.mjs:3`, `b95b2a9:tools/lib/svc.mjs:170`).
 TAS at Thorium `dbee66a` preserves it. That TAS writes the dependency count only
 when the source has `DEPS` so the zero in a source without dependencies must
 already be correct (`Thorium dbee66a:src/tas/DRV.ASM:92-120`,
@@ -97,12 +97,12 @@ already be correct (`Thorium dbee66a:src/tas/DRV.ASM:92-120`,
 ## The dependencies
 
 Each 9-byte dependency contains a minimum version followed by an 8-byte
-name padded with spaces (`241b438:tools/lib/svc.mjs:165`). Dependencies follow the
+name padded with spaces (`b95b2a9:tools/lib/svc.mjs:165`). Dependencies follow the
 image and are not relocated. For each entry the loader searches the
 registry for that name at the requested version or later. An absent record
 or one below the minimum version rejects the load
-(`241b438:src/loader.asm:200-223`). `makeSvc` takes them from its `deps` option and rejects a name of more than 8 bytes
-(`241b438:tools/lib/svc.mjs:164`). `TAS` takes them from what follows a label named
+(`b95b2a9:src/loader.asm:200-223`). `makeSvc` takes them from its `deps` option and rejects a name of more than 8 bytes
+(`b95b2a9:tools/lib/svc.mjs:164`). `TAS` takes them from what follows a label named
 `DEPS` in the source, as whole 9-byte entries in `DB`.
 
 ## The execution record
@@ -110,7 +110,7 @@ or one below the minimum version rejects the load
 A service can carry an application that TEC-OS enters,
 as `MON3.SVC` and `SHELL.SVC` do. Its image then starts with a 16-byte
 *execution record*, at file offset 25, directly after the header
-(`241b438:docs/services.md:133-144`):
+(`b95b2a9:docs/services.md:133-144`):
 
 | Offset | Bytes | Contents |
 | --- | --- | --- |
@@ -124,7 +124,7 @@ as `MON3.SVC` and `SHELL.SVC` do. Its image then starts with a 16-byte
 The entry is an offset, never a relocated label: TEC-OS adds the service's
 page itself, and the loader rejects a staged record whose entry lies
 outside the image. A format-4 service without a record must not start its
-image with `45h 58h 01h` (`241b438:docs/services.md:146-158`).
+image with `45h 58h 01h` (`b95b2a9:docs/services.md:146-158`).
 
 Typing `NAME.SVC` compares `NAME` with the name in each installed service's
 ready record that has bit 1. One match is entered without reading a file.
@@ -132,21 +132,21 @@ None installs the file and, if its record has bit 1 and its INIT set it
 ready, enters it. An install that never became ready is removed again and
 the line is rejected. Two or more matches are rejected. A service with no
 record, or with bit 1 clear, only installs, and text after the name is the
-entry's command tail (`241b438:docs/services.md:83-90`,
-`241b438:docs/services.md:111-131`, `241b438:src/loader.asm:734-783`). The
+entry's command tail (`b95b2a9:docs/services.md:83-90`,
+`b95b2a9:docs/services.md:111-131`, `b95b2a9:src/loader.asm:734-783`). The
 entry receives A = `FFh` for a line of `STARTUP.CMD` and 0 otherwise, with
 HL its own address and page zero prepared as for a `.COM`. It returns with
 a warm boot, which leaves the service installed
-(`241b438:docs/services.md:165-181`). The shell's record is
+(`b95b2a9:docs/services.md:165-181`). The shell's record is
 `DB "EX",1`, then the state byte 2, then the entry offset 41 and the name
-field (`241b438:drivers/shell.asm:45-55`).
+field (`b95b2a9:drivers/shell.asm:45-55`).
 
 ## The relocation data
 
 Relocation positions are encoded as one-byte gaps. At each fixup the loader adds
 the service's base page to an address's high byte. The first gap starts at
 header byte 24, immediately before the image. Each later gap starts at the
-previous fixup (`241b438:tools/lib/svc.mjs:36-48`). A gap of 255 moves on 255 bytes with
+previous fixup (`b95b2a9:tools/lib/svc.mjs:36-48`). A gap of 255 moves on 255 bytes with
 nothing fixed and the next byte carries on from there. A distance of 255 or more
 is therefore written as bytes of 255 and then the rest:
 
@@ -157,13 +157,13 @@ is therefore written as bytes of 255 and then the rest:
 | 509 | `255 255 0` |
 
 Image byte 600 is 601 bytes from header byte 24, which is 255 and 255 and 91
-more (`241b438:test/svc.test.mjs:528-532`). When the rest is 0, as for image byte 509,
+more (`b95b2a9:test/svc.test.mjs:528-532`). When the rest is 0, as for image byte 509,
 the last byte is a gap of 0. That fixes the byte the 255s reached.
 
 Every position reached by a gap must remain inside the header and image,
 below the size at offset 6. This includes the positions reached by a 255
 gap. An out-of-bounds position rejects the load
-(`241b438:src/loader.asm:267-299`).
+(`b95b2a9:src/loader.asm:267-299`).
 
 A first gap of 0 is different: it reaches header byte 24, the final name
 byte, so it passes the bounds check. The loader does not reject it.
@@ -171,9 +171,9 @@ byte, so it passes the bounds check. The loader does not reject it.
 The example below shows the resulting name change.
 
 The repository also has bitmap and 16-bit-offset encoders for comparison
-(`241b438:tools/lib/svc.mjs:27-35`). `makeSvc` writes the gap list unless its options
+(`b95b2a9:tools/lib/svc.mjs:27-35`). `makeSvc` writes the gap list unless its options
 name another. The loader reads only the gap list
-(`241b438:tools/lib/svc.mjs:101`, `241b438:tools/lib/svc.mjs:152`).
+(`b95b2a9:tools/lib/svc.mjs:101`, `b95b2a9:tools/lib/svc.mjs:152`).
 
 ### A first gap of 0
 
@@ -214,7 +214,7 @@ B:WORK>
 
 In this run the service loaded at page `A4h`, below the shell. The inserted
 zero gap changed header byte 24 from a space, `20h`, to `C4h`. The shell's
-`PUTTRIM` masks bit 7 (`46cf3f1:drivers/shellio.asm:264-283`) so the name prints with
+`PUTTRIM` masks bit 7 (`57a8c38:drivers/shellio.asm:264-283`) so the name prints with
 a `D`.
 
 ## GLCD.SVC
@@ -227,7 +227,7 @@ od -A x -t x1 -N 48 dist/files/GLCD.SVC
 od -A x -t x1 -j 767 dist/files/GLCD.SVC
 ```
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS 57a8c38: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
 ```text
 000000 44 04 00 01 4e 00 ff 02 00 00 45 00 02 00 06 2b
 000010 00 47 4c 43 44 20 20 20 20 f2 00 4d 01 52 01 c9
@@ -267,4 +267,4 @@ of the next five 2s reaches the next word's high byte. None of the 69 gaps is
 bit for each of the 742 image bytes would take 93 bytes.
 
 The driver contains no font. Its `INIT` obtains the ROM font address through
-service 15 and stores it for drawing (`241b438:drivers/glcd.asm:60-64`).
+service 15 and stores it for drawing (`b95b2a9:drivers/glcd.asm:60-64`).

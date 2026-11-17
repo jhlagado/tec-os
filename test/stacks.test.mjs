@@ -22,7 +22,7 @@ import { run, watch } from "./lib/census.mjs";
 import { ks53Census, mon3Svc } from "./lib/mon3.mjs";
 import { flushRun } from "./lib/coalesce.mjs";
 
-const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "dirty"];
+const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "dirty", "put"];
 const COMMANDS = [
   "PROBE\r",
   "TERM\r",
@@ -33,13 +33,13 @@ const COMMANDS = [
   "VIDMODE\r",
   "COPY DATA.BIN B:DATA.CPY\r",
   "DIR B:\r",
-  "SAVE 4 S.COM\r",
+  "PUT 4 S.COM\r",
   "TYPE S.COM\r",
   "ERA S.COM\r",
   "TYPE LINES.TXT\r",
   "ABC\b\b\x15XYZ\x12\x05Q\r", // the line editor: backspace, ^U, ^R, ^E
   "\x03",
-  "SAVE 1 C:X.COM\r", // a BDOS error on the read-only C:, then a key
+  "PUT 1 C:X.COM\r", // a BDOS error on the read-only C:, then a key
   "DIR E:\r",
   "E:\r",
 ];
@@ -47,7 +47,7 @@ const COMMANDS = [
 // Logged on B:, so that B: is written behind: its lines written inside BIOS
 // WRITE at each directory write, and by warm boot after DIRTY leaves a file
 // unclosed.
-const WRITE_BEHIND = ["B:\r", "SAVE 4 S.COM\r", "COPY A:DATA.BIN DATA.CP2\r", "DIRTY\r", "A:\r"];
+const WRITE_BEHIND = ["B:\r", "PUT 4 S.COM\r", "COPY A:DATA.BIN DATA.CP2\r", "DIRTY\r", "A:\r"];
 
 async function consoleRun(opts, { wb = false } = {}) {
   const { rom, symbols } = romFor();
@@ -143,7 +143,7 @@ async function chainRun() {
     { geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true },
   ]);
   const a = volume(image, "A");
-  for (const n of ["probe", "line"]) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
+  for (const n of ["probe", "line", "put"]) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
   a.write("CHAIN.COM", Uint8Array.from([...(await program("chain")).bytes, ...Buffer.from("PROBE!DIR B: &DIR\0", "latin1")]));
   a.write("LINES.TXT", Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i + 1}\r\n`).join("") + "\x1a", "latin1"));
   withShell(image);
@@ -151,7 +151,7 @@ async function chainRun() {
   const depths = watch(m);
   m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
-  for (const line of ["PROBE!DIR!USER 0\r", "ERA NOSUCH.X &DIR!DIR\r", "CHAIN!PROBE\r", "SAVE 1 C:X.COM!PROBE\r", "LINE!PROBE\r", "\x03"]) run(m, line);
+  for (const line of ["PROBE!DIR!CON\r", "ERA NOSUCH.X &DIR!DIR\r", "CHAIN!PROBE\r", "PUT 1 C:X.COM!PROBE\r", "LINE!PROBE\r", "\x03"]) run(m, line);
   assert.deepEqual(m.violations, []);
   assert.equal(m.read(m.sym("CHPOS")), 0);
   return depths();
@@ -244,7 +244,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console logged on B:, written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; bare CD query, changed selection and failed-prerequisite paths; lines of pieces under SHELL.SVC, typed and from function 47, with an & piece after a failure, a BDOS error and ^C; enter-on-install installing, re-entering and removing a never-ready install; and MON3.SVC resident and unloaded; dirty work on A: before each public entry for BDOS 1, 6 input, 10 and 11, a BIOS CONIN, BDOS 17 and 48, MOUNT, a B: write and the next block, logged on B: and on A:; accepting runs prove an extent crossing, while refusal runs retain actual write statuses and positions. COPY and the paged TYPE run under SHELL.SVC. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, PUT, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console logged on B:, written behind, adding a PUT and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; bare CD query, changed selection and failed-prerequisite paths; lines of pieces under SHELL.SVC, typed and from function 47, with an & piece after a failure, a BDOS error and ^C; enter-on-install installing, re-entering and removing a never-ready install; and MON3.SVC resident and unloaded; dirty work on A: before each public entry for BDOS 1, 6 input, 10 and 11, a BIOS CONIN, BDOS 17 and 48, MOUNT, a B: write and the next block, logged on B: and on A:; accepting runs prove an extent crossing, while refusal runs retain actual write statuses and positions. COPY and the paged TYPE run under SHELL.SVC. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));

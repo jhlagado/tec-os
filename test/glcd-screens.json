@@ -1,6 +1,6 @@
 {
   "from": "b025dbb",
-  "what": "the ST7920's graphics RAM, SHA-256 to 16 hex digits, after each command: b025dbb's driver's screens, retaken under the shell once its prompt named the volume",
+  "what": "the ST7920's graphics RAM, SHA-256 to 16 hex digits, after each command: b025dbb's driver's screens, retaken under the shell once its prompt named the volume, and from PUT 4 S.COM to DIR E: once PUT.COM took the place of SAVE",
   "bdosVector": 46854,
   "screens": [
     {
@@ -40,16 +40,16 @@
       "gdram": "c42b7de8cf018369"
     },
     {
-      "line": "SAVE 4 S.COM\r",
-      "gdram": "a5d75191bb517615"
+      "line": "PUT 4 S.COM\r",
+      "gdram": "67985204b69fd5ce"
     },
     {
       "line": "TYPE S.COM\r",
-      "gdram": "6e78cbbf6d5edc7a"
+      "gdram": "119397862913a390"
     },
     {
       "line": "ERA S.COM\r",
-      "gdram": "9ef6f5669508e9c2"
+      "gdram": "2c05a33024d3bd20"
     },
     {
       "line": "TYPE LINES.TXT\r",
@@ -64,12 +64,12 @@
       "gdram": "8044ace9e516822d"
     },
     {
-      "line": "SAVE 1 C:X.COM\r",
-      "gdram": "132530afda75e575"
+      "line": "PUT 1 C:X.COM\r",
+      "gdram": "7ce693a597263eac"
     },
     {
       "line": "DIR E:\r",
-      "gdram": "baea10ff7124a9dd"
+      "gdram": "5e8c8eb0a20c884e"
     },
     {
       "line": "E:\r",

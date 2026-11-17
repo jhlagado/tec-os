@@ -50,8 +50,8 @@ first, so the word at `0006h` goes from `A500h` to `9200h`, and the TPA from
 41,984 bytes to **37,120**. With `GLCD.SVC` installed too, as the GLCD
 console's startup does, it is `8F00h`, a TPA of **36,352**, in any order of
 installing the three. On the starter card
-with no shell, whose four drives take the bare ROM's word to `B6C5h`, it goes
-from `B6C5h` to `A300h`, and the TPA from 46,533 bytes to 41,472, and 40,704 with
+with no shell, whose four drives take the bare ROM's word to `B6C8h`, it goes
+from `B6C8h` to `A300h`, and the TPA from 46,536 bytes to 41,472, and 40,704 with
 `GLCD.SVC`. The monitor, its line buffer, its FCB, its saved page
 zero and its stack are all in those pages, above anything a MON-3 program may
 load into. MON-3's graphics buffer and variables are not: they are MON-3's
@@ -114,7 +114,7 @@ It does not relocate absolute addresses embedded in machine code or data.
   ends the session through the existing BDOS error path. Copying is a
   stream, so a device failure after copying begins can leave partial data;
   validation is not a hardware-fault rollback mechanism.
-- **`GO [addr]`** runs the last good load at its remembered entry, or the
+- **`GO [addr]`** runs the last good load at its remembered address, or the
   explicit hexadecimal `addr`. The explicit override applies to this run
   only; it does not change the remembered load address. With neither it prints
   `?`. It first flushes the cache (BDOS 48). If a write fails, GO prints
@@ -448,7 +448,7 @@ its two `LD A,R` on both sides. The console's return is tested with
   and starts nothing while a write is pending, so no earlier write is lost
   with a hung program.
 - **The accepted disk hazard.** A MON-3 program that writes from the bare
-  BDOS entry through BFFFh (`B6C5h` on the starter, `B985h` on the two-volume
+  BDOS entry through BFFFh (`B6C8h` on the starter, `B988h` on the two-volume
   reference card) can damage the allocation vectors, workspace and RAM BIOS
   table. It can
   damage TEC-OS's disk tables. The protections are the flush before `GO`,

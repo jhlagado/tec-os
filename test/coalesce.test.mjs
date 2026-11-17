@@ -10,7 +10,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ABI, ROOT, SHELL_SVC, abiDeclarations, boot, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { ABI, PUT_COM, ROOT, SHELL_SVC, abiDeclarations, boot, putBytes, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 import { recoveryInput } from "./lib/public-caller.mjs";
 import { BUF, DMA, FCB, FCB2, FCB3, MUTANTS, backlog, card, closed8, dirBlocks, flushRun, pat, rig, same, three } from "./lib/coalesce.mjs";
@@ -24,7 +24,7 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 // each of 32 records, in cycles from the stub.
 // abi is the digest of abi.inc's declarations, its comment lines left out.
 const LANDING = { used: 14769, tpa: 47273, abi: "254a794dd99a0c7a189b06bff0b219671cf0eec5a5249ddd9bcacb3e54c43504", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
-const INTEGRITY = { used: 16016, tpa: 47237, starter: 46533, entry: 0xb6c5 };
+const INTEGRITY = { used: 15717, tpa: 47240, starter: 46536, entry: 0xb6c8 };
 
 // Qualified control's costs in this exact returned-input fixture: one empty
 // status call, and 32 write/status pairs on each logged drive. The integrity
@@ -493,8 +493,8 @@ test("AC2 warm boot", () => {
     "JP 0000h": (r) => program(r, [0xc3, 0, 0]),
     "BDOS 0": (r) => program(r, [0x0e, 0, 0xcd, 5, 0]),
     "function 47": (r) => {
-      [..."USER 0"].forEach((c, i) => r.m.write(0x2100 + i, c.charCodeAt(0)));
-      r.m.write(0x2106, 0);
+      [..."CON"].forEach((c, i) => r.m.write(0x2100 + i, c.charCodeAt(0)));
+      r.m.write(0x2103, 0);
       program(r, [0x0e, 26, 0x11, 0x00, 0x21, 0xcd, 5, 0, 0x0e, 47, 0xcd, 5, 0]);
     },
   };
@@ -712,12 +712,14 @@ const traces = new Map();
  * Time the complete matrix-typed command through its next prompt, recording
  * each card write's owning BDOS call and every acknowledged write return.
  * Known output and accepted publication are checked before cost or traffic.
+ * A PUT command's card has PUT.COM on A: too, which the starter card does not.
  */
 function onStarter(command, { logged = "B" } = {}) {
   PINS.forEach(check);
   const key = `${logged} ${command}`;
   if (traces.has(key)) return traces.get(key);
-  const image = starterCard();
+  const image = starterCard(), put = /^put /i.test(command);
+  if (put) volume(image, "A").write("PUT.COM", PUT_COM);
   const m = boot(image, { tms: true, matrix: true, width: 40 });
   if (logged !== "A") {
     m.mark = m.output.length;
@@ -730,8 +732,7 @@ function onStarter(command, { logged = "B" } = {}) {
   assert.deepEqual(Array.from({ length: returning.length }, (_, i) => m.read(retword + i)), returning, "the complete measured return span belongs to this ROM");
   const back = retword + returning.length - 1;
   const t = { writes: [], fn: [], w21: [], commits: [], writeEntries: 0 };
-  const dir = dirBlocks(image), save = /^save /i.test(command), fileName = save ? "X.COM" : "BOUNCE.COM";
-  const expectedSave = Uint8Array.from({ length: 4096 }, (_, i) => m.read(0x100 + i));
+  const dir = dirBlocks(image), fileName = put ? "X.COM" : "BOUNCE.COM";
   let on = false, call = null;
   const step = m.step.bind(m);
   m.step = () => {
@@ -774,8 +775,8 @@ function onStarter(command, { logged = "B" } = {}) {
   assert.deepEqual(t.writes, t.commits.map(c => c.block), "every SDWRITE has one accepted complete backend commit");
   assert.ok(t.writeEntries > 0); assert.equal(t.w21.length, t.writeEntries);
   const mean = t.w21.reduce((a, b) => a + b, 0) / t.w21.length; assert.ok(Number.isFinite(mean));
-  if (save) {
-    assert.equal(file.length, 4096); assert.deepEqual(file, expectedSave, "all sixteen saved pages equal this machine's own pre-command TPA");
+  if (put) {
+    assert.equal(file.length, 4096); assert.deepEqual(file, putBytes(16), "all sixteen pages hold PUT's known bytes");
   } else {
     assert.match(text, /COM written\r\n/); assert.equal(file.length, 16000);
     assert.equal(sha(file), "68d9e9a1a3e327f94e9632bf827e66bd51f14ef715d7bf1d2a104007d349c0f0", "the complete pinned compiler result");
@@ -810,12 +811,12 @@ function checkBounceWrites(b) {
   assert.ok(b.writes.length <= 168, `${b.writes.length} BOUNCE card writes`);
 }
 
-function checkSaveWrites(s) {
+function checkPutWrites(s) {
   const data = s.writes.filter(block => !s.dir.has(block)), times = new Map();
   for (const block of data) times.set(block, (times.get(block) ?? 0) + 1);
   assert.equal(times.size, 8); assert.ok([...times.values()].every(n => n === 4));
   assert.equal(data.length, 32); assert.equal(s.writes.length - data.length, 2);
-  assert.ok(s.writes.length <= 34, `${s.writes.length} SAVE card writes`);
+  assert.ok(s.writes.length <= 34, `${s.writes.length} PUT card writes`);
 }
 
 test("AC3 bounce writes", { skip: CARD_SKIP, timeout: 900_000 }, () => {
@@ -823,9 +824,9 @@ test("AC3 bounce writes", { skip: CARD_SKIP, timeout: 900_000 }, () => {
   console.log(`BAZA BOUNCE: ${b.writes.length} card writes`);
 });
 
-test("AC3 save", { skip: CARD_SKIP, timeout: 300_000 }, () => {
-  const s = onStarter("save 16 a:x.com"); checkSaveWrites(s);
-  console.log(`SAVE 16 X.COM: ${s.writes.length} card writes, ${s.cycles} cycles`);
+test("AC3 put", { skip: CARD_SKIP, timeout: 300_000 }, () => {
+  const s = onStarter("put 16 a:x.com"); checkPutWrites(s);
+  console.log(`PUT 16 X.COM: ${s.writes.length} card writes, ${s.cycles} cycles`);
 });
 
 /** Compare the complete physical allocation, including bytes past logical EOF.
@@ -1278,12 +1279,12 @@ test("AC7 bounce speed", { skip: CARD_SKIP, timeout: 900_000 }, () => {
   console.log(`BAZA BOUNCE: ${b.cycles} T, ${((100 * b.cycles) / BOUNCE_BASE).toFixed(2)} % of the historical shell landing; ${b.w21.length} matched BDOS 21 calls, ${Math.round(b.mean)} T each`);
 });
 
-// The starter's same compiler and SAVE workflows, logged on A:SYSTEM.
+// The starter's same compiler and PUT workflows, logged on A:SYSTEM.
 test("S2-11 starter workloads logged on A:", { skip: CARD_SKIP, timeout: 900_000 }, (t) => {
   const b = onStarter("baza bounce", { logged: "A" }); checkBounceWrites(b);
   assert.ok(b.cycles <= STARTER_COST.bounceA, `BAZA BOUNCE: ${b.cycles} T`);
-  const s = onStarter("save 16 x.com", { logged: "A" }); checkSaveWrites(s);
-  t.diagnostic(JSON.stringify({ bounce: { seconds: +(b.cycles / 4e6).toFixed(2), writes: b.writes.length }, save16: { seconds: +(s.cycles / 4e6).toFixed(2), writes: s.writes.length } }));
+  const s = onStarter("put 16 x.com", { logged: "A" }); checkPutWrites(s);
+  t.diagnostic(JSON.stringify({ bounce: { seconds: +(b.cycles / 4e6).toFixed(2), writes: b.writes.length }, put16: { seconds: +(s.cycles / 4e6).toFixed(2), writes: s.writes.length } }));
 });
 
 test("AC7 file speed", () => {

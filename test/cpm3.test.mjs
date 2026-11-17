@@ -68,11 +68,3 @@ test("function 99, truncate, returns FFh and leaves the file as it was", () => {
   m.runUntil(() => m.waitingForInput(), 400_000_000, "warm boot");
   assert.equal(volume(image, "A").read("KEEP.DAT").length, 5000 + (128 - (5000 % 128)) % 128);
 });
-
-test("the prompt shows the user number before the drive unless it is 0, as CP/M 3 does: 3A>", () => {
-  const m = boot(card());
-  assert.match(m.command("USER 3"), /\r\n3A(:\S*)?>$/);
-  assert.match(m.command("B:"), /\r\n3B(:\S*)?>$/);
-  assert.match(m.command("USER 15"), /\r\n15B>$/);
-  assert.match(m.command("USER 0"), /\r\nB(:\S*)?>$/);
-});

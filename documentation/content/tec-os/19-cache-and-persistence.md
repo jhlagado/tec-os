@@ -7,14 +7,14 @@ nav_group: "Inside TEC-OS"
 
 # 19. Cache and persistence
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/. READ/SAVE/DIR timings use the measurements retained there.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -33,7 +33,7 @@ Ordinary outer calls now give pending writes an earlier opportunity: one eligibl
 line is attempted before the call's normal work. A successful record call can
 still leave its newest bytes only in RAM if the program makes no further call.
 No timer progresses the queue while the program owns the CPU
-(`a40d482:docs/recovery.md:25-52`).
+(`0701241:docs/recovery.md:25-52`).
 
 The existing numeric and capture receipts in this chapter retain their stated
 historical firmware. They have not been rerun under these housekeeping paths.
@@ -43,10 +43,10 @@ retained-data observation below is separate from those historical costs.
 ## Thirty lines and their table
 
 The cache can retain thirty card blocks. Its 30 lines each contain 512
-bytes and occupy `8000h–BBFFh` in EXPAND 1 (`241b438:src/cache.asm:1-20`,
-`241b438:src/layout.asm:32-42`). Line n begins at `8000h` plus n times `200h`.
+bytes and occupy `8000h–BBFFh` in EXPAND 1 (`b95b2a9:src/cache.asm:1-20`,
+`b95b2a9:src/layout.asm:32-42`). Line n begins at `8000h` plus n times `200h`.
 `CLADR` calculates its high byte by doubling n and adding `80h`
-(`241b438:src/cache.asm:172-177`).
+(`b95b2a9:src/cache.asm:172-177`).
 
 A table in the next page records each line's identity and state. At
 `CTAB`, `BC00h`, four bytes per line hold the card block number or
@@ -55,18 +55,18 @@ changes not yet written to the card. Empty lines have no block, clean
 lines match the card and dirty lines contain newer bytes.
 
 Cold boot clears EXPAND 1 and marks every line empty before mounting the
-card ([Chapter 16](16-reset-and-boot.md), `241b438:src/boot.asm:77`,
-`241b438:src/boot.asm:239-256`). Mounting reads the container table into an ordinary
+card ([Chapter 16](16-reset-and-boot.md), `b95b2a9:src/boot.asm:77`,
+`b95b2a9:src/boot.asm:239-256`). Mounting reads the container table into an ordinary
 clean line. `CTAKE` can later reuse that line like any other
-(`241b438:src/vol.asm:380-416`). Chapter 18 explains the mount checks.
+(`b95b2a9:src/vol.asm:380-416`). Chapter 18 explains the mount checks.
 
 The lookup key is `SDLBA`, the absolute card block number. It remains the
 same regardless of the drive used to reach the block. Looking up this
 address prevents separate cache copies of the same block
-(`241b438:src/cache.asm:52-94`).
+(`b95b2a9:src/cache.asm:52-94`).
 
 The data and line table are banked in EXPAND 1. Five control bytes remain
-in the resident workspace above the RAM BIOS table (`241b438:src/ram.asm:310-325`):
+in the resident workspace above the RAM BIOS table (`b95b2a9:src/ram.asm:310-325`):
 
 - `CNEXT`, the next line to give out
 - `CWTYPE`, the write type of the current BIOS `WRITE` in its low bits,
@@ -78,7 +78,7 @@ in the resident workspace above the RAM BIOS table (`241b438:src/ram.asm:310-325
 Table access briefly selects EXPAND 1. `CXON` supplies `LATCHV` ORed with
 `LATEXP`. The routine writes that latch value, accesses the bytes then
 restores `LATCHV`. No `PUSH`, `POP` or `CALL` occurs between those latch
-writes (`241b438:src/cache.asm:33-44`). The caller's stack may be hidden during the
+writes (`b95b2a9:src/cache.asm:33-44`). The caller's stack may be hidden during the
 access, as [Chapter 15](15-state-and-memory.md#expand-1-and-the-stack-boundary)
 explains.
 
@@ -86,14 +86,14 @@ explains.
 
 A cache hit replaces the physical transfer with a copy. BIOS `READ` maps
 the record to its card block and quarter-block position then calls `CREAD`
-(`241b438:src/bios.asm:395-399`, `241b438:src/cache.asm:426-437`). `CLOOK` compares `SDLBA`
-against line keys from line 0 onwards (`241b438:src/cache.asm:52-94`). On a hit,
+(`b95b2a9:src/bios.asm:395-399`, `b95b2a9:src/cache.asm:426-437`). `CLOOK` compares `SDLBA`
+against line keys from line 0 onwards (`b95b2a9:src/cache.asm:52-94`). On a hit,
 `CRDREC` copies 128 bytes to the DMA address. On a miss, `CTAKE` allocates
 a line and `CFILL` reads the block before the same record copy.
 
 Filling a line needs no intermediate block buffer. `CFILL` sets `SDXB` to
 `LATEXP` and `SDREAD` selects EXPAND 1 during its byte loop, placing card
-bytes directly in the line (`241b438:src/cache.asm:189-207`, `241b438:src/sd.asm:469-478`).
+bytes directly in the line (`b95b2a9:src/cache.asm:189-207`, `b95b2a9:src/sd.asm:469-478`).
 Read failure leaves the line empty.
 
 Replacement still favours clean lines. `CTAKE` searches cyclically from
@@ -102,7 +102,7 @@ line and advances the cursor; this is not a least-recently-used policy.
 When all lines are dirty, it instead tries one bounded first-dirty pass.
 Any clean slot freed can serve the allocation even if another line refused.
 If none is freed, the operation fails without discarding acknowledged data
-(`a40d482:src/cache.asm:308-374`).
+(`0701241:src/cache.asm:308-374`).
 
 The write queue is separate from that clean-line replacement policy. Each
 dirty cache line retains its full absolute block tag in CTAB; its queue entry
@@ -110,7 +110,7 @@ keeps the first-dirty position. Received rewrites merge without moving or
 duplicating that entry. `HKROUND` freezes
 eligible line numbers for a round; failure advances the round too, and later
 arrivals wait for the next round. Successful removal invalidates stale round
-slots before line reuse (`a40d482:src/hk.asm:1-122`).
+slots before line reuse (`0701241:src/hk.asm:1-122`).
 
 ### Historical read costs
 
@@ -125,24 +125,25 @@ reads on A hit. Scanning the empty WORK directory produces 32 misses and
 96 hits.
 
 Lookup alone is much cheaper than those complete BIOS calls. `CLOOK`
-takes 264 T-states for a line-0 hit in the READ workload. Across READ, SAVE
-and directory workloads, misses take 1,977–2,021. The trace distinguishes
+takes 264 T-states for a line-0 hit in the READ workload. Across the READ and
+directory workloads and the historical SAVE workload described below, misses
+take 1,977–2,021. The trace distinguishes
 hit and miss through the saved Z flag.
 
 The copy cost depends on the DMA address. `CRDREC` and `CWRREC` select
 source and destination banks through `XMSRC` and `XMDST`: 0 is the program
-view and 1 is EXPAND 1. They call `MVCOPY` (`46cf3f1:src/cache.asm:370-395`). Within
-a bank, it performs an `LDIR` with that bank selected (`46cf3f1:src/cache.asm:680-684`,
-`46cf3f1:src/cache.asm:777-783`). Below `8000h`, the program view remains visible
+view and 1 is EXPAND 1. They call `MVCOPY` (`57a8c38:src/cache.asm:370-395`). Within
+a bank, it performs an `LDIR` with that bank selected (`57a8c38:src/cache.asm:680-684`,
+`57a8c38:src/cache.asm:777-783`). Below `8000h`, the program view remains visible
 with EXPAND 1 selected so that part also uses an `LDIR`
-(`46cf3f1:src/cache.asm:685-739`).
+(`57a8c38:src/cache.asm:685-739`).
 
 A destination in EXPAND 0, such as `DIRBUF`, shares the window with EXPAND 1.
 The copy must switch the latch between each byte read and write
-(`46cf3f1:src/cache.asm:742-771`). It uses no stack under EXPAND 1 because the
-caller's stack may be in EXPAND 0 (`46cf3f1:src/cache.asm:13-17`). `MVEND` restores
+(`57a8c38:src/cache.asm:742-771`). It uses no stack under EXPAND 1 because the
+caller's stack may be in EXPAND 0 (`57a8c38:src/cache.asm:13-17`). `MVEND` restores
 `LATCHV` and enables interrupts only if enabled on entry
-(`46cf3f1:src/cache.asm:790-804`). In the READ workload below, the faster fixed-RAM
+(`57a8c38:src/cache.asm:790-804`). In the READ workload below, the faster fixed-RAM
 copy to `0080h` gives 4,565–6,334 T-states on hits and 226,345–226,346 on
 misses. These cannot replace the slower `DIRBUF` timings.
 
@@ -186,7 +187,7 @@ node tools/tecvol.mjs put time.img A data.bin
 
 The timing script uses `Machine` in the same way as `tools/capture.mjs`,
 which prints no cycle count. Its card is `time.img`, with no startup file
-or shell. It samples `cycles` (`46cf3f1:host/machine.mjs:284`) after the command
+or shell. It samples `cycles` (`57a8c38:host/machine.mjs:284`) after the command
 `READ DATA.BIN` has been typed and echoed but before Return. The second
 sample is at the next prompt. The first run after cold boot takes 6,617,943
 T-states, or 1.65 seconds. The next takes 1,318,031, or 0.33 seconds, about
@@ -211,7 +212,7 @@ Read-only volumes reject writes. Ordinary entry service supplements both
 policies, so the next public write can commit the previous same-block update.
 Four separate record calls can therefore cause four SD writes; merging received
 updates no longer promises batching across public calls
-(`a40d482:src/bios.asm:329-358`, `a40d482:docs/recovery.md:47-67`).
+(`0701241:src/bios.asm:329-358`, `0701241:docs/recovery.md:47-67`).
 
 Both policies use the same directory and console boundaries:
 
@@ -224,12 +225,12 @@ Both policies use the same directory and console boundaries:
    every drive, before they read, subject to errors. BIOS `CONST` and the raw
    reader get ordinary entry opportunities rather than newly promised complete
    drains. A long TONE/raw-reader call has no new progress deadline
-   (`a40d482:docs/recovery.md:106-109`).
+   (`0701241:docs/recovery.md:106-109`).
 
 The following table retains the historical flush-point account. The ordinary
 outer entry attempt is now an additional opportunity for both data rows, and
 all-dirty pressure now attempts a bounded pass. Neither cold reset nor power
-loss preserves dirty RAM (`a40d482:docs/recovery.md:25-67`).
+loss preserves dirty RAM (`0701241:docs/recovery.md:25-67`).
 
 | Write | Reaches the card | A reset before then loses |
 | --- | --- | --- |
@@ -242,8 +243,8 @@ The starter boots with A logged. Its writes can be accepted into RAM, but
 an admitted outer BDOS, hardware or returning BIOS entry can attempt a queued
 line before its normal operation. Nested entries inherit that context rather
 than starting recursive workers. `OUTCHAR` and `READDIR` supply selected private
-opportunities (`a40d482:src/hk.asm:124-202`,
-`a40d482:src/cpm/bdoscon.asm:169-171`, `a40d482:src/cpm/bdoslog.asm:17-22`).
+opportunities (`0701241:src/hk.asm:124-202`,
+`0701241:src/cpm/bdoscon.asm:169-171`, `0701241:src/cpm/bdoslog.asm:17-22`).
 A prompt after `Write pending` is not proof that the card is current.
 
 ## Writes off the logged drive
@@ -253,35 +254,35 @@ Off-drive coalescing begins in BIOS `WRITE`. After saving the type in
 block first flushes the pending block. `BWGET` then compares `BOOTDRV` with
 `DSKCUR`. An off-drive data write sets `CWTYPE` bit 5. Type-1 directory
 writes leave the bit clear. Both continue through `CWRBH`
-(`241b438:src/bios.asm:329-358`).
+(`b95b2a9:src/bios.asm:329-358`).
 
 `CWRBH` merges the record and marks its line dirty. With bit 5 set, `CWCO`
 stores the line number plus one in `CPEND` and returns. Zero means no pending
-block (`241b438:src/cache.asm:519-549`, `241b438:src/ram.asm:310-325`). This retains one
+block (`b95b2a9:src/cache.asm:519-549`, `b95b2a9:src/ram.asm:310-325`). This retains one
 pending-block boundary shared across drives. Required flush points include
-the following events; ordinary outer entry can attempt the line earlier (`241b438:docs/recovery.md:25-67`):
+the following events; ordinary outer entry can attempt the line earlier (`b95b2a9:docs/recovery.md:25-67`):
 
 - the file's close and any other directory request: an open, make, search,
   delete, rename, attribute change, size, login or the extent change inside
   a write. `FNCLSE` and `READDIR` call `CPOUT` first, so the directory never
   names a block whose data is not on the card
-  (`241b438:src/cpm/bdosfile.asm:215-216`, `241b438:src/cpm/bdoslog.asm:17-20`)
+  (`b95b2a9:src/cpm/bdosfile.asm:215-216`, `b95b2a9:src/cpm/bdoslog.asm:17-20`)
 - a BIOS write to another block, on any drive. `BWGET` calls `CPMOVE`, which
   keeps the pending line when the new write is to the same block and
-  otherwise writes it with `CPFLSH` (`241b438:src/bios.asm:343-347`,
-  `241b438:src/cache.asm:572-601`)
+  otherwise writes it with `CPFLSH` (`b95b2a9:src/bios.asm:343-347`,
+  `b95b2a9:src/cache.asm:572-601`)
 - a console read: functions 1, 10 and 11, function 6 with `E = FFh` or
-  BIOS `CONIN`. All call `CKEY` (`241b438:src/cpm/bdos.asm:282-289`, `241b438:src/cpm/bdos.asm:331-340`,
-  `241b438:src/cpm/bdos.asm:405-407`, `241b438:src/cpm/bdos.asm:702-715`, `241b438:src/console.asm:225`)
+  BIOS `CONIN`. All call `CKEY` (`b95b2a9:src/cpm/bdos.asm:282-289`, `b95b2a9:src/cpm/bdos.asm:331-340`,
+  `b95b2a9:src/cpm/bdos.asm:405-407`, `b95b2a9:src/cpm/bdos.asm:702-715`, `b95b2a9:src/console.asm:225`)
 - a drive change at the prompt, which calls `VFLUSH` before it moves the
-  logged drive (`241b438:src/cpm/ccp.asm:286`)
+  logged drive (`b95b2a9:src/cpm/ccp.asm:286`)
 - function 48, `CD`'s mount, an unmount and warm boot
 
 Received records still merge in a block and preserve their neighbours.
 Completed clean lines remain useful for program and directory reads. Ordinary
 entry service can end the merge interval between public record calls, however;
 there is no deliberate wait for future updates and no cross-call one-write-per-
-block guarantee (`a40d482:docs/recovery.md:25-52`).
+block guarantee (`0701241:docs/recovery.md:25-52`).
 
 Before the pending block reaches the card, power loss or a cold reset can
 discard its newest records: at most four records, or 512 bytes. Warm boot
@@ -290,14 +291,17 @@ directory request reports `Bad Sector` or returns function 45's error.
 Input still returns according to its own API. Failed acknowledged data stays
 queued through warm boot; the separate notice reporter does not borrow an
 unrelated call's result registers. An unmodified or read-only close need not
-globally drain every dirty line (`a40d482:docs/recovery.md:69-84`,
-`a40d482:src/cache.asm:638-649`).
+globally drain every dirty line (`0701241:docs/recovery.md:69-84`,
+`0701241:src/cache.asm:638-649`).
 
 ### Historical off-drive SAVE costs
 
 The following retained SAVE timings, committed-byte observations and write
-counts describe their old firmware, not current housekeeping traffic. Keep
-their 8/16/160-page workloads and byte/EOF checks for fresh measurements.
+counts describe their old firmware, not current housekeeping traffic. SAVE
+was a ROM command of that firmware, CP/M 2.2's, which wrote memory pages from
+`0100h` to a file. It has since left the ROM. Fresh measurements need a
+program that writes the same 8, 16 and 160 pages, with the same byte and
+end-of-file checks.
 
 The recorded SAVE runs each start from a fresh `time.img` containing READ
 and DATA on A. SAVE counts 256-byte pages. Counts 8, 16 and 160 therefore
@@ -319,50 +323,51 @@ block more than once.
 
 The logged drive can retain several changed blocks instead of just the
 pending block used elsewhere. Four records fit each block, following the
-mapping in Chapter 18 (`241b438:src/cache.asm:380-415`). Policy follows the logged
+mapping in Chapter 18 (`b95b2a9:src/cache.asm:380-415`). Policy follows the logged
 drive regardless of descriptor content. Descriptor byte 15 is reserved
 and `MNFILL` copies only the read-only bit into drive flags
-(`241b438:src/vol.asm:597-598`, `241b438:format/format.json:36`). After its checks, BIOS
+(`b95b2a9:src/vol.asm:597-598`, `b95b2a9:format/format.json:36`). After its checks, BIOS
 `WRITE` enters `CWRBH` with `CWTYPE` bit 5 clear for logged-drive data
-(`241b438:src/bios.asm:343-358`).
+(`b95b2a9:src/bios.asm:343-358`).
 
-The merge itself is common to every write (`241b438:src/cache.asm:439-569`).
+The merge itself is common to every write (`b95b2a9:src/cache.asm:439-569`).
 `CWRBH` uses the block's existing line or obtains a line through `CTAKE`.
 A new line normally requires a card pre-read. The new-allocation rule from
 Chapter 18 permits zero-fill instead when no existing records need
-preserving (`241b438:src/cache.asm:462-488`).
+preserving (`b95b2a9:src/cache.asm:462-488`).
 
 `CWRREC` copies 128 bytes from DMA and `CDSET` marks the line dirty.
 Logged-drive data writes then set `CANY` and return. Success means the
 record is cached. The call may also have evicted an older dirty line, so
-other card bytes may already have changed (`241b438:src/cache.asm:519-541`).
+other card bytes may already have changed (`b95b2a9:src/cache.asm:519-541`).
 
 Type 1, identified by `CWTYPE` bit 0, continues to directory publication on
-any drive (`241b438:src/cache.asm:550-570`). `CFLUSH` writes every dirty line except
+any drive (`b95b2a9:src/cache.asm:550-570`). `CFLUSH` writes every dirty line except
 the directory line. Only complete success permits `CWRITE` to write that
 line. On failure the directory line is dropped so the next read obtains
 the card's copy. Failed data lines remain dirty because they contain the
 newest records. The BDOS receives the error. A program using function 45
 can retry close and its retained dirty data. Close succeeds after those
-writes and the directory write succeed (`241b438:src/cache.asm:265-306`,
-`241b438:src/cache.asm:560-569`).
+writes and the directory write succeed (`b95b2a9:src/cache.asm:265-306`,
+`b95b2a9:src/cache.asm:560-569`).
 
 File creation and closing a changed FCB cause BDOS directory writes.
-Extent transitions also close changed state (`241b438:src/cpm/bdosfile.asm:229-287`,
-`241b438:src/cpm/bdosfile.asm:510-514`, `241b438:src/cpm/bdosrec.asm:94-98`). Each successful
+Extent transitions also close changed state (`b95b2a9:src/cpm/bdosfile.asm:229-287`,
+`b95b2a9:src/cpm/bdosfile.asm:510-514`, `b95b2a9:src/cpm/bdosrec.asm:94-98`). Each successful
 directory write therefore brings changed cache data to the card first,
-on every drive (`241b438:src/cpm/bdoslog.asm:83-88`).
+on every drive (`b95b2a9:src/cpm/bdoslog.asm:83-88`).
 
 Required input still attempts pending data. `CANY` selects a complete bounded
 pass when logged-drive lines may remain; otherwise `CPOUT` checks the single
 pending block. Ordinary entry service can commit a line even before these
-required boundaries (`a40d482:src/cache.asm:603-636`).
+required boundaries (`0701241:src/cache.asm:603-636`).
 
 ### Historical logged-drive SAVE costs
 
 The comparison and line-number ordering below remain their original measured
-receipts. New first-dirty service changes traffic and scheduling; fresh results
-must preserve these workloads and actual saved bytes.
+receipts, taken with the same removed SAVE command. New first-dirty service
+changes traffic and scheduling; fresh results must write the same page counts
+and check the bytes written.
 
 Selecting `B:` first changes the policy for the same destination. The
 fresh two-volume card measurements compare both cases:
@@ -391,28 +396,28 @@ A full pass snapshots first-dirty order and attempts each eligible line once,
 advancing past refusals so healthy lines can progress. New arrivals cannot
 extend a frozen round, and successful removal invalidates its old slot before
 reuse. `CFLUSH` excludes the caller's directory line; `CFLALL` is the same
-no-exclusion warm pass (`a40d482:src/hk.asm:1-122`,
-`a40d482:src/cache.asm:265-306`).
+no-exclusion warm pass (`0701241:src/hk.asm:1-122`,
+`0701241:src/cache.asm:265-306`).
 
 Directory publication remains after its data prerequisites. Either a failed
 prerequisite or a failed metadata write rejects and drops that unpublished
 directory image. It must never be replayed later. Failed acknowledged data has
 a different lifetime: it stays queued, including through warm boot. All-dirty
 allocation can use any clean slot its bounded pass freed; if none was freed it
-fails without discarding that data (`a40d482:src/cache.asm:308-374`,
-`a40d482:src/cache.asm:550-569`).
+fails without discarding that data (`0701241:src/cache.asm:308-374`,
+`0701241:src/cache.asm:550-569`).
 
 This ordering provides no rollback. Completed overwrites stay changed even if
 the directory update fails. Newly allocated data can be on SD without a completed
 file entry, and a cut during one block transfer can leave old, new or mixed bytes.
 A directory block can damage sixteen entries. Acknowledgement is not proof of
-physical power-loss durability (`a40d482:docs/recovery.md:111-132`).
+physical power-loss durability (`0701241:docs/recovery.md:111-132`).
 
 `CWRITE` still performs the individual transfer from the tagged line, with
 SDXB selecting EXPAND 1 for SDWRITE. A successful write makes the line clean;
 a refused write leaves acknowledged data dirty. The new queue removal and
 error-event bookkeeping accompany that transfer rather than replacing its
-physical byte path (`a40d482:src/cache.asm:219-263`).
+physical byte path (`0701241:src/cache.asm:219-263`).
 
 <a id="seven-flush-occasions"></a>
 
@@ -424,7 +429,7 @@ OUTCHAR/READDIR points also attempt work. Required input, explicit function 48,
 warm boot, directory publication and valid selection changes keep their own
 bounded flush paths. Invalid or same-selection paths can return earlier.
 These are cooperative opportunities, not a timer or wall-clock deadline
-(`a40d482:docs/recovery.md:33-67`).
+(`0701241:docs/recovery.md:33-67`).
 
 <a id="a-failed-flush"></a>
 
@@ -442,7 +447,7 @@ through `CHPOS`. `HKNOTICE` reports the failure episode separately:
 Function 45's silent `FFh` mode defers notices without losing the event. A
 previously reported episode retains its own state; an operation's metadata
 error is not interchangeable with the queue notice
-(`a40d482:src/cache.asm:638-649`, `a40d482:src/hk.asm:204-237`).
+(`0701241:src/cache.asm:638-649`, `0701241:src/hk.asm:204-237`).
 
 `Cache clear` covers cached record writes. It does not close an FCB, repair
 rejected metadata, finish browser persistence or prove physical durability.
@@ -455,16 +460,17 @@ the bootstrap Enter-retry path run no `SDINIT`; Enter is not permission to
 replay the queue onto an inserted stranger. Resolve the original backend's
 failure, or accept cold reset's loss of queued RAM. Retention can make required
 polling slow and fill the cache; healthy lines may still progress, but allocation
-fails if a bounded pass frees no slot (`a40d482:docs/recovery.md:206-222`).
+fails if a bounded pass frees no slot (`0701241:docs/recovery.md:206-222`).
 
 ### Current retained-data observation
 
-With the current `241b438` ROM and sixteen-file starter, the same shortened
+With ROM `35893cab` and its fifteen-file starter, the same shortened
 card still has a readable WORK directory, while its first data block is
-outside the backend. The capture sends `SAVE 1 B:X.COM`, acknowledges its
-error with one explicit `x`, then sends `DIR B:`. No further key is supplied.
+outside the backend. The capture sends `COPY STARTUP.CMD B:X.CMD`, acknowledges
+its error with one explicit `x`, then sends `DIR B:`. No further key is
+supplied.
 
-<!-- TEC-OS 241b438, ROM c9586263: owned-input serial capture02. CR overwrites are rendered as by tools/capture.mjs; one initial empty line and right-hand blanks omitted. Exact actions, raw bytes, caller/return/DIR events, cache and receipts: Origo studies/p3-tec-os/evidence/book-owned-dir-capture02/. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card nodata.img '@start COPY STARTUP.CMD B:X.CMD' '@key x' '@start DIR B:'. Complete captured console transcript. The cache's state after each step was read from the same host model. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -475,7 +481,7 @@ A>SHELL.SVC
 
 A:SYSTEM>GLCD.SVC
 
-A:SYSTEM>SAVE 1 B:X.COM
+A:SYSTEM>COPY STARTUP.CMD B:X.CMD
 
 Write pending
 
@@ -485,11 +491,10 @@ A:SYSTEM>DIR B:
 Bdos Err On B: Bad Sector
 ```
 
-The `x` belongs to SAVE's close-error acknowledgement. Warm boot retains the
+The `x` acknowledges COPY's disk error. Warm boot retains the
 failed block and successfully rebuilds the disk state, so the normal shell
 can read the next command. That prompt does not certify that the write reached
-the card. The observed typed-line return and native shell handler show that
-`DIR B:` really runs; it then encounters another Bad Sector and waits for an
+the card. `DIR B:` then runs. It encounters another Bad Sector and waits for an
 acknowledgement. The capture ends there, not at a successful listing or a
 repaired card.
 
@@ -497,7 +502,7 @@ The same dirty entry still owns block 4128 and the same 512 data bytes after
 DIR. This model observation demonstrates retained acknowledged data across
 the error and warm boot. It does not complete an unclosed file, demonstrate
 original-backend repair or qualify physical-card durability. Separately,
-the exact `241b438` strict fixture pair checks original-backend recovery,
+the exact `b95b2a9` strict fixture pair checks original-backend recovery,
 rejected metadata, deferred notices and CR-only bootstrap retry. These are
 controlled guest tests, not additional console transcripts.
 
@@ -525,7 +530,7 @@ cp dist/starter.img nodata.img
 truncate -s 2113536 nodata.img
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card nodata.img '@start SAVE 1 B:X.COM' '@key x' 'DIR B:'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card nodata.img '@start SAVE 1 B:X.COM' '@key x' 'DIR B:'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -548,14 +553,15 @@ X       .COM       0
 A:SYSTEM>
 ```
 
-In this historical capture, `SAVE` creates X.COM's empty directory entry before
+In this historical capture `SAVE 1`, the removed ROM command writing one
+256-byte page of memory, creates X.COM's empty directory entry before
 buffering two records.
 Close then fails to flush their data block and reports `Bad Sector`. After
 the recovery key, `x` here, warm boot retries the block then drops it with
 `Write lost`. The failed close never publishes the new record count or
 allocation map. The fixture's on-card file consequently still has no
-records (`46cf3f1:src/cpm/ccpcmd.asm:266-390`, `46cf3f1:src/cpm/bdosfile.asm:210-217`,
-`46cf3f1:src/cache.asm:624-640`).
+records (`57a8c38:src/cpm/ccpcmd.asm:266-390`, `57a8c38:src/cpm/bdosfile.asm:210-217`,
+`57a8c38:src/cache.asm:624-640`).
 
 DIR lists the name because creation of the empty entry succeeded. The
 listing establishes that earlier operation's result, not persistence of the
@@ -572,28 +578,28 @@ The same banking that enables caching creates an interrupt constraint.
 During EXPAND 1 access, `8000h–BFFFh` contains cache memory in place of the
 workspace and stacks. An interrupt could push its return address into the
 wrong bank and run with hidden workspace. BIOS `READ` and `WRITE` therefore
-mask interrupts across mapping and cache work (`241b438:src/cache.asm:16-20`).
+mask interrupts across mapping and cache work (`b95b2a9:src/cache.asm:16-20`).
 
 `CDI` saves the preceding interrupt state through `IFFGET`. Its `LD A,I`
 copies the interrupt flip-flop to P/V. An NMOS Z80 can clear that flag when
 accepting an interrupt during the instruction, so `IFFGET` repeats a clear
-result (`241b438:src/bios.asm:367-371`). `CDI` then executes `DI` and saves flags
-in `CIFF` (`241b438:src/bios.asm:379-386`).
+result (`b95b2a9:src/bios.asm:367-371`). `CDI` then executes `DI` and saves flags
+in `CIFF` (`b95b2a9:src/bios.asm:379-386`).
 
 On exit, `BRET` converts Z to `A` = 0 for success or 1 for error. `CEI`
 reenables interrupts only if `CIFF` records them enabled at entry. Calls
-made with interrupts off return with them off (`241b438:src/bios.asm:424-449`,
-`241b438:src/bios.asm:395-399`, `241b438:src/bios.asm:418-422`). `VFLUSH` uses the same pair
-(`241b438:src/volsvc.asm:373-389`). `MVCOPY` calls `IFFGET` and retains a separate
-state copy (`241b438:src/cache.asm:668-670`).
+made with interrupts off return with them off (`b95b2a9:src/bios.asm:424-449`,
+`b95b2a9:src/bios.asm:395-399`, `b95b2a9:src/bios.asm:418-422`). `VFLUSH` uses the same pair
+(`b95b2a9:src/volsvc.asm:373-389`). `MVCOPY` calls `IFFGET` and retains a separate
+state copy (`b95b2a9:src/cache.asm:668-670`).
 
 As described in Chapter 16, a program or service must enable maskable
 interrupts. The executable ROM `EI` sites restore saved state: `CEI`,
-`RXBITS`, `TXBYTE`, `MVEND` and PICO9918 `VPAIR` (`241b438:src/bios.asm:440-449`,
-`241b438:src/console.asm:306-331`, `241b438:src/console.asm:363-393`, `241b438:src/cache.asm:808-813`,
-`241b438:src/pico.asm:443-454`). Boot also installs `EI` followed by `RETI` at
+`RXBITS`, `TXBYTE`, `MVEND` and PICO9918 `VPAIR` (`b95b2a9:src/bios.asm:440-449`,
+`b95b2a9:src/console.asm:306-331`, `b95b2a9:src/console.asm:363-393`, `b95b2a9:src/cache.asm:808-813`,
+`b95b2a9:src/pico.asm:443-454`). Boot also installs `EI` followed by `RETI` at
 `0038h` when no resident jump is retained. That stub can run on an interrupt
-or a program's `RST 38h` (`241b438:src/boot.asm:377-386`). `DI` cannot block NMI.
+or a program's `RST 38h` (`b95b2a9:src/boot.asm:377-386`). `DI` cannot block NMI.
 The NMI conditions from Chapter 15 still apply.
 
 Programs that enable interrupts must schedule disk operations around
@@ -609,8 +615,8 @@ Avoiding explicit disk calls is insufficient for short interrupt response.
 An admitted light BDOS call, hardware query or returning BIOS call can perform
 SD work first; OUTCHAR and READDIR add selected private opportunities. The
 worker brackets its attempted write with CDI/CEI, so those calls can incur the
-same interrupt-off storage interval (`a40d482:src/hk.asm:124-202`,
-`a40d482:src/cpm/bdoscon.asm:169-171`, `a40d482:src/cpm/bdoslog.asm:17-22`).
+same interrupt-off storage interval (`0701241:src/hk.asm:124-202`,
+`0701241:src/cpm/bdoscon.asm:169-171`, `0701241:src/cpm/bdoslog.asm:17-22`).
 Plan pending storage work before latency-sensitive intervals and account for
 ordinary opportunities as well as required drains and cache misses. Long TONE
 and raw-reader calls gain no new deadline or universal short-call guarantee.

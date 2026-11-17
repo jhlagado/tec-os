@@ -1,7 +1,7 @@
 # The shell: SHELL.SVC and the ROM's shell hook
 
 The CCP in ROM is minimal. It runs a `.COM` or a `.SVC`, changes drive, and
-has CP/M's built-ins `DIR`, `ERA`, `REN`, `TYPE`, `SAVE` and `USER`, with
+has CP/M's built-ins `DIR`, `ERA`, `REN` and `TYPE`, with
 `CON`, `CD` and `UNLOAD`. It reads one line of `A:STARTUP.CMD` after a reset.
 
 `SHELL.SVC` is a resident service that takes over the prompt through the
@@ -70,7 +70,7 @@ A line is split into pieces at separators, and each piece runs in turn:
   code: in `A &B &C` with A failing, B and C are both skipped; in `A &B !C`, C
   runs. A skipped piece is not echoed: typed after a failed build, `TAS X &X`
   shows the line, TAS's message and the next prompt, and no `A>X`.
-- A refused command and the built-ins' failures (`NO FILE`, `NO SPACE`, a bad
+- A refused command and the built-ins' failures (`NO FILE`, `FILE EXISTS`, a bad
   `REN` and the rest) set FF00h, as they always have.
 - Each new line runs whatever the last line returned. A line whose first
   character after blanks and `!` is `&` is refused, `&WORD?` with FF00h, and
@@ -99,9 +99,8 @@ A line is split into pieces at separators, and each piece runs in turn:
 
 Typed with the shell, `NAME.CMD` runs a script:
 
-1. The file is read from the drive named, else the current one, in the current
-   user, with no fallback to A:. With no file the shell says `NAME.CMD?`, with
-   FF00h.
+1. The file is read from the drive named, else the current one, with no
+   fallback to A:. With no file the shell says `NAME.CMD?`, with FF00h.
 2. It is text, read 128 bytes at a time, as many records as it has. It ends at
    1Ah, a zero byte or the end of its last record.
 3. A line ends at CR, LF or CR LF. Its first 127 characters are kept; the rest of
@@ -145,8 +144,8 @@ CD changes the directory presented by a drive by selecting a named on-card
 volume. A: to D: are equal drives, and each presents one volume, or none.
 The basic commands below also work at the bare ROM CCP; its prompt remains
 `A>` rather than showing the directory label.
-The prompt shows the drive and its volume: `B:GAMES>`, and with a user number
-`3B:GAMES>`; a drive with no volume shows `C:>`. A command not found on the
+The prompt shows the drive and its volume: `B:GAMES>`; a drive with no volume
+shows `C:>`. A command not found on the
 current drive runs from A:, as if A: were always on the path.
 
 | Typed | Result |
@@ -186,8 +185,7 @@ next drive change or warm boot; nothing on the starter card does it.
 selection, so after `CD A:` to a volume with no `SHELL.SVC` (`CD A:GAMES` on
 the starter card) a reset gives the bare `A>` on that volume. The ROM's `CD`
 remains available. Type `CD ?`, `CD A:SYSTEM` and `SHELL.SVC`
-to restore the shell. CD preserves the user area: if it is not user 0, type
-`USER 0` before loading the starter's shell. A reset itself starts in user 0.
+to restore the shell.
 Power off and on gives the card's own drives and the shell again; on the
 web page, Power cycle.
 
@@ -219,14 +217,6 @@ and the drive's volume. Hidden (SYS) files are omitted, as in the ROM's
 two-group directory order. A row remains 20 columns, within the GLCD's 21,
 and long listings stop at `[more]`. `DIR /W` goes directly to the ROM's wide
 listing; with no shell, `DIR` is the ROM's listing too.
-
-**`DIR` before `SAVE`.** The shell's `DIR` with sizes builds its table of
-names in the TPA, at 0100h–223Fh, so it overwrites a program left there. In
-CP/M 2.2 `DIR` leaves the TPA alone, and loading a program, listing the disk
-and then typing `SAVE n NAME.COM` saves the program. Here that `SAVE` would
-write `DIR`'s table. Use `DIR /W` before `SAVE`: it is the ROM's listing,
-which works in the record at 0080h and leaves the TPA as it was
-(`test/shell2.test.mjs`). With no shell, `DIR` is that listing too.
 
 **Its cost.** A first search combines each name's extent sizes in a table.
 Two more searches then produce the rows, with no BDOS 35 scan and search
@@ -320,6 +310,8 @@ empty line.
   origin, FFh for a line of `STARTUP.CMD` so that its quiet paths hold, and 0
   otherwise. The ROM writes a zero at the buffer's last byte, then runs the line
   as a typed one. An empty line brings the next prompt. `LINE` must return.
+  It must return with the user area as it found it: the ROM runs the line in
+  that area, and only the next prompt puts it back to area 0.
 - The first BDOS 10 after a `LINE` call offers ^W and ^N through `HREC` and
   stores the finished line through `HSTORE`. A program's BDOS 10 does neither.
 

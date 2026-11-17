@@ -45,7 +45,7 @@ function session(lines_) {
 }
 
 test("SH11 ^W recalls the lines typed at the prompt, newest first, and ^N steps forward", () => {
-  const m = session(["dir", "user 0", "era x.y", "stat"]);
+  const m = session(["dir", "con", "era x.y", "stat"]);
   m.mark = m.output.length;
   m.type(W);
   assert.equal(held(m), "stat");
@@ -54,7 +54,7 @@ test("SH11 ^W recalls the lines typed at the prompt, newest first, and ^N steps 
   m.type(W + W + W + W);
   assert.equal(held(m), "dir", "at the oldest, ^W stays");
   m.type(N);
-  assert.equal(held(m), "user 0");
+  assert.equal(held(m), "con");
   m.type(N + N + N);
   assert.equal(held(m), "", "past the newest, an empty line");
   m.type(N);

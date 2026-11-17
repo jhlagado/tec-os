@@ -7,14 +7,14 @@ nav_group: "Using the machine"
 
 # 7. Choose a console
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -87,7 +87,7 @@ to the serial terminal. The command appears on the old display. Its
 reply and next prompt appear on the new one. Only serial output is
 included in this capture:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --serial 'CON TTY'. Complete serial transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --board pico --serial 'CON TTY'. Complete serial transcript. -->
 ```text
 CON: TTY:
 A:SYSTEM>
@@ -104,7 +104,7 @@ until its claim ends, as Chapter 12 explains. Bare `CON CRT` and
 `CON PICO` retain the width and any active claim. Returning to the
 PICO9918 produces only this reply and prompt:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'CON TTY' 'CON CRT'. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --board pico --screen 'CON TTY' 'CON CRT'. Full screen; trailing empty rows omitted. -->
 ```text
 CON: CRT:
 A:SYSTEM>
@@ -113,7 +113,7 @@ A:SYSTEM>
 An invalid console name is printed with a question mark. The selection
 remains unchanged, as this separate capture shows:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CON XYZ'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs 'CON XYZ'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -169,7 +169,7 @@ files therefore occupy eight rows.
 An unsupported width, a width after another device name or a number joined to
 `CRT` without a space produces a question mark. The console remains as it was:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico 'CON CRT80' 'CON TTY 40' 'CON PICO 50'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --board pico 'CON CRT80' 'CON TTY 40' 'CON PICO 50'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -211,7 +211,7 @@ explains the memory boundary.
 leaves the console where it was and shows `GLCD?` on the 20 × 4 LCD. Here both
 display selections leave a serial-only board on the terminal:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs CON 'CON CRT' 'CON UC1' CON. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs CON 'CON CRT' 'CON UC1' CON. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -238,7 +238,7 @@ startup `GLCD.SVC` line installs nothing. `CON UC1` then loads the
 driver and selects the graphics LCD. This host-model text capture used
 both displays and the matrix keyboard:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'CON UC1' CON. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --board pico --screen 'CON UC1' CON. Full screen; trailing empty rows omitted. -->
 ```text
 CON: UC1:
 A:SYSTEM>CON
@@ -292,7 +292,7 @@ but commands typed on the serial terminal still run.
 matrix keyboard is not the input device in `BAT:`. In this run `DIR`
 ran between the two `CON` commands but printed nothing on the terminal:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --serial '@start CON BAT' '@start DIR' 'CON TTY'. Complete serial transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --serial '@start CON BAT' '@start DIR' 'CON TTY'. Complete serial transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

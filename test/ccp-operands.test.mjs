@@ -5,9 +5,20 @@
 // was retaken when modules left, again when GLCD.SVC took its font, six
 // records longer, and again when the type in its FCBs became SVC, those two
 // hashes alone. A write to C: was retaken when a read-only volume came to say
-// R/O, ERA *.* when Return alone came to end its answer, COPY's two write
-// errors on B: when the destination came to be closed (KE-179), and SAVE's
-// when its file did (KE-201). SHELLC and SHELLE left with the nested levels.
+// R/O, ERA *.* when Return alone came to end its answer, and COPY's two write
+// errors on B: when the destination came to be closed (KE-179). SHELLC and
+// SHELLE left with the nested levels. SAVE's eleven rows left with SAVE, and
+// the row that made GONE.TMP for ERA became a REN of a placeholder file. The
+// calls of every row but the shell's were retaken then: SAVE's two cells left
+// the workspace, so the CCP's FCBs and line buffer are three bytes higher.
+// Traces from the ROM before and after paired on every row: the same output,
+// operands, FCB bytes and stack peaks, and each address the same buffer.
+// USER's eight rows left with USER, and every row's calls were retaken again:
+// the CCP no longer asks function 32 for the area at each entry, so that call
+// is gone from each line, function 25's call after it carries another stale E,
+// which is no operand of it, the CCP's FCBs and line buffer are three bytes
+// higher, and the seventeen-page shell's line buffer and COPY's FCB are 11
+// bytes lower. Traces from main and this build paired as before, every row.
 // Raw buffer addresses are part of each call digest, so relocation alone
 // changes it. Fixture updates require paired traces with identical output,
 // logical buffer identities, defined operands, FCB bytes and stack peaks.
@@ -106,7 +117,7 @@ function watch(m) {
 function run(m, line) {
   m.mark = m.output.length;
   m.type(`${line}\r`);
-  const prompt = /\r\n\d*[A-P](:\S*)?>$/;
+  const prompt = /\r\n[A-P](:\S*)?>$/;
   let seen = -1;
   for (let i = 0; i < 200; i += 1) {
     const end = m.cycles + 20_000_000;
@@ -136,7 +147,7 @@ function reading(m, fixture) {
 
 test("the built-ins' operands keep their output, BDOS calls and stack", { timeout: 300_000 }, async () => {
   assert.equal(FIXTURE.profile, PROFILE);
-  assert.equal(FIXTURE.inputs.length, 78);
+  assert.equal(FIXTURE.inputs.length, 59);
   const bare = FIXTURE.inputs.filter((r) => !r.shell);
   const m = boot(await card());
   const rows = reading(m, bare);

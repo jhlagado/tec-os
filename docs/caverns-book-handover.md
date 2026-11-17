@@ -81,7 +81,7 @@ that browser trial. No physical-board claim applies to either.
 Tested console: PICO9918 at 80 columns, matrix keyboard input. Shell-resident
 TPA: 41,984 bytes; COM: 29,056 bytes; logical image: 28,946 bytes. After
 reserving 768 bytes for the CPU stack, 12,270 bytes remain for dynamic arrays,
-strings and control. This space is used during initialisation and play. The no-shell TPA is 46,533 bytes, but this example does not need it.
+strings and control. This space is used during initialisation and play. The no-shell TPA is 46,536 bytes, but this example does not need it.
 Growth is constrained; use the small banner change, not a large library feature.
 There are eleven carrying slots, finite candle life and random combat risk.
 The candle is still found lit; matches and a burn clock starting on lighting
@@ -148,7 +148,7 @@ combined coverage records, not claims of single all-green full-suite runs.
 
 - [Current-main firmware qualification](evidence/caverns-main-integration/qualification.json).
 - [Fresh matching-main browser trial](evidence/caverns-main-integration/viewer-result.json).
-- [Viewer qualification](https://github.com/jhlagado/tec-os-viewer/blob/5e7bb9dc8ede62fcb7fe1650043e1e33e3cc26c4/docs/evidence/caverns-main-integration/qualification.json).
+- [Viewer qualification](https://github.com/jhlagado/tec-os-viewer/blob/a87771beeaa466a7a1745132761d9d81826e62e8/docs/evidence/caverns-main-integration/qualification.json).
 
 The earlier compact-emission records below remain the detailed first-increment
 baseline; current-main integration preserves its compiler and game hashes.

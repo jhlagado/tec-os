@@ -7,14 +7,14 @@ nav_group: "Using the machine"
 
 # 6. Cards on the PC
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -50,7 +50,7 @@ Close files normally and wait for the prompt before card removal. After
 failure and await `Cache clear`: the prompt alone is insufficient. Warm boot
 retains acknowledged data but cold reset discards it. Queue clearance does not
 close an FCB or guarantee physical durability
-(`a40d482:docs/recovery.md:69-117`).
+(`0701241:docs/recovery.md:69-117`).
 
 Never change a card on a PC while TEC-OS is using it. Its cached blocks and
 free-space maps would no longer match the card. Reset after returning a
@@ -168,7 +168,7 @@ project and session files:
 
 B's listing contains the source, executable and debug file:
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS 57a8c38: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
 ```text
  0 BANNER.ASM        384
  0 BANNER.COM        128
@@ -189,7 +189,7 @@ wc -c recovered/BANNER.REC recovered/BANNER.ASM
 The filtered listing contains the same three B entries. `wc` reports
 the extracted file sizes:
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS 57a8c38: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
 ```text
 384 recovered/BANNER.REC
 273 recovered/BANNER.ASM
@@ -232,7 +232,7 @@ printf 'missing get exit: %s\n' "$missing_status"
 cat recovered/missing.stderr
 ```
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS 57a8c38: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
 ```text
 missing get exit: 1
 tecvol: 0/MISSING.ASM not found
@@ -333,12 +333,12 @@ record with `^Z`. Binary files receive zero padding. The CP/M directory
 still records whole records, not the PC file's original byte length.
 
 Without `--text`, a text file receives zero padding instead of `^Z`.
-TED on the starter card, Thorium `20339b8`, recognises trailing `00h`
+TED on the starter card, Thorium `02b63d8`, recognises trailing `00h`
 through the rest of the last record as the file's end. It opens this
 form without an error. A rejected byte elsewhere ends the editor with
 `EDIT error 03` and its line and column, such as `EDIT error 03 L3 C5`
-(`b3134cf:docs/compatibility.md`, `Thorium 20339b8:README.md`).
-The older Thorium `cc4044b` TED rejects that padding with error 03
+(`9ade2fe:docs/compatibility.md`, `Thorium 02b63d8:README.md`).
+The older Thorium `fc874ce` TED rejects that padding with error 03
 and reports no position.
 
 `era` erases a named file. Like `get`, `put` and `era` use user area 0 unless
@@ -478,41 +478,46 @@ checks. This historical recipe revision 14 places thirteen files on A, including
 SHELL.SVC, DEMO.ASM and BOUNCE.BAS. It also includes MON3.SVC and
 the source-only HELLO3.ASM example. `TAS DEMO` builds DEMO.COM on the card.
 Media preparation writes no separate page recipe
-(`b3134cf:tools/media.mjs`, `b3134cf:web/build.mjs`). The browser checks
+(`9ade2fe:tools/media.mjs`, `9ade2fe:web/build.mjs`). The browser checks
 the same sizes and SHA-256 hashes.
 
 ## A protection example
 
 This example separates protection of a volume from protection of a
 file. It requires prepared media files and an existing `build/` directory.
-WORK on B is writable but its STARTUP.CMD is read-only. ARCHIVE on C
-is an empty read-only volume:
+SYSTEM on A holds only the shell, for its COPY. WORK on B is writable but
+its STARTUP.CMD is read-only. ARCHIVE on C is an empty read-only volume:
 
 ```sh
 node tools/tecvol.mjs create build/errs.img --volume G1M:SYSTEM:A --volume G8M:WORK:B --volume G1M:ARCHIVE:C:ro
+node tools/tecvol.mjs put build/errs.img A dist/files/SHELL.SVC
 node tools/tecvol.mjs put build/errs.img B dist/files/STARTUP.CMD --ro
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/errs.img '@start SAVE 1 C:X.COM' '@key x' '@start ERA B:STARTUP.CMD' '@key x' 'DIR B:'. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card build/errs.img SHELL.SVC '@start COPY B:STARTUP.CMD C:' '@key x' '@start ERA B:STARTUP.CMD' '@key x' 'DIR B:'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
 B: WORK
 C: ARCHIVE     (read-only)
 
-A>SAVE 1 C:X.COM
+A>SHELL.SVC
+
+A:SYSTEM>COPY B:STARTUP.CMD C:
 
 Bdos Err On C: R/O
-A>ERA B:STARTUP.CMD
+A:SYSTEM>ERA B:STARTUP.CMD
 
 Bdos Err On B: File R/O
-A>DIR B:
-STARTUP.CMD
-1 file, 8172K free
-A>
+A:SYSTEM>DIR B:
+
+STARTUP.CMD      128
+1 file, 128 bytes
+8368128 free on B:WORK
+A:SYSTEM>
 ```
 
-`SAVE` made no file on C and `ERA` left B's file in place. In the default
+`COPY` made no file on C and `ERA` left B's file in place. In the default
 BDOS error mode each message waits for a key before ending the command.
 Here the capture supplies `x`. A program can also make a drive temporarily
 read-only. Warm boot clears that temporary protection
@@ -545,7 +550,7 @@ cp dist/starter.img short.img
 truncate -s 2104320 short.img
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card short.img '@start DIR B:' '@key x'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card short.img '@start DIR B:' '@key x'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -582,7 +587,7 @@ it after closing guest files and successful guest writes. A prompt after
 Write pending is insufficient; resolve the original backend refusal and await
 Cache clear. Downloading does not flush the guest cache or complete its file
 metadata, and browser storage is a separate stage
-(`a40d482:docs/recovery.md:69-117`).
+(`0701241:docs/recovery.md:69-117`).
 
 The page also prepares `STARTUP.CMD` for its selected display when it can.
 Keep an untouched copy if you need the original startup text. The exact
@@ -612,14 +617,14 @@ Off the logged drive, all volumes share one pending-block boundary. The
 logged drive can hold several dirty blocks. Ordinary outer OS calls now attempt
 one eligible line before their own work, so a next same-block record call can
 commit the previous update. Received updates still merge, but four separate
-calls no longer promise a single SD write (`a40d482:docs/recovery.md:25-67`).
+calls no longer promise a single SD write (`0701241:docs/recovery.md:25-67`).
 
 A cut loses uncommitted RAM; earlier physical writes are not undone. New data
 blocks may have no completed directory entry, and an existing file can contain
 mixed old/new blocks under its old length. A directory image rejected because
 its own write or a prerequisite failed is dropped, never replayed later.
 Acknowledged data stays queued through warm boot while RAM survives, but that
-does not finish an unclosed FCB (`a40d482:docs/recovery.md:111-132`).
+does not finish an unclosed FCB (`0701241:docs/recovery.md:111-132`).
 
 A cut during a single block write can leave old, new or mixed contents in
 that block. A directory block holds sixteen 32-byte entries, any of which

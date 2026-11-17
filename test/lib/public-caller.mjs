@@ -11,7 +11,9 @@ export function recoveryInput(m) {
   if (key === undefined || !m.classicBankIn || !m.waitingForInput()) return false;
   if (m.read(m.sym("ERRMODE")) !== 0xff || m.read(m.sym("HKDEP")) !== 1 || m.read(m.sym("HKBUSY"))) return false;
   const saved = word(m, m.sym("OLDSP"));
-  return saved === m.sym("CSTKTOP") - 4 && word(m, saved) === key + 5;
+  // A ROM that carried the user across the disk reset held it on the stack here.
+  const held = m.symbols.has("SAVEDU") ? 4 : 2;
+  return saved === m.sym("CSTKTOP") - held && word(m, saved) === key + 5;
 }
 
 /** Check an ordinary caller's context, without changing guest state. */

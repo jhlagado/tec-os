@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
-import { GLCD_SVC, ROOT, abiDeclarations, SHELL_SVC, TEST_CLOCK, romFor, startupFile, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, PUT_COM, ROOT, abiDeclarations, SHELL_SVC, TEST_CLOCK, putBytes, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 import { cacheState } from "./lib/cache-pending.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
@@ -160,7 +160,7 @@ test("KG58 rom cap", () => {
   const { rom, symbols } = romFor();
   assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 1], "ABI 5.1");
   const m = machine(card());
-  assert.equal(word(m, 6) - 0x100, 47237, "TPA 47,237 with the shared recovery allocation");
+  assert.equal(word(m, 6) - 0x100, 47240, "TPA 47,240 with the shared recovery allocation");
   console.log(`ROM ${used} used, ${free} free, ${used - BASELINE.used} over the baseline, ${first.hash}`);
 });
 
@@ -341,19 +341,13 @@ test("KG59 name rule", async () => {
   assert.deepEqual(bytesAt(p, (pp << 8) + 25, 16), asLoaded(pp), "GLCD.SVC by CON UC1");
 });
 
-test("KG59 drive and user", async () => {
+test("KG59 drive", async () => {
   const m = boot({ "MON3.SVC": await mon3File() });
   installMon3(m);
   let r = typed(m, "B:MON3.SVC");
   assert.ok(r.mon3, "B:MON3.SVC enters A:'s installed copy");
   assert.deepEqual(r.opens, []);
   leave(m, r);
-  m.command("USER 1");
-  r = typed(m, "MON3.SVC");
-  assert.ok(r.mon3, "so does MON3.SVC in user 1");
-  assert.deepEqual(r.opens, []);
-  leave(m, r);
-  m.command("USER 0");
   m.command("UNLOAD");
   const state = loaderState(m);
   r = typed(m, "B:MON3.SVC");
@@ -1266,7 +1260,7 @@ async function vectorExchange(svc, jp0 = false) {
   const data = { "DATA1.DAT": pattern(128, 3), "DATA2.DAT": pattern(64, 4) };
   const tail = jp0 ? [0xc3, 0x00, 0x00] : [0xc9];
   const exch = bin(0x3a, 0, 0, 0x47, 0x3a, 0, 0, 0x32, 0, 0, 0x78, 0x32, 0, 0, ...tail); // A=(x); B=A; A=(y); (x)=A; (y)=B
-  const { m } = await inSession({ ...data, "EXCH.BIN": exch }, { svc });
+  const { m } = await inSession({ ...data, "EXCH.BIN": exch, "PUT.COM": PUT_COM }, { svc });
   assert.ok(ok(line(m, "LOAD EXCH.BIN")));
   const v = vectorA(m);
   const free = v.bytes.findIndex((b) => b !== 0xff); // the byte holding the first free block
@@ -1293,12 +1287,11 @@ async function vectorExchange(svc, jp0 = false) {
     assert.equal(vectorA(m).bytes.reduce((a, b) => a + b, 0), sum, "the vector's sum unchanged");
     leave(m, { mon3: true });
   }
+  // Three new files of 16 records, each filled with its own byte.
   const saved = {};
-  for (const [n, seed] of [["N1.COM", 5], ["N2.COM", 6], ["N3.COM", 7]]) {
-    const bytes = pattern(16, seed);
-    bytes.forEach((b, i) => m.write(0x100 + i, b));
-    assert.doesNotMatch(m.command(`SAVE 8 ${n}`), /\?/);
-    saved[n] = bytes;
+  for (const [n, fill] of [["N1.COM", 5], ["N2.COM", 6], ["N3.COM", 7]]) {
+    assert.doesNotMatch(m.command(`PUT 8 ${n} ${fill}`), /\?|NO SPACE/);
+    saved[n] = putBytes(8, fill);
   }
   const a = volume(m.sdImage, "A");
   assert.deepEqual(a.verify(), [], "the card's directory holds no cross-link");
@@ -1537,7 +1530,7 @@ test("KG63 warm boot and reset", async () => {
   m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after a reset");
   assert.deepEqual(services(m), [], "a reset removes it");
-  assert.equal(word(m, 6), 0xb985);
+  assert.equal(word(m, 6), 0xb988);
 });
 
 async function unloads(svc) {
@@ -1548,7 +1541,7 @@ async function unloads(svc) {
     exitBy(m, how);
     m.command("UNLOAD");
     assert.deepEqual(services(m), [], `after ${how}: UNLOAD takes the pages`);
-    assert.equal(word(m, 6), 0xb985, `after ${how}: (0006h) back at B985h`);
+    assert.equal(word(m, 6), 0xb988, `after ${how}: (0006h) back at B988h`);
     assert.equal(warmTarget(m), m.sym("WBOOTR"), `after ${how}: the hook is out`);
     assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A(:\S*)?>$/, `after ${how}: a .COM exits to the prompt`);
   }
@@ -1636,10 +1629,10 @@ test("KG68 docs agree", async () => {
   const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
   assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **${fig.pages} pages**`), "the size");
   // The starter card asks for four drives, whose vectors take the bare
-  // ROM's word from B985h to B6C5h: MON3.SVC's pages go below page B6h.
+  // ROM's word from B988h to B6C8h: MON3.SVC's pages go below page B6h.
   const bare = fig.top - 0x300;
   const tpa = (top) => (top - 0x100).toLocaleString("en");
-  assert.ok(mon3.includes(`from \`B6C5h\` to \`${h4(bare)}\`, and the TPA from 46,533 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
+  assert.ok(mon3.includes(`from \`B6C8h\` to \`${h4(bare)}\`, and the TPA from 46,536 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
   // With the shell: (0006h) is A500h with SHELL.SVC alone on the starter
   // card, as shell2.test measures it, MON3.SVC's pages lower, and GLCD.SVC
   // three pages lower still.
@@ -1664,7 +1657,7 @@ test("KG68 docs agree", async () => {
   const listedIn = (head) => [...mon3.slice(mon3.indexOf(head)).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
   assert.deepEqual(listedIn("calls implemented, 42 of them:"), built.filter((i) => !(i in TRANSLATED)), "the implemented calls");
   assert.deepEqual(listedIn("Translated, on TEC-OS's resources, 4 of them:"), Object.keys(TRANSLATED).map(Number), "the translated calls");
-  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes from the bare BDOS entry through BFFFh \(`B6C5h` on the starter, `B985h` on the two-volume reference card\)/);
+  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes from the bare BDOS entry through BFFFh \(`B6C8h` on the starter, `B988h` on the two-volume reference card\)/);
   // The refused calls the doc lists are those the table sends to the error display, and RTCAPI.
   const refusedCalls = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [i] : []));
   const notBuilt = mon3.slice(mon3.indexOf("Not built, and refused:")).split(". Each")[0];

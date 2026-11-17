@@ -4,11 +4,14 @@
 // lower than it was with the driver; a program on the CCP stack can call
 // the BIOS's CONOUT within the declared caller-stack space; UNLOAD gives the
 // console and the pages back. Emulator evidence.
-// The screens that show SAVE to a read-only volume were retaken: it came to say R/O.
+// The screens that show a write to a read-only volume were retaken: it came to say R/O.
 // Every screen was retaken when the shell's prompt came to name the drive's
 // volume and its DIR to list sizes; the commands are the same.
 // The two screens that show DIR B:'s rows were retaken when DIR came to print
 // the name and type together; the other eighteen are as they were.
+// When SAVE left the ROM, PUT.COM took its place in the two commands that
+// write a file, and the five screens after PUT 4 S.COM, TYPE S.COM, ERA S.COM,
+// PUT 1 C:X.COM and DIR E: were retaken; the other fifteen are as they were.
 // KS48 keeps this historical oracle on its original-font input. Only the
 // historical pixel workload uses a disposable FONT-span restoration. Other
 // GLCD tests and Compact alias/rendering tests use the unmodified production ROM.
@@ -23,12 +26,12 @@ import {restoreHistoricalFont,validateHistoricalFont,historicalFontContext} from
 import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay, withShell } from "./lib/fixtures.mjs";
 
 const referenceBytes = readFileSync(resolve(ROOT, "test/glcd-screens.json"));
-assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"4af172005735ae5552fe065bdb10e8080c322e08b68ca81b9ac6dabb0c51f64b","the historical command list and oracle, with the two DIR screens retaken");
+assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"93d359bdbb97d4bec76eb4cd4648c46e757ecae83d798b6ffccb5ae631b945d0","the historical command list and oracle, with the DIR and PUT screens retaken");
 const REF = JSON.parse(referenceBytes);
 // Bind the clone to this build's untouched input, not to a permanent ROM pin.
 const productionInput = romFor();
 const historicalContext = historicalFontContext(productionInput.rom,productionInput.symbols);
-const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "conout", "fill"];
+const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "conout", "fill", "put"];
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 
 async function card() {

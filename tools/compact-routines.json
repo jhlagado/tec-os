@@ -423,14 +423,13 @@
     "MLTAKE",
     "SHLINE",
     "SHENT",
-    "SAVEDU",
+    "SAVEDRV",
     "NOTDRIVE",
     "ARGSKIP",
     "ONENAME",
     "ENDCHK",
     "CMDPARSE",
     "ERRGO",
-    "LOADA",
     "LOADCOM",
     "LOADLIM",
     "LOADEND",
@@ -442,12 +441,6 @@
     "CMDUNL",
     "CONNO",
     "CMDCON",
-    "CMDUSER",
-    "CMDSAVE",
-    "SAVE128",
-    "SAVECLS",
-    "SAVEWER",
-    "SAVENOSP",
     "PREPPAGE",
     "PARSEFCB",
     "PARFLD",
@@ -869,6 +862,27 @@
     "GETCAP",
     "INTDSP",
     "APITAB"
+  ],
+  "test/programs/area.asm": [
+    "START",
+    "SHOW",
+    "PUTA",
+    "SETA",
+    "GETA",
+    "FILE",
+    "SPACES",
+    "NUM"
+  ],
+  "test/programs/area3.asm": [
+    "INIT",
+    "REMOVE",
+    "AREA3"
+  ],
+  "test/programs/put.asm": [
+    "START",
+    "FILE",
+    "WORD",
+    "NUM"
   ],
   "drivers/shell.asm": [
     "INIT",

@@ -212,5 +212,5 @@
     ".vitepress/theme/page-enhancements.js",
     ".github/workflows/deploy.yml"
   ],
-  "firmwareRevision": "46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee"
+  "firmwareRevision": "57a8c38b7f341433285e39c4bec14ecc486ffe26"
 }

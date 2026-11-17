@@ -49,8 +49,8 @@ With a service in, `(0006h)` is its page's start. The `JP` there goes straight i
 the BDOS, so a BDOS call is two jumps however many services are in, and every field a
 service needs lies at or above that word, where a program that sets SP from it can't
 reach. With none in, `(0006h)` is the stub directly below the allocation vectors,
-`B6C5h` on the four-drive starter card; the two-volume reference card gives
-`B985h`.
+`B6C8h` on the four-drive starter card; the two-volume reference card gives
+`B988h`.
 
 Format version 4 has version 1's layout. It rose with ABI 5, as 3 did with ABI 4:
 services test no ABI, and each major moved the table's entries, so the loader
@@ -112,8 +112,8 @@ entered. A registry record is never an entry.
 the file it was installed from, which its `INIT` copies into its record. The
 command's own file name is compared with that name in each installed
 service's ready record that has bit 1. The header's name and any registry
-record's name play no part, and nor do the drive and the user: `B:MON3.SVC` and
-`MON3.SVC` in user 1 enter a `MON3` installed from A: and read nothing.
+record's name play no part, and nor does the drive: `B:MON3.SVC` enters a
+`MON3` installed from A: and reads nothing.
 
 1. **One match** is entered. No file is opened, so the file need not still be
    on the card.
@@ -306,6 +306,8 @@ call to the ROM could try. A warm boot ends that state.
 clear, or carry set to refuse, leaving everything as it was. It may be called
 after a record check failed. `UNLOAD` calls it, from the CCP, so no program is
 running.
+
+Neither `INIT` nor `REMOVE` need restore the user area: the prompt after them is in area 0.
 
 ## Stacks
 

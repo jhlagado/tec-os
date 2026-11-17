@@ -7,20 +7,20 @@ nav_group: "Using the machine"
 
 # 5. Drives and user areas
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 You can keep separate groups of files on the same card. A volume is a
-complete disk of files, assigned to a drive letter. Within a volume, user
-areas separate further groups. These locations affect file commands and
+complete disk of files, assigned to a drive letter, and `CD` chooses which
+volume a drive shows. These locations affect file commands and
 program lookup. A tool can therefore be available even when DIR omits it.
 The final sections explain resident services, which occupy memory as
 well as having a file on the card.
@@ -37,7 +37,7 @@ GAMES and SPARE are present on the card but unassigned. The prompt
 `CD ?` lists the card's volumes, in the card's order, each with the drive it
 is on:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD ?'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs 'CD ?'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -69,7 +69,7 @@ drive can be named explicitly, as in `DIR B:` or `TYPE A:SAMPLE.ASM`.
 Selecting an empty drive or naming a file on it gives `Select`. This
 starter-card run selects B and then uses empty drive D:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs B: '@start D:' '@key x' '@start DIR D:' '@key x'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs B: '@start D:' '@key x' '@start DIR D:' '@key x'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -98,18 +98,20 @@ returned-error option for programs.
 
 ## User areas
 
-Each file belongs to a user area numbered 0 through 15. This separates
-groups of files within the same volume. `USER 3` selects area 3 across
-all drives. A nonzero area appears before the prompt's drive letter, as
-in CP/M 3: `3A:SYSTEM>` is area 3 on drive A. TEC-OS starts in area 0,
-which contains all the starter files.
+CP/M gives every file a user area numbered 0 through 15, a way to keep
+groups of files apart within one volume. TEC-OS stores the area with each
+file, as CP/M does, but its prompt works in area 0 only. There is no `USER`
+command and the prompt shows no area number. All the starter files are in
+area 0.
 
-File commands use the selected area. A file created in area 3 is absent
-from area 0's listing even on the same volume. This example uses
-`SAVE 1 B:MINE.COM` to copy a page of existing program memory into a
-demonstration file in area 3. No file is created or moved in area 0:
+A CP/M program can still select another area while it runs, and the files
+it makes there stay apart from those in area 0. When the program ends, the
+prompt is back in area 0. A file left in another area therefore cannot be
+listed, erased or run from the prompt. In this example NOTES.TXT is in area
+3 of WORK, put there from the PC with `tecvol put card.img B NOTES.TXT
+--text --user 3`. Neither `DIR` nor `TYPE` finds it:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs 'USER 3' 'SAVE 1 B:MINE.COM' 'DIR B:' TAS 'USER 0' 'DIR B:'. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card build/area.img 'DIR B:' 'TYPE B:NOTES.TXT'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -120,61 +122,44 @@ A>SHELL.SVC
 
 A:SYSTEM>GLCD.SVC
 
-A:SYSTEM>USER 3
-3A:SYSTEM>SAVE 1 B:MINE.COM
-3A:SYSTEM>DIR B:
-
-MINE.COM         256
-1 file, 256 bytes
-8368128 free on B:WORK
-3A:SYSTEM>TAS
-usage: TAS NAME [OUT.TYP]
-
-3A:SYSTEM>USER 0
 A:SYSTEM>DIR B:
 NO FILE
 
+A:SYSTEM>TYPE B:NOTES.TXT
+NO FILE
 A:SYSTEM>
 ```
 
-`TAS` still runs from area 3 because program lookup also checks area 0.
-COPY operates within the current user area, so it cannot transfer
-files to another. The PC command `tecvol put --user N` places a file in a selected
-area, as [Chapter 6](06-cards-on-the-pc.md) explains. `USER` requires a
-number from 0 to 15. An omitted or out-of-range number produces `?`.
+The PC tools reach every area: `tecvol dir` lists them all, and `--user N`
+selects one for `get`, `put` and `era`, as [Chapter 6](06-cards-on-the-pc.md)
+explains. To keep groups of files apart on the machine itself, use named
+volumes. `CD` puts another volume on a drive, as the sections below show.
 
 The system attribute is a separate property of a file. `DIR` omits system
-files as well as files outside the current area. A system file remains
-available to `TYPE` and other file commands in its area and a program
-command can run it. The attribute does not make the file available in
-every user area or protect it against modification.
+files. A system file remains available to `TYPE` and other file commands
+and a program command can run it. The attribute does not protect the file
+against modification.
 
 ## Program lookup
 
 A command that is not built in normally names a COM file. The search
 begins on its explicit drive, or the current drive if none is named.
-It checks the current user area first and then area 0 if those differ.
-Area 0 lookup requires no system attribute and leaves your selected
-area unchanged.
 
 A name without a drive prefix can also find a tool on A. That search
-begins only after both areas on the current drive contain no matching
-file. On A, the current area again precedes area 0. At `3B>`, `TOOL`
-uses this order:
+begins only after the current drive has no matching file. At `B:WORK>`,
+`TOOL` uses this order:
 
 | Search | File |
 | --- | --- |
-| 1 | B, area 3: `TOOL.COM` |
-| 2 | B, area 0: `TOOL.COM` |
-| 3 | A, area 3: `TOOL.COM` |
-| 4 | A, area 0: `TOOL.COM` |
+| 1 | B: `TOOL.COM` |
+| 2 | A: `TOOL.COM` |
 
-An explicit drive restricts lookup to that drive. `B:TOOL` checks B's
-current area and area 0 only. Loading from A also leaves the current
-drive unchanged. In this capture, both `A:TAS` and plain `TAS` run
+An explicit drive restricts lookup to that drive. `B:TOOL` checks B
+only. Loading from A also leaves the current drive unchanged. In this
+capture, both `A:TAS` and plain `TAS` run
 A's program and print its usage line. The prompt remains on B:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs B: A:TAS TAS STARTUP.CMD. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs B: A:TAS TAS STARTUP.CMD. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -206,13 +191,13 @@ so its command fails. `A:STARTUP.CMD` would run A's script again.
 The ROM alone treats `.CMD` like another extension and searches for COM.
 
 SVC files have a narrower search. A service command reads only the
-current user area on the named or current drive. At `B:WORK>` you must
+named or current drive. At `B:WORK>` you must
 therefore name the starter driver as `A:GLCD.SVC`. `CON UC1` also names
 A's driver explicitly when loading it. The resident-service examples
 below explain installation and removal.
 
 Lookup stops when a file is found but cannot load. A `TOOL.COM` too large
-on B is not skipped for a smaller copy on A or in another area. An absent
+on B is not skipped for a smaller copy on A. An absent
 file or an oversized program prints the command name with a question mark.
 A card-read failure in the default error mode gives `Bad Sector` and ends
 the command through the BDOS instead. It does not print that question mark.
@@ -238,7 +223,7 @@ slot large enough for either geometry, so any volume fits any drive.
 This run assigns GAMES to D, displays that assignment and attempts to
 put WORK on C before listing all volumes:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD D:GAMES' 'CD D:' 'CD C:WORK' 'CD ?'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs 'CD D:GAMES' 'CD D:' 'CD C:WORK' 'CD ?'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -286,7 +271,7 @@ change to the current drive immediately reselects it to use the new
 volume. The shell fills its prompt-label table at its first prompt
 and updates it through `CD`. A program using ROM mount calls can
 therefore leave an old label displayed. `CD` alone rereads the card
-and updates it (`241b438:docs/shell.md:142-198`).
+and updates it (`b95b2a9:docs/shell.md:142-198`).
 
 ### CD on drive A
 
@@ -297,7 +282,7 @@ selection, so a reset after `CD A:GAMES` starts from GAMES, which has no
 startup file and no shell. The bare prompt `A>` follows. ROM CD commands
 remain available to restore SYSTEM:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD A:GAMES' TAS @reset 'CD ?' 'CD A:SYSTEM' SHELL.SVC. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs 'CD A:GAMES' TAS @reset 'CD ?' 'CD A:SYSTEM' SHELL.SVC. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -334,9 +319,8 @@ A:SYSTEM>
 ```
 
 At the bare prompt, use `CD ?`, `CD A:SYSTEM` and `SHELL.SVC` to restore
-the shell. CD preserves the current drive and user area. The starter's shell
-is in user 0; use `USER 0` before loading it if you changed the area.
-Reset starts in user 0. Power cycle restores the card's default drive
+the shell. CD preserves the current drive. Power cycle restores the
+card's default drive
 assignments and startup. A `CD` in a script cannot change the drive the script
 is read from: it is refused with `CD?`, and the script goes on.
 
@@ -363,7 +347,7 @@ the `R/O` and `File R/O` messages wait for a key before ending the command.
 
 ## The drives after a reset
 
-An ordinary program exit retains the current drive and user area.
+An ordinary program exit retains the current drive, in user area 0.
 Removing the current drive's volume makes the next prompt use A. Reset
 starts on A in area 0, although the volume assignments may survive.
 
@@ -377,7 +361,7 @@ in location, size, geometry and flags and fit the drive's slot.
 This run assigns GAMES to D and then resets. The boot banner and volume
 listing show that D still contains GAMES:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD D:GAMES' @reset 'CD ?'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs 'CD D:GAMES' @reset 'CD ?'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -567,8 +551,8 @@ address for one run. LOAD never runs automatically,
 and moving bytes does not relocate absolute operands. TAS produces genuine
 HEX with `TAS NAME OUT.HEX`, using data 00/EOF 01 and no entry record. These
 address forms follow the later development components
-(`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/mon3.md:60-143`,
-`Thorium 0c8adea809ff8752e504bad9c40256e2572f2462:docs/language.md:167-185`).
+(`TEC-OS 1cded94eed6a077bd0cddea4554c2a2245c40a5a:docs/mon3.md:60-143`,
+`Thorium 7a217f96c76f11641af3fa0b22d0b34be6e2a467:docs/language.md:167-185`).
 GO flushes the cache before it runs anything. If a write fails, the data
 stays queued, GO prints `?` and no program starts. It runs once the card has
 taken the write and the console shows `Cache clear`.
@@ -591,18 +575,18 @@ that ended a program out of the command line. Serial has no such wait.
 Warm boot preserves MON3.SVC. `UNLOAD` or reset removes it. Its
 current 4,781-byte header and image occupy 19 pages. With relocation data
 the file occupies 5,237 bytes. These later measurements belong to the monitor
-at `TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e`; the earlier checked
+at `TEC-OS 1cded94eed6a077bd0cddea4554c2a2245c40a5a`; the earlier checked
 header/captures above retain their historical ownership. These pages hold the service code,
 line buffer and recovery stack above the MON-3 program's load area.
 The program itself uses MON-3's stack below `0880h`.
 
 On a card with nothing else installed, the BDOS entry address stored
-at `0006h` changes from `B6C5h` to `A300h`. Program memory falls from 46,533 bytes
+at `0006h` changes from `B6C8h` to `A300h`. Program memory falls from 46,536 bytes
 to 41,472, or 40,704 with GLCD.SVC too. On the starter card, the
 shell is already installed. Installing MON3 changes that address from `A500h` to `9200h` and
 reduces program memory from 41,984 to 37,120 bytes. Adding
 GLCD.SVC gives `8F00h` and 36,352 bytes
-(`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/mon3.md:47-58`).
+(`TEC-OS 1cded94eed6a077bd0cddea4554c2a2245c40a5a:docs/mon3.md:47-58`).
 
 The return-to-prompt key handling uses TEC-OS's `KBLAST` state. Each
 MON3 matrix read stores the detected key there. A later TEC-OS scan
@@ -630,7 +614,7 @@ return also sets the panel's modes again, so the console's text shows again
 whatever mode the program left the panel in.
 
 The service cannot recover a program that hangs: the reset button is the
-way out. A program that writes `B6C5h–BFFFh`, which holds the BDOS entry,
+way out. A program that writes `B6C8h–BFFFh`, which holds the BDOS entry,
 the allocation vectors, TEC-OS's workspace and its BIOS table, can damage
 TEC-OS's disk tables. The service writes pending changes before `GO` and
 resets the drives after each return to limit that. Its messages are in

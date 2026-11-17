@@ -1386,7 +1386,7 @@ saves; physical TEC-1G run; final human review of the revised release. The
 retained 230-action candle lifetime and random combat can still end a game.
 
 Browser qualification completed: system Chromium loaded the clean standalone
-Viewer built at 346d5c6, with TEC-OS 8f88b8c. Its fresh starter contains source,
+Viewer built at 7dee8f3, with TEC-OS 2bd6b0a. Its fresh starter contains source,
 not COM. Native compilation inside the browser produced the exact qualified
 COM, verified by downloading and comparing bytes. TAKE COMPASS confirmed the
 action; INVENTORY and the revised clearing description worked. The trial then

@@ -82,6 +82,8 @@ SERVICES reports only `SHELL 15`: 15 pages, 3,840 bytes. The additional 197-byte
 difference is page alignment: the bare ceiling B6C5h is rounded down to B600h
 for service allocation, then the 15 pages leave A700h. No unidentified service
 accounts for that difference in this measured configuration.
+These rows measured the fifteen-page shell of TEC-OS `fdca626`, before sized
+`DIR`, on a ROM that still had `SAVE`; the current shell takes seventeen pages.
 
 The current mapping has 16 KiB ROM above the 48 KiB RAM window. Page zero and
 resident BDOS/BIOS/cache/allocation-vector workspace also sit outside TPA; the

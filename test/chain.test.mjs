@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { createContainer } from "../tools/lib/container.mjs";
 import { Machine } from "./lib/machine.mjs";
 import { SHELL, pageOf } from "./lib/shell.mjs";
-import { TEST_CLOCK, boot, program, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
+import { MARKS, PUT_COM, TEST_CLOCK, boot, marked, program, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
 
 import { pendingSayFiles, pendingSayFailure } from "./lib/pending-say.mjs";
 
@@ -25,16 +25,18 @@ export const chainWith = (bytes) => Uint8Array.from([...CHAIN, ...bytes]);
 /** CHAIN.COM chaining TEXT, ended by a 0. */
 export const chainTo = (text) => chainWith([...raw(text), 0]);
 
-/** A card with the test's programs on A:, FILES, and a STARTUP.CMD of SHELL.SVC then STARTUP's lines. */
+/** The marker files these tests type: few enough that DIR lists A: without a pause. */
+const USED = Object.fromEntries([0, 2, 3, 4, 5, 6, 7].map((n) => [n, MARKS[n]]));
+
+/** A card with the test's programs and marker files on A:, FILES, and a STARTUP.CMD of SHELL.SVC then STARTUP's lines. */
 function card(files = {}, image = standardCard(), startup = []) {
   const a = volume(image, "A");
-  for (const [n, b] of Object.entries({ "SAY.COM": SAY, "RC.COM": RC, "LINE.COM": LINE, ...files })) a.write(n, b);
+  for (const [n, b] of Object.entries({ "SAY.COM": SAY, "RC.COM": RC, "LINE.COM": LINE, ...USED, ...files })) a.write(n, b);
   return withShell(image, ...startup);
 }
 
 const chpos = (m) => m.read(m.sym("CHPOS"));
 const code = (m) => m.read(m.sym("PRGCODE")) | (m.read(m.sym("PRGCODE") + 1) << 8);
-const user = (m) => m.read(4) >> 4;
 /** The shell's prompt, reading a typed line: nothing left of a line, a script or startup. */
 const idle = (m, from) => m.ready() && /[A-P](:\S*)?>$/.test(m.text(from));
 
@@ -52,9 +54,9 @@ test("SH8 a line of two, three and four pieces runs each in turn, each echoed af
   const m = boot(card());
   assert.equal(run(m, "say!say"), "say!say\r\r\nSAY\r\nA:SYSTEM>say\r\nSAY\r\nA:SYSTEM>");
   assert.equal(count(run(m, "SAY!SAY!SAY"), /\nSAY\r/g), 3);
-  assert.equal(run(m, "SAY!USER 3!USER 0!SAY"), "SAY!USER 3!USER 0!SAY\r\r\nSAY\r\nA:SYSTEM>USER 3\r\n3A:SYSTEM>USER 0\r\nA:SYSTEM>SAY\r\nSAY\r\nA:SYSTEM>");
-  run(m, "USER 3");
-  assert.equal(user(m), 3);
+  assert.equal(run(m, "SAY!TYPE 3!TYPE 0!SAY"), "SAY!TYPE 3!TYPE 0!SAY\r\r\nSAY\r\nA:SYSTEM>TYPE 3\r\n#3\r\n\r\nA:SYSTEM>TYPE 0\r\n#0\r\n\r\nA:SYSTEM>SAY\r\nSAY\r\nA:SYSTEM>");
+  run(m, "TYPE 3");
+  assert.equal(marked(m), 3);
 });
 
 test("SH8 an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line", () => {
@@ -71,31 +73,31 @@ test("SH8 a line of 127 characters runs whole: 32 pieces", () => {
   assert.equal(count(run(m, line, 2_000_000_000), /\nSAY\r/g), 32);
 });
 
-test("SH8 a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets", () => {
+test("SH8 a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive it sets", () => {
   const m = boot(card({ "HI.COM": SAY }));
-  const out = run(m, "USER 0!B:!HI!A:!HI!DIR HI.COM");
+  const out = run(m, "TYPE 0!B:!HI!A:!HI!DIR HI.COM");
   assert.match(out, /A(:\S*)?>B:\r\nB(:\S*)?>HI\r\nSAY\r\nB(:\S*)?>A:\r\nA(:\S*)?>HI\r\nSAY\r\nA(:\S*)?>DIR HI.COM\r\n(\r\n)?HI\.COM {11}128\r\n1 file/);
   assert.equal(m.read(4) & 15, 0);
 });
 
 test("SH8 a startup line holding ! runs all its pieces before the next startup line", () => {
-  const m = boot(card({}, standardCard(), ["SAY!USER 2!USER 0", "SAY!USER 5"]));
+  const m = boot(card({}, standardCard(), ["SAY!TYPE 2!TYPE 0", "SAY!TYPE 5"]));
   m.runUntil(() => idle(m, 0), 600_000_000, "the prompt");
-  assert.match(m.text(0), /A(:\S*)?>SAY!USER 2!USER 0\r\r\nSAY\r\nA(:\S*)?>USER 2\r\n2A(:\S*)?>USER 0\r\nA(:\S*)?>SAY!USER 5\r\r\nSAY\r\nA(:\S*)?>USER 5\r\n5A(:\S*)?>$/);
-  assert.equal(user(m), 5);
+  assert.match(m.text(0), /A(:\S*)?>SAY!TYPE 2!TYPE 0\r\r\nSAY\r\nA(:\S*)?>TYPE 2\r\n#2\r\n\r\nA(:\S*)?>TYPE 0\r\n#0\r\n\r\nA(:\S*)?>SAY!TYPE 5\r\r\nSAY\r\nA(:\S*)?>TYPE 5\r\n#5\r\n\r\nA(:\S*)?>$/);
+  assert.equal(marked(m), 5);
 });
 
 test("SH8 history gives the chained line back whole, as typed, and it runs again", () => {
   const m = boot(card());
-  run(m, "say!say!user 2");
-  run(m, "USER 0");
+  run(m, "say!say!type 2");
+  run(m, "TYPE 0");
   const from = m.output.length;
   m.type("\x17\x17"); // ^W twice: the line before the last
-  m.runUntil(() => m.waitingForInput() && /say!say!user 2$/.test(m.text(from)), 50_000_000, "the recall");
+  m.runUntil(() => m.waitingForInput() && /say!say!type 2$/.test(m.text(from)), 50_000_000, "the recall");
   m.type("\r");
   m.runUntil(() => idle(m, from), 600_000_000, "the prompt");
   assert.equal(count(m.text(from), /\nSAY\r/g), 2);
-  assert.equal(user(m), 2);
+  assert.equal(marked(m), 2);
 });
 
 test("SH8 & runs a piece after a success, and not after a program's FF00h, FFFEh or NAME?", () => {
@@ -118,10 +120,10 @@ test("SH8 & runs a piece after a success, and not after a program's FF00h, FFFEh
 
 test("SH8 after a skipped & piece a later & skips too, and a ! piece runs", () => {
   const m = boot(card());
-  const out = run(m, "RC FF00 &SAY &SAY!USER 6");
+  const out = run(m, "RC FF00 &SAY &SAY!TYPE 6");
   assert.equal(count(out, /\nSAY\r/g), 0);
-  assert.match(out, /A(:\S*)?>USER 6\r\n6A(:\S*)?>$/);
-  assert.equal(user(m), 6);
+  assert.match(out, /A(:\S*)?>TYPE 6\r\n#6\r\n\r\nA(:\S*)?>$/);
+  assert.equal(marked(m), 6);
 });
 
 test("SH8 the code is cleared as each piece is taken, before the command is looked for", () => {
@@ -140,13 +142,13 @@ test("SH8 the code is cleared as each piece is taken, before the command is look
   run(m, "RC FF00");
   assert.equal(count(run(m, "NOSUCH &SAY"), /\nSAY\r/g), 0, "NAME? sets FF00h, whatever came before");
   run(m, "RC FF00");
-  assert.equal(count(run(m, "USER 0 &SAY"), /\nSAY\r/g), 1, "a built-in that succeeds clears it");
+  assert.equal(count(run(m, "TYPE 0 &SAY"), /\nSAY\r/g), 1, "a built-in that succeeds clears it");
 });
 
 test("SH8 a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file", () => {
   const m = boot(card({ "X.COM": Uint8Array.from([0xc9]) }));
   assert.equal(count(run(m, "ERA X.COM &SAY"), /\nSAY\r/g), 1, "a file erased");
-  for (const bad of ["ERA X.COM", "REN NEW.COM=NONE.COM", "REN SAY.COM=RC.COM", "TYPE NONE.TXT", "USER 99"]) {
+  for (const bad of ["ERA X.COM", "REN NEW.COM=NONE.COM", "REN SAY.COM=RC.COM", "TYPE NONE.TXT", "DIR A B"]) {
     assert.equal(count(run(m, `${bad} &SAY`), /\nSAY\r/g), 0, bad);
     assert.equal(code(m), 0xff00, bad);
   }
@@ -183,7 +185,7 @@ test("SH8 function 47's command starts with the default FCBs, tail, DMA and stac
   run(chained, "CHAIN");
   const piece = boot(card());
   const p = entryState(piece);
-  run(piece, "USER 0!SAY B:ONE.TXT TWO.DAT and the rest");
+  run(piece, "TYPE 0!SAY B:ONE.TXT TWO.DAT and the rest");
   assert.equal(t.length, 1);
   assert.deepEqual(c, t);
   assert.deepEqual(p, t);
@@ -213,11 +215,11 @@ test("SH8 function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, 
 test("SH8 function 47 takes 127 characters, the line's rest replaced, and an empty command ends at the prompt", () => {
   const long = `${"SAY!".repeat(31)}SAY`;
   const m = boot(card({ "CHAIN.COM": chainTo(long), "EMPTY.COM": chainTo("") }));
-  assert.equal(count(run(m, "CHAIN!USER 7", 2_000_000_000), /\nSAY\r/g), 32);
-  assert.equal(user(m), 0, "the rest of the line was replaced");
-  const out = run(m, "EMPTY!USER 7");
-  assert.equal(out, "EMPTY!USER 7\r\r\n\r\nA:SYSTEM>");
-  assert.equal(user(m), 0);
+  assert.equal(count(run(m, "CHAIN!TYPE 7", 2_000_000_000), /\nSAY\r/g), 32);
+  assert.equal(marked(m), 0, "the rest of the line was replaced");
+  const out = run(m, "EMPTY!TYPE 7");
+  assert.equal(out, "EMPTY!TYPE 7\r\r\n\r\nA:SYSTEM>");
+  assert.equal(marked(m), 0);
 });
 
 test("SH8 a chained command missing, unreadable or too large reaches NAME? and the prompt", () => {
@@ -242,29 +244,29 @@ test("SH8 a chained command missing, unreadable or too large reaches NAME? and t
 });
 
 test("SH8 a chain from a startup line runs before the next startup line, and may hold ! and &", () => {
-  const m = boot(card({ "CHAIN.COM": chainTo("USER 0!RC FF00 &SAY!SAY"), "C2.COM": chainTo("say &user 4") }, standardCard(), ["CHAIN", "C2", "USER 3"]));
+  const m = boot(card({ "CHAIN.COM": chainTo("TYPE 0!RC FF00 &SAY!SAY"), "C2.COM": chainTo("say &type 4") }, standardCard(), ["CHAIN", "C2", "TYPE 3"]));
   m.runUntil(() => idle(m, 0), 800_000_000, "the prompt");
   const t = m.text(0);
-  assert.ok(t.endsWith("A:SYSTEM>CHAIN\r\r\n\r\nA:SYSTEM>USER 0\r\nA:SYSTEM>RC FF00\r\n\r\nA:SYSTEM>SAY\r\nSAY\r\nA:SYSTEM>C2\r\r\n\r\nA:SYSTEM>say\r\nSAY\r\nA:SYSTEM>user 4\r\n4A:SYSTEM>USER 3\r\r\n3A:SYSTEM>"), JSON.stringify(t));
+  assert.ok(t.endsWith("A:SYSTEM>CHAIN\r\r\n\r\nA:SYSTEM>TYPE 0\r\n#0\r\n\r\nA:SYSTEM>RC FF00\r\n\r\nA:SYSTEM>SAY\r\nSAY\r\nA:SYSTEM>C2\r\r\n\r\nA:SYSTEM>say\r\nSAY\r\nA:SYSTEM>type 4\r\n#4\r\n\r\nA:SYSTEM>TYPE 3\r\r\n#3\r\n\r\nA:SYSTEM>"), JSON.stringify(t));
   assert.equal(count(t, /\nSAY\r/g), 2, "the & piece after RC FF00 skipped");
-  assert.equal(user(m), 3);
+  assert.equal(marked(m), 3);
 });
 
 test("SH8 ^C at a program's line input drops the rest of the line", () => {
   const m = boot(card());
   const from = m.output.length;
-  m.type("LINE!SAY!USER 2\r");
-  m.runUntil(() => m.waitingForInput() && m.read(m.sym("HFLAG")) === 0 && m.text(from).endsWith("USER 2\r\r\n"), 200_000_000, "LINE's input");
+  m.type("LINE!SAY!TYPE 2\r");
+  m.runUntil(() => m.waitingForInput() && m.read(m.sym("HFLAG")) === 0 && m.text(from).endsWith("TYPE 2\r\r\n"), 200_000_000, "LINE's input");
   m.type("\x03");
   m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
   assert.match(m.text(from), /\^C\r\nA(:\S*)?>$/);
   assert.equal(count(m.text(from), /\nSAY\r/g), 0);
-  assert.equal(user(m), 0);
+  assert.equal(marked(m), 0);
 });
 
 test("SH8 a BDOS error's exit drops the rest of the line", () => {
   const image = card(
-    {},
+    { "PUT.COM": PUT_COM },
     createContainer([
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
       { geometry: "G1M", label: "WORK", mount: "B" },
@@ -273,12 +275,12 @@ test("SH8 a BDOS error's exit drops the rest of the line", () => {
   );
   const m = boot(image);
   const from = m.output.length;
-  m.type("SAVE 1 C:X.COM!SAY!USER 2\r");
+  m.type("PUT 1 C:X.COM!SAY!TYPE 2\r");
   m.runUntil(() => m.waitingForInput() && /Bdos Err/.test(m.text(from)), 200_000_000, "the error");
   m.type("\r");
   m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
   assert.equal(count(m.text(from), /\nSAY\r/g), 0);
-  assert.equal(user(m), 0);
+  assert.equal(marked(m), 0);
 });
 
 /** Type LINE, answer the BDOS error it meets with a key, and run to the prompt: the text since. */
@@ -298,17 +300,17 @@ const SEL16 = Uint8Array.from([0x1e, 16, 0x0e, 14, 0xcd, 5, 0, 0xc9]);
 
 test("SH8 a read-only drive's exit drops the rest of the line", () => {
   const m = boot(card({ "ROX.COM": ROX }));
-  const out = runError(m, "ROX NEW.DAT!SAY!USER 2", /Bdos Err On A: R\/O/);
+  const out = runError(m, "ROX NEW.DAT!SAY!TYPE 2", /Bdos Err On A: R\/O/);
   assert.equal(count(out, /\nSAY\r/g), 0);
-  assert.equal(user(m), 0);
+  assert.equal(marked(m), 0);
   assert.equal(volume(m.sdImage, "A").find("NEW.DAT"), undefined, "nothing made");
 });
 
 test("SH8 a failed select's exit drops the rest of the line", () => {
   const m = boot(card({ "SEL16.COM": SEL16 }));
-  const out = runError(m, "SEL16!SAY!USER 2", /Bdos Err On .: Select/);
+  const out = runError(m, "SEL16!SAY!TYPE 2", /Bdos Err On .: Select/);
   assert.equal(count(out, /\nSAY\r/g), 0);
-  assert.equal(user(m), 0);
+  assert.equal(marked(m), 0);
 });
 
 test("SH8 a directory read that fails drops the rest of the line", () => {
@@ -327,27 +329,27 @@ test("SH8 a directory read that fails drops the rest of the line", () => {
   };
   const from = m.output.length;
   armed = true;
-  m.type("DIR!SAY!USER 2\r");
+  m.type("DIR!SAY!TYPE 2\r");
   m.expect(/Bad Sector/, { from, maxCycles: 400_000_000 });
   m.runUntil(() => m.waitingForInput(), 100_000_000, "the error's key");
   m.type("\r");
   m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
   assert.equal(failed, 1);
   assert.equal(count(m.text(from), /\nSAY\r/g), 0);
-  assert.equal(user(m), 0);
+  assert.equal(marked(m), 0);
 });
 
 test("SH8 ERA's read-only file drops the rest of the line", () => {
   const image = card();
   volume(image, "A").write("R.DAT", new Uint8Array(128), { readOnly: true });
   const m = boot(image);
-  const out = runError(m, "ERA R.DAT!SAY!USER 2", /Bdos Err On A: File R\/O/);
+  const out = runError(m, "ERA R.DAT!SAY!TYPE 2", /Bdos Err On A: File R\/O/);
   assert.equal(count(out, /\nSAY\r/g), 0);
-  assert.equal(user(m), 0);
+  assert.equal(marked(m), 0);
   assert.ok(volume(m.sdImage, "A").find("R.DAT"), "the file kept");
 });
 
-test("SH8 SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
+test("SH8 PUT's NO SPACE sets FF00h by function 108: a full directory and a full disk", () => {
   const full = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
     { geometry: "G1M", label: "DIRS", mount: "B" },
@@ -357,24 +359,24 @@ test("SH8 SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
   for (let i = 0; i < 256; i += 1) b.write(`F${i}.DAT`, new Uint8Array(1));
   const c = volume(full, "C");
   c.write("BIG.DAT", new Uint8Array(c.freeBytes()));
-  const m = boot(card({}, full));
+  const m = boot(card({ "PUT.COM": PUT_COM }, full));
   for (const drive of ["B", "C"]) {
-    const out = run(m, `SAVE 1 ${drive}:X.COM &SAY &USER 2`);
+    const out = run(m, `PUT 1 ${drive}:X.COM &SAY &TYPE 2`);
     assert.match(out, /NO SPACE/, drive);
     assert.equal(count(out, /\nSAY\r/g), 0, drive);
     assert.equal(code(m), 0xff00, drive);
-    assert.equal(user(m), 0, drive);
+    assert.equal(marked(m), 0, drive);
   }
 });
 
 test("SH8 a failed warm flush retains acknowledged data and drops the rest of the line", () => {
   const image = card(pendingSayFiles()), m = boot(image), fault = pendingSayFailure(m, image);
-  const out = run(m, "SAY!SAY!USER 3");
-  assert.match(out, /^SAY!SAY!USER 3\r\r\nSAY\r\nWrite pending\r\n\r\nA(:\S*)?>$/);
-  assert.equal(count(out, /\nSAY\r/g), 1); assert.equal(user(m), 0);
+  const out = run(m, "SAY!SAY!TYPE 3");
+  assert.match(out, /^SAY!SAY!TYPE 3\r\r\nSAY\r\nWrite pending\r\n\r\nA(:\S*)?>$/);
+  assert.equal(count(out, /\nSAY\r/g), 1); assert.equal(marked(m), 0);
   fault.assertPending();
   fault.release(); run(m, ""); fault.assertRecovered();
-  assert.equal(user(m), 0);
+  assert.equal(marked(m), 0);
 });
 
 /** A card with LONG.TXT of 30 lines on A:, and 200 files on B:, for TYPE's and DIR's [more] on serial's 24 rows. */
@@ -399,11 +401,11 @@ function runMore(m, line, key) {
 
 test("SH8 ^C at TYPE's or DIR's [more] drops the rest of the line", () => {
   const m = boot(pagedCard());
-  for (const line of ["TYPE LONG.TXT!SAY!USER 2", "TYPE LONG.TXT &SAY!USER 2", "DIR B:!SAY!USER 2", "DIR B: &SAY!USER 2"]) {
+  for (const line of ["TYPE LONG.TXT!SAY!TYPE 2", "TYPE LONG.TXT &SAY!TYPE 2", "DIR B:!SAY!TYPE 2", "DIR B: &SAY!TYPE 2"]) {
     const out = runMore(m, line, "\x03");
     assert.equal(count(out, /\nSAY\r/g), 0, line);
     assert.doesNotMatch(out, /line 30|\d+ files?\b/, line);
-    assert.equal(user(m), 0, line);
+    assert.equal(marked(m), 0, line);
     assert.equal(code(m), 0, line);
   }
 });

@@ -287,7 +287,7 @@ CHAIN47:LD      DE,CMD47
         CALL    5
         LD      C,47
         JP      5
-CMD47:  DB      "USER 3",0
+CMD47:  DB      "CON",0
 %ENDIF
 %IF V_DEP + V_LATE
 DEPNAME:DB      "DEMO    "

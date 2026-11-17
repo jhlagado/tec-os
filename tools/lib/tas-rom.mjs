@@ -8,7 +8,7 @@ import { inputsDir, pinnedBytes } from './pins.mjs';
 import { decodeImage, scanSource, tasImage } from './tas-d8.mjs';
 
 const runnerPin = '3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689';
-const tasPin = '0c8adea809ff8752e504bad9c40256e2572f2462';
+const tasPin = '7a217f96c76f11641af3fa0b22d0b34be6e2a467';
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const include = /^([ \t]*%INCLUDE[ \t]+")([^"\r\n]+)(")/gim;
 

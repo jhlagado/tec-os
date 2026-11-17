@@ -154,5 +154,17 @@
   "test/programs/mon3stub.asm": {
     "lines": [],
     "headers": {}
+  },
+  "test/programs/area.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "test/programs/area3.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "test/programs/put.asm": {
+    "lines": [],
+    "headers": {}
   }
 }

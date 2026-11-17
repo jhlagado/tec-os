@@ -32,15 +32,14 @@ test("RIG3 bare CD lists and queries the selected directories", () => {
   assert.deepEqual(selections(m), [1, 2, 3, 0]);
 });
 
-test("RIG3 bare CD changes the presented directory while retaining drive and user", () => {
+test("RIG3 bare CD changes the presented directory while retaining the drive", () => {
   const m = boot(card());
   command(m, "B:", /B>$/);
-  command(m, "USER 3", /3B>$/);
-  command(m, "cd games", /\r\nB:GAMES\r\n3B>$/);
+  command(m, "cd games", /\r\nB:GAMES\r\nB>$/);
   assert.deepEqual(selections(m), [1, 4, 3, 0]);
-  command(m, "CD D:SPARE", /\r\nD:SPARE\r\n3B>$/);
+  command(m, "CD D:SPARE", /\r\nD:SPARE\r\nB>$/);
   assert.deepEqual(selections(m), [1, 4, 3, 5]);
-  assert.equal(m.read(4), 0x31);
+  assert.equal(m.read(4), 1);
 });
 
 test("RIG3 bare CD of its existing selection does not reset the disk", () => {
@@ -114,7 +113,7 @@ test("RIG3 bare CD retains its selection when a data-prerequisite flush fails", 
   assert.equal(selections(guest)[3], 5);
 });
 
-for (const user of [0, 3]) test(user ? "RIG3 reset recovery from user 3 has no hidden user-zero search" : "RIG3 reset recovery restores SYSTEM and loads SHELL", () => {
+test("RIG3 reset recovery restores SYSTEM and loads SHELL", () => {
   const image = card(), a = volume(image, "A");
   a.write("SHELL.SVC", SHELL_SVC);
   a.write("STARTUP.CMD", startupFile("SHELL.SVC"));
@@ -127,15 +126,9 @@ for (const user of [0, 3]) test(user ? "RIG3 reset recovery from user 3 has no h
   assert.equal(pageOf(m), 0);
   assert.equal(selections(m)[0], 4);
   command(m, "CD ?", /SYSTEM/);
-  if (user) command(m, `USER ${user}`, /3A>$/);
   command(m, "CD A:SYSTEM", /\r\nA:SYSTEM\r\n/);
-  assert.equal(m.read(4) >> 4, user);
+  assert.equal(m.read(4) >> 4, 0);
   assert.equal(selections(m)[0], 1);
-  if (user) {
-    command(m, "SHELL.SVC", /SHELL.SVC\?/, 0xff00);
-    assert.equal(pageOf(m), 0, "no hidden user-zero search");
-    command(m, "USER 0", /A>$/);
-  }
   command(m, "SHELL.SVC", /A:SYSTEM>$/);
   assert.ok(pageOf(m));
   assert.equal(word(m, 6) - 256, 41984);

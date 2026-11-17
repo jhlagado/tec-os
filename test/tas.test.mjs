@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { DHLEN, makeSvc } from "../tools/lib/svc.mjs";
 import { scanSource } from "../tools/lib/tas-d8.mjs";
-import { ROOT, boot, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { ROOT, boot, marked, standardCard, volume, withMarks, withShell } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
 const TAS = pinned("TAS.COM");
@@ -91,9 +91,9 @@ test("TAS refuses a read-only output and leaves it as it was", { skip: TAS.skip,
   a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
   a.write("HELLO.ASM", Buffer.from(HELLO), { text: true });
   a.write("HELLO.COM", Uint8Array.from([0xc9]), { readOnly: true });
-  const m = boot(withShell(image));
-  assert.match(m.command("TAS HELLO &USER 3", LONG), /read-only/);
-  assert.equal(m.read(4) >> 4, 0, "the line stopped");
+  const m = boot(withShell(withMarks(image, 3)));
+  assert.match(m.command("TAS HELLO &TYPE 3", LONG), /read-only/);
+  assert.equal(marked(m), 0, "the line stopped");
   assert.equal(volume(image, "A").read("HELLO.COM")[0], 0xc9);
   assert.deepEqual(m.violations, []);
 });

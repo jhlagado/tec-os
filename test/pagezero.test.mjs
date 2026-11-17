@@ -47,7 +47,7 @@ for (const [name, opts, files] of [
       else m.type(`${line}\r`);
       m.runUntil(() => m.waitingForInput() && /\d*[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, line);
     };
-    for (const line of ["DIR", "TYPE HELLO.TXT", "USER 3", "USER 0", "CON"]) say(line);
+    for (const line of ["DIR", "TYPE HELLO.TXT", "CON"]) say(line);
     for (let i = 0; i < 30; i += 1) say("DIR HELLO.TXT");
     for (const line of ["CON UC1", "DIR", "CON CRT", "DIR", "CON TTY", "DIR"]) say(line);
     m.cpu.cpu.pc = 0;

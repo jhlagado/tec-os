@@ -51,8 +51,6 @@ CONHDR:
   DB "CON: ",'$'
 FILEEX:
   DB "FILE EXISTS",'$'
-NOSPACE:
-  DB "NO SPACE",'$'
 ALLQUERY:
   DB "ALL (Y/N)?",'$'
 BADCHARS:

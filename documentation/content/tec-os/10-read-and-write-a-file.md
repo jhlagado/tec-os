@@ -7,14 +7,14 @@ nav_group: "Writing programs"
 
 # 10. Read and write a file
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -228,7 +228,7 @@ node tools/tecvol.mjs put work.img B hello.asm --text
 
 The capture runs SHOW once with that source file and once with a missing name:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card work.img B: 'SHOW HELLO.ASM' 'SHOW NOSUCH.TXT'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card work.img B: 'SHOW HELLO.ASM' 'SHOW NOSUCH.TXT'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -317,7 +317,7 @@ hold several dirty lines. Ordinary outer calls also attempt eligible work
 before their own operation. The next same-block write can commit a prior update;
 there is no cross-call batching guarantee. Required input tries to drain pending
 data subject to refusal, so Write pending can remain at a prompt
-(`a40d482:docs/recovery.md:25-78`).
+(`0701241:docs/recovery.md:25-78`).
 
 A write result of 1 or 2 can follow earlier successful records. Close that
 partial file and check the close result before reporting progress. A failed
@@ -345,5 +345,5 @@ separately distinguish Write pending, a reported queue's successful Cache clear
 and an otherwise unreported error with no dirty retry. Explicit function 48
 retains its own failure result. Rejected metadata is dropped and never replayed;
 clearing data cannot finish its unclosed FCB or rejected directory update.
-Cold reset discards pending data (`a40d482:src/cache.asm:550-569`,
-`a40d482:src/cache.asm:638-649`, `a40d482:src/hk.asm:204-237`).
+Cold reset discards pending data (`0701241:src/cache.asm:550-569`,
+`0701241:src/cache.asm:638-649`, `0701241:src/hk.asm:204-237`).

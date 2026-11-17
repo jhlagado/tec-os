@@ -460,14 +460,14 @@ test("the web host: a current card is unchanged by the starter's files, and one 
 });
 
 test("the web host: a pre-shell card's own STARTUP.CMD lines follow SHELL.SVC and the display's line and run under the shell, and a read-only one leaves the card as it was", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
-  const card = preShellCard("GLCD.SVC\r\nTYPE NOTES.TXT\r\nDIR B: &USER 0");
+  const card = preShellCard("GLCD.SVC\r\nTYPE NOTES.TXT\r\nDIR B: &CON");
   const prepared = prepareCard(card, "tms", "40", starter().card);
   assert.equal(prepared.changed, true);
   assert.match(prepared.note, /its later lines, which the ROM alone never ran, now run under the shell/);
-  assert.equal(startupOf(card), "SHELL.SVC\r\nCON PICO 40\r\nTYPE NOTES.TXT\r\nDIR B: &USER 0\r\n");
+  assert.equal(startupOf(card), "SHELL.SVC\r\nCON PICO 40\r\nTYPE NOTES.TXT\r\nDIR B: &CON\r\n");
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   assert.match(m.text(0), />TYPE NOTES\.TXT\r\r\nmy own notes\r\n/, "the user's TYPE ran");
-  assert.match(m.text(0), />DIR B: &USER 0\r\r\n\r\nWORK\.TXT +\d+\r\n[\s\S]*? free on B:WORK\r\nA(:\S*)?>USER 0\r\n/, "and the chained line, piece by piece under the shell");
+  assert.match(m.text(0), />DIR B: &CON\r\r\n\r\nWORK\.TXT +\d+\r\n[\s\S]*? free on B:WORK\r\nA(:\S*)?>CON\r\n/, "and the chained line, piece by piece under the shell");
   assert.deepEqual(m.violations, []);
 
   const locked = preShellCard();

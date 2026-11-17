@@ -7,28 +7,29 @@ nav_group: "Using the machine"
 
 # 8. Commands at startup
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 Commands in `A:STARTUP.CMD` repeat your usual setup after reset.
 TEC-OS runs them before accepting keyboard commands. They can load
 the shell or a graphics LCD driver and select a display width. They
-can also set the starting drive and user area. You can keep those choices on the card instead
+can also set the starting drive and put a named volume on a drive. You
+can keep those choices on the card instead
 of typing them each session.
 
 ## A short file of commands
 
 The file contains a command per line in user area 0 of A. You can
 edit it in TED as in Chapter 2 or use the
-[PC card tools](06-cards-on-the-pc.md). While user area 0 is selected,
+[PC card tools](06-cards-on-the-pc.md).
 `TYPE A:STARTUP.CMD` displays the saved text for checking. Changes take
 effect at the next reset.
 
@@ -36,18 +37,18 @@ After saving, exit the editor normally and check the file result. After
 `Write pending`, a prompt alone does not establish a complete file. Resolve
 the original backend failure and await `Cache clear` before reset; queue
 clearance does not repair rejected metadata or finish an unclosed FCB
-(`a40d482:docs/recovery.md:69-117`).
+(`0701241:docs/recovery.md:69-117`).
 
 If bootstrap reset or saved-drive selection fails, Disk reset failed / Enter
 retries replaces normal command input. Only CR retries reset; LF, ordinary keys
 and input Ctrl-C do not. A previously buffered cold-start line waits and runs
 once after success, not inside recovery. Printing/input can still service queued
 writes but run no SDINIT and authorise no replay onto an inserted stranger
-(`a40d482:src/cpm/ccp.asm:75-134`).
+(`0701241:src/cpm/ccp.asm:75-134`).
 
 The starter card's file has two lines:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'TYPE STARTUP.CMD'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs 'TYPE STARTUP.CMD'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -86,12 +87,12 @@ file and `--text` converts its line endings to CRLF with a final CP/M
 text-end marker, `^Z`:
 
 ```sh
-printf 'SHELL.SVC\nB:\nUSER 3\ncd\nDIR\nNOSUCH\nUSER 0\n' > startup.cmd
+printf 'SHELL.SVC\nB:\ncd\nDIR\nNOSUCH\nCD D:GAMES\nD:\n' > startup.cmd
 cp dist/starter.img lines.img
 node tools/tecvol.mjs put lines.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card lines.img. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card lines.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -101,35 +102,37 @@ C: PROJECTS
 A>SHELL.SVC
 
 A:SYSTEM>B:
-B:WORK>USER 3
-3B:WORK>cd
+B:WORK>cd
 B:WORK
-3B:WORK>DIR
+B:WORK>DIR
 NO FILE
 
-3B:WORK>NOSUCH
+B:WORK>NOSUCH
 NOSUCH?
 
-3B:WORK>USER 0
-B:WORK>
+B:WORK>CD D:GAMES
+D:GAMES
+B:WORK>D:
+D:GAMES>
 ```
 
 The startup text is echoed as written, so `cd` appears in lower case.
 The shell folds the command word to capitals for matching and runs it
-as CD. Earlier lines have selected B and area 3, so DIR reports no files
-in that area. NOSUCH fails without stopping the next line. USER 0
-then leaves the first interactive prompt at `B:WORK>`. A program on
-a startup line completes before the next line runs.
+as CD. An earlier line has selected B, so DIR lists WORK, which is empty.
+NOSUCH fails without stopping the next line. `CD D:GAMES` then puts the
+GAMES volume on D and `D:` selects it, leaving the first interactive prompt
+at `D:GAMES>`. A program on a startup line completes before the next line
+runs.
 
-The same commands without the `SHELL.SVC` line show the ROM's single line:
+A file without the `SHELL.SVC` line shows the ROM's single line:
 
 ```sh
-printf 'B:\nUSER 3\ncd\n' > startup.cmd
+printf 'B:\ncd\nDIR\n' > startup.cmd
 cp dist/starter.img bare.img
 node tools/tecvol.mjs put bare.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card bare.img. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card bare.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -294,8 +297,8 @@ the 20 × 4 LCD until the GLCD driver loads. Selecting that console
 also enables matrix input if the Matrix switch is on.
 
 At the serial prompt you can erase the bad file with `ERA STARTUP.CMD` or
-replace it with corrected text then reset. The startup file is in user area 0 of
-A so recovery must address that location. Without a usable terminal, the Chapter
+replace it with corrected text then reset. The startup file is on
+A so recovery must address that drive. Without a usable terminal, the Chapter
 6 card tools can replace or erase it on a PC. A recognised reset with a skip
 retains valid drive assignments just as it does without a skip.
 
@@ -312,12 +315,12 @@ contain only the beginning of `DIR *.CMD`:
 
 ```sh
 printf '\n%.0s' $(seq 60) > startup.cmd
-printf 'DIR *.CMD\nUSER 3\n' >> startup.cmd
+printf 'DIR *.CMD\nCD ?\n' >> startup.cmd
 cp dist/starter.img cut.img
 node tools/tecvol.mjs put cut.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card cut.img. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card cut.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -329,7 +332,7 @@ NO FILE
 A>
 ```
 
-The shortened command, `DIR *.CM`, runs and USER 3 is never read.
+The shortened command, `DIR *.CM`, runs and `CD ?` is never read.
 The shell reads as many records as the file contains. Putting SHELL.SVC
 first moves both commands into its part of the file. The sixty blank
 lines place them in the second record and both run in full:
@@ -337,12 +340,12 @@ lines place them in the second record and both run in full:
 ```sh
 printf 'SHELL.SVC\n' > startup.cmd
 printf '\n%.0s' $(seq 60) >> startup.cmd
-printf 'DIR *.CMD\nUSER 3\n' >> startup.cmd
+printf 'DIR *.CMD\nCD ?\n' >> startup.cmd
 cp dist/starter.img long.img
 node tools/tecvol.mjs put long.img A startup.cmd --text
 ```
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs --card long.img. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card long.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -356,8 +359,14 @@ A:SYSTEM>DIR *.CMD
 STARTUP.CMD      256
 1 file, 256 bytes
 909312 free on A:SYSTEM
-A:SYSTEM>USER 3
-3A:SYSTEM>
+A:SYSTEM>CD ?
+
+SYSTEM      A:
+WORK        B:
+PROJECTS    C:
+GAMES
+SPARE
+A:SYSTEM>
 ```
 
 The parser applies these line and file limits:
@@ -381,7 +390,7 @@ cp dist/starter.img semi.img
 node tools/tecvol.mjs put semi.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card semi.img. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card semi.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -420,7 +429,7 @@ PICO9918 with the Matrix switch enabled starts at 40 columns. Other
 configurations start on serial. A width or GLCD startup line can then
 select another layout or display.
 
-Startup is read from area 0 of whichever volume is on A at reset.
+Startup is read from whichever volume is on A at reset.
 A recognised reset can restore another volume there and run its file.
 No startup commands run if that file is absent.
 [Chapter 5](05-drives-and-user-areas.md) explains retained assignments
@@ -428,7 +437,7 @@ and the card-header defaults.
 
 This separate card has a SPARE volume with another startup file.
 SYSTEM initially loads the shell and runs `CD ?`. After `CD A:SPARE`
-and reset, the file on SPARE runs instead. It contains only `USER 2`
+and reset, the file on SPARE runs instead. It contains only `DIR`
 and installs no shell:
 
 ```sh
@@ -436,11 +445,11 @@ node tools/tecvol.mjs create spare.img --volume G1M:SYSTEM:A --volume G8M:WORK:B
 node tools/tecvol.mjs put spare.img A dist/files/SHELL.SVC
 printf 'SHELL.SVC\nCD ?\n' > startup.cmd
 node tools/tecvol.mjs put spare.img A startup.cmd --text
-printf 'USER 2\n' > startup.cmd
+printf 'DIR\n' > startup.cmd
 node tools/tecvol.mjs put spare.img SPARE startup.cmd --text
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card spare.img 'CD A:SPARE' @reset. Complete captured console transcript. -->
+<!-- TEC-OS 84518ef, ROM 35893cab: node tools/capture.mjs --card spare.img 'CD A:SPARE' @reset. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -460,15 +469,18 @@ TEC-OS 0.1 for TEC-1G
 A: SPARE
 B: WORK
 
-A>USER 2
-2A>
+A>DIR
+STARTUP.CMD
+1 file, 1014K free
+A>
 ```
 
-The reset has kept SPARE on A so the final prompt is the bare `2A>`. SYSTEM
+The reset has kept SPARE on A, so its `DIR` lists SPARE's one file and the
+final prompt is the bare `A>`. SYSTEM
 is no longer mounted, so its shell and tools cannot be loaded yet.
 The ROM's CD remains available: `CD ?` lists the named directories and
-`CD A:SYSTEM` restores SYSTEM. The current user area remains 2, so use
-`USER 0` and then `SHELL.SVC` to load the starter's shell. A recognised
+`CD A:SYSTEM` restores SYSTEM. `SHELL.SVC` then loads the starter's shell.
+A recognised
 reset repeats the retained assignment while it remains valid. Power cycle
 restores the header's default drive assignments and startup.
 
@@ -502,7 +514,7 @@ cp dist/starter.img nostart.img
 node tools/tecvol.mjs era nostart.img A STARTUP.CMD
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card nostart.img --lcd 'CON UC1'. Complete captured console transcript and LCD rows. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card nostart.img --lcd 'CON UC1'. Complete captured console transcript and LCD rows. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -530,7 +542,7 @@ node tools/tecvol.mjs put gname.img A dist/files/GLCD.SVC G.SVC
 node tools/tecvol.mjs era gname.img A GLCD.SVC
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card gname.img --board glcd --lcd 'CON UC1' G.SVC CON. Complete captured console transcript and LCD rows. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card gname.img --board glcd --lcd 'CON UC1' G.SVC CON. Complete captured console transcript and LCD rows. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

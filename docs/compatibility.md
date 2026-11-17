@@ -2,17 +2,17 @@
 
 TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
-46,533 bytes (`0100h–B6C4h`) on the starter card with nothing loaded, and at
-least 46,533 on any card, since cold boot places the BDOS entry below the
+46,536 bytes (`0100h–B6C7h`) on the starter card with nothing loaded, and at
+least 46,536 on any card, since cold boot places the BDOS entry below the
 allocation vectors of the drives the card asks for: the starter card asks for
 four, each with a vector for an 8 MiB volume. A card of two volumes and no
-drives field gives 47,237. A board with a PICO9918 has the same: its console
+drives field gives 47,240. A board with a PICO9918 has the same: its console
 is in the ROM and its RAM in the BIOS's state (KS39). The GLCD's driver takes
 three pages under the stub's page, leaving 45,568 on the starter card. The
 starter card loads `SHELL.SVC`, which takes seventeen pages there, leaving
 41,984, and 41,216 with the GLCD's driver too. The CCP loads a `.COM` up to
 the start of the page holding the word at `0006h`, so the largest it loads on
-the starter card with nothing loaded is 46,336 bytes (`0100h–B5FFh`), 197
+the starter card with nothing loaded is 46,336 bytes (`0100h–B5FFh`), 200
 below the TPA: a program may use the rest. It reports version 2.2.
 
 ## BDOS functions
@@ -50,7 +50,7 @@ for the next flush; `E = FFh`'s purge is the same flush. Function 12 still repor
 | Wildcard search | 17 | Pass |
 | User areas | 32 | Pass; files in one user area are invisible from another |
 | Drive selection | 14, 25 | Pass |
-| Read-only volume | 22 via `SAVE`, 29 | `Bdos Err On C: R/O`; card unchanged. Function 29 lists the volume once its drive has been selected |
+| Read-only volume | 22, 29 | `Bdos Err On C: R/O`; card unchanged. Function 29 lists the volume once its drive has been selected |
 
 A sequential write (21) moves to the next extent when it needs it, as CP/M
 2.2's does: the write of record 128 of an extent, not the write of record
@@ -61,9 +61,9 @@ file of 128 records has one directory entry.
 
 Function 32 keeps the low five bits of any `E` but FFh, as CP/M 2.2's does:
 user numbers 0–31 reach the directory, and no `E` makes the user E5h, the
-user byte of an erased entry. The CCP's `USER` takes 0–15, and 0004h holds
-four bits of the user, so a program that leaves user 16 or more finds the
-next prompt in that number's low four bits.
+user byte of an erased entry. A program's areas last while it runs: warm
+boot clears the user number, so every prompt is in area 0, and the CCP keeps
+0004h's user nibble zero.
 
 Function 13 resets the disks and selects drive A, and leaves the user number
 as it is, as CP/M 2.2's does.
@@ -80,15 +80,20 @@ file, as CP/M 2.2's does, so a program can make it read-write again.
 
 ## Command processor
 
-`DIR`, `ERA`, `REN`, `SAVE`, `TYPE`, `USER` and drive changes, with the
+`DIR`, `ERA`, `REN`, `TYPE` and drive changes, with the
 syntax of the CP/M 2.2 CCP, are in ROM, with `CON` and `UNLOAD`. `DIR`'s output
 is TEC-OS's own: `NAME.EXT` columns that fit the display, then the file count
-and free space. Programs that parse DR's `DIR` layout will not find it. The
-shell's `DIR` with sizes also uses the TPA, which CP/M's does not: see
-[Known incompatibilities](#known-incompatibilities). `SAVE`
-on a full disk or directory differs from CP/M 2.2's, which prints its error with
-the file left open and its records in no directory entry: TEC-OS's closes the
-file first, keeping the records written, as `COPY` does, then prints `NO SPACE`.
+and free space. Programs that parse DR's `DIR` layout will not find it.
+`SAVE` is a CP/M 2.2 built-in that TEC-OS does not provide: typed, it is an
+unknown command. Nothing needs it, since TAS and BAZA write their `.COM`
+files, TED saves text and `MON3.SVC` loads and runs programs itself.
+`USER` is the other CP/M 2.2 built-in TEC-OS does not provide. The command
+processor works in user area 0 only: the prompt shows no user number, and
+every return to the prompt is in area 0, whatever area a program set. Function
+32 and the user byte of a directory entry are CP/M 2.2's, so a program that
+uses areas while it runs still works. The one consequence is that files a
+program leaves in another area cannot be listed, erased or run from the
+prompt. Named volumes and `CD` are the way to keep groups of files apart.
 `SUBMIT` is not supported; `.CMD` scripts are `SHELL.SVC`'s.
 
 `SHELL.SVC`, a resident service on the starter card and the first line of its
@@ -124,7 +129,7 @@ leave the code at 0, and the line goes on. The shell's built-ins:
   (Y/N)?` question. A built-in comes before a program of its name, so `DEL`
   under the shell doesn't run a `DEL.COM`, as `ERA` never runs an `ERA.COM`;
   `A:DEL` or `DEL.COM` still runs the file.
-- `COPY SOURCE DEST` copies one file within the current user. `DEST` may be a
+- `COPY SOURCE DEST` copies one file. `DEST` may be a
   drive alone, `COPY X.COM B:`, or a blank name with a type, `COPY X.COM B:.TXT`
   or `COPY X.COM B:.*`: each takes the source's whole name, so all three make
   `B:X.COM`. A destination that names the source, on the same drive after the
@@ -165,11 +170,10 @@ volume services, `TNMOUNT` and `TNDESC` (`docs/shell.md`). Selections are
 for the session: a reset keeps them, as long as the card still holds each
 volume. `docs/recovery.md` says how.
 
-A command runs `NAME.COM` from the current drive, or the drive it names, in the
-current user and, if it isn't there, in user 0; no SYS attribute is needed. When
-there is none there, no drive was named and the current drive isn't A:, it runs
-A:'s `NAME.COM` (KD-169), from the current user and then user 0, so `TED` and
-`TAS` run from B:; the current drive and user stay as they were. `B:NAME` looks
+A command runs `NAME.COM` from the current drive, or the drive it names; no
+SYS attribute is needed. When there is none there, no drive was named and the
+current drive isn't A:, it runs A:'s `NAME.COM` (KD-169), so `TED` and
+`TAS` run from B:; the current drive stays as it was. `B:NAME` looks
 on B: only. A `.PRL` file is not run: it is a `.COM` with a 256-byte header,
 and none is on the starter card or written by the tools.
 
@@ -186,9 +190,9 @@ neither.
 
 ## Base page
 
-Warm boot at `0000h`, BDOS vector at `0005h` (target `B6C5h` on the starter card, directly
+Warm boot at `0000h`, BDOS vector at `0005h` (target `B6C8h` on the starter card, directly
 below the allocation vectors), IOBYTE at
-`0003h` (stored, not acted on), user and drive at `0004h`, default FCBs at
+`0003h` (stored, not acted on), the drive at `0004h` with the user nibble zero, default FCBs at
 `005Ch` and `006Ch`, command tail and default DMA at `0080h`, programs at
 `0100h`, entered with HL 0100h, DE 0000h and A FFh from a startup line or 0
 otherwise, since the CCP's run path is shared with a service's entry. CP/M 2.2 promises a program no register at entry, and
@@ -200,7 +204,7 @@ its console output, its console reads and the warm boot after `^C` or a disk
 error. Cold boot builds the table and warm boot leaves it alone, so a
 replaced entry stays until reset. A program that damages the table can stop
 warm boot working; reset rebuilds it. A program may return by `RET`, by `JP 0000h` or by BDOS function 0.
-The user number survives warm boot.
+The user number does not survive warm boot: every program starts in area 0.
 
 The CCP bootstrap uses returned errors for its disk reset and saved-drive
 selection. A failure stays at `Disk reset failed` / `Enter retries`, with
@@ -230,10 +234,10 @@ warm boot on the PICO9918 and 7,984 on the GLCD.
 
 | Program | Version | Result | Notes |
 | --- | --- | --- | --- |
-| TED.COM | Thorium `20339b8` (`c6c8374a`, 12,335 bytes), on the starter card; the image is built at Thorium `6ded494` and unchanged at `20339b8` | Runs | Edits, saves and reopens a file on the PICO9918 at 80, 40 and 32 columns and on the GLCD at 21 × 8, and `TED NAME 12` opens at line 12 (`test/ted.test.mjs`). A file ends at its first `^Z` or at a run of `00h` that fills the rest of its last record, so a text file padded with `00h`, as an older copy onto the card made it, opens with no error; a byte TED refuses stops it with `EDIT error 03` and that byte's line and column, as `EDIT error 03 L3 C5` (`test/ted.test.mjs`). ^T B saves, runs `TAS` by function 47 and comes back at the error's line and column; ^T R builds, runs the program and comes back at the same place after a key; on A: and on B:, with the PICO9918 and with a serial terminal. Its chained lines need `SHELL.SVC`, which the starter card loads: with no shell the ROM runs such a line whole, so the tool still builds and the prompt comes back in place of TED. A file name and `THOR.PRJ`'s `ARGS` stop at a `!` or at an `&` after a blank, where the shell splits a line, so under the shell `ARGS X &HELLO Z` runs the program once with the tail ` X`; an `&` inside a word, as in `/M:&HE000`, is text (`test/ted.test.mjs`). ^T D chains `TDB`, which isn't on the card: each tool on the chained line names the drive TED was loaded from, so the CCP prints `A:TDB?` and `A:TED` brings the editor back at its place. A table in TED picks the tools by the source's type (Origo KD-262): `.ASM` builds with `TAS` and debugs with `TDB`; `.BAS` builds with `BAZA NAME.BAS`, which finds `BAZA.RTL` on the current drive or the drive `BAZA.COM` was loaded from, and its ^T D says `No debugger` and chains nothing; any other type is plain text, and `THOR.PRJ`'s `MAIN` may be a `.BAS`. With the starter card's BAZA, `TED TIMES.BAS` and ^T B build and come back clean, ^T D says `No debugger` and chains nothing, ^T R runs `TIMES`, and a syntax error brings TED back on its line in the file from BAZA's `THOR.ERR`, with the last `TIMES.COM` kept byte for byte; a project on B: builds with A:'s BAZA and A:'s `BAZA.RTL` (`test/ted-baza.test.mjs`). It needs ABI major 5 and asks `TNINFO` for the console's size. `TED B:X.ASM` from A: opens B:'s file, and its build runs A:'s `TAS` on it; `C:TED X.ASM` from B: builds B:'s file with C:'s `TAS` and comes back to C:'s `TED`, since TED takes the load drive from 0050h before each tool; the CCP finds a `.COM` on A: when the current drive hasn't one. Its text holds 28,182 bytes on the starter card, `SHELL.SVC` loaded, with no display and with both displays; with `MON3.SVC` resident too it holds 23,318, and 22,550 with `GLCD.SVC` as well. Those two are below the 24,576-byte source-style limit, so edit a source at that limit with `MON3.SVC` unloaded (`test/ted.test.mjs`). The PICO9918's console is in the ROM, so it costs the TPA nothing. A save over a read-only file is refused with `Save failed 16`, and the text is kept. Beside the source it writes `THOR.SES`, which holds the last file's name and place, and `THOR.PRJ` after a good build, whose keys are `MAIN` and `ARGS`, with `THOR.ERR`, `THOR.$$$` and `THOR.BAK` on the way; a `THOR.SES` copied from another card names that card's file and place |
+| TED.COM | Thorium `02b63d8` (`c6c8374a`, 12,335 bytes), on the starter card; the image is built at Thorium `045a62b` and unchanged at `02b63d8` | Runs | Edits, saves and reopens a file on the PICO9918 at 80, 40 and 32 columns and on the GLCD at 21 × 8, and `TED NAME 12` opens at line 12 (`test/ted.test.mjs`). A file ends at its first `^Z` or at a run of `00h` that fills the rest of its last record, so a text file padded with `00h`, as an older copy onto the card made it, opens with no error; a byte TED refuses stops it with `EDIT error 03` and that byte's line and column, as `EDIT error 03 L3 C5` (`test/ted.test.mjs`). ^T B saves, runs `TAS` by function 47 and comes back at the error's line and column; ^T R builds, runs the program and comes back at the same place after a key; on A: and on B:, with the PICO9918 and with a serial terminal. Its chained lines need `SHELL.SVC`, which the starter card loads: with no shell the ROM runs such a line whole, so the tool still builds and the prompt comes back in place of TED. A file name and `THOR.PRJ`'s `ARGS` stop at a `!` or at an `&` after a blank, where the shell splits a line, so under the shell `ARGS X &HELLO Z` runs the program once with the tail ` X`; an `&` inside a word, as in `/M:&HE000`, is text (`test/ted.test.mjs`). ^T D chains `TDB`, which isn't on the card: each tool on the chained line names the drive TED was loaded from, so the CCP prints `A:TDB?` and `A:TED` brings the editor back at its place. A table in TED picks the tools by the source's type (Origo KD-262): `.ASM` builds with `TAS` and debugs with `TDB`; `.BAS` builds with `BAZA NAME.BAS`, which finds `BAZA.RTL` on the current drive or the drive `BAZA.COM` was loaded from, and its ^T D says `No debugger` and chains nothing; any other type is plain text, and `THOR.PRJ`'s `MAIN` may be a `.BAS`. With the starter card's BAZA, `TED TIMES.BAS` and ^T B build and come back clean, ^T D says `No debugger` and chains nothing, ^T R runs `TIMES`, and a syntax error brings TED back on its line in the file from BAZA's `THOR.ERR`, with the last `TIMES.COM` kept byte for byte; a project on B: builds with A:'s BAZA and A:'s `BAZA.RTL` (`test/ted-baza.test.mjs`). It needs ABI major 5 and asks `TNINFO` for the console's size. `TED B:X.ASM` from A: opens B:'s file, and its build runs A:'s `TAS` on it; `C:TED X.ASM` from B: builds B:'s file with C:'s `TAS` and comes back to C:'s `TED`, since TED takes the load drive from 0050h before each tool; the CCP finds a `.COM` on A: when the current drive hasn't one. Its text holds 28,182 bytes on the starter card, `SHELL.SVC` loaded, with no display and with both displays; with `MON3.SVC` resident too it holds 23,318, and 22,550 with `GLCD.SVC` as well. Those two are below the 24,576-byte source-style limit, so edit a source at that limit with `MON3.SVC` unloaded (`test/ted.test.mjs`). The PICO9918's console is in the ROM, so it costs the TPA nothing. A save over a read-only file is refused with `Save failed 16`, and the text is kept. Beside the source it writes `THOR.SES`, which holds the last file's name and place, and `THOR.PRJ` after a good build, whose keys are `MAIN` and `ARGS`, with `THOR.ERR`, `THOR.$$$` and `THOR.BAK` on the way; a `THOR.SES` copied from another card names that card's file and place |
 | Edit | build with the screen configuration block (`ECFG` at `0103h`) | Ran until `TED.COM` took its place | Edited, saved and reopened a file on the PICO9918 at 80 × 24; also verified on Triptych's CP/M 2.2 at 80 × 24. That build tested for ABI major 3 at `C003h`, so the card and the tests took it with that one byte set to 4, checked by its hash, and read `ABIVID` at `C008h`; it also edited, saved and reopened on the GLCD at 21 × 8. Its test on Triptych's CP/M went with it |
 | BAZA.COM, BAZA.RTL | Baza `5f6b58d` (`c4088ace`, 13,312 bytes; `edf1a19d`, 13,056 bytes), on the starter card | Runs | While it compiles BAZA shows a spinner, `\|`, `/`, `-` or `\` each followed by a backspace, through BDOS function 6 (Baza's README; `test/ted-baza.test.mjs`). `BAZA TIMES` compiles the starter card's `TIMES.BAS` to `TIMES.COM`, which runs at 40 columns on the PICO9918, turns away a number outside 1 to 12 and returns to the prompt. With `GLCD.SVC` loaded and a `JP ABICALL` held in RST 1, which a warm boot's sweep keeps, BAZA puts its own vector at `08h` while it compiles and gives the held `JP` back, RST 2 to RST 6 are unchanged, `TIMES` runs and the GLCD is still the console (`test/times.test.mjs`). BAZA takes RST 1 to RST 6, whatever they hold, only while the compiler runs, so nothing that claims them, a debugger's breakpoint for one, may be entered while it compiles (Baza's release notes); a compiled program uses none. It finds `BAZA.RTL` on the current drive or on the drive it was loaded from. With `THOR.SES` present a failed compile writes `THOR.ERR` as `NAME.BAS:line:1: message`, with the file's line, and a good one deletes it; it replaces `NAME.COM` only on success, renaming the old one to `BZnnnnnn.$$B` while the new one goes in and giving it its name back if the new one can't take it (Baza's README and release notes; the TED round in `test/ted-baza.test.mjs`); a `BZ000000.$$B` left on the drive doesn't stop the next build, which leaves it as it was (`test/times.test.mjs`). A failed compile sets return code FF00h, as TAS does (Baza's release notes; `test/times.test.mjs` reads it at the prompt), so under the shell `BAZA BAD &TIMES` skips `TIMES`. BAZA sets function 45's error mode with `E = FEh`, so a disk error says its message and returns: `BAZA C:TIMES` onto a read-only C: prints `Bdos Err On C: R/O` and `File I/O failed`, skips an `&` piece, gives RST 1's held `JP` back and ends at `A>` (`test/times.test.mjs`). Its start-up check can't fail on TEC-OS: `BAZA.COM` is self-extracting, and its loader needs `(0006h)` at `51C7h` or above, the top of its 20,679-byte memory image, before it unpacks the 17,280-byte compiler, or it warm boots with no message and no `THOR.ERR`, so the compiler's own `TPA too small` is never reached (Baza's `docs/size-account.md`); a service's base is never below `8000h`. A program too big for the room left still fails with `Capacity exceeded`. `DEF CALL`, `CALL` and `REG()` call machine code: the ROM's services, a service's entries or an address (Baza's `docs/call.md`); the starter card's `BOUNCE.BAS`, Baza's `examples/BOUNCE.BAS` at `5f6b58d` (`615693a5`, 5,189 bytes), with its keywords in capitals and its names in lower case (`bindings/basic/basic-style.md` in Origo) and its loop in integer variables, compiles and drives the PICO9918 that way: Graphics I with 16 × 16 sprites, a ship that W/A/S/D and the arrow keys move, as TEC-OS delivers them, `ESC [ A` to `D`, an unknown sequence such as `ESC [ Z` moving nothing, and `Q` giving the display back at `A>`; it compiles to a 17,408-byte `BOUNCE.COM` (`test/starter.test.mjs`). A program that claims the PICO9918 and stops on an error gives the display back before it prints, so its message shows on the console and it ends at `A>` (`test/times.test.mjs`). `VARPTR(v)` gives a variable's address (Baza's README and `docs/call.md`) |
-| TAS.COM | Thorium `0c8adea` (`8e1f0efb`, 11,013 bytes), on the starter card | Runs | Assembles `HELLO.ASM` into `HELLO.COM` and `HELLO.DBG` on TEC-OS (`test/tas.test.mjs`); its build of itself, and TED's and TDB's builds with it, are tested in Thorium. An output name ending in `.HEX`, as in `TAS NAME NAME.HEX`, writes Intel HEX: data records at the source's own 16-bit addresses with their checksums, a gap left where the source leaves one, and the end record; `.COM`, `.BIN`, `.SVC` and `.DBG` output is as before. A program assembled that way on the card loads under `MON3.SVC` and runs at its own address and at another given to `LOAD`, with the shell, `GLCD.SVC` and `MON3.SVC` all resident and 36,352 bytes of TPA, and a source with more gaps than the assembler's memory holds fails cleanly, keeping the last good output (`test/tas-hex.test.mjs`). `TAS X X.SVC` writes a service that loads. A failed build sets FF00h by function 108, so under the shell `TED X.ASM!TAS X &X` needs no `ERA X.COM`, and a read-only output is refused. Several statements go on one line with a `\` between them, as in `ld a,1 \ inc b \ ret`; a `\` in quotes is still an escape. A line's code, before its comment, is at most 128 characters, blanks counted, and a longer one is refused as `line too long` at column 129; a comment may be any length (Thorium's `docs/language.md`). A line of more than 128 characters of code, which `dbee66a` took, is now refused even with no `\` in it. TEC-OS's own sources have no `\` and no line of code over 128 characters, so they assembled to the same bytes under `2299dfc` as under `dbee66a`, and the ROM, `SHELL.SVC` and `MON3.SVC` assemble to the same bytes under `0c8adea` as under `2299dfc`. TEC-OS's own sources keep one statement a line, and the ROM's map refuses a line with several (`tools/lib/tas-d8.mjs`) |
+| TAS.COM | Thorium `7a217f9` (`8e1f0efb`, 11,013 bytes), on the starter card | Runs | Assembles `HELLO.ASM` into `HELLO.COM` and `HELLO.DBG` on TEC-OS (`test/tas.test.mjs`); its build of itself, and TED's and TDB's builds with it, are tested in Thorium. An output name ending in `.HEX`, as in `TAS NAME NAME.HEX`, writes Intel HEX: data records at the source's own 16-bit addresses with their checksums, a gap left where the source leaves one, and the end record; `.COM`, `.BIN`, `.SVC` and `.DBG` output is as before. A program assembled that way on the card loads under `MON3.SVC` and runs at its own address and at another given to `LOAD`, with the shell, `GLCD.SVC` and `MON3.SVC` all resident and 36,352 bytes of TPA, and a source with more gaps than the assembler's memory holds fails cleanly, keeping the last good output (`test/tas-hex.test.mjs`). `TAS X X.SVC` writes a service that loads. A failed build sets FF00h by function 108, so under the shell `TED X.ASM!TAS X &X` needs no `ERA X.COM`, and a read-only output is refused. Several statements go on one line with a `\` between them, as in `ld a,1 \ inc b \ ret`; a `\` in quotes is still an escape. A line's code, before its comment, is at most 128 characters, blanks counted, and a longer one is refused as `line too long` at column 129; a comment may be any length (Thorium's `docs/language.md`). A line of more than 128 characters of code, which `dbee66a` took, is now refused even with no `\` in it. TEC-OS's own sources have no `\` and no line of code over 128 characters, so they assembled to the same bytes under `f71cf3d` as under `dbee66a`, and the ROM, `SHELL.SVC` and `MON3.SVC` assemble to the same bytes under `7a217f9` as under `f71cf3d`. TEC-OS's own sources keep one statement a line, and the ROM's map refuses a line with several (`tools/lib/tas-d8.mjs`) |
 | ATOM.COM | build that sizes its workspace from `0006h` | Ran until `TAS.COM` took its place | Assembled `HELLO.ASM` into `HELLO.COM` on TEC-OS; needs the BDOS at `78C4h` or higher |
 | ATOM.COM | 0.3.7 | Refuses to run | Requires the BDOS at `E400h` or higher |
 | EDIT.COM | 0.2.0 without the screen configuration | Not run | Fixed stack at `D800h–E3FFh`, above the TPA, and assumes 80 × 24 |
@@ -247,21 +251,21 @@ and run.
 - **`[more]`** (the shell's). The key is tested with `AND DFh`, so `#` and `;` stop a listing as
   ^C, Esc and Q do.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
-  more than 46,533 bytes of TPA, may fail; how much a card gives depends on
-  its drives and what is loaded. Measured on the starter card: 46,533 bare,
+  more than 46,536 bytes of TPA, may fail; how much a card gives depends on
+  its drives and what is loaded. Measured on the starter card: 46,536 bare,
   41,984 with the shell, and 41,216 with the shell and the GLCD's driver.
-- **`DIR` before `SAVE`.** In CP/M 2.2 the built-in `DIR` leaves the TPA
-  alone, so a program loaded there can still be written out with `SAVE` after
-  a listing. The shell's `DIR` with sizes builds its table of names at
-  0100h–223Fh and overwrites that program: a `SAVE` after it writes the
-  table. `DIR /W`, the ROM's listing, uses only the record at 0080h and is
-  safe before `SAVE`, as is `DIR` with no shell (`test/shell2.test.mjs`).
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
   that does not go through it is the check for `^S` while the BDOS writes,
   which calls the ROM's console status directly so that it draws no cursor.
 - **CCP overwrite.** Programs that expect to reclaim CCP memory below the BDOS
   gain nothing: the CCP is in ROM and its workspace is above the TPA.
+- **No `SAVE`.** CP/M 2.2's built-in that wrote memory pages to a file is not
+  provided, as the command processor's section says.
+- **No `USER`.** The prompt is always in user area 0. A program that sets an
+  area with function 32 and exits finds the next prompt, and the next
+  program, in area 0, and the files it left in another area cannot be listed,
+  erased or run from the prompt.
 - **Interrupts off in disk-critical spans.** Functional BIOS `READ` and
   `WRITE` bracket their cache/SD work with CDI/CEI, preserving the incoming
   maskable-interrupt state. Entry housekeeping uses its own protected span,
@@ -342,7 +346,7 @@ last matrix key, which any service that scans the matrix itself writes
 | --- | --- | --- |
 | ROM table | Moved from `FF00h` to `C003h` and from ABI 2.6 to 5.0: 8 bytes, the signature, the versions and one jump to 15 numbered services. `XMOVE`, `MOVE`, the nested CCP entries, the counts, the low mark, the console size's address and the font's address left it | The table was added |
 | Hardware services | 19 numbered from 0 became 9 numbered from 0: `INFO`, `DIGIT`, `LCD`, `VIDEO`, `TONE`, `JOY`, `KEYS`, `PUTAT`, `RTC`, then mount, unmount, describe, the drivers' hook, find and list as 9 to 14. A number past 14 returns status 1 | Added |
-| BDOS | Functions 47, 44, 46 and 99 added, the last three as CP/M 3's: 44 takes a count of 1 only and returns FFh for any other, 46 puts a drive's free records at the DMA address, and 99 returns FFh with nothing changed; function 50 gone. The prompt shows the user number before the drive unless it is 0, as `3A>`. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
+| BDOS | Functions 47, 44, 46 and 99 added, the last three as CP/M 3's: 44 takes a count of 1 only and returns FFh for any other, 46 puts a drive's free records at the DMA address, and 99 returns FFh with nothing changed; function 50 gone. The command processor stays in user area 0, with no `USER` and no `SAVE`. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
 | Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `STARTUP.CMD` added. `.DRV`, `NAME.DRV` and `DRIVERS` came after the pin too, and became `.SVC`, `NAME.SVC` and `SERVICES` | History and `COPY` added |
 | Service format | Format 4 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The GLCD's console is a loaded driver; the PICO9918's console and the font are in the ROM (KS39) | None |
 | Page zero | `0040h` holds `LATCHV` alone; `0041h` to `004Fh` are unused by TEC-OS and held by a `MON3.SVC` session while it runs, the console's state moved above the RAM BIOS table (KS36c), and `MAINS` and `EXPANDS` are gone with MAIN 1's count. `0050h` holds the drive the CCP loaded the running program from, as CP/M 3 does: 0 for the current drive, 1 for A: and so on, and 1 when it was found on A: by the search. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |

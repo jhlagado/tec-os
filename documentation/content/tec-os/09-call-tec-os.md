@@ -7,14 +7,14 @@ nav_group: "Writing programs"
 
 # 9. Call TEC-OS
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -145,7 +145,7 @@ return word.
 On drive B, `TAS LINE` builds LINE.COM from that source. The serial capture
 starts with the build:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card line.img B: 'TAS LINE' '@start LINE' HELLO. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card line.img B: 'TAS LINE' '@start LINE' HELLO. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
 ```text
 B:WORK>TAS LINE
 LINE.COM written
@@ -154,7 +154,7 @@ LINE.COM written
 Running `LINE` and entering `HELLO` followed by Return continues the same
 capture:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card line.img B: 'TAS LINE' '@start LINE' HELLO. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card line.img B: 'TAS LINE' '@start LINE' HELLO. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
 ```text
 B:WORK>LINE
 HELLO
@@ -224,8 +224,8 @@ function.
 
 ## Returning to the prompt
 
-An ordinary exit normally restores the starting drive and user area for the
-next prompt. An unavailable drive falls back to A.
+An ordinary exit normally restores the starting drive for the next prompt,
+in user area 0. An unavailable drive falls back to A.
 
 With the inherited stack balanced, a top-level `RET` ends the program through
 warm boot. A jump to `0000h` or BDOS function 0 has the same destination.
@@ -245,6 +245,6 @@ installed services and console selection. It flushes pending card writes
 before another program loads. A successful flush puts those bytes on the card.
 A failed acknowledged line stays queued; continuation is cancelled and
 separate notices describe pending data and later completion. This does not
-close an unclosed file (`a40d482:src/cache.asm:638-649`,
-`a40d482:src/hk.asm:204-237`). Chapter 16 traces that sequence.
+close an unclosed file (`0701241:src/cache.asm:638-649`,
+`0701241:src/hk.asm:204-237`). Chapter 16 traces that sequence.
 

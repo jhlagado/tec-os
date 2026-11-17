@@ -7,14 +7,14 @@ nav_exclude: true
 
 # TEC-OS on the TEC-1G
 
-<!-- Checked against TEC-OS 46cf3f1 (retained recovery baseline), ROM ac86ad23:
+<!-- Checked against TEC-OS 57a8c38 (retained recovery baseline), ROM ac86ad23:
      15,312 bytes used and 1,072 free. Basic CD recovery is in ROM;
      SHELL.SVC supplies the richer command environment. The starter has
      thirteen files and supplies HELLO3.ASM for guest TAS compilation.
      Actual console, host-tool and cache receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and book-recovery-host/.
      Explicit historical source/test excerpts retain their stated pins.
-     Viewer 3494f4a, published as 3de3198, receives this firmware. -->
+     Viewer 1ad270f, published as 69e21e6, receives this firmware. -->
 
 TEC-OS is a CP/M-compatible disk operating system for the TEC-1G. It provides
 a working environment for developing and running software on the machine
@@ -43,18 +43,18 @@ TEC-1G. Compatibility depends on the memory available and the operating-system
 calls, terminal features and hardware a program uses.
 
 The current cooperative housekeeping implementation is qualified at TEC-OS
-`241b438`: operating-system calls give pending data a bounded chance to reach
+`b95b2a9`: operating-system calls give pending data a bounded chance to reach
 the card, and failed acknowledged data remains available for retry. The
 current source-only starter has fifteen files, including the BASIC Caverns source.
 [Chapter 1](01-first-session.md) shows its fresh PICO boot and directory;
 [Chapter 19](19-cache-and-persistence.md#current-retained-data-observation)
 shows what happens when the card refuses a write.
 
-Older console examples remain labelled `46cf3f1`, and older timing and stack
+Older console examples remain labelled `57a8c38`, and older timing and stack
 measurements keep their stated source and workload. They have not all been
 rerun or repriced. Source citations similarly identify their revision;
 unprefixed references retain the baseline in the page header. New current
-observations name `241b438` separately. The model and browser evidence does
+observations name `b95b2a9` separately. The model and browser evidence does
 not stand in for physical-board qualification.
 
 ## Starting with a prepared machine

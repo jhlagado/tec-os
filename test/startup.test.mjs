@@ -8,14 +8,14 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import { makeSvc } from "../tools/lib/svc.mjs";
 import { Machine } from "./lib/machine.mjs";
-import { ABI, GLCD_SVC, ROOT, SHELL_SVC, TEST_CLOCK, program, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { ABI, GLCD_SVC, MARKS, ROOT, SHELL_SVC, TEST_CLOCK, marked, program, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 /** A machine at reset with FILES on A:; with SHELL, SHELL.SVC there and first in STARTUP.CMD. */
 function start(files, { key = false, shell = false, rom, ...opts } = {}) {
   const image = standardCard();
   const a = volume(image, "A");
   a.write("HELLO.TXT", Buffer.from("hello\r\n\x1a", "latin1"));
-  for (const [name, bytes] of Object.entries(files)) a.write(name, bytes);
+  for (const [name, bytes] of Object.entries({ ...MARKS, ...files })) a.write(name, bytes);
   if (shell) {
     a.write("SHELL.SVC", SHELL_SVC);
     a.write("STARTUP.CMD", Buffer.concat([Buffer.from("SHELL.SVC\r\n", "latin1"), Buffer.from(files["STARTUP.CMD"] ?? "\x1a")]));
@@ -30,28 +30,27 @@ function start(files, { key = false, shell = false, rom, ...opts } = {}) {
   return m;
 }
 const prompt = (m, max = 400_000_000) => m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(0)), max, "a usable prompt");
-const user = (m) => m.read(4) >> 4;
 
 test("each line runs, echoed, and a failing one prints its message; a warm boot doesn't run the file", () => {
-  const m = start({ "STARTUP.CMD": startupFile("NOSUCH", "", "USER 3", "TYPE HELLO.TXT") }, { shell: true });
+  const m = start({ "STARTUP.CMD": startupFile("NOSUCH", "", "TYPE 3", "TYPE HELLO.TXT") }, { shell: true });
   prompt(m);
   const text = m.text(0);
   assert.match(text, /A(:\S*)?>NOSUCH\r\r\nNOSUCH\?/);
   assert.match(text, /A(:\S*)?>TYPE HELLO.TXT\r\r\n/);
-  assert.equal(user(m), 3);
+  assert.equal(marked(m), 3);
   const mark = m.output.length;
   m.cpu.cpu.pc = 0;
   m.runUntil(() => m.waitingForInput() && /[A-P](:\S*)?>$/.test(m.text(mark)), 200_000_000, "warm boot");
-  assert.doesNotMatch(m.text(mark), /USER/);
+  assert.doesNotMatch(m.text(mark), /TYPE/);
 });
 
 test("a file with no lines, and no file, reach the prompt; a file over one record ends at it", () => {
   prompt(start({ "STARTUP.CMD": new Uint8Array(0) }));
   prompt(start({}));
-  const m = start({ "STARTUP.CMD": Buffer.from("USER 1\r\n".repeat(60) + "USER 2\r\n\x1a", "latin1") });
+  const m = start({ "STARTUP.CMD": Buffer.from("TYPE 1\r\n".repeat(60) + "TYPE 2\r\n\x1a", "latin1") });
   prompt(m);
-  assert.equal((m.text(0).match(/USER 1/g) ?? []).length, 1, "with no shell, the first line alone");
-  assert.equal(user(m), 1);
+  assert.equal((m.text(0).match(/TYPE 1/g) ?? []).length, 1, "with no shell, the first line alone");
+  assert.equal(marked(m), 1);
 });
 
 test("a key held through reset skips the file: a hanging INIT reaches a prompt, and with no key it hangs", async () => {
@@ -80,26 +79,26 @@ for (const [name, opts, said] of [["no GLCD", { matrix: true, glcd: false }, fal
 }
 
 test("a quiet line for an absent device is followed by an & piece that runs, and the same line typed says NAME? (KD-173)", () => {
-  const m = start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC &USER 3") }, { matrix: true, glcd: false, shell: true });
+  const m = start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC &TYPE 3") }, { matrix: true, glcd: false, shell: true });
   prompt(m);
   assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/);
-  assert.equal(user(m), 3, "the & piece ran: the code stayed 0");
+  assert.equal(marked(m), 3, "the & piece ran: the code stayed 0");
   assert.match(m.command("GLCD.SVC"), /GLCD\.SVC\?/, "typed: said");
-  m.command("USER 0");
-  assert.match(m.command("GLCD.SVC &USER 5"), /GLCD\.SVC\?/);
-  assert.equal(user(m), 0, "typed: a failure, so its & piece goes");
+  m.command("TYPE 0");
+  assert.match(m.command("GLCD.SVC &TYPE 5"), /GLCD\.SVC\?/);
+  assert.equal(marked(m), 0, "typed: a failure, so its & piece goes");
 });
 
 test("on a serial board, with no PICO9918 console, a width from the file is quiet and its & piece runs; typed, it says the width? (KE-191)", () => {
-  const m = start({ "STARTUP.CMD": startupFile("CON PICO 32 &USER 3", "CON CRT 40") }, { shell: true });
+  const m = start({ "STARTUP.CMD": startupFile("CON PICO 32 &TYPE 3", "CON CRT 40") }, { shell: true });
   prompt(m);
   assert.doesNotMatch(m.text(0), /\d\d\?/, "nothing said at boot");
-  assert.equal(user(m), 3, "the & piece ran: the code stayed 0");
+  assert.equal(marked(m), 3, "the & piece ran: the code stayed 0");
   assert.equal(m.read(3) & 3, 0, "TTY: kept");
   assert.match(m.command("CON PICO 32"), /\r\n32\?\r\n/, "typed: refused");
-  m.command("USER 0");
-  assert.match(m.command("CON CRT 40 &USER 5"), /\r\n40\?\r\n/);
-  assert.equal(user(m), 0, "typed: a failure, so its & piece goes");
+  m.command("TYPE 0");
+  assert.match(m.command("CON CRT 40 &TYPE 5"), /\r\n40\?\r\n/);
+  assert.equal(marked(m), 0, "typed: a failure, so its & piece goes");
 });
 
 test("a line from the file whose service fails for another cause, or has no file, still says so, and its & piece goes", async () => {
@@ -108,10 +107,10 @@ test("a line from the file whose service fails for another cause, or has no file
   defs.V_FAIL = 1;
   const { file } = await makeSvc(resolve(ROOT, "test/programs/svcdemo.asm"), { defs, work: resolve(ROOT, "build/svc") });
   for (const line of ["FAIL.SVC", "NONE.SVC"]) {
-    const m = start({ "FAIL.SVC": file, "STARTUP.CMD": startupFile(`${line} &USER 3`) }, { shell: true });
+    const m = start({ "FAIL.SVC": file, "STARTUP.CMD": startupFile(`${line} &TYPE 3`) }, { shell: true });
     prompt(m);
     assert.match(m.text(0), new RegExp(`${line.replace(".", "\\.")}\\?`), line);
-    assert.equal(user(m), 0, `${line}: the & piece went`);
+    assert.equal(marked(m), 0, `${line}: the & piece went`);
   }
 });
 
@@ -120,31 +119,31 @@ test("a line from the file whose INIT succeeds with A = TNENODV and whose record
   for (const v of ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECX", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"]) defs[v] = 0;
   defs.V_WILD = 1;
   const { file } = await makeSvc(resolve(ROOT, "test/programs/svcdemo.asm"), { defs, work: resolve(ROOT, "build/svc") });
-  const m = start({ "WILD.SVC": file, "STARTUP.CMD": startupFile("WILD.SVC &USER 3") }, { shell: true });
+  const m = start({ "WILD.SVC": file, "STARTUP.CMD": startupFile("WILD.SVC &TYPE 3") }, { shell: true });
   prompt(m);
   assert.equal(m.read(m.sym("SVCRC")), 1, "the record refused, REMOVE ran: nothing left");
   assert.notEqual(m.read(m.sym("SVCRA")), ABI.TNENODV, "no INIT failure to report");
   assert.match(m.text(0), /WILD\.SVC\?/);
-  assert.equal(user(m), 0, "the & piece went");
+  assert.equal(marked(m), 0, "the & piece went");
 });
 
 const SAY = (await program("say")).bytes;
 const raw = (text) => Buffer.from(text, "latin1");
 
 test("a file of exactly 128 bytes runs its last byte, and reads no further", () => {
-  const m = start({ "STARTUP.CMD": raw("\r".repeat(121) + "USER 13") });
+  const m = start({ "STARTUP.CMD": raw("\r".repeat(121) + "TYPE 13") });
   prompt(m);
-  assert.equal(user(m), 13);
+  assert.equal(marked(m), 13);
 });
 
 test("^Z and a zero each end the file", () => {
   for (const end of ["\x1a", "\0"]) {
-    const m = start({ "STARTUP.CMD": raw(`\r\n${end}USER 4\r\n`) });
+    const m = start({ "STARTUP.CMD": raw(`\r\n${end}TYPE 4\r\n`) });
     prompt(m);
-    assert.equal(user(m), 0, `${JSON.stringify(end)} before any line: none runs`);
-    const s = start({ "STARTUP.CMD": raw(`USER 3\r\n${end}\r\nUSER 4\r\n`) }, { shell: true });
+    assert.equal(marked(m), 0, `${JSON.stringify(end)} before any line: none runs`);
+    const s = start({ "STARTUP.CMD": raw(`TYPE 3\r\n${end}\r\nTYPE 4\r\n`) }, { shell: true });
     prompt(s);
-    assert.equal(user(s), 3, `${JSON.stringify(end)}: the shell reads no further`);
+    assert.equal(marked(s), 3, `${JSON.stringify(end)}: the shell reads no further`);
   }
 });
 
@@ -160,11 +159,11 @@ test("a read that returns an error starts nothing, whatever the record holds", (
   const m = start({ "STARTUP.CMD": new Uint8Array(0) });
   const step = m.step.bind(m);
   m.step = () => {
-    if (m.pc === m.sym("STBOOT")) [..."USER 5\r\n"].forEach((c, i) => m.write(m.sym("LOADBUF") + i, c.charCodeAt(0)));
+    if (m.pc === m.sym("STBOOT")) [..."TYPE 5\r\n"].forEach((c, i) => m.write(m.sym("LOADBUF") + i, c.charCodeAt(0)));
     return step();
   };
   prompt(m);
-  assert.equal(user(m), 0);
+  assert.equal(marked(m), 0);
 });
 
 test("NAME.SVX is no service: the type must be SVC in full", () => {
@@ -174,12 +173,12 @@ test("NAME.SVX is no service: the type must be SVC in full", () => {
 });
 
 test("a reset clears the position, so the file runs again", () => {
-  const m = start({ "STARTUP.CMD": startupFile("USER 3") });
+  const m = start({ "STARTUP.CMD": startupFile("TYPE 3") });
   prompt(m);
   m.reset();
   const from = m.output.length;
   m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(from)), 400_000_000, "the prompt after reset");
-  assert.match(m.text(from), /A(:\S*)?>USER 3/);
+  assert.match(m.text(from), /A(:\S*)?>TYPE 3/);
 });
 
 /** Each line's output and BDOS calls from MLSKIP, where the CCP takes it, to the next MLREAD. */
@@ -216,7 +215,7 @@ for (const [name, lines] of [
   ["a built-in then a line", ["TYPE HELLO.TXT", "DIR"]],
   ["a program's warm boot then a line", ["SAY", "DIR"]],
   ["a failing line then a line", ["NOSUCH", "DIR"]],
-  ["USER 3 then a line", ["USER 3", "DIR"]],
+  ["TYPE 3 then a line", ["TYPE 3", "DIR"]],
 ]) {
   test(`lines from the file equal the same lines typed: ${name}`, () => {
     const f = start({ "SAY.COM": SAY, "STARTUP.CMD": startupFile(...lines) }, { shell: true });
@@ -289,17 +288,17 @@ test("a startup file whose program jumps to C000h warm boots once, as a program'
 // --- The one startup line --------------------------------------------------
 
 test("SH4 first line", () => {
-  const m = start({ "STARTUP.CMD": startupFile("USER 3", "USER 5") });
+  const m = start({ "STARTUP.CMD": startupFile("TYPE 3", "TYPE 5") });
   prompt(m);
-  assert.equal(user(m), 3, "the first line runs, and only it");
-  assert.match(m.text(0), /A(:\S*)?>USER 3\r/);
-  assert.doesNotMatch(m.text(0), /USER 5/);
+  assert.equal(marked(m), 3, "the first line runs, and only it");
+  assert.match(m.text(0), /A(:\S*)?>TYPE 3\r/);
+  assert.doesNotMatch(m.text(0), /TYPE 5/);
 });
 
 test("SH4 blank and comment", () => {
-  const m = start({ "STARTUP.CMD": startupFile("; the boot file", "", "USER 4", "USER 6") });
+  const m = start({ "STARTUP.CMD": startupFile("; the boot file", "", "TYPE 4", "TYPE 6") });
   prompt(m);
-  assert.equal(user(m), 4, "empty and ; lines are passed over");
+  assert.equal(marked(m), 4, "empty and ; lines are passed over");
   assert.doesNotMatch(m.text(0), /the boot file/, "and not echoed");
   const c = start({ "STARTUP.CMD": raw("; a comment, and nothing after it\r\n\x1a") });
   prompt(c);
@@ -308,13 +307,13 @@ test("SH4 blank and comment", () => {
 
 test("SH4 127", () => {
   const line = `TYPE ${"X".repeat(122)}YY`; // 129 characters
-  const m = start({ "STARTUP.CMD": raw(`${line}\r\nUSER 2\r\n`) });
+  const m = start({ "STARTUP.CMD": raw(`${line}\r\nTYPE 2\r\n`) });
   prompt(m);
   assert.match(m.text(0), new RegExp(`A(:\\S*)?>${line.slice(0, 127)}\\r`), "the first 127 characters");
-  assert.equal(user(m), 0);
-  const r = start({ "STARTUP.CMD": raw(`${"\r\n".repeat(60)}USER 7`) });
+  assert.equal(marked(m), 0);
+  const r = start({ "STARTUP.CMD": raw(`${"\r\n".repeat(60)}TYPE 7`) });
   prompt(r);
-  assert.equal(user(r), 7, "the record's end ends an unended line");
+  assert.equal(marked(r), 7, "the record's end ends an unended line");
 });
 
 test("RIG5 a 127-character startup echo borrows APIRTPC only outside an outer return owner", () => {
@@ -352,19 +351,19 @@ test("RIG5 a 127-character startup echo borrows APIRTPC only outside an outer re
 });
 
 test("SH4 skip", () => {
-  const m = start({ "STARTUP.CMD": startupFile("USER 3") }, { key: true });
+  const m = start({ "STARTUP.CMD": startupFile("TYPE 3") }, { key: true });
   prompt(m);
-  assert.equal(user(m), 0, "a key held through reset skips the line");
+  assert.equal(marked(m), 0, "a key held through reset skips the line");
 });
 
 test("SH4 warm boot", () => {
-  const m = start({ "STARTUP.CMD": startupFile("USER 3") });
+  const m = start({ "STARTUP.CMD": startupFile("TYPE 3") });
   prompt(m);
-  m.command("USER 0");
+  m.command("TYPE 0");
   const mark = m.output.length;
   m.cpu.cpu.pc = 0;
   m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(mark)), 200_000_000, "warm boot");
-  assert.equal(user(m), 0, "never at a warm boot");
+  assert.equal(marked(m), 0, "never at a warm boot");
 });
 
 test("SH4 quiet paths", () => {
@@ -383,8 +382,8 @@ test("SH4 mutant: STLINE without the comment skip refuses a first ; line at boot
   let n = 0;
   for (let i = at; i < at + 96; i += 1) if (bytes[i] === 0xfe && bytes[i + 1] === 0x3b) [(bytes[i + 1] = 0xff), (n += 1)]; // CP ';'
   assert.equal(n, 2);
-  const m = start({ "STARTUP.CMD": startupFile("; the boot file", "USER 4") }, { rom: { rom: bytes, symbols } });
+  const m = start({ "STARTUP.CMD": startupFile("; the boot file", "TYPE 4") }, { rom: { rom: bytes, symbols } });
   prompt(m);
   assert.match(m.text(0), /;\?/);
-  assert.equal(user(m), 0);
+  assert.equal(marked(m), 0);
 });

@@ -7,14 +7,14 @@ nav_group: "Using the machine"
 
 # 2. Make a small program
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -78,7 +78,7 @@ Chapter 3 uses the same sequence to build BASIC source with BAZA. This
 excerpt shows the rejected build before TED redraws its screen. The initial
 screen-clear controls, leading blank line and final editor redraw are omitted:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card banner-broken.img --board pico --screen '@start A:TED B:BANNER.ASM' $'@press \x14B' '@run 400'. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card banner-broken.img --board pico --screen '@start A:TED B:BANNER.ASM' $'@press \x14B' '@run 400'. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
 ```text
 A:SYSTEM>A:TAS B:BANNER.ASM
 BANNER.ASM:14:1: unknown instruction or directive
@@ -102,7 +102,7 @@ returns to `A:SYSTEM>`. The prompt's read attempts pending writes. After
 `Write pending`, preserve RAM and resolve the original backend failure before
 awaiting `Cache clear`. A prompt alone does not prove file closure or browser
 preservation; cold reset discards pending data
-(`a40d482:docs/recovery.md:69-117`).
+(`0701241:docs/recovery.md:69-117`).
 
 Reopening `A:TED B:BANNER.ASM` reads the saved file and starts at `L1 C1`
 in this session. The deliberate extra line is gone. The corrected text
@@ -117,7 +117,7 @@ reopens the source for further editing.
 produced this complete console text before the editor redraw. The initial
 clear-screen controls and leading blank line are omitted:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card banner-plain.img --board pico --screen '@start A:TED B:BANNER.ASM' $'@press \x14R' '@run 400'. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card banner-plain.img --board pico --screen '@start A:TED B:BANNER.ASM' $'@press \x14R' '@run 400'. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
 ```text
 A:SYSTEM>A:TAS B:BANNER.ASM
 BANNER.COM written
@@ -195,7 +195,7 @@ MSG: db "Hello from TEC-OS!",13,10,"$"
 this separate capture. The initial clear-screen controls and leading
 blank line are omitted:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card banner-edited.img --board pico --screen '@start A:TED B:BANNER.ASM' $'@press \x14R' '@run 400'. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card banner-edited.img --board pico --screen '@start A:TED B:BANNER.ASM' $'@press \x14R' '@run 400'. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
 ```text
 A:SYSTEM>A:TAS B:BANNER.ASM
 BANNER.COM written
@@ -218,7 +218,7 @@ unchanged, which is why the edit needs another build.
 `^Q` quits the editor. Wait for `A:SYSTEM>` before a reset or card removal:
 the key read attempts pending data. After Write pending, resolve the original
 backend failure and await Cache clear before reset; a prompt alone does not
-prove file closure or browser preservation (`a40d482:docs/recovery.md:69-117`).
+prove file closure or browser preservation (`0701241:docs/recovery.md:69-117`).
 
 A fresh machine with new RAM can read the edited source from the saved
 card. `A:TED B:BANNER.ASM` displays the exclamation mark and twelve Down
@@ -230,7 +230,7 @@ empty-prompt `^C`. `B:BANNER` runs it from B while A remains current,
 without opening TED or assembling source. The final excerpt includes
 the quit's preservation step, the standalone run and a final `^C`:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card banner-edited.img 'A:TAS B:BANNER.ASM' '^C' B:BANNER '^C'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card banner-edited.img 'A:TAS B:BANNER.ASM' '^C' B:BANNER '^C'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
