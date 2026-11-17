@@ -402,9 +402,14 @@ test("KG67 mutant: plotToLCD returning at once", { timeout: 600_000 }, async () 
   assert.notEqual(S.end.gdram, R.end.gdram, "glcd-mad's graphics RAM differs");
 });
 
+// Without the common pin. Each side's R is pinned, so the case does not turn
+// on the instructions run since reset, which every ROM change moves: MON-3's
+// side at 0, as KG67 glcd-maze pins both, the session's at 40h, a value that
+// gives a maze that ends, 266,108,685 cycles from 4000h.
 test("KG67 mutant: glcd-maze without the R pin", { timeout: 600_000 }, async () => {
   const { bytes } = await realBuild("glcd-maze");
-  const [ref, ses] = [programReference(bytes), await programSession(bytes)];
+  const ldar = ldarOf([...bytes]);
+  const [ref, ses] = [programReference(bytes, { ldar }), await programSession(bytes, { ldar, r: 0x40 })];
   runToPc(ref, MON3_SOFTBOOT, 2_000_000_000, "glcd-maze under MON-3");
   runToPc(ses, GORET, 2_000_000_000, "glcd-maze in the session");
   assert.notEqual(snap(ses.m).gbuf, snap(ref.m).gbuf, "the two sides' GBUF differ");

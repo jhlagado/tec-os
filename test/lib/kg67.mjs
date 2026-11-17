@@ -66,9 +66,9 @@ export const regsOf = (c) => ({ a: c.a, bc: (c.b << 8) | c.c, de: (c.d << 8) | c
 
 /**
  * Count the RST 18h and RST 10h opcodes M fetches from 4000h up, and set R
- * to 0 at the fetch of each address in LDAR: { 0x18, 0x10 }.
+ * to R (0 unless given) at the fetch of each address in LDAR: { 0x18, 0x10 }.
  */
-export function instrument(m, { ldar = [] } = {}) {
+export function instrument(m, { ldar = [], r = 0 } = {}) {
   const count = { 0x18: 0, 0x10: 0 };
   const step = m.step.bind(m);
   m.step = () => {
@@ -78,7 +78,7 @@ export function instrument(m, { ldar = [] } = {}) {
       if (op === 0xdf) count[0x18] += 1;
       else if (op === 0xd7) count[0x10] += 1;
     }
-    if (ldar.includes(pc)) m.cpu.cpu.r = 0;
+    if (ldar.includes(pc)) m.cpu.cpu.r = r;
     return step();
   };
   return count;
@@ -388,16 +388,17 @@ export function programReference(bytes, { ldar = [] } = {}) {
 /**
  * BYTES in a session, LOAD PROG.BIN and GO, at its first fetch of 4000h:
  * { m, count, c0, before }, BEFORE the card's files by digest after the LOAD.
- * SVC: the service; MACHINE: the machine's options.
+ * SVC: the service; LDAR and R: R's pin, as instrument's; MACHINE: the
+ * machine's options.
  */
-export async function programSession(bytes, { svc, ldar = [], machine } = {}) {
+export async function programSession(bytes, { svc, ldar = [], r: pin = 0, machine } = {}) {
   const { m } = await inSession({ "PROG.BIN": bytes }, { svc, machine });
   const r = line(m, "LOAD PROG.BIN");
   if (!r.mon3 || /\?/.test(r.out.split("LOAD")[1] ?? "")) throw new Error(`LOAD PROG.BIN: ${r.out}`);
   const { volume } = await import("./fixtures.mjs");
   const a = volume(m.image, "A");
   const before = Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))]));
-  const count = instrument(m, { ldar });
+  const count = instrument(m, { ldar, r: pin });
   goTo(m, "GO", 0x4000, 20_000_000);
   return { m, count, c0: m.cycles, before };
 }
