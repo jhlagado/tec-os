@@ -281,7 +281,10 @@ test("a starter card passes every check, and SD8 leaves the card as it was", SLO
   const middle = free0 + Math.floor((freeL - free0) / 2);
   const order = [free0, ...pow, middle, ...Array.from({ length: 32 }, (_, i) => free0 + i), freeL];
   assert.deepEqual(log.writes.filter((_, i) => i % 2 === 0), order);
-  assert.ok(Buffer.from(image).equals(Buffer.from(before)), "the card is unchanged");
+  // Compare the byte views directly.
+  // Two more full card copies would
+  // exceed the test memory budget.
+  assert.equal(Buffer.compare(image, before), 0, "the card is unchanged");
   assertSafe(log, image, before, containerBlocks, blocks);
   for (const b of log.writes) assert.ok(b < blocks - 1, `block ${b} is before the last`);
   // MON3's state is back: the latch, its user vectors, and no unknown call.
@@ -304,7 +307,7 @@ test("an SDSC card, byte-addressed, passes SD8 inside TEC-OS's range", SLOW, () 
   assert.equal(lines.get("SD8").status, "PASS", JSON.stringify(lines.get("SD8")));
   assert.ok(log.writes.length > 0);
   assertSafe(log, image, before, containerBlocks, blocks);
-  assert.ok(Buffer.from(image).equals(Buffer.from(before)));
+  assert.equal(Buffer.compare(image, before), 0);
 });
 
 test("SDHC block numbers above 400000h work on a 4 GB card", SLOW, () => {
@@ -447,7 +450,7 @@ test("a failed pattern write is reported, the block restored, and nothing low wr
   assert.equal(lines.get("SD8").status, "FAIL");
   assert.match(lines.get("SD8").detail, /^blocks=\d+ fail=1 /);
   assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
-  assert.ok(Buffer.from(image).equals(Buffer.from(before)), "the restore put the block back");
+  assert.equal(Buffer.compare(image, before), 0, "the restore put the block back");
 });
 
 test("a restore that fails three times stops SD8 and says to restore the card", SLOW, () => {
@@ -484,7 +487,7 @@ test("AD between blocks stops SD8 cleanly, each block put back first", SLOW, () 
   assert.match(lines.get("SD8").detail, /^reason=user-abort blocks=3 fail=0 /);
   assert.equal(log.writes.length, 6, "three blocks, each written and put back");
   assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
-  assert.ok(Buffer.from(image).equals(Buffer.from(before)));
+  assert.equal(Buffer.compare(image, before), 0);
 });
 
 /** Run a starter card with OPTIONS for card() and answer SD8 with 8 then GO;
@@ -583,7 +586,7 @@ test("a low block that does not read after a pattern write stops SD8, counted as
   assert.match(lines.get("SD8").detail, /^lowread at=20480 low=5 blocks=1 fail=1 /);
   assert.equal(log.writes.length, 2, "the block was put back first");
   assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
-  assert.ok(Buffer.from(image).equals(Buffer.from(before)));
+  assert.equal(Buffer.compare(image, before), 0);
 });
 
 test("a probe read that fails stops SD8 with nothing written", SLOW, () => {
@@ -614,7 +617,7 @@ test("a 1.1 card of 20 volumes, with a table block, passes SD7 and SD8 stays out
   assert.equal(lines.get("SD8").status, "PASS", JSON.stringify(lines.get("SD8")));
   assert.ok(log.writes.length > 0);
   assertSafe(log, image, before, containerBlocks, blocks);
-  assert.ok(Buffer.from(image).equals(Buffer.from(before)));
+  assert.equal(Buffer.compare(image, before), 0);
 });
 
 test("with no card SD2 fails with TEC-OS's SDENOCD and the other SD checks skip", SLOW, () => {
@@ -633,7 +636,7 @@ test("any answer but 8 then GO at SD8's question writes nothing", SLOW, () => {
     const { lines, log } = run({ cardOf: (log) => card(image, image.length / BLOCK, log), answers: { "SD8 press 8": answer, "SD9 pull": [AD] } });
     assert.deepEqual(lines.get("SD8"), { status: "SKIP", detail: "reason=user" }, JSON.stringify(answer));
     assert.deepEqual(log.writes, []);
-    assert.ok(Buffer.from(image).equals(Buffer.from(before)));
+    assert.equal(Buffer.compare(image, before), 0);
   }
 });
 
