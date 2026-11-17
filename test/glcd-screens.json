@@ -1,6 +1,6 @@
 {
   "from": "b025dbb",
-  "what": "the ST7920's graphics RAM, SHA-256 to 16 hex digits, after each command: b025dbb's driver's screens, retaken under the shell once its prompt named the volume, and from PUT 4 S.COM to DIR E: once PUT.COM took the place of SAVE",
+  "what": "the ST7920's graphics RAM, SHA-256 to 16 hex digits, after each command: b025dbb's driver's screens, retaken under the shell once its prompt named the volume, and from PUT 4 S.COM to DIR E: once PUT.COM took the place of SAVE; three editing screens retaken when buffered input stopped echoing matrix navigation, with held-input assertions and no synthetic CR after ignored up",
   "bdosVector": 46854,
   "screens": [
     {
@@ -57,15 +57,15 @@
     },
     {
       "line": "ABC\b\b\u0015XYZ\u0012\u0005Q\r",
-      "gdram": "ad20d045a87f5b5f"
+      "gdram": "0c292ef6077e3f18"
     },
     {
       "line": "\u0003",
-      "gdram": "8044ace9e516822d"
+      "gdram": "0c292ef6077e3f18"
     },
     {
       "line": "PUT 1 C:X.COM\r",
-      "gdram": "7ce693a597263eac"
+      "gdram": "15551ff355da082e"
     },
     {
       "line": "DIR E:\r",

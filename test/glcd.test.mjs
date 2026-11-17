@@ -12,6 +12,9 @@
 // When SAVE left the ROM, PUT.COM took its place in the two commands that
 // write a file, and the five screens after PUT 4 S.COM, TYPE S.COM, ERA S.COM,
 // PUT 1 C:X.COM and DIR E: were retaken; the other fifteen are as they were.
+// The three editing screens were retaken when buffered input began ignoring
+// navigation. Matrix 05h and 03h mean left and up, not Ctrl-E and Ctrl-C.
+// Their old screens included the cursor corruption. The other seventeen stay.
 // KS48 keeps this historical oracle on its original-font input. Only the
 // historical pixel workload uses a disposable FONT-span restoration. Other
 // GLCD tests and Compact alias/rendering tests use the unmodified production ROM.
@@ -26,7 +29,7 @@ import {restoreHistoricalFont,validateHistoricalFont,historicalFontContext} from
 import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay, withShell } from "./lib/fixtures.mjs";
 
 const referenceBytes = readFileSync(resolve(ROOT, "test/glcd-screens.json"));
-assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"93d359bdbb97d4bec76eb4cd4648c46e757ecae83d798b6ffccb5ae631b945d0","the historical command list and oracle, with the DIR and PUT screens retaken");
+assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"d9872e1efa123cde62df01a758c0d553beee28c34f84ad732522d29f0dc8b165","the historical command list and oracle, with the DIR, PUT and navigation screens retaken");
 const REF = JSON.parse(referenceBytes);
 // Bind the clone to this build's untouched input, not to a permanent ROM pin.
 const productionInput = romFor();
@@ -59,11 +62,40 @@ async function board({ matrix = true, historicalFont = false } = {}) {
   return m;
 }
 
+/** Settle at character input, after echo and its incidental status polls. */
+function heldInput(m) {
+  const first = m.sym("CINMX"), last = m.sym("CINME");
+  m.runUntil(() => m.pc >= first && m.pc < last, 50_000_000, "buffered character input");
+}
+
+/** Navigation changes neither the logical line nor the displayed cursor. */
+function ignoredArrow(m, key) {
+  heldInput(m);
+  const state = () => {
+    const count = m.read(m.sym("LINCNT")), buffer = word(m, m.sym("PARAM"));
+    return { count, pointer: word(m, m.sym("LINPTR")),
+      bytes: Array.from({ length: count }, (_, i) => m.read(buffer + 2 + i)),
+      row: m.read(m.sym("VROW")), col: m.read(m.sym("VCOL")) };
+  };
+  const before = state(), mark = m.output.length;
+  m.type(key);
+  heldInput(m);
+  assert.deepEqual(state(), before, "the GLCD prompt ignores the navigation key");
+  assert.equal(m.text(mark), "", "no navigation byte is echoed");
+}
+
 /** Type a line and run to the prompt, answering [more] or an error's key. */
 function run(m, line) {
   m.glcdWorkloadCommand = line;
   m.mark = m.output.length;
-  m.type(line);
+  if (line === "ABC\b\b\x15XYZ\x12\x05Q\r") {
+    m.type("ABC\b\b\x15XYZ\x12");
+    ignoredArrow(m, "\x05"); // matrix left, after retyping XYZ
+    m.type("Q\r");
+  } else if (line === "\x03") {
+    ignoredArrow(m, line); // matrix up: no new prompt or synthetic Enter
+    return;
+  } else m.type(line);
   const prompt = /\r\n[A-P](:\S*)?>$/;
   let seen = -1;
   for (let i = 0; i < 400; i += 1) {
