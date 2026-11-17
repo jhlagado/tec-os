@@ -1,6 +1,6 @@
 # Caverns: restoring the original prose
 
-Under qualification. The owner requested restoration of atmosphere rather
+Qualified in emulation and the browser. The owner requested restoration of atmosphere rather
 than terse route summaries. All 54 room descriptions have been reconciled
 with the preserved protected MicroWorld BASIC listing. The original sentences,
 Norse setting, humour, statue of Loki, bat colony, glacial river and castle
@@ -19,7 +19,25 @@ The public source is CAVERNS.BAS and BAZA writes CAVERNS.COM. The assembly build
 is preserved as CAVASM.COM, outside the starter card, to avoid a name collision.
 The card still supplies only source and instructions, not the compiled game.
 
-The first native build is 37,248 bytes, below the 40,000-byte ceiling. Full quest,
-checkpoint/state/RNG, TED exercise, card and Viewer checks are in progress.
-The earlier two 1,432-pass strict runs apply to the preceding text, not this
-restoration; their records remain unchanged.
+The final native build is 37,248 bytes (37,177 logical), below the 40,000-byte
+ceiling. Both independent full strict TEC-OS runs pass all 1,433 checks, with
+no failures or skips. The Viewer passes all 202 checks with unchanged timing
+and copy limits. A fresh Chromium context compiles the byte-identical game,
+plays the opening and restores an exported checkpoint in independent storage.
+The native quest earns 126 points, visits all 54 rooms, checks their actual
+prose and returns home. The 480-command/36-scenario comparison preserves all
+persisted state/RNG and exact non-prose responses. Descriptions, paragraph
+wrapping and the copyright are the only permitted output differences.
+
+The door's static description is deliberately neutral: the existing dynamic
+message reports whether it is barred or blasted open. The bridge retains its
+creaking, swaying atmosphere without falsely claiming it will collapse. The
+temple's statue, balcony lore, crypt's decay, bat colony and castle's humour
+return without restoring obsolete gates, bearings or riddles. All 216 exits,
+objects, values and command vocabulary remain unchanged.
+
+[Qualification and retained logs](evidence/caverns-prose-restoration/qualification.json)
+separate earlier failed/stopped attempts from the two complete passing runs.
+The host-copy timing failure under concurrent CPU load is retained by the
+Viewer; CPU isolation passed the same limits, with no gate weakened. Physical
+TEC-1G and the author's final read-through remain human-stage checks.

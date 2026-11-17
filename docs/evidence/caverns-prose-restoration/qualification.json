@@ -1,5 +1,5 @@
 {
-  "status": "WIP: first combined strict run passes all 1433 tests; independent second run and isolated Viewer gate pending",
+  "status": "Qualified in native emulation and browser; main/Pages publication in progress",
   "sourceFile": "programs/CAVERNS.BAS",
   "comFile": "programs/CAVERNS.COM",
   "compiler": "eee4ee6846add13c0ea120fbf2de8be0ec08c0b1",
@@ -27,6 +27,43 @@
       "commandExitCode": 0,
       "logSha256": "bdd1cee60a0cbb0ac17a1557f0a00b91a3cf3d67ca8419f81f0b47adb703e027",
       "codeCommit": "9b25a0cf"
+    },
+    {
+      "index": 2,
+      "tests": 1433,
+      "pass": 1433,
+      "fail": 0,
+      "skipped": 0,
+      "commandExitCode": 0,
+      "logSha256": "00a394f25348a9886037ca430a11593c31aada86de9d4d4c5724de80bc5568ba",
+      "codeCommit": "9b25a0cf",
+      "independentWorktree": true
     }
-  ]
+  ],
+  "independentArtifactsIdentical": {
+    "dist/tecos.rom": "35893cab810bf6757e5992ec492ec37a113828674e33d10da2e48dfa706b0bc8",
+    "dist/tecos.d8.json": "5ddb64f51eaa8c54ce22fd87edeb01a7c673679ce77ef43eb411088e30beca92",
+    "programs/CAVERNS.BAS": "b9bb843da998b757297831e46fbacd7e4de405d995807ee462351332e5c5e880",
+    "programs/CAVERNS.COM": "d2ad7340741da02f5f5553875128b14f23bfb9f9db6d9c55e8be5d033f152301"
+  },
+  "viewerFullSuite": {
+    "tests": 202,
+    "pass": 202,
+    "fail": 0,
+    "skipped": 0,
+    "limitsChanged": false
+  },
+  "freshBrowserTrialPassed": true,
+  "review": {
+    "kind": "implementer source/diff review plus native differential and state-dependent prose observations",
+    "independentHumanReview": "pending",
+    "unchangedWorldFields": [
+      "216 exits",
+      "room IDs and keys",
+      "all objects and initial positions",
+      "treasure values",
+      "command vocabulary"
+    ],
+    "proseStateReconciliation": "Original atmosphere retained; modern gate/rope/castle/door rules win on conflicts"
+  }
 }

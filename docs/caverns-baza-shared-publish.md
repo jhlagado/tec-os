@@ -1,6 +1,9 @@
 # Caverns integration of the compact Baza build
 
-This integration is under qualification. The published compiler/runtime pair
+This records the compiler-only phase before the prose restoration. Its two
+complete strict runs passed 1,432 checks each. The final combined integration
+with restored prose is qualified separately in [the restoration record](caverns-prose-restoration.md).
+The published compiler/runtime pair
 comes from Baza `eee4ee6`; its committed `dist/compiler-build.json` is checked
 against both files before native compilation. No BASIC source, game rule or
 room data changed. Historical evidence remains tied to its original artifacts.
@@ -70,7 +73,8 @@ publication and physical TEC-1G qualification are separate.
 The release procedure follows Origo's
 [Phase 3b checklist](https://github.com/jhlagado/origo/blob/main/studies/p3-tec-os/release-roadmap.md#phase-3b-baza-and-ted-language-support-kd-262):
 paired pins, service-loaded vector checks, two strict TEC-OS runs, review,
-then Viewer/book integration. The two fresh complete strict runs are pending.
+then Viewer/book integration. Both compiler-only runs passed; the final combined restoration also passed
+two independent 1,433-check strict runs.
 The [qualification record](evidence/caverns-baza-shared-publish/qualification.json)
 tracks their actual outcomes and the complete retained logs.
 

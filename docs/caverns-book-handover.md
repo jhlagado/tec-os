@@ -6,29 +6,29 @@ and [map audit](caverns-map-audit.md), outside the practical manual.
 
 ## Readiness
 
-The restored version passes 39 native game/scenario/rewrite/TED/starter checks
-on the preceding firmware: a 126-point first-discovery quest, all 54 rooms and
-their displayed descriptions, return home, and checkpoint restoration. The
-480-command comparison in 36 scenarios retains exact non-prose output and full
-persisted state/RNG; only the recorded descriptions, their line wrapping and
-the copyright are normalised. TED copy/edit/save/build/run/exit/reopen after a
-power cycle passes. The source-only starter compiles the exact executable in
-a fresh Chromium Viewer, plays the opening, and restores an exported checkpoint
-in independent browser storage. These are emulator and browser observations.
+Qualified against the combined current firmware: **two independent full
+strict runs, 1,433 passes each, zero failures or skips**. This includes native
+compilation, the 126-point first-discovery quest, all 54 rooms and their
+printed descriptions, homecoming, complete checkpoint restoration and the
+TED copy/edit/save/build/run/exit/reopen-after-power-cycle exercise.
 
-Current TEC-OS main has since been merged. Two complete strict runs on this
-combined candidate and the refreshed Viewer qualification are pending. This is
-active integration work, not a completed main release. The previous compiler-only
-candidate passed two complete 1,432-test strict runs; those results are retained
-separately and do not qualify the newer firmware or restored text by themselves.
-Physical TEC-1G testing and final human gameplay review remain outstanding.
+The 480-command comparison in 36 scenarios retains exact non-prose output and
+all persisted state/RNG. Only the recorded descriptions, paragraph wrapping,
+copyright and diagnostic source-line coordinates are normalised. The full
+Viewer suite passes 202 checks, including unchanged timing/copy gates. A fresh
+Chromium Viewer compiles the exact executable from a source-only starter,
+plays the opening and restores an exported checkpoint in independent storage.
+These are native-emulator and browser observations, not physical-board tests.
+Physical TEC-1G testing and the author's final prose/gameplay read-through
+remain outstanding. Final receiving pins are recorded as integration closes;
+no new public version or release tag is assigned here.
 
 ## Exact artifacts
 
 | Artifact | Repository / pin / path |
 |---|---|
 | Restored source and rendering change | jhlagado/tec-os, 9b25a0cf72585bd6f0fedd290a2e4a45f45f3b53 |
-| Current firmware integration | jhlagado/tec-os, ae61d294; current main merged for qualification |
+| Current firmware integration | jhlagado/tec-os, ae61d294; current main merged; runtime source at the qualified code pin |
 | Source on SYSTEM | programs/CAVERNS.BAS |
 | Verification executable, excluded from starter | programs/CAVERNS.COM; 37,248 bytes |
 | Exact source, compiler, RTL, executable identities | test/caverns-basic.json |
@@ -36,7 +36,7 @@ Physical TEC-1G testing and final human gameplay review remain outstanding.
 | Main-volume recipe and image | dist/starter.recipe.json, revision 17; dist/starter.img |
 | Compiler/runtime pair | jhlagado/baza, eee4ee6846add13c0ea120fbf2de8be0ec08c0b1; dist/BAZA.COM and dist/BAZA.RTL |
 | Editor and dependency pins | TED.COM and compiler/runtime in test/inputs.json |
-| Viewer receiving work | jhlagado/tec-os-viewer, caverns-baza-viewer; qualification pending |
+| Viewer receiving work | jhlagado/tec-os-viewer, 617ec47; final main pin/publication follows |
 | Development checkpoints | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 | Assembly comparison, development only | programs/CAVASM.COM |
 

@@ -1,9 +1,8 @@
 # Caverns on TEC-OS
 
-Current prose restoration and rename are under qualification; see
-[caverns-prose-restoration.md](caverns-prose-restoration.md). Its first build
-is 37,248 bytes. The compiler-only measurements below describe the preceding
-text until the final restoration results are recorded.
+The restored original prose and modern navigation are qualified in the native
+emulator and Chromium Viewer. See [the restoration record](caverns-prose-restoration.md)
+for reconciliation, exact artifacts and test evidence.
 
 The starter disk's main SYSTEM volume supplies **CAVERNS.BAS** and
 **CAVERNS.TXT**. Neither the BASIC executable nor the assembly version is
@@ -82,7 +81,7 @@ the later text-only landmark pass is under `docs/evidence/caverns-wording-pass`.
 The native tests are emulator evidence. The system-Chromium Viewer trial also
 compiled from a fresh source-only card, downloaded a byte-identical COM, played
 the opening and exported/restored a checkpoint in a fresh browser context.
-Its two native Viewer recipe/bundle tests pass. None substitutes for a board run. Gameplay review of this
+The full Viewer suite passes all 202 checks, including its unchanged resource gates. None substitutes for a board run. Gameplay review of this
 revision and a physical TEC-1G run remain the final human checks.
 
 Known limits: eleven carried objects; combat can lose; finite candle lifetime
