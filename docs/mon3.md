@@ -44,14 +44,15 @@ record asks to be entered on install. It stays installed after `EXIT`, so
 `UNLOAD` first. An older card's line with `/E` after the name still enters:
 the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
-On the starter card it is 4,781 bytes of header and image in **19 pages**, 5,237
-bytes as a file with its relocation data. The starter card loads `SHELL.SVC`
-first, so the word at `0006h` goes from `A500h` to `9200h`, and the TPA from
-41,984 bytes to **37,120**. With `GLCD.SVC` installed too, as the GLCD
-console's startup does, it is `8F00h`, a TPA of **36,352**, in any order of
-installing the three. On the starter card
+On the starter card it is 3,928 bytes of header and image in **16 pages**, 4,318
+bytes as a file with its relocation data. MON-3's graphics are a service of
+their own, `MON3GFX.SVC`, 1,023 bytes in 4 pages (below). The starter card loads
+`SHELL.SVC` first, so the word at `0006h` goes from `A500h` to `9500h`, and the
+TPA from 41,984 bytes to **37,888**. With `GLCD.SVC` installed too, as the GLCD
+console's startup does, it is `9200h`, a TPA of **37,120**, in any order of
+installing the three. `MON3GFX.SVC` takes 4 pages more, 1,024 bytes of TPA. On the starter card
 with no shell, whose four drives take the bare ROM's word to `B6C5h`, it goes
-from `B6C5h` to `A300h`, and the TPA from 46,533 bytes to 41,472, and 40,704 with
+from `B6C5h` to `A600h`, and the TPA from 46,533 bytes to 42,240, and 41,472 with
 `GLCD.SVC`. The monitor, its line buffer, its FCB, its saved page
 zero and its stack are all in those pages, above anything a MON-3 program may
 load into. MON-3's graphics buffer and variables are not: they are MON-3's
@@ -240,8 +241,9 @@ MON-3's graphics workspace is set at each entry too, as every MON-3 reset
 leaves it through `initLCD`: `GBUF`, 0A00h–0DFFh, and the graphics calls'
 variables, 0E00h–0E19h, hold zero, except `VPORT` (0E13h), the buffer the
 drawing calls use, which holds 0A00h. `CLRBUF` (0E0Ch) zero is the session's
-choice, as no MON-3 reset writes it. The step runs at each entry by `MON3.SVC`, after
-the service is installed or found, and at call 2. A program's `GO` and its
+choice, as no MON-3 reset writes it. The step is `MON3GFX.SVC`'s: it runs at each entry
+by `MON3.SVC` with the graphics loaded, after the service is installed or found, and at
+call 2; without them nothing writes the workspace. A program's `GO` and its
 return do not run it, as MON-3's `softBoot` does not, so what one program
 leaves there the next one finds.
 
@@ -369,9 +371,36 @@ Where the session differs from MON-3, by design:
   would come. Back at `MON3>`, or after `EXIT`, TEC-OS's scan finds a key
   still held recorded and doesn't take it as a new one.
 
-## RST 18h: the graphics calls
+## RST 18h: the graphics calls, `MON3GFX.SVC`
 
-`RST 18h` takes the call in A, as MON-3 does. The service runs MON-3's own
+The graphics are a second service, `MON3GFX.SVC`, which depends on `MON3.SVC`
+(Origo KD-437): its calls run only in a `MON3.SVC` session, whose restart forms,
+entry and return they hook, and a call past 20 goes to the session's own error
+display. Its header names `MON3`, version 1, the record `MON3.SVC` publishes, so the
+loader refuses it with nothing changed until `MON3.SVC` is installed, and puts it
+below `MON3.SVC`, so `UNLOAD` takes it first. Its `INIT` finds the record with
+`TNFIND` and writes a `JP` over each of `MON3.SVC`'s three hooks: `RST 18h`, the
+workspace at each entry and the panel at a program's return. Its `REMOVE` puts
+them back. A second copy finds its own `JP` and is refused at `INIT`, `MON3GFX.SVC?`.
+
+It is loaded explicitly, with `MON3.SVC` installed:
+
+- **At the prompt:** `MON3.SVC`, `EXIT`, `MON3GFX.SVC`, then `MON3.SVC` enters with
+  the graphics in.
+- **From `MON3>`:** `GFX` chains `MON3GFX.SVC!MON3.SVC` by function 47: its warm boot
+  ends the session, the shell runs the two pieces, and `MON3>` comes back with the
+  graphics in. A loaded program must be loaded again: the file is staged at 0100h
+  and the new pages lie below `MON3.SVC`'s, where a program may have been. With no
+  shell the line runs whole and ends at the prompt with the graphics in.
+- **Not from `STARTUP.CMD` after `MON3.SVC`:** that line enters its session, and the
+  session's `EXIT` ends the file, so the line after it never runs.
+
+**Without `MON3GFX.SVC`** every `RST 18h` shows `displayError` on the digits,
+waits for a key and returns to the program as a key press does, as MON-3 does
+for a call it lacks; the workspace is not set at entry and the panel is not set
+again at a program's return.
+
+The service runs MON-3's own
 routines for calls 0 to 20, in MON-3's order, with only their addresses
 moved, so each leaves the registers, the flags, memory and the ST7920 as
 MON-3's does, and takes MON-3's time from its first instruction to its
@@ -401,13 +430,14 @@ returns straight to the caller, and IX is lost. A on entry is not MON-3's
 (the low byte of the routine's address there), but no routine reads it.
 After call 14, DE ends in the service's copy of MON-3's row table, not in
 MON-3's ROM. From the `RST` to the routine's first instruction the session
-takes 253 T, MON-3 175 T: the restart path's 101 T and a 17 T test that
-refuses 21 and above, against MON-3's 21 T jump and its 19 T test. So a
-program takes MON-3's time and 78 T more for each `RST 18h`.
+takes 263 T, MON-3 175 T: the restart path's 101 T, the hook's 10 T jump into
+`MON3GFX.SVC` and a 17 T test that refuses 21 and above, against MON-3's 21 T
+jump and its 19 T test. So a program takes MON-3's time and 88 T more for each
+`RST 18h`.
 
 ## The GLCD console
 
-At a program's return, when CON: is `UC1:` (IOBYTE AND 3 is 3), the
+At a program's return with `MON3GFX.SVC` loaded, when CON: is `UC1:` (IOBYTE AND 3 is 3), the
 session sends the ST7920 `GLCD.SVC`'s own mode bytes, 30h, 0Ch, 01h, 34h
 and 36h, the same as its `GLCMOD`, each followed by about 2.1 ms (8,389 T at
 4 MHz, MON-3's own count of 0140h), before the form feed. That is the basic set, the display on, DDRAM cleared, the extended set
