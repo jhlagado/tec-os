@@ -199,10 +199,12 @@ SKB1:
   jr SKIPSB
 
 ; The prompt: the drive at 0004h, its
-; volume and >.
+; volume and >. The mask keeps it right
+; on a ROM that leaves a user there.
 
 PROMPT:
   ld a,(CURDSK)  ; 0004h: the drive
+  and $0F        ; without the user
   call DRVLBL    ; drive and volume
   ld e,'>'       ; then >
 
