@@ -100,7 +100,7 @@ KBMOD:
   cp 3
   jr c,KBNONE    ; modifier alone
   cp 7           ; Caps Lock key
-  jr z,KBCAPS
+  jp z,KBCAPS
   jr nc,KBNOARR  ; Keys 3-6: ESC [ A-D
   ld hl,KBARROW-3
   call KBIDX     ; keys 3-6: A-D
