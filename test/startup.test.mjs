@@ -358,7 +358,7 @@ test("SH4 skip", () => {
   assert.equal(marked(m), 0, "a key held through reset skips the line");
 });
 
-test("SH4 skip from the matrix keyboard: Fn held through reset skips the line as a keypad key does", () => {
+test("SH4 skip from the matrix keyboard (LC-22): Fn held through reset skips the line as a keypad key does", () => {
   const m = start({ "STARTUP.CMD": startupFile("TYPE 3") }, { fn: true, matrix: true, glcd: false });
   prompt(m);
   assert.equal(marked(m), 0, "Fn held through reset skips the line");

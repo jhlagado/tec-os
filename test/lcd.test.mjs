@@ -2,7 +2,8 @@
 // the runtime's panel, and LCD.SVC's 40 x 4 on two host panels of two
 // controllers (host/lcd40.mjs), one written here and one made of the
 // runtime's own controllers. Prototype tests for the LCD console model: each
-// names the proposed gate it measures. Emulator evidence only.
+// names the proposed gate it measures; LC-20 and LC-21 are revision 2's confirmed
+// console change and its swap key. Emulator evidence only.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -476,7 +477,7 @@ function backOnLcd(m) {
   return m.cycles;
 }
 
-test("LC-12 CON TTY with nothing on the serial line, and CON CRT with no key, come back to the LCD after about ten seconds", () => {
+test("LC-20 CON TTY with nothing on the serial line, and CON CRT with no key, come back to the LCD after about ten seconds", () => {
   for (const [line, opts] of [["CON TTY", {}], ["CON CRT", { tms: true }]]) {
     const m = start({ matrix: true, ...opts });
     const t = asked(m, line);
@@ -487,7 +488,7 @@ test("LC-12 CON TTY with nothing on the serial line, and CON CRT with no key, co
   }
 });
 
-test("LC-12 a key on the new console keeps it; a matrix key while serial asks does not", () => {
+test("LC-20 a key on the new console keeps it; a matrix key while serial asks does not", () => {
   const tty = start({ matrix: true });
   asked(tty, "CON TTY");
   tty.type(" ");
@@ -506,7 +507,7 @@ test("LC-12 a key on the new console keeps it; a matrix key while serial asks do
   assert.equal(wrong.read(wrong.sym("CONMOD")), 3);
 });
 
-test("LC-12 a program that writes the IOBYTE's CON field is not asked about it", () => {
+test("LC-20 a program that writes the IOBYTE's CON field is not asked about it", () => {
   // LD A,1 / LD (0003h),A / RET: CON to CRT.
   const m = start({ matrix: true, tms: true, files: { "TOCRT.COM": Uint8Array.from([0x3e, 0x01, 0x32, 0x03, 0x00, 0xc9]) } });
   m.mark = m.output.length;
@@ -526,7 +527,7 @@ function hotkey(m) {
   m.runUntil(() => m.read(kb) === 0xff && m.waitingForInput(), 20_000_000, "their release");
 }
 
-test("LC-13 Fn and Space swap the console between the LCD and the PICO9918, the typed line kept; with no PICO9918 they do nothing", () => {
+test("LC-21 Fn and Space swap the console between the LCD and the PICO9918, the typed line kept; with no PICO9918 they do nothing", () => {
   const m = start({ matrix: true, tms: true });
   m.type("DI");
   until(m, (r) => r[3] === "A>DI", "the echo");
