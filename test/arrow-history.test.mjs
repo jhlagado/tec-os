@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {boot,standardCard,withShell} from './lib/fixtures.mjs';
+import {boot,program,standardCard,volume,withShell} from './lib/fixtures.mjs';
 
 function held(m){
  const first=m.sym(m.videoConsole()?'CINMX':'CINLP');
@@ -61,3 +61,17 @@ test('arrow recall respects the existing line maximum without submitting it',()=
  assert.deepEqual(m.violations,[]);
 });
 
+test('program line input ignores arrows with populated resident shell history',async()=>{
+ const image=withShell(standardCard());
+ volume(image,'A').write('LINE.COM',(await program('line')).bytes);
+ const m=boot(image);
+ m.command('ECHO HISTORY');
+ m.type('LINE\r');
+ m.runUntil(()=>m.read(m.sym('LINMAX'))===20&&m.waitingForInput(),100_000_000,'application input');
+ assert.equal(m.read(m.sym('HFLAG')),0,'prompt history is disabled inside the program');
+ m.type('AB\x1b[A\x1b[BCD');
+ assert.equal(held(m),'ABCD');
+ m.type('\r');m.expect(/A(:\S*)?>$/);
+ m.type('\x1b[A');assert.equal(held(m),'LINE','history resumes at the shell prompt');
+ assert.deepEqual(m.violations,[]);
+});
