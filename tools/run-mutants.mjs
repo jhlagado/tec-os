@@ -3,7 +3,10 @@
 // HEAD by default, built in build/model-mutants/. --slice FROM:TO runs part of
 // the set, for one at a time under the memory guard; --list names them.
 //
-//   node tools/run-mutants.mjs --set KS36B [--landed REV] [--slice FROM:TO] [--list] --out FILE
+//   node tools/run-mutants.mjs --set KS36B [--landed REV] [--slice FROM:TO] [--list] [--out FILE]
+//
+// FILE defaults to build/model-mutants/SET.json. MODEL_JOBS=1 runs one test
+// process at a time. The pinned inputs come from this checkout's .inputs.
 
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -23,7 +26,7 @@ async function main() {
   const [from, to] = (M.arg("--slice") ?? `0:${SET.length}`).split(":").map(Number);
   const t0 = Date.now();
   const got = await sets.mutate(await M.prepared(WORK, "landed", landed), WORK, SET.slice(from, to));
-  writeFileSync(M.arg("--out"), JSON.stringify({ prototype: M.commit(landed), ...got }, null, 2) + "\n");
+  writeFileSync(M.arg("--out", resolve(WORK, `${M.arg("--set", "")}.json`)), JSON.stringify({ prototype: M.commit(landed), ...got }, null, 2) + "\n");
   M.log(`mutants ${got.mutantScore.caught} of ${got.mutantScore.total} caught; done in ${Math.round((Date.now() - t0) / 1000)} s`);
 }
 
