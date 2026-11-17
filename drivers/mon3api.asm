@@ -982,3 +982,19 @@ R18N:
 MREC: DW 0
   DB "MON3    ",1
   DW R18
+
+; GFX: chain MON3GFX.SVC, then MON3.SVC,
+; by function 47. Its warm boot ends the
+; session; the shell runs the two
+; pieces, and the second enters again
+; with the graphics in. A loaded
+; program must be loaded again.
+
+CGFX:
+  ld de,MGFX
+  ld c,26        ; the line as the DMA
+  call BDOS
+  ld c,47        ; chained after a
+  jp BDOS        ; warm boot
+
+MGFX: DB "MON3GFX.SVC!MON3.SVC",0

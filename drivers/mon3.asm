@@ -486,6 +486,8 @@ CMDS:
   DW CGO
   DB "EXIT",0
   DW CEXIT
+  DB "GFX",0
+  DW CGFX
   DB 0
 
 ; Skip spaces at HL. Returns A = the
