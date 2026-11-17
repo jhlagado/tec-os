@@ -85,7 +85,7 @@ CMTTY EQU 0      ; serial terminal
 CMCRT EQU 1      ; PICO + matrix keys
 CMBAT EQU 2      ; serial reader. List
                  ; output discarded
-CMUC1 EQU 3      ; GLCD + matrix keys
+CMUC1 EQU 3      ; LCD/driver + matrix
 
 ; BOOTSTK is the fixed-RAM stack top.
 ; WSBASE is generated so the lower

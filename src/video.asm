@@ -162,13 +162,17 @@ VIDHOOK:
   inc hl
   ld (hl),d
 
-; If this mode is in effect, as UC1 is
-; while the LCD serves it, choose the
-; console again at the next call, so
-; the new table takes it.
+; Registration does not take the LCD.
+; Only a selected registered route
+; needs its vectors copied again.
 
+  ld a,(CONAUX)
+  or a
+  jr z,VIDHRET
   ld a,l
   call VIDHF1
+
+VIDHRET:
   ld hl,LINEBUF
   or a
   ret
@@ -186,6 +190,12 @@ VIDHOFF:
   jr nz,VIDHF1
   ld hl,CONDEV
   res 2,(hl)
+  ld hl,CONAUX
+  ld a,(hl)
+  ld (hl),0      ; removed route: LCD
+  or a
+  ret z          ; LCD already selected
+  ld a,LOW(GLVEC+1)
 
 VIDHF1:
 

@@ -127,6 +127,7 @@ VSTOP: DS 1      ; inclusive scroll rows
 VSBOT: DS 1
 VCLAIM: DS 1     ; CDCLM while claimed
 CONMOD: DS 1     ; effective mode
+CONAUX: DS 1     ; UC1: 0 LCD, 1 driver
 
 ; Warm boot's BIOS stack, outside
 ; CCPCLR..BDOSRME. Cold boot and DIAG

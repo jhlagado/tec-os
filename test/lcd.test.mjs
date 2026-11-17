@@ -265,33 +265,34 @@ test("LC-5 CON LCD and CON LCD 20 select it; CON LCD 40 is refused with nothing 
   assert.equal(m.read(m.sym("CONMOD")), 0);
 });
 
-test("LC-5 CON LCD is refused while GLCD.SVC holds UC1, and UNLOAD gives UC1 back to the LCD", () => {
-  const { rom, symbols } = romFor();
-  const image = standardCard();
-  volume(image, "A").write("GLCD.SVC", GLCD_SVC);
-  volume(image, "A").write("INFO.COM", INFO);
-  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, matrix: true });
-  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
-  m.runUntil(() => m.ready(), 200_000_000, "the first prompt");
-  assert.deepEqual(geometry(m), [20, 4], "the LCD until the driver loads");
+test("LC-5 LCD and UC1 remain selectable with GLCD loaded, and unloading it keeps LCD", () => {
+  const m = start({ matrix: true, glcd: true, files: { "GLCD.SVC": GLCD_SVC, "INFO.COM": INFO } });
   assert.match(m.command("CON UC1"), /CON: UC1:/);
-  assert.deepEqual(geometry(m), [21, 8], "CON UC1 loads the GLCD's driver, as it always has");
-  m.command("INFO");
-  assert.equal(m.read(0x132) & 0x04, 0x04, "the GLCD bit");
-  assert.match(m.command("CON LCD"), /LCD\?/);
+  assert.deepEqual(geometry(m), [20, 4], "UC1 is the LCD alias");
+  assert.equal(m.read(m.sym("GLVEC") + 1), 0, "UC1 loads no driver");
+  assert.match(con(m, "CON GLCD"), /CON: UC1:/);
   assert.deepEqual(geometry(m), [21, 8]);
-  assert.match(m.command("CON GLCD"), /CON: UC1:/);
+  const table = m.read(m.sym("GLVEC")) | m.read(m.sym("GLVEC") + 1) << 8;
+  assert.ok(table !== 0);
+  assert.match(con(m, "CON LCD"), /CON: UC1:/);
+  assert.deepEqual(geometry(m), [20, 4]);
+  assert.equal(m.read(m.sym("GLVEC")) | m.read(m.sym("GLVEC") + 1) << 8, table, "driver still registered");
+  m.command("INFO");
+  assert.equal(m.read(0x132) & 0x04, 0x04, "INFO retains GLCD presence");
   m.command("UNLOAD");
-  assert.deepEqual(geometry(m), [20, 4], "the LCD again");
-  assert.ok(rows(m).includes("A>"));
+  assert.deepEqual(geometry(m), [20, 4]);
+  assert.equal(m.read(m.sym("GLVEC") + 1), 0);
+  assert.equal(m.read(m.sym("CONAUX")), 0);
+  assert.deepEqual(m.violations, []);
 });
 
-test("LC-5 a table a program registers on UC1 under the LCD takes the console at the next call", () => {
+test("LC-5 a program registering UC1 under LCD leaves the selected LCD intact", () => {
   const m = start({ matrix: true, files: { "REG.COM": register(10, 5) } });
   m.command("REG");
   assert.equal(m.read(0x130), 0, "registered");
-  assert.deepEqual(geometry(m), [10, 5], "the table's size");
-  assert.equal(m.read(m.sym("VPUTV")) | (m.read(m.sym("VPUTV") + 1) << 8), 0x8010, "and its routines");
+  assert.equal(m.read(m.sym("GLVEC")) | m.read(m.sym("GLVEC") + 1) << 8, 0x8000);
+  assert.deepEqual(geometry(m), [20, 4], "LCD still selected");
+  assert.equal(m.read(m.sym("CONAUX")), 0);
   assert.equal(m.read(m.sym("CONMOD")), 3);
 });
 
@@ -543,4 +544,21 @@ test("LC-21 Fn and Space swap the console between the LCD and the PICO9918, the 
   hotkey(lcdOnly);
   assert.equal(lcdOnly.read(lcdOnly.sym("CONMOD")), 3);
   assert.deepEqual(rows(lcdOnly), ["A: SYSTEM", "B: WORK", "", "A>"], "nothing typed");
+});
+
+
+test("LC-21 the hotkey cycles LCD, PICO, loaded GLCD and LCD without unloading", () => {
+  const m = start({ matrix: true, tms: true, glcd: true, files: { "GLCD.SVC": GLCD_SVC } });
+  m.command("GLCD.SVC");
+  con(m, "CON LCD");
+  const before = entry(m);
+  hotkey(m);
+  assert.equal(m.read(m.sym("CONMOD")), 1, "PICO");
+  hotkey(m);
+  assert.deepEqual(geometry(m), [21, 8], "GLCD");
+  hotkey(m);
+  assert.deepEqual(geometry(m), [20, 4], "LCD");
+  assert.equal(entry(m), before, "no service removed");
+  assert.ok(m.read(m.sym("GLVEC") + 1) !== 0);
+  assert.deepEqual(m.violations, []);
 });

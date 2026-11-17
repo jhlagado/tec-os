@@ -1,6 +1,6 @@
 ; IOBYTE CON bits select TTY serial I/O,
 ; CRT PICO/matrix, BAT serial input with
-; discarded output or UC1 GLCD/matrix.
+; discarded output or UC1 LCD/driver.
 ; Cold PICO selection requires CDMTX
 ; enable and a successful probe. Loading
 ; GLCD retains active CRT. Console calls
@@ -90,6 +90,14 @@ CONSWN:
   ret
 
 CONSWO:
+  cp CMUC1
+  jr nz,CONSWP
+  ld a,(CONAUX)
+  or a
+  jr z,CONSWL    ; the ROM LCD selected
+  ld a,b
+
+CONSWP:
   add a,LOW(PIVEC)-1
   ld l,a         ; 1: PIVEC, 3: GLVEC
   ld h,HIGH(PIVEC)
@@ -106,6 +114,10 @@ CONSWO:
 
   bit 1,b        ; UC1 is 3, CRT 1
   jr z,CONSWT
+  xor a
+  ld (CONAUX),a  ; absent driver: LCD
+
+CONSWL:
   ld a,(CONDEV)
   rrca           ; CDMTX
   jr nc,CONSWT
@@ -142,6 +154,27 @@ CONSWV:
   ld (ESCST),a
   ld (VCURV),a
   jp VTCLS
+
+; Select UC1's auxiliary route in A:
+; 0 is the ROM LCD, 1 the registered
+; driver. GLVEC stays registered. An
+; active UC1 is reselected lazily.
+; Changes AF and HL. Keeps BC and DE.
+
+CONASEL:
+  ld hl,CONAUX
+  cp (hl)
+  jr z,CONARET
+  ld (hl),a
+  ld hl,CONMOD
+  ld a,(hl)
+  cp CMUC1
+  jr nz,CONARET
+  ld (hl),0
+
+CONARET:
+  or a           ; successful selection
+  ret
 
 ; Return BCONST's ready FFh/NZ. If none
 ; is ready, show the video cursor where

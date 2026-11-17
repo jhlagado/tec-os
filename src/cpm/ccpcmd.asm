@@ -85,12 +85,14 @@ CONCMP:
 CONMAT:
   pop af         ; discard saved pointer
   ld a,b
-  cp 5
-  jr c,CONHIT    ; modes, and the LCD
-  add a,a
-  cpl
-  add a,14       ; 13-2B: aliases
-  ld b,a         ; selected mode
+  cp CMUC1
+  jr nz,CONMA1
+  inc b          ; UC1 names the LCD
+
+CONMA1:
+  cp 6
+  jr nz,CONHIT   ; GLCD stays distinct
+  ld b,CMCRT     ; PICO alias
 
 CONHIT:
   ld a,(hl)
@@ -185,64 +187,54 @@ CONWD:
 
 CONNW:
   call ENDCHK    ; name-only suffix
+  ld a,b
+  cp 5           ; explicit GLCD
+  jr z,CONGLCD
   bit 2,b
   jr z,CONFL
   ld c,0         ; the LCD, no width
 
-; CON LCD: UC1 must be a four-row LCD,
-; the ROM's own console or a loaded
-; driver's table. C is the width asked
-; for, 0 for none, and it must be that
-; panel's columns. Otherwise BADCMD with
-; nothing changed. No driver is loaded.
+; CON LCD and CON UC1 select the ROM
+; LCD without changing GLVEC. C is the
+; width asked for, or 0 for none. A
+; different width fails before effects.
 
 CONLCD:
-  ld hl,(GLVEC)
-  ld a,h
-  or l
-  jr nz,CONLT    ; a loaded driver's
-  ld hl,LCVTAB   ; none: the ROM's
-
-CONLT:
-  ld de,14       ; columns, then rows
-  add hl,de
+  ld hl,LCVTAB+14
   ld a,c
   or a
-  jr z,CONLR     ; no width asked
+  jr z,CONLOK    ; width omitted
   cp (hl)
-  jr nz,CONLB    ; not this panel's
-
-CONLR:
-  inc hl
-  ld a,(hl)
-  cp 4
-  jr z,CONLOK    ; UC1 is an LCD
+  jr z,CONLOK
 
 CONLB:
   jp BADCMD      ; the later refusals
 
 CONLOK:
+  xor a
+  call CONASEL   ; keep GLVEC registered
   ld b,CMUC1
   call CONFLD
   jr CONSHOW
 
-; Select B through CONFLD. UC1 calls
-; GLCLD to reuse/load a driver, with
-; C=0 for the name GLCD. The field is
-; written first, so that a driver loaded
-; by a startup line finds UC1 asked for.
-; After a failure GLCLD copies the
-; then-current CONMOD back into the CON
-; bits. CONHDR output triggers routing.
-; Report resulting CONMOD and enter
-; MAINLOOP. Cold PISTART skips PIVEC
-; setup when CDMTX is clear.
+; Plain modes set the CON field. Only
+; the explicit GLCD name loads or
+; selects its driver. Set UC1 first so
+; its INIT sees the requested mode.
+; A failed load restores that field.
 
 CONFL:
-  call CONFLD    ; write requested mode
-  ld a,b
-  cp CMUC1       ; UC1 wants a display
-  call z,GLCLD   ; load/reuse driver
+  call CONFLD
+  jr CONSHOW
+
+CONGLCD:
+  ld b,CMUC1
+  call CONFLD
+  ld c,0
+  call GLCLD
+  jr c,CONSHOW
+  ld a,1
+  call CONASEL
 
 CONSHOW:
   call CONREP    ; output triggers route

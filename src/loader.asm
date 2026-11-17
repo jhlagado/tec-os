@@ -943,6 +943,8 @@ SVCGO:
   set 2,(hl)     ; CDGLC
 
 SVCG1:
+  ld a,1
+  call CONASEL   ; direct load selects it
   ld b,CMUC1     ; UC1 console mode
   ld a,(CONMOD)  ; keep active PICO
   dec a          ; CMCRT is 1

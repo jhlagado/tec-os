@@ -139,32 +139,66 @@ KBNONE:
   xor a          ; Z: no character
   ret
 
-; Fn+Space: the console to the other
-; matrix display, the LCD's or GLCD's
-; UC1 and the PICO9918's CRT, at once.
-; No PICO9918, or a program's claim on
-; it: nothing. Serial is not in the
-; swap. The key is not delivered.
+; Fn+Space cycles the available matrix
+; displays: LCD, PICO, loaded GLCD,
+; then LCD. A PICO claim skips it as a
+; destination. Serial is not scanned.
+; The key is consumed.
 
 KBSWAP:
+  ld a,(CONMOD)
+  rrca
+  jr nc,KBNONE   ; serial excluded
+  ld a,(CONMOD)
+  cp CMCRT
+  jr z,KBSGLC
+  ld a,(CONAUX)
+  or a
+  jr nz,KBSLCD   ; GLCD to LCD
   ld a,(VCLAIM)
   or a
-  jr nz,KBNONE   ; the PICO9918 claimed
-  ld a,(CONMOD)
-  xor 2          ; UC1 and CRT swap
-  cp CMCRT
-  jr nz,KBSW1    ; to UC1: always there
-  ld hl,PIVEC+1
-  inc (hl)
-  dec (hl)       ; Z: no PICO9918
-  jr z,KBNONE
+  jr nz,KBSGLC
+  ld a,(PIVEC+1)
+  or a
+  jr z,KBSGLC
+  ld b,CMCRT
+  jr KBSSET
 
-KBSW1:
+KBSGLC:
+  ld a,(CONDEV)
+  and CDGLC
+  jr z,KBSLCD
+  ld a,(GLVEC+1)
+  or a
+  jr z,KBSLCD
+  ld a,1
+  jr KBSAUX
+
+KBSLCD:
+  ld a,(CONMOD)
+  cp CMUC1
+  jr nz,KBSLC1
+  ld a,(CONAUX)
+  or a
+  jr z,KBNONE    ; LCD alone: unchanged
+
+KBSLC1:
+  xor a
+
+KBSAUX:
   push af
-  call CURHIDE   ; off the old screen
-  pop bc
-  call CONFLD    ; B: the CON field
-  call CONSEL    ; the new screen now
+  call CURHIDE
+  pop af
+  call CONASEL
+  ld b,CMUC1
+  jr KBSSEL
+
+KBSSET:
+  call CURHIDE   ; keeps B
+
+KBSSEL:
+  call CONFLD
+  call CONSEL
   call CURSHOW
   jr KBNONE
 
