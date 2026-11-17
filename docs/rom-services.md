@@ -174,13 +174,19 @@ A program using extra stack state sets up its own stack first. The routines
 run with the caller's interrupt state; an interrupt handler must not print
 through the console.
 
-A table of four rows is taken to be a character LCD's. While it is the console
-the ROM writes no banner, drive label or status word to the LCD, the `LCD`
-service (2) returns `TNENODV` with nothing written, and `CON LCD` selects it. A
-display of four rows that is not the LCD must not register as four.
+While the ROM LCD route is active, the ROM writes no banner, drive label or
+status word to it. The `LCD` service (2) returns `TNENODV` without writing.
+Active identity uses the UC1 mode and ROM LCD auxiliary selection, rather
+than row count. A registered four-row terminal remains a separate device.
+`CON LCD` selects the ROM LCD profile independently of the registered table.
+`CON UC1` selects the registered table when one exists, otherwise ROM LCD.
+It does not load a driver.
 
-A table registered while `UC1:` is the mode in effect takes the console at the
-next console call.
+Registration leaves an explicitly selected ROM LCD in use. The auxiliary
+selector is separate from GLVEC. A selected registered-driver route is
+reselected when its table changes. Removing that driver returns UC1 to LCD
+and invalidates the saved transaction identity. A later installation at the
+same address cannot be mistaken for the former driver.
 
 `TNDRVR` returns `LINEBUF`'s address in HL, where the row routines read and write a
 row, with A = 0 and carry clear. It returns `TNEBAD` with carry and nothing changed for

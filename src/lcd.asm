@@ -6,13 +6,16 @@
 ; status writers and the raw-row service
 ; leave it alone.
 
-; Z while the LCD is the console: only
-; its console has four rows. A=VHGT.
-; Keeps BC, DE and HL.
+; Z only for the active ROM LCD route.
+; A registered driver may have any row
+; count. Keeps BC, DE and HL.
 
 LCDCON:
-  ld a,(VHGT)
-  cp 4
+  ld a,(CONMOD)
+  cp CMUC1
+  ret nz
+  ld a,(CONAUX)
+  or a
   ret
 
 ; Console restore: the panel's width,

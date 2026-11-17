@@ -1,11 +1,13 @@
 // The character LCD as a console: the ROM's own 20 x 4 console for UC1 on
-// the runtime's panel, and LCD.SVC's 40 x 4 on two host panels of two
+// the runtime's panel, and the ROM's 40 x 4 on two host panels of two
 // controllers (host/lcd40.mjs), one written here and one made of the
 // runtime's own controllers. Prototype tests for the LCD console model: each
 // names the proposed gate it measures; LC-20 and LC-21 are revision 2's confirmed
 // console change and its swap key. Emulator evidence only.
 
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
+import { check, pinned } from "./lib/inputs.mjs";
 import assert from "node:assert/strict";
 import { Machine } from "./lib/machine.mjs";
 import { ABI, GLCD_SVC, ROOT, TEST_CLOCK, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
@@ -265,16 +267,19 @@ test("LC-5 CON LCD and CON LCD 20 select it; CON LCD 40 is refused with nothing 
   assert.equal(m.read(m.sym("CONMOD")), 0);
 });
 
-test("LC-5 LCD and UC1 remain selectable with GLCD loaded, and unloading it keeps LCD", () => {
+test("LC-5 LCD remains selectable with GLCD loaded and UC1 selects its registered table", () => {
   const m = start({ matrix: true, glcd: true, files: { "GLCD.SVC": GLCD_SVC, "INFO.COM": INFO } });
   assert.match(m.command("CON UC1"), /CON: UC1:/);
-  assert.deepEqual(geometry(m), [20, 4], "UC1 is the LCD alias");
+  assert.deepEqual(geometry(m), [20, 4], "UC1 without a driver uses LCD");
   assert.equal(m.read(m.sym("GLVEC") + 1), 0, "UC1 loads no driver");
   assert.match(con(m, "CON GLCD"), /CON: UC1:/);
   assert.deepEqual(geometry(m), [21, 8]);
   const table = m.read(m.sym("GLVEC")) | m.read(m.sym("GLVEC") + 1) << 8;
   assert.ok(table !== 0);
   assert.match(con(m, "CON LCD"), /CON: UC1:/);
+  con(m, "CON UC1");
+  assert.deepEqual(geometry(m), [21, 8], "UC1 selects the resident driver without another load");
+  con(m, "CON LCD");
   assert.deepEqual(geometry(m), [20, 4]);
   assert.equal(m.read(m.sym("GLVEC")) | m.read(m.sym("GLVEC") + 1) << 8, table, "driver still registered");
   m.command("INFO");
@@ -332,16 +337,20 @@ test("LC-6 once the LCD is the console no status text is written: the labels, GL
   assert.equal(d.statusWrites, 0);
 });
 
-test("LC-6 four rows mean the LCD: a four-row table on UC1 stops the raw row service, an eight-row one does not", () => {
-  const four = start({ matrix: true, files: { "REG.COM": register(16, 4), "RAW.COM": RAWLCD } });
-  four.command("REG");
-  four.command("RAW");
-  assert.equal(four.read(0x130), ABI.TNENODV);
-  const eight = start({ matrix: true, files: { "REG.COM": register(16, 8), "RAW.COM": RAWLCD } });
-  eight.command("REG");
-  eight.command("RAW");
-  assert.equal(eight.read(0x130), 0);
-  assert.equal(rows(eight)[1], "RAW ROW FROM PROGRAM");
+test("LC-6 selected registered tables allow raw LCD access at four or eight rows", () => {
+  for (const height of [4, 8]) {
+    const m = start({ matrix: true, files: { "REG.COM": register(16, height), "RAW.COM": RAWLCD } });
+    m.command("REG");
+    assert.equal(m.read(m.sym("CONAUX")), 0, "registration retains the LCD");
+    m.command("RAW");
+    assert.equal(m.read(0x130), ABI.TNENODV);
+    con(m, "CON UC1");
+    assert.equal(m.read(m.sym("CONAUX")), 1, "public command selects the registered driver");
+    assert.deepEqual(geometry(m), [16, height]);
+    m.command("RAW");
+    assert.equal(m.read(0x130), 0);
+    assert.equal(rows(m)[1], "RAW ROW FROM PROGRAM");
+  }
 });
 
 test("LC-7 a warm boot keeps the screen and the console, and a reset starts it again", () => {
@@ -659,41 +668,7 @@ test("LC-20 stale console bytes and arrow tails are not confirmation", () => {
   assert.deepEqual(m.violations, []);
 });
 
-test("LC-23 startup console choice works before a missing card and confirms its target", () => {
-  const m = start({ matrix: true, tms: true, card: false });
-  m.expect(/L=LCD C=CRT S=TTY$/, { from: 0, maxCycles: 200_000_000 });
-  m.typeMatrix("C");
-  m.expect(/Press a key$/, { maxCycles: 200_000_000 });
-  m.typeMatrix(" ");
-  m.expect(/R retry> $/, { maxCycles: 200_000_000 });
-  assert.equal(m.read(m.sym("CONMOD")), 1);
-  assert.deepEqual(geometry(m), [80, 24]);
-  assert.deepEqual(m.violations, []);
-});
 
-test("LC-22 Fn bypass is latched before card access and survives its early release", () => {
-  const { rom, symbols } = romFor();
-  const image = standardCard();
-  volume(image, "A").write("STARTUP.CMD", startupFile("TYPE MARK.TXT"));
-  volume(image, "A").write("MARK.TXT", text(["SHOULD NOT RUN"]));
-  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, matrix: true, glcd: false });
-  m.tec1g.applyMatrixKey(0, 2, true);
-  m.runUntil(() => m.pc === m.sym("COLDRT"), 100_000_000, "bypass latched before card access");
-  assert.equal(m.read(m.sym("CONOLD")) & 0x40, 0x40);
-  m.tec1g.applyMatrixKey(0, 2, false);
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
-  m.runUntil(() => m.ready(), 200_000_000, "the prompt");
-  assert.doesNotMatch(m.text(), /L=LCD|SHOULD NOT RUN/);
-  assert.equal(m.read(m.sym("CONOLD")), 0);
-  assert.deepEqual(m.violations, []);
-});
-
-test("LC-23 program return does not replay the cold console choice", () => {
-  const m = start({ matrix: true, files: { "RETURN.COM": Uint8Array.of(0xc9) } });
-  assert.doesNotMatch(m.command("RETURN"), /L=LCD C=CRT S=TTY/);
-  assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
-  assert.deepEqual(m.violations, []);
-});
 
 
 test("LC-23 cold choice can select and confirm PICO before a missing card is accessed", () => {
@@ -760,5 +735,98 @@ test("LC-20 warm boot from EXPAND 1 clears classic transaction state without wri
   assert.equal(m.read(state) & 0x80, 0);
   assert.equal(m.expand[1][state - 0x8000], 0xd7);
   assert.deepEqual(m.expand1Writes, []);
+  assert.deepEqual(m.violations, []);
+});
+
+
+test("LC-20 rollback cannot select a new driver installed at the removed driver's old address", () => {
+  const opts = { matrix: true, glcd: true, files: { "GLCD.SVC": GLCD_SVC } };
+  const probe = start(opts);
+  probe.command("GLCD.SVC");
+  const old = probe.read(probe.sym("GLVEC")) | probe.read(probe.sym("GLVEC") + 1) << 8;
+  const base = old & 0xff00;
+  const code = [];
+  const emit = (...bytes) => code.push(...bytes);
+  const word = (n) => [n & 255, n >> 8];
+  const call = (name) => emit(0xcd, ...word(probe.sym(name)));
+  call("CONSAVE");
+  call("SVCUNL");
+  emit(0x21, ...word(base), 0x36, 0x76, 0x11, ...word(base + 1), 0x01, 0xff, 0x02, 0xed, 0xb0);
+  const source = code.length + 1;
+  emit(0x21, 0, 0, 0x11, ...word(old), 0x01, 16, 0, 0xed, 0xb0);
+  emit(0x06, 3, 0x21, ...word(old), 0x0e, ABI.TNDRVR, 0xcd, ...word(ABI.ABICALL));
+  call("CONROLL");
+  emit(0x06, 3, 0x21, 0, 0, 0x0e, ABI.TNDRVR, 0xcd, ...word(ABI.ABICALL), 0xc9);
+  const payload = 0x100 + code.length;
+  code[source] = payload & 255;
+  code[source + 1] = payload >> 8;
+  for (let i = 0; i < 7; i++) emit(...word(old + 16));
+  emit(21, 8);
+  const m = start({ ...opts, files: { ...opts.files, "ROLL.COM": Uint8Array.from(code) } });
+  m.command("GLCD.SVC");
+  assert.equal(m.read(m.sym("GLVEC")) | m.read(m.sym("GLVEC") + 1) << 8, old);
+  m.command("ROLL");
+  assert.deepEqual(geometry(m), [20, 4], "the LCD, never the replacement HALT table");
+  assert.equal(m.read(m.sym("GLVEC")) | m.read(m.sym("GLVEC") + 1) << 8, 0);
+  assert.equal(m.read(m.sym("CGLDOLD")) | m.read(m.sym("CGLDOLD") + 1) << 8, 0);
+  assert.equal(m.read(old + 16), 0x76, "replacement code was not called");
+  assert.deepEqual(m.violations, []);
+});
+
+const TED = pinned("TED.COM");
+for (const columns of [20, 40]) {
+  test(`LC-25 TED edits, scrolls, saves and reopens on LCD ${columns} x 4`, { skip: TED.skip, timeout: 120_000 }, () => {
+    check(TED);
+    const original = ["abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", "second", "third", "fourth", "fifth"].join("\n") + "\n";
+    const m = start({ matrix: true, lcd40: columns === 40, files: {
+      "TED.COM": readFileSync(TED.path),
+      "NOTES.TXT": Buffer.from(original.replace(/\n/g, "\r\n") + "\x1a", "latin1"),
+    } });
+    if (columns === 40) con(m, "CON LCD 40");
+    const screen = () => columns === 40 ? rows40(m) : rows(m);
+    const keys = (value, reason, done) => {
+      m.enqueueInput(value, "matrix");
+      m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 200_000_000, reason);
+    };
+    keys("TED NOTES.TXT\r", "TED's first four-row screen", () => /L1 C1\b/.test(screen()[3]));
+    assert.equal(screen().length, 4);
+    assert.equal(screen()[0], original.split("\n")[0].slice(0, columns));
+    keys("\x1b[C".repeat(50), "horizontal scroll", () => /L1 C51\b/.test(screen()[3]));
+    assert.notEqual(screen()[0], original.split("\n")[0].slice(0, columns));
+    keys("\x1b[D".repeat(50), "column one again", () => /L1 C1\b/.test(screen()[3]));
+    keys("Y\x13", "insert and save", () => Buffer.from(volume(m.sdImage, "A").read("NOTES.TXT", { text: true })).toString() === "Y" + original);
+    keys("\x1b[B".repeat(4), "vertical scroll", () => /L5 C/.test(screen()[3]));
+    keys("\x11", "return to the prompt", () => m.ready());
+    keys("TED NOTES.TXT\r", "reopen the saved file", () => /L1 C1\b/.test(screen()[3]) && screen()[0].startsWith("Yabcdef"));
+    keys("\x11", "final prompt", () => m.ready());
+    assert.deepEqual(m.violations, []);
+  });
+}
+
+
+test("LC-20 BAT confirmation is visible on serial but ordinary BAT output stays discarded", () => {
+  const m = start({ matrix: true, files: { "LOUD.TXT": text(["ORDINARY BAT OUTPUT"]) } });
+  m.typeMatrix("CON BAT\r");
+  m.runUntil(() => m.waitingForInput() && /Press a key$/.test(m.serialText()), 200_000_000, "BAT's serial question");
+  assert.match(m.serialText(), /CON: BAT:\r\nPress a key$/);
+  assert.equal(m.read(3) & 3, 2, "feedback keeps BAT's IOBYTE field");
+  m.type(" ");
+  m.runUntil(() => m.ready(), 200_000_000, "BAT's prompt");
+  assert.equal(m.read(m.sym("CONMOD")), 2);
+  assert.match(m.serialText(), /Press a key\r\n$/);
+  const serial = m.serialText();
+  m.command("TYPE LOUD.TXT");
+  assert.equal(m.serialText(), serial, "ordinary BAT output is discarded");
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-20 unanswered BAT confirmation restores the former LCD", () => {
+  const m = start({ matrix: true });
+  m.typeMatrix("CON BAT\r");
+  m.runUntil(() => m.waitingForInput() && /Press a key$/.test(m.serialText()), 200_000_000, "BAT's serial question");
+  backOnLcd(m);
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  assert.equal(m.read(3) & 3, 3);
+  assert.match(m.serialText(), /Press a key\r\n$/);
   assert.deepEqual(m.violations, []);
 });

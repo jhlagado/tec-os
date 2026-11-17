@@ -1,45 +1,104 @@
 # Console
 
-The console is one device at a time, chosen by the CP/M IOBYTE's `CON:`
-field at `0003h`:
+The LCD console changes in this branch are a prototype awaiting the combined
+build and emulator qualification. Physical LCD readback, timing and the future
+controller wiring still require board checks.
 
-| IOBYTE CON: | Device | Keys from | Output to | Size, from `INFO` (`L` × `H`) |
-| --- | --- | --- | --- | --- |
-| `TTY:` (0) | Serial terminal | Serial | Serial | 0 × 0 (programs assume 80 × 24) |
-| `CRT:` (1) | PICO9918 | Matrix keyboard | PICO9918 | 80, 40 or 32 × 24, by `CON` |
-| `BAT:` (2) | CP/M batch | Reader (serial) | List (discarded) | 0 × 0 |
-| `UC1:` (3) | GLCD | Matrix keyboard | GLCD | 21 × 8 |
+The console is selected through the CP/M IOBYTE CON field at `0003h`.
+UC1 has a separate auxiliary selection for the ROM LCD or a registered driver.
+Selecting the LCD leaves the GLCD driver resident and registered.
 
-A reset starts on `CRT:` when the PICO9918 answers and the matrix keyboard
-is fitted, and on `TTY:` otherwise. `GLCD.SVC`'s load takes the console unless
-`CRT:` is in effect.
-The CCP's `CON` command shows the console in use; `CON TTY`, `CON CRT`,
-`CON BAT` and `CON UC1` (a colon may follow), or `CON PICO` for `CRT:` and
-`CON GLCD` for `UC1:`, change it, as `STAT CON:=CRT:` or any program writing
-the IOBYTE does. After `CRT` or `PICO` a width, 80, 40 or 32, sets the
-PICO9918's columns through the ROM's console table (`PICOWID`, version 3 of
-the "PICO" record); warm boot keeps the width and a reset sets 40. Any other
-width, a width after another name, or no PICO9918 console, and the command is
-refused with nothing changed; but a line from `STARTUP.CMD` on a board with no
-PICO9918 console passes quietly, as a service's line for an absent device
-does, and a `:` line after it runs. The BIOS acts on a change at the
-next console call: it clears and homes the new screen. `CRT:` without the
-PICO9918, or either display's mode without the matrix keyboard, falls back to
-the serial terminal. `UC1:` with no driver loaded is the 20 × 4 LCD with the
-matrix keyboard: a reset with the Matrix switch on and no PICO9918 starts
-there, after sending the banner to the serial line, and then the serial line
-is not read. The Matrix switch off at a reset always gives the serial
-console.
-
-| Device | Direction | Present when | Status |
+| IOBYTE CON | Device | Keyboard | Size from INFO |
 | --- | --- | --- | --- |
-| FTDI serial, 4800 8N2 | in, out | always | Implemented |
-| Matrix keyboard | in | the board's Matrix configuration switch (port 03h bit 0) is on | Implemented |
-| PICO9918, 80 × 24 text (TEXT80) | out | the card answers at ports BEh/BFh and the matrix keyboard is fitted | Implemented |
-| PICO9918, 40 × 24 text | out | as above, `CON PICO 40` | Implemented |
-| PICO9918, 32 × 24 Graphics I | out | as above, `CON PICO 32` | Implemented |
-| ST7920 GLCD, 128 × 64 as 21 × 8 | out | the controller's busy flag clears | Implemented |
-| HD44780 LCD, 20 × 4 | status only | always | Banner and mounted drives at cold boot; not a console device |
+| TTY (0) | Serial terminal | Serial | 0 × 0 |
+| CRT (1) | PICO9918 | Matrix | 80, 40 or 32 × 24 |
+| BAT (2) | Serial reader, discarded output | Serial | 0 × 0 |
+| UC1 (3), LCD selected | Character LCD | Matrix | 20 × 4, or configured 40 × 4 |
+| UC1 (3), GLCD selected | Registered GLCD driver | Matrix | 21 × 8 |
+
+A reset with the Matrix switch on starts on the LCD even when PICO9918 is
+present. The serial line receives the banner. Before card access the LCD shows
+`L=LCD C=CRT S=TTY`. L or an unanswered choice keeps LCD. C requests PICO
+and S requests serial. A missing PICO leaves LCD selected. Fn or a keypad key
+held through reset skips the choice and STARTUP.CMD. The bypass is latched
+before mounting, so releasing the key during card access does not run the script.
+The Matrix switch off at reset starts on serial.
+
+CON reports the effective IOBYTE mode. The selection forms are:
+
+| Command | Effect |
+| --- | --- |
+| CON LCD | Select the ROM LCD and retain its profile |
+| CON UC1 | Select a registered auxiliary table, otherwise ROM LCD. Load no file |
+| CON LCD 20 | Select the original 20-column profile |
+| CON LCD 40 | Probe the experimental second controller, then select 40 columns if both controllers are independent |
+| CON GLCD | Load or reuse GLCD.SVC and select its registered table |
+| CON CRT or CON PICO | Select PICO at its retained width |
+| CON PICO 80, 40 or 32 | Select PICO at that width |
+| CON TTY | Select serial input and output |
+| CON BAT | Select serial input with ordinary output discarded |
+
+BAT confirmation feedback goes temporarily to serial. Its ordinary output
+remains discarded and its IOBYTE field stays BAT.
+
+A colon may follow a console name. A typed CON or STARTUP.CMD selection that
+changes the device or width displays `Press a key` on the target. A fresh key
+from its keyboard keeps the change. An unanswered question restores the
+previous device, PICO width and LCD profile. The intended interval is about
+ten seconds at 4 MHz and remains subject to timing qualification. The former
+screen is restored and cleared. No previous bitmap is retained.
+
+The command's Enter key, buffered characters and arrow tails cannot confirm.
+Serial confirmation begins after the question finishes transmitting and after
+an idle interval. NULs, bad frames and a low line use the same finite budget.
+An identical selection and a report-only CON need no question. Invalid syntax,
+invalid width, unavailable PICO and a held PICO claim leave the route intact.
+A failed GLCD load restores the former route.
+
+Programs writing IOBYTE retain the immediate interface. The next console call
+applies its CON field without a question or a driver load. UC1 uses the retained
+auxiliary selection. CRT with no available PICO, or UC1 without the matrix
+keyboard, falls back to serial. The other six IOBYTE bits are preserved.
+
+Fn+Space cycles LCD, available PICO and loaded GLCD, then returns to LCD.
+A claimed PICO is skipped as a destination. The key is consumed and the partial
+command line is retained. Control-R redraws that line on the newly cleared
+screen. Serial is excluded from this cycle and matrix scanning is not added
+to its input path. The hotkey works while the OS polls the matrix keyboard.
+A program retaining the CPU or reading raw ports cannot be interrupted this way.
+
+| Device | Direction | Availability |
+| --- | --- | --- |
+| FTDI serial, 4800 8N2 | input and output | Always |
+| Matrix keyboard | input | Matrix switch, port 03h bit 0 |
+| PICO9918 text and Graphics I | output | Controller at BEh/BFh and matrix keyboard |
+| ST7920 GLCD, 21 × 8 | output | GLCD.SVC installed and controller ready |
+| HD44780 LCD, 20 × 4 | output | Original panel at 04h/84h |
+| HD44780 LCD, 40 × 4 | output | Explicit experimental profile, two independent controllers |
+
+## LCD profiles
+
+Both profiles have four rows. Reset always uses 20 columns and never probes
+or writes the second-controller ports. CON LCD 40 explicitly permits probing
+0Ch and 8Ch. That pair is board-unqualified and requires matching hardware
+decode. A failed proof prints `LCD40?` on the previous console without
+publishing 40-column geometry. A successful request still needs confirmation.
+CON LCD 20 returns to the first controller and turns off the second cursor.
+An omitted width retains the selected profile. Warm boot retains it and reset
+returns to 20 columns before processing startup commands again.
+
+On a physical 40-column module, the 20-column recovery profile can occupy two
+physical rows as four logical rows. It is not a four-row window on that panel.
+Scrolling reads the panel's display memory into LINEBUF and writes rows back.
+It therefore needs data-port readback to work on the board. Status writers
+and TNLCD leave an active LCD console alone. TNLCD retains its twenty-byte
+raw-row interface when the console is elsewhere.
+
+The LCD uses its hardware character set, plain text in place of reverse video
+and a hardware cursor. Under the shell the pager displays three text rows
+before `[more]`. The 20-column directory row contains a contiguous filename
+and its size. Long summaries wrap. Programs requiring more rows or graphics
+need another display.
 
 ## Video terminal
 
@@ -99,45 +158,35 @@ answers at ports BEh/BFh. The terminal reaches the display in use through a
 table of its routines, so another display needs only those routines.
 `docs/services.md` has the rules.
 
-The PICO9918's console is in the ROM, at 80 columns, 40, or 32 in Graphics I
-(KS39). When the VDP answers and the matrix keyboard is fitted, cold boot starts
-it before the banner at 40 columns and sets `CON:` to `CRT:`: the banner, the
-volume list, DIAG's `R retry>` prompt if the card won't mount, and the prompt all
-appear on its screen, with no file needed. Its table, its "PICO" record and its
-state are one 95-byte RAM block, `PIBLK`, in the BIOS's state, so it costs no TPA
-pages. With no matrix keyboard the console stays on serial, and the VDP stays
-unprogrammed until a program claims it. A terminal user on a PICO9918 board takes
-the console with `CON TTY`, or from cold boot with the Matrix switch off. Warm boot
-restores the mode of the display in use (see [compatibility.md](compatibility.md)).
+The PICO9918 console is in ROM and supports 80-column and 40-column text,
+plus 32-column Graphics I. Cold boot prepares its table at 40 columns when
+the VDP and matrix keyboard are present. The LCD remains selected until the
+user chooses PICO. Its table, registry record and state occupy the BIOS's
+95-byte PIBLK. With the matrix switch off the console remains serial and no
+PICO console table is installed. Warm boot restores the selected display.
 
 ## GLCD
 
-The GLCD console is a driver, `GLCD.SVC` on the starter card, not part of
-the ROM. Its code and its screen text take three pages just below the BDOS
-entry, so on a board that loads it `(0006h)` is three pages under the stub's page;
-a board without a GLCD loses nothing. Its INIT hands the terminal its six video
-routines through `TNDRVR`, a service of the table at `C003h`, and the terminal calls them directly, on the
-caller's stack (see [rom-services.md](rom-services.md)). On a board with a GLCD, the matrix
-keyboard and no PICO9918 console, cold boot shows its banner and volumes on the
-serial terminal and the 20 × 4 LCD, and a `STARTUP.CMD` line naming
-`GLCD.SVC` installs it and makes the GLCD the console; with no such line the
-console stays serial, and the matrix keyboard isn't read. `CON UC1:` loads it
-too, and shows `GLCD?` on the LCD if it can't, which a display taking over clears. On a board with both displays
-the line passes over it quietly while `CON:` is `CRT:`, which keeps the
-console, so it takes none of the services' stack room (KE-200), and `CON UC1:`
-then loads it and switches to it. Typed while `CRT:` is in effect, it loads and
-gives way; loaded after `CON TTY`, it takes the console. A board without a GLCD refuses it,
-quietly from `STARTUP.CMD`, and one without a matrix keyboard refuses it with
-`GLCD.SVC?`, leaving nothing behind. Warm boot keeps it; `UNLOAD`, when it is the lowest
-resident, removes it, and the console goes back to `CRT:` if the "PICO" record is
-present and to serial if not.
+The GLCD console is GLCD.SVC, a resident driver occupying three pages below
+the BDOS entry. A direct load selects GLCD unless CRT is active. A startup
+GLCD.SVC line while CRT is active is skipped quietly. CON GLCD explicitly
+loads or reuses the driver and requests its selection. CON UC1 selects an
+already registered auxiliary table, or ROM LCD when no table exists. It
+loads no file.
+
+TNDRVR registers the UC1 table independently of LCD selection. Registration
+alone does not take an explicitly selected LCD. Removing the active driver
+returns UC1 to LCD. Removing it while LCD is selected keeps LCD selected.
+A saved console transaction identifies the former live installation. Dropping
+that driver invalidates the identity, so rollback cannot call reclaimed code
+or select another installation merely because it reused the address.
 
 The ST7920 runs in its extended instruction set with graphics on. The
 driver keeps the 168 characters on screen and draws each 16-pixel graphics
 word by composing the glyph rows of the two to four 6-pixel cells that
 overlap it, so no 1 KiB pixel buffer is needed. Writing a character redraws
-the words its cell touches; scrolling moves the text and redraws each row,
-about 0.25 s at 4 MHz. Every access waits for the busy flag, bounded at 256 polls;
+the words its cell touches. Scrolling moves the text and redraws each row.
+Every access waits for the busy flag, bounded at 256 polls;
 a byte the controller is not ready for by then is dropped, not sent.
 
 Under `SHELL.SVC`, `TYPE` and `DIR` use the display size, from `TNINFO`, to pause
@@ -170,7 +219,9 @@ There is no interrupt or receive buffer. On the serial terminal TEC-OS polls
 the serial line continuously while waiting for input; a start bit is seen at
 most 38 T-states late, and the receiver allows for half of that. On `CRT:`
 and `UC1:` it scans the matrix keyboard and does not poll the serial line.
-Input typed while a program is busy and not polling is lost.
+Input typed while a program is busy and not polling is lost. Console
+confirmation uses a separate bounded receiver so an endless NUL stream
+cannot suspend its timeout.
 
 The cold PICO9918 working width is 40. Explicit 32/40/80 selection and warm width preservation remain supported. Bare CON CRT/PICO retains the selected width.
 

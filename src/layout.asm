@@ -120,8 +120,8 @@ BIOSSTN EQU 48
 MAXDRV EQU 4     ; drives A-D
 
 ; CON's wait for a key on a new console:
-; polls, and a matrix poll's padding in
-; 13-T loops. Set from measured times.
+; finite slots and matrix padding in
+; 13-T loops. Timing probes set them.
 
 KWPOLL EQU 12080
 KWPAD EQU 50

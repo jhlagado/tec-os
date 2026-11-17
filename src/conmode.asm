@@ -84,11 +84,11 @@ CONASK:
   call CONDIFF
   ret z
   ld hl,PRESSK
-  call PUTS
+  call CONTXT
   ld hl,KWPOLL
   call KEYWT
   push af
-  call PUTCRLF
+  call CONCRLF
   pop af
   ret nz
   call CONROLL
@@ -164,8 +164,9 @@ CONTEND:
 ; before BDOS initialisation as well.
 
 CONREP:
+  call CONSEL
   ld hl,CONHDR
-  call PUTS
+  call CONTXT
   ld a,(CONMOD)
   add a,a
   add a,a
@@ -179,12 +180,44 @@ CONSH1:
   push bc
   push hl
   ld a,(hl)
-  call PUTA
+  call CONPUT
   pop hl
   pop bc
   inc hl
   djnz CONSH1
-  jp PUTCRLF
+  jp CONCRLF
+
+; Transaction feedback is visible on
+; serial even when BAT discards normal
+; output. Keep IOBYTE and BAT routing.
+; Changes AF, BC, DE and HL.
+
+CONTXT:
+  ld a,(hl)
+  or a
+  ret z
+  push hl
+  call CONPUT
+  pop hl
+  inc hl
+  jr CONTXT
+
+CONCRLF:
+  ld a,13
+  call CONPUT
+  ld a,10
+
+CONPUT:
+  push af
+  ld a,(CONMOD)
+  cp CMBAT
+  jr nz,CONPUT1
+  pop af
+  jp TXBYTE
+
+CONPUT1:
+  pop af
+  jp PUTA
 
 ; Wait a finite processor-work budget
 ; for a fresh key on the selected
@@ -195,7 +228,7 @@ CONSH1:
 ; No housekeeping or route change runs
 ; inside this timed wait. Normal BIOS
 ; input keeps its existing behaviour.
-; HL is the calibrated slot budget.
+; HL is the remaining poll-slot budget.
 ; NZ: consumed key in A; Z: timeout.
 ; Changes AF, BC, DE and HL.
 

@@ -86,11 +86,6 @@ CONCMP:
 CONMAT:
   pop af         ; discard saved pointer
   ld a,b
-  cp CMUC1
-  jr nz,CONMA1
-  inc b          ; UC1 names the LCD
-
-CONMA1:
   cp 6
   jr nz,CONHIT   ; GLCD stays distinct
   ld b,CMCRT     ; PICO alias
@@ -195,15 +190,15 @@ CONNW:
   jr z,CONFL
   ld c,0         ; the LCD, no width
 
-; CON LCD and CON UC1 select the ROM
-; LCD without changing GLVEC. C is the
+; CON LCD selects the ROM LCD without
+; changing GLVEC. C is the
 ; width asked for, or 0 for none. A
 ; different width fails before effects.
 
 CONLCD:
   ld a,(CONDEV)
   rrca
-  jr nc,CONSHOW  ; no matrix: keep serial
+  jp nc,CONSHOW  ; no matrix: keep serial
   ld a,c
   or a
   jr z,CONLOK    ; retain the profile
@@ -247,6 +242,19 @@ CONFL:
   jr nz,CONLB
 
 CONFL1:
+  ld a,b
+  cp CMUC1
+  jr nz,CONFL2
+  ld hl,(GLVEC)
+  ld a,h
+  or l
+  jr z,CONFAUX
+  ld a,1         ; registered, no load
+
+CONFAUX:
+  call CONASEL
+
+CONFL2:
   call CONFLD
   jr CONSHOW
 
