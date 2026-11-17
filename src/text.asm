@@ -51,6 +51,8 @@ CONNAMS:
 
 CONHDR:
   DB "CON: ",'$'
+PRESSK:
+  DB "Press a key",'$'
 FILEEX:
   DB "FILE EXISTS",'$'
 ALLQUERY:

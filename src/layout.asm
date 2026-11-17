@@ -113,6 +113,13 @@ CCPSTN EQU 48    ; CCP command stack
 BIOSSTN EQU 48
 
 MAXDRV EQU 4     ; drives A-D
+
+; CON's wait for a key on a new console:
+; polls, and a matrix poll's padding in
+; 13-T loops. Set from measured times.
+
+KWPOLL EQU 9300
+KWPAD EQU 50
 DPHSZ EQU 16
 DRVESZ EQU 8     ; drive entry bytes
 

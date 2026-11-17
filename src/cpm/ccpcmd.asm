@@ -53,6 +53,8 @@ CONBAD:
 ; for CONNO.
 
 CMDCON:
+  ld a,(CONMOD)  ; the console in use,
+  push af        ; for CONSHOW's test
   call ARGSKIP   ; argument/error start
   jp z,CONSHOW   ; no operand: report
   ld de,CONNAMS  ; four-byte name table
@@ -243,8 +245,43 @@ CONFL:
   call z,GLCLD   ; load/reuse driver
 
 CONSHOW:
-  ld de,CONHDR   ; report after routing
-  call PUTSTR    ; output triggers route
+  call CONREP    ; output triggers route
+  pop bc         ; B = the console before
+  ld a,(CONMOD)
+  cp b
+  jr z,CONMAIN   ; the same: no question
+
+; A new console must be answered from
+; its own keyboard. Otherwise the CON
+; field goes back to the console the
+; command came from, which is reported
+; there. A program's IOBYTE write is
+; not asked about.
+
+  push bc
+  ld de,PRESSK   ; "Press a key"
+  call PUTSTR
+  call KEYWT     ; NZ: a key came
+  pop bc
+  jr nz,CONOK
+  call CONFLD    ; the console before
+  call CONREP    ; reported there
+
+CONMAIN:
+  jp MAINLOOP
+
+CONOK:
+  ld de,CRLFMSG
+  call PUTSTR
+  jr CONMAIN
+
+; Print CON: and the effective console's
+; name, then CR LF. The first output
+; applies a route change.
+
+CONREP:
+  ld de,CONHDR
+  call PUTSTR
   ld a,(CONMOD)  ; effective mode
   add a,a        ; four bytes per name
   add a,a
@@ -260,8 +297,41 @@ CONSH1:
   inc hl
   djnz CONSH1
   ld de,CRLFMSG
-  call PUTSTR
-  jp MAINLOOP
+  jp PUTSTR
+
+; Wait about ten seconds for a key from
+; the console in effect, through BDOS 6,
+; which shows the cursor. NZ: a key came
+; and is taken. Z: none. A matrix
+; console's poll is padded to the length
+; of a serial one, so that the wait is
+; the same on each. Changes AF/BC/DE/HL.
+
+KEYWT:
+  ld hl,KWPOLL
+
+KEYW1:
+  push hl
+  ld e,$FF       ; 6: input, no wait
+  ld c,6
+  call BDOS
+  pop hl
+  or a
+  ret nz         ; a key
+  ld a,(CONMOD)
+  rrca           ; matrix consoles
+  jr nc,KEYW3
+  ld b,KWPAD
+
+KEYW2:
+  djnz KEYW2
+
+KEYW3:
+  dec hl
+  ld a,h
+  or l
+  jr nz,KEYW1
+  ret            ; Z: no key
 
 ; Prepare transient page zero after a
 ; successful load. Input (ARGSTRT) is
