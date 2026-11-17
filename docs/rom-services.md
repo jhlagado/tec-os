@@ -149,6 +149,14 @@ A program using extra stack state sets up its own stack first. The routines
 run with the caller's interrupt state; an interrupt handler must not print
 through the console.
 
+A table of four rows is taken to be a character LCD's. While it is the console
+the ROM writes no banner, drive label or status word to the LCD, the `LCD`
+service (2) returns `TNENODV` with nothing written, and `CON LCD` selects it. A
+display of four rows that is not the LCD must not register as four.
+
+A table registered while `UC1:` is the mode in effect takes the console at the
+next console call.
+
 `TNDRVR` returns `LINEBUF`'s address in HL, where the row routines read and write a
 row, with A = 0 and carry clear. It returns `TNEBAD` with carry and nothing changed for
 B = 1, since `CRT:`'s table is the ROM's, if that mode has a table already, or with no
