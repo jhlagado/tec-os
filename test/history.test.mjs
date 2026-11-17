@@ -1,6 +1,7 @@
 // Command-line history at the prompt, moved from the CCP to SHELL.SVC:
-// the ring in the shell's own last page, ^W and ^N, through the
-// ROM's HREC and HSTORE calls. Emulator evidence, on the serial console.
+// the ring in EXPAND 1's history page, which the shell reaches through the
+// ROM's RINGIO, ^W and ^N, through the ROM's HREC and HSTORE calls.
+// Emulator evidence, on the serial console.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -20,10 +21,11 @@ function held(m) {
   return String.fromCharCode(...Array.from({ length: n }, (_, i) => m.read(p + 2 + i)));
 }
 
-/** The ring's lines from the newest back, read from the shell's pages. */
+/** The ring's lines from the newest back: EXPAND 1's history page, and its head in the shell's pages. */
 function lines(m) {
   const page = pageOf(m);
-  const ring = Uint8Array.from({ length: 256 }, (_, i) => m.read(page + SHELL.symbols.RING + i));
+  const bank = m.expand ? m.expand[1] : m.banks[0];
+  const ring = Uint8Array.from({ length: 256 }, (_, i) => bank[m.sym("HRING") - 0x8000 + i]);
   const head = m.read(page + SHELL.symbols.HHEAD);
   const out = [];
   let p = (head - 1) & 0xff;
