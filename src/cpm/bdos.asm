@@ -399,8 +399,11 @@ PRLOOP:
 ; storing it even at maximum 0.
 ; BS/DEL, ^C/^E/^R/^U/^X/^P and
 ; prompt-only ^W/^N use the handlers
-; below. Return zero. Any register may
-; change.
+; below. Escape sequences for terminal
+; keys are consumed without echo or
+; storage. Raw character input remains
+; unchanged. Return zero. Any register
+; may change.
 
 FNLINE:
   call CKEY      ; write every line
@@ -417,6 +420,10 @@ FNLINE:
 
 LINLOOP:
   call GETCHAR   ; next unechoed key
+
+LINKEY:
+  cp $1B         ; terminal key prefix
+  jp z,LINESC
   ld c,a         ; C: key/echo argument
   cp CR          ; CR/LF completes
   jr z,TOLINDON
@@ -698,6 +705,36 @@ LINHC:
   pop hl
   inc hl         ; the shell's next byte
   jr LINHC
+
+; Consume a terminal key without
+; inserting its escape bytes or moving
+; the cursor. CSI and SS3 share the
+; final-byte range. A control key ends
+; an incomplete sequence through its
+; normal line-editing handler.
+; A lone Escape has no effect. Its next
+; ordinary byte is processed normally,
+; except [ or O begins a sequence.
+; No extra call frame or saved state.
+
+LINESC:
+  call GETCHAR
+  cp '['
+  jr z,LINCSI
+  cp 'O'
+  jp nz,LINKEY
+
+LINCSI:
+  call GETCHAR
+  cp $1B         ; restart the prefix
+  jr z,LINESC
+  cp SPACE       ; control: normal edit
+  jp c,LINKEY
+  cp $40         ; parameters/intermediates
+  jr c,LINCSI
+  cp $7F         ; DEL/high byte: normal
+  jp nc,LINKEY
+  jp LINLOOP     ; final consumed
 
 ; Function 11: return 1 for pending or
 ; BIOS-ready input, otherwise 0. An

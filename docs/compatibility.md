@@ -145,8 +145,14 @@ leave the code at 0, and the line goes on. The shell's built-ins:
   the line is empty. The line recalled can be edited and sent like a typed one.
   The history is a 256-byte ring in the shell's own pages, kept by warm boot and
   emptied by a reset. A line equal to the newest is not stored again, and nor is
-  one holding a 0. Function 10 called by a program is CP/M 2.2's: ^W and ^N go
-  into its buffer as characters, and its lines are not kept.
+  one holding a 0. Programs receive ^W and ^N as characters in the buffer,
+  and their lines are not kept.
+- Function 10 consumes terminal navigation sequences without echo or storage.
+  This applies to the shell, ROM prompt and program line input. A lone Escape
+  is ignored. `ESC [` and `ESC O` start CSI and SS3 sequences, so manually
+  typed text with those prefixes is interpreted the same way. CR and editing
+  controls recover from an unfinished sequence. Raw BIOS and BDOS character
+  input keep their existing byte behaviour (`docs/console.md`).
 
 In ROM too:
 

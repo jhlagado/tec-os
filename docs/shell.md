@@ -262,7 +262,10 @@ reported as zero. Ordinary drive and read errors keep their BDOS handling.
   geometry `TNINFO` gives (80 by 24 on the serial terminal).
 - The history ring keeps the lines typed at the prompt; ^W shows the one before
   and ^N the one after. A line equal to the newest is not stored again. A
-  program's line input is CP/M 2.2's: ^W and ^N go into its buffer.
+  program's line input receives ^W and ^N as characters.
+- Arrow and other terminal navigation sequences are ignored during line input.
+  They neither alter the command nor move its cursor. History still uses
+  ^W and ^N. Programs reading raw characters can handle arrows themselves.
 
 ## Loading, `UNLOAD` and recovery
 

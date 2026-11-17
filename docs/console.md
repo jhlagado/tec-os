@@ -37,6 +37,20 @@ there is always a console. The 20 × 4 LCD is never the console.
 | ST7920 GLCD, 128 × 64 as 21 × 8 | out | the controller's busy flag clears | Implemented |
 | HD44780 LCD, 20 × 4 | status only | always | Banner and mounted drives at cold boot; not a console device |
 
+## Line input
+
+The shell, ROM prompt and programs using BDOS function 10 share the line
+editor. It consumes terminal key sequences without storing or echoing them.
+Up and down leave the command and cursor in place. Other CSI and SS3 keys,
+including left, right, Home and End, are also ignored. The shell's history
+keys remain Ctrl-W and Ctrl-N.
+
+A lone Escape is ignored. An Escape followed by `[` or `O` begins a sequence,
+including when those characters were typed by hand. Enter or an editing
+control ends an incomplete sequence through its usual handler. Raw BIOS
+and BDOS character-input calls still return the original key bytes, so
+editors and games can handle arrows themselves.
+
 ## Video terminal
 
 On the serial terminal, output is passed through unchanged and the terminal
