@@ -292,7 +292,7 @@ and run.
 
 ## The contract at this commit
 
-What another program or study may rely on, in one place. ABI 5.1 is not frozen
+What another program or study may rely on, in one place. ABI 5.2 is not frozen
 until a release. `src/abi.inc` is the published form, and the ROM assembles from it.
 
 ### The ROM table
@@ -301,8 +301,8 @@ until a release. `src/abi.inc` is the published form, and the ROM assembles from
 | --- | --- | --- |
 | `C003h` | `ABITAB` | `"TNA"` |
 | `C006h` | `ABIMAJ` | Major version, 5 |
-| `C007h` | `ABIMIN` | Minor version, 1 |
-| `C008h` | `ABICALL` | `JP` to the 16 services numbered 0 to 15 in C: the hardware services, mount, unmount, describe, the video drivers' hook, find, list and the font |
+| `C007h` | `ABIMIN` | Minor version, 2 |
+| `C008h` | `ABICALL` | `JP` to the services numbered 0 to 17 in C: the hardware services, mount, unmount, describe, the video drivers' hook, find, list, the shell hook and a glyph's rows; 15, the font's table at 5.1, is refused |
 
 The table ends at `C00Bh`. `abi.inc` gives each service's arguments, results, carry and stack.
 `PUTAT` returns status 2 on the serial terminal, or while the PICO9918 is claimed and
