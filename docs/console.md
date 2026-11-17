@@ -161,9 +161,9 @@ The display size is published in the table at `C003h` (the word at
 their screen without being rebuilt for each display.
 
 The font is `format/font5x7.txt`, TEC Compact in the existing five-cell, eight-row encoding. The
-ROM holds one copy, built from that file, and the ROM's PICO9918 console and the
-GLCD's driver draw from it; the driver asks for it at `INIT` with `TNFONT`,
-service 15.
+ROM holds one copy, built from that file and packed four bytes a glyph, and the ROM's
+PICO9918 console and the GLCD's driver draw from it; the driver asks for each glyph it
+draws with `TNGLYPH`, service 17.
 
 ## Matrix keyboard
 
