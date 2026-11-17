@@ -71,8 +71,9 @@ test("SH16 version fields", () => {
   const inc = readFileSync(resolve(ROOT, "src/abi.inc"), "utf8");
   assert.match(inc, /^SVCFMT EQU 4$/m);
   assert.equal(ABI.TNSHELL, 16);
-  // KD-435's stage appends TNRING and TNPARSE at minor 2.
-  assert.equal(ABI.TNCOUNT, 19);
+  // KD-435's stage appends TNRING and TNPARSE, 18 and 19, at minor 2, 17
+  // being the packed font's.
+  assert.equal(ABI.TNCOUNT, 20);
   const { rom } = romFor();
   assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 2], "TNA 5.2");
   for (const f of [SHELL.file, MON3.file, HOOK.file]) assert.deepEqual([...f.subarray(25, 28)], [0x45, 0x58, 1], "the record's version byte stays 1");

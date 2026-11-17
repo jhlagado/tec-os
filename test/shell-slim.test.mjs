@@ -100,6 +100,13 @@ test("SL4 DIR on another drive, and after CD A: to a volume without DIR.COM", ()
   assert.match(at(m, "DIR SAY.COM"), /SAY\.COM +128\r\n1 file, 128 bytes\r\n/);
 });
 
+// A:'s volume is at index 0, so a label walk that starts past it finds
+// B:'s and C:'s and never A:'s: this row is the one that sees it.
+test("SL4 DIR on A: names A:'s volume in its last row", () => {
+  const m = shellMachine(shellCard());
+  assert.match(at(m, "DIR SAY.COM"), /\r\nSAY\.COM +128\r\n1 file, 128 bytes\r\n\d+ free on A:SYSTEM\r\nA:SYSTEM>$/);
+});
+
 test("SL5 DIR's [more]: ^C drops the rest of the line, Esc stops the listing only", () => {
   const files = Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`F${String(i).padStart(4, "0")}.DAT`, new Uint8Array(128)]));
   const image = shellCard();
@@ -172,6 +179,14 @@ test("SL6 a program that overwrites the page: ^W and ^N stay bounded, the next l
   }
   m.type("\x15");
   held(m);
+  // One ^W, then ^N: on a page of R the line shown is not the newest, so ^N
+  // looks ahead for a zero there is none of, and its bound must end it.
+  m.type(W);
+  held(m);
+  m.type(N);
+  assert.ok(/^R*$/.test(held(m)), "^N after one ^W returns");
+  m.type("\x15");
+  held(m);
   m.mark = m.output.length;
   m.type("ECHO NEW\r");
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
@@ -187,14 +202,45 @@ test("SL6 a program that overwrites the page: ^W and ^N stay bounded, the next l
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
 });
 
-test("SL7 ABI 5.2: TNRING and TNPARSE, and TNCOUNT 19", () => {
+test("SL7 ABI 5.2: TNRING 18 and TNPARSE 19, 17 the packed font's, and TNCOUNT 20", () => {
   const { rom, symbols } = romFor();
   assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 2]);
-  assert.deepEqual([ABI.TNRING, ABI.TNPARSE, ABI.TNCOUNT], [17, 18, 19]);
+  assert.deepEqual([ABI.TNRING, ABI.TNPARSE, ABI.TNCOUNT], [18, 19, 20]);
   assert.equal(symbols.get("HRING"), 0xbd00);
   const entry = (n) => rom[symbols.get("SVTAB") - 0xc000 + 2 * n] | (rom[symbols.get("SVTAB") - 0xc000 + 2 * n + 1] << 8);
   assert.equal(entry(ABI.TNRING), symbols.get("HWSRING"));
   assert.equal(entry(ABI.TNPARSE), symbols.get("SVPARS"));
+});
+
+/**
+ * A program that calls TNPARSE directly, as a third party would: NAME at
+ * 0180h into the FCB at 0200h, then A to 01F0h, HL to 01F2h and the flags
+ * to 01F4h.
+ */
+function parser(name) {
+  const bytes = new Uint8Array(0x81 + name.length);
+  bytes.set([0x21, 0x80, 0x01, 0x11, 0x00, 0x02, 0x0e, ABI.TNPARSE, 0xcd, 0x08, 0xc0,
+    0x32, 0xf0, 0x01, 0x22, 0xf2, 0x01, 0xf5, 0xe1, 0x22, 0xf4, 0x01, 0xc9]);
+  bytes.set(Buffer.from(name, "latin1"), 0x80);
+  return bytes;
+}
+
+test("SL7 TNPARSE called directly: carry and TNEBAD for a bad name, the FCB for a good one", () => {
+  const cases = [["B:X.DAT", false], ["X*.?", false], ["<>", true], ["Q:X", true], ["NINEBYTES.X", true], ["A.TOOLONG", true]];
+  const files = Object.fromEntries(cases.map(([name], i) => [`P${i}.COM`, parser(name)]));
+  const m = shellMachine(shellCard(files));
+  cases.forEach(([name, bad], i) => {
+    at(m, `P${i}`);
+    const a = m.read(0x1f0), carry = m.read(0x1f4) & 1, hl = word(m, 0x1f2);
+    assert.equal(carry, bad ? 1 : 0, `${name}: carry`);
+    assert.equal(a, bad ? ABI.TNEBAD : 0, `${name}: A`);
+    if (!bad) {
+      assert.equal(hl, 0x180 + name.length, `${name}: HL at the delimiter`);
+      const fcb = String.fromCharCode(...Array.from({ length: 11 }, (_, k) => m.read(0x201 + k)));
+      assert.equal(fcb, name === "B:X.DAT" ? "X       DAT" : "X????????  ", name);
+      assert.equal(m.read(0x200), name === "B:X.DAT" ? 2 : 0, `${name}: drive`);
+    }
+  });
 });
 
 test("SL7 the shell's names through TNPARSE: COPY, DEL, a .CMD script and SERVICES as before", () => {
@@ -258,11 +304,14 @@ function pathsCard() {
   return image;
 }
 
-// T-states from Enter to the prompt at 4d7795e on pathsCard, with a
-// DIR.COM of 1,433 bytes on it, each line typed twice and the second timed.
-// A typed line now pays HSTORE's ring through RINGIO, about 0.13 ms a
-// character; a script's lines and a chain's later pieces pay nothing.
-const BASE = [["ECHO HI", 250985, 4800], ["RUN.CMD", 7379213, 10000], ["TYPE HELLO.TXT!TYPE HELLO.TXT!TYPE HELLO.TXT!TYPE HELLO.TXT", 2546723, 40000], ["SAY", 351744, 3600]];
+// T-states from Enter to the prompt at b4310a1 on pathsCard, with a
+// DIR.COM of 1,440 bytes on it, each line typed twice and the second timed,
+// and the allowance over each. A typed line pays HSTORE's ring through
+// RINGIO, about 720 T-states a character (ECHO HI measured 5,009 more); a
+// script's lines about 335 each (RUN.CMD 8,361, its own typed line
+// included); CD ? and DIR /W the ring for their typed line and what the
+// card's layout moves, measured 3,787 and 4,413 more.
+const BASE = [["ECHO HI", 250985, 6000], ["RUN.CMD", 7379213, 10000], ["TYPE HELLO.TXT!TYPE HELLO.TXT!TYPE HELLO.TXT!TYPE HELLO.TXT", 2546723, 50000], ["SAY", 351744, 3600], ["CD ?", 1140085, 5000], ["DIR /W", 2622584, 6000]];
 
 test("SL9 the ordinary path: a typed line pays the ring's bytes, its pieces and a script's lines nothing more", () => {
   const m = shellMachine(pathsCard());
@@ -276,4 +325,120 @@ test("SL9 the ordinary path: a typed line pays the ring's bytes, its pieces and 
     const took = m.cycles - t0;
     assert.ok(took <= base + allowance, `${line}: ${took} T-states against ${base} and ${allowance} more`);
   }
+});
+
+// While RINGIO has EXPAND 1 in view, SP is NMISP: an NMI's two-byte frame
+// would land in the BDOS stack's unused foot, and in EXPAND 1's free page,
+// where the caller's own stack would be a cache line. The window, from the
+// OUT that maps the bank to the OUT that unmaps it, is bounded.
+test("SL11 RINGIO: SP is NMISP whenever EXPAND 1 is in view, and the window is bounded", (t) => {
+  const m = shellMachine(shellCard());
+  const lo = m.sym("RINGIO"), hi = m.sym("SVPARS"), safe = m.sym("NMISP");
+  assert.equal(safe, m.sym("STKBASE") + 4);
+  let calls = 0, wrong = 0, start = -1, widest = 0;
+  const step = m.step.bind(m);
+  m.step = () => {
+    const mapped = (m.sysCtrl & 0x04) !== 0, inside = m.pc >= lo && m.pc < hi;
+    if (m.pc === lo) calls += 1;
+    if (mapped && inside && (m.cpu.cpu.sp & 0xffff) !== safe) wrong += 1;
+    if (mapped && start < 0 && inside) start = m.cycles;
+    if (!mapped && start >= 0) { widest = Math.max(widest, m.cycles - start); start = -1; }
+    return step();
+  };
+  at(m, "ECHO ONE");
+  at(m, "ECHO TWO");
+  m.type(W);
+  held(m);
+  m.type(N);
+  held(m);
+  m.type("\x15\r");
+  m.runUntil(() => m.ready(), 400_000_000, "the prompt");
+  m.step = step;
+  t.diagnostic(JSON.stringify({ calls, widest }));
+  assert.ok(calls > 40, `${calls} calls`);
+  assert.equal(wrong, 0, "SP is NMISP in every mapped instruction");
+  assert.ok(widest <= 60, `the mapped window ${widest} T-states`);
+});
+
+/** The starter card media builds, booted on BOARD; each LINE typed TIMES times on a fresh machine, ms from Enter to the prompt. */
+function starterTimes(board, line, times) {
+  const m = shellMachine(new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))), board === "pico" ? { tms: true, matrix: true } : {});
+  const out = [];
+  for (let i = 0; i < times; i++) {
+    m.type(line);
+    const t0 = m.cycles;
+    m.mark = m.output.length;
+    m.type("\r");
+    m.runUntil(() => m.ready() && /[A-P]:\S*>$/.test(m.text(m.mark)), 4e9, line);
+    out.push((m.cycles - t0) / 4000);
+  }
+  return out;
+}
+
+// SS-12's caps, ms at 4 MHz on the starter card, each from a fresh boot.
+// DIR B: is a G8M: its first listing logs it in and turns the 30-line cache
+// over, so the second reads DIR.COM from the card again; later ones read
+// nothing. The measured figures are in the model.
+test("SL12 time on the starter card: DIR, DIR of B: and C:, CD and ^W within their caps", { timeout: 600_000 }, (t) => {
+  const times = {
+    dir: starterTimes("serial", "DIR", 2), pico: starterTimes("pico", "DIR", 2),
+    b: starterTimes("serial", "DIR B:", 4), c: starterTimes("serial", "DIR C:", 3), cd: starterTimes("serial", "CD", 2),
+  };
+  t.diagnostic(JSON.stringify(times));
+  const caps = [["DIR, serial", times.dir[1], 1800], ["DIR, PICO9918", times.pico[1], 1200],
+    ["DIR B:, after its login", times.b[1], 400], ["DIR B:, later", times.b[3], 160],
+    ["DIR C:, after its login", times.c[1], 230], ["DIR C:, later", times.c[2], 160], ["CD", times.cd[1], 700]];
+  for (const [what, ms, cap] of caps) assert.ok(ms <= cap, `${what}: ${ms.toFixed(1)} ms, over ${cap}`);
+  const m = shellMachine(new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))));
+  at(m, "ECHO ONE");
+  at(m, "ECHO TWO");
+  const t0 = m.cycles;
+  m.mark = m.output.length;
+  m.type(W);
+  m.runUntil(() => m.waitingForInput() && m.text(m.mark).endsWith("ECHO TWO"), 400_000_000, "^W");
+  const ms = (m.cycles - t0) / 4000;
+  assert.ok(ms <= 33, `^W ${ms.toFixed(2)} ms, over 33`);
+});
+
+// SS-14, with service eviction. Written now and run at the build: a ROM with
+// no EVICT keyword skips them.
+const EVICTS = romFor().symbols.has("CMDEVI");
+
+test("SL14 EVICT A:DIR lists plainly and the shell comes back; EVICT DIR is the ROM's", { skip: !EVICTS }, () => {
+  const image = shellCard();
+  const b = volume(image, "B");
+  for (let i = 0; i < 30; i++) b.write(`F${String(i).padStart(4, "0")}.DAT`, new Uint8Array(128));
+  const m = shellMachine(image);
+  const t = at(m, "EVICT A:DIR B:");
+  assert.doesNotMatch(t, /\[more\]/, "no shell: no pager");
+  assert.match(t, /F0029\.DAT +128\r\n30 files, 3840 bytes\r\n/);
+  assert.ok(owners(m).some((o) => o.name === "SHELL"), "the shell is back");
+  assert.match(at(m, "EVICT DIR /W B:"), /30 files, \d+K free/);
+});
+
+test("SL14 after an eviction ^W shows nothing; after a refused one it recalls the line before", { skip: !EVICTS }, () => {
+  const m = shellMachine(shellCard());
+  at(m, "ECHO ONE");
+  at(m, "EVICT SAY");
+  m.type(W);
+  assert.equal(held(m), "", "the restored shell's INIT cleared the page");
+  m.type("\x15\r");
+  m.runUntil(() => m.ready(), 400_000_000, "the prompt");
+  at(m, "ECHO TWO");
+  at(m, "ERA SHELL.SVC");
+  assert.match(at(m, "EVICT SAY"), /SHELL in the way/);
+  m.type(W);
+  assert.equal(held(m), "EVICT SAY");
+  m.type(W);
+  assert.equal(held(m), "ERA SHELL.SVC");
+  m.type("\x15\r");
+  m.runUntil(() => m.ready(), 400_000_000, "the prompt");
+});
+
+test("SL14 the eviction record and the ring are each written by their own writer only", { skip: !EVICTS }, () => {
+  const m = shellMachine(shellCard());
+  at(m, "ECHO ONE");
+  at(m, "EVICT SAY");
+  at(m, "ECHO TWO");
+  assert.deepEqual(m.expand1Writes, [], "no write to EXPAND 1's free pages but the record's and the ring's");
 });

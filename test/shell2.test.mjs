@@ -1015,11 +1015,15 @@ test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
   t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
   assert.deepEqual(qualifiedB, { nothing: 4963, worst: 8_737_681 });
   assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_202_609 });
-  // 4d7795e read 360 over on both drives, at the bound; KD-435's stage
-  // reads 352 on B: and 361 on A:, the averaged poll moving by a T-state
-  // with the ROM's layout. The bound was 360.
+  // The bound was 360, and b4310a1 read 360 over on both drives. Each
+  // figure is a whole command's time, the program's load included, over 200
+  // calls, so where the card holds ST.COM and NO.COM and what the cache
+  // holds of them moves it: KD-435's ROM with b4310a1's shell reads 360 and
+  // 360 again, the poll loop itself is the same T-state for T-state under
+  // either shell, and this stage's smaller shell reads 352 on B: and 361 on
+  // A:. The bound is the base's 360 and a margin of 8 for that.
   for (const [drive, current, qualified] of [["B", b, qualifiedB], ["A", a, qualifiedA]])
-    assert.ok(current.nothing - qualified.nothing <= 362, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
+    assert.ok(current.nothing - qualified.nothing <= 368, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
   assert.ok(b.worst / qualifiedB.worst - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / qualifiedB.worst - 1) * 100).toFixed(2)} % over qualified`);
   assert.ok(a.worst / qualifiedA.worst - 1 <= 0.05, `logged on A:: ${a.worst} T, ${((a.worst / qualifiedA.worst - 1) * 100).toFixed(2)} % over qualified`);
 });

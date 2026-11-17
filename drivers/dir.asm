@@ -25,8 +25,12 @@ FAILCODE EQU 255*256
 ; The CCP enters with the tail at 0081h,
 ; zero-ended. Its own parse of FCBONE
 ; passes over a bad name, so the tail is
-; parsed again here. ABI 5.2 or later
-; is required: TNPARSE is minor 2.
+; parsed again here. ABI 5 and TNPARSE
+; are required: minor 2 is shared with
+; another stage's service, so TNPARSE
+; is tried on an empty name, which a
+; ROM without it refuses as a number
+; past its table.
 
 START:
   ld sp,STKTOP   ; DIR.COM's own stack
@@ -41,9 +45,10 @@ ST1:
   inc hl
   inc de
   djnz ST1       ; all four bytes
-  ld a,(hl)      ; the minor version
-  cp 2
-  jr c,NOABI     ; before TNPARSE
+  ld hl,TNAEND   ; an empty name: a 0
+  ld de,CFCB
+  call PARSEFCB  ; TNPARSE there?
+  jr c,NOABI     ; no: not this system
   call PGFIND    ; the shell's PAGE
   ld hl,TAIL     ; the tail
   call SKIPSP    ; to the operand
@@ -55,6 +60,7 @@ NOABI:
   jp WBOOT
 
 TNATAG: DB "TNA",5
+TNAEND: DB 0
 
 NOABIM:
   DB "DIR.COM needs TEC-OS"

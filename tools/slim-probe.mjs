@@ -2,8 +2,9 @@
 // The shell-slimming figures on the starter card that tools/media.mjs
 // builds: SHELL.SVC's size and pages, the word at 0006h and the TPA with the
 // shell loaded, and the time from a line's Enter to the next prompt for DIR,
-// DIR /W, ECHO, TYPE, CD and the history keys, on the serial console and on
-// the PICO9918. Prints one JSON object and asserts nothing.
+// DIR /W, DIR of B: and C:, ECHO, TYPE, CD and the history keys, on the
+// serial console and on the PICO9918. Prints one JSON object and asserts
+// nothing.
 //
 //   node tools/slim-probe.mjs [--card dist/starter.img] [--add NAME=FILE] [--json FILE]
 //
@@ -87,7 +88,7 @@ function board(name) {
   const out = { board: name, entry: word(m, 6).toString(16).toUpperCase() + "h", tpa: word(m, 6) - 0x100, residents: res };
   // Each command twice: the second is the figure, with the card's blocks
   // in the cache as at any later use.
-  for (const [k, line] of [["dir", "DIR"], ["dirw", "DIR /W"], ["echo", "ECHO HI"], ["type", "TYPE STARTUP.CMD"], ["cdq", "CD ?"], ["cd", "CD"], ["cdb", "CD B:WORK"], ["dirb", "DIR B:"], ["nofile", "DIR X.Y"]]) {
+  for (const [k, line] of [["dir", "DIR"], ["dirw", "DIR /W"], ["echo", "ECHO HI"], ["type", "TYPE STARTUP.CMD"], ["cdq", "CD ?"], ["cd", "CD"], ["cdb", "CD B:WORK"], ["dirb", "DIR B:"], ["dirc", "DIR C:"], ["dirbxy", "DIR B:X.Y"], ["nofile", "DIR X.Y"]]) {
     timed(m, line);
     const r = timed(m, line);
     out[k] = r.ms;

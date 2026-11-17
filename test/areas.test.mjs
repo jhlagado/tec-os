@@ -107,9 +107,9 @@ const WAS = {
 test("without USER the ROM is smaller, SHELL.SVC is 17 pages and no TPA row is smaller", () => {
   const census = JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
   assert.ok(census.rom.used < WAS.used, `${census.rom.used} bytes used, fewer than ${WAS.used}`);
-  // KD-435's stage adds 50 ROM bytes and takes SHELL.SVC to 10 pages: the
+  // KD-435's stage adds 67 ROM bytes and takes SHELL.SVC to 10 pages: the
   // rows held 15,713 used, 671 free, 17 pages and 42,752 under the shell.
-  assert.deepEqual([census.rom.used, census.rom.free], [15763, 621], "the ROM's bytes used and free");
+  assert.deepEqual([census.rom.used, census.rom.free], [15780, 604], "the ROM's bytes used and free");
   for (const row of ["twoVolume", "starter"]) assert.ok(census.ram.cards[row].tpa >= WAS.tpa[row], `${row}: TPA ${census.ram.cards[row].tpa}`);
   const top = (m) => m.read(6) | (m.read(7) << 8);
   const bare = top(boot(card())), shelled = top(boot(card({ shell: true })));
@@ -156,10 +156,27 @@ test("the ordinary command path is no slower without USER: to the prompt after a
   t.diagnostic(JSON.stringify({ now, was: WAS.path, kept }));
   for (const k of ["bare", "shell"]) {
     assert.ok(now[k].warm <= WAS.path[k].warm, `${k}: ${now[k].warm} T-states from a warm boot to the prompt, ${WAS.path[k].warm} before`);
-    // KD-435: a typed line under the shell pays HSTORE's ring through RINGIO,
-    // 997 T-states for X; the allowance is 1,200.
-    const allowance = k === "shell" ? 1200 : 0;
+    // KD-435: a typed line under the shell pays HSTORE's ring through RINGIO
+    // and its NMI-safe SP, 1,231 T-states for X; the allowance is 1,500. The
+    // row below keeps KD-430's own bound with the shell of its landing.
+    const allowance = k === "shell" ? 1500 : 0;
     assert.ok(now[k].program <= WAS.path[k].program + allowance, `${k}: ${now[k].program} T-states from a typed command to the program, ${WAS.path[k].program} before`);
     assert.ok(kept[k].warm > WAS.path[k].warm, `${k}: the ROM kept from before, which sets the area at each entry, is over that figure to the prompt: ${kept[k].warm}`);
   }
+});
+
+// KD-430's claim kept apart from KD-435's ring: with b4310a1's shell, which
+// keeps its history in its own RAM, this ROM takes a typed command to its
+// program, and a warm boot to the prompt, no slower than the ROM before USER
+// left. The ring's own price under this stage's shell is shell-slim's SL9.
+test("KD-430 with the shell of its landing: the ROM's command path is no slower without USER", () => {
+  const BEFORE = Buffer.from(JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/shell-before-slim.json"), "utf8")).file, "base64");
+  const made = standardCard();
+  const a = volume(made, "A");
+  a.write("X.COM", Uint8Array.from([0xc9]));
+  a.write("SHELL.SVC", BEFORE);
+  a.write("STARTUP.CMD", Buffer.from("SHELL.SVC\r\n\x1a", "latin1"));
+  const now = path(boot(made));
+  assert.ok(now.warm <= WAS.path.shell.warm, `${now.warm} T-states from a warm boot to the prompt, ${WAS.path.shell.warm} before`);
+  assert.ok(now.program <= WAS.path.shell.program, `${now.program} T-states from a typed command to the program, ${WAS.path.shell.program} before`);
 });

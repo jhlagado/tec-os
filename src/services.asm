@@ -538,15 +538,21 @@ HWSRING:
 
 ; RINGIO: byte L of the history page,
 ; HRING in EXPAND 1. Carry: write A
-; there; no carry: read it into A. No
-; stack is touched while EXPAND 1 is in
-; view, with interrupts held off.
-; Returns H=HIGH(HRING), keeps BC, DE
-; and L and the interrupt state; F
+; there; no carry: read it into A.
+; While EXPAND 1 is in view interrupts
+; are off and SP is NMISP, so that an
+; NMI's two-byte frame lands where
+; neither bank holds state: the unused
+; foot of the BDOS's stack, and EXPAND
+; 1's free page. The caller's stack, in
+; EXPAND 1, would be the cache's lines.
+; Returns H=HIGH(HRING), keeps BC, DE,
+; L, IX and the interrupt state; F
 ; changes.
 
 RINGIO:
   push bc
+  push ix
   ld h,HIGH(HRING)
   ld b,a         ; the byte to write
   sbc a,a        ; FFh: write, 0: read
@@ -554,6 +560,9 @@ RINGIO:
   call IFFGET    ; P/V: interrupts on
   di
   push af
+  ld ix,0
+  add ix,sp      ; IX: the caller's SP
+  ld sp,NMISP    ; no state under it
   ld a,(LATCHV)
   or LATEXP
   out (SYSLAT),a
@@ -566,12 +575,14 @@ RIO1:
   ld b,(hl)      ; and read back
   ld a,(LATCHV)  ; the program's view
   out (SYSLAT),a
+  ld sp,ix       ; the caller's stack
   pop af
   jp po,RIO2     ; they were off
   ei
 
 RIO2:
   ld a,b         ; the byte
+  pop ix
   pop bc
   ret
 

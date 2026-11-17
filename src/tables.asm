@@ -123,9 +123,11 @@ SVTAB: DW HWSINFO,HWSDIG
 
   DW SVLST,HWSFONT
 
-; 16 to 18
+; 16 to 19. 17 is the packed font's
+; TNGLYPH; until that stage lands it is
+; refused as TNSHELL refuses a table.
 
-  DW SVSHL,HWSRING,SVPARS
+  DW SVSHL,SVSHB,HWSRING,SVPARS
 
 ; Twelve-byte FCB prefixes for CMDFCB:
 ; explicit drive A, eight-byte name and

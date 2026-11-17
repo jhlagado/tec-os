@@ -2,7 +2,8 @@
 ; C003h..C00Ah: TNA, major, minor and JP
 ; SVCDSP. The ROM includes the shared
 ; declarations first. Minor 1 adds
-; TNFONT, minor 2 TNRING and TNPARSE.
+; TNFONT, minor 2 TNGLYPH (17, the
+; packed font's), TNRING and TNPARSE.
 ; The build checks table bytes and
 ; addresses and the following data
 ; block.

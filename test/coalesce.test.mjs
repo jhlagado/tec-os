@@ -24,10 +24,11 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 // each of 32 records, in cycles from the stub.
 // abi is the digest of abi.inc's declarations, its comment lines left out.
 const LANDING = { used: 14769, tpa: 47273, abi: "254a794dd99a0c7a189b06bff0b219671cf0eec5a5249ddd9bcacb3e54c43504", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
-// KD-435 appends TNRING and TNPARSE (ABI 5.2) and takes the ROM to 15,763:
+// KD-435 appends TNRING and TNPARSE as 18 and 19 (ABI 5.2, 17 being the
+// packed font's) and takes the ROM to 15,780:
 // the declarations' digest at that stage, and its ROM ceiling.
-const SLIM = { abi: "c12fc4671040fa781051fe81d0b4ae696e936218d0ed1c855f81ab6c4d3c6aa4" };
-const INTEGRITY = { used: 15763, tpa: 47240, starter: 46536, entry: 0xb6c8 };
+const SLIM = { abi: "5e9ed384b71d3493a6f895dc8b5a60a56e819ea03c536fcb1396a6e01400bdaf" };
+const INTEGRITY = { used: 15780, tpa: 47240, starter: 46536, entry: 0xb6c8 };
 
 // Qualified control's costs in this exact returned-input fixture: one empty
 // status call, and 32 write/status pairs on each logged drive. The integrity
@@ -42,7 +43,7 @@ test("AC12 version fields", () => {
   const inc = readText("src/abi.inc");
   assert.equal(sha(Buffer.from(abiDeclarations(inc), "utf8")), SLIM.abi, "abi.inc's declarations as at KD-435's stage");
   assert.match(inc, /^SVCFMT EQU 4$/m);
-  assert.equal(ABI.TNCOUNT, 19);
+  assert.equal(ABI.TNCOUNT, 20);
   const { rom } = romFor();
   assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 2], "TNA 5.2");
   assert.match(readText("tools/build.mjs"), /^const VERSION = \{ major: 0, minor: 1 \};$/m);

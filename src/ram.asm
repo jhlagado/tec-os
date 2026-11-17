@@ -289,6 +289,15 @@ STKBASE:
 STKTOP:
 BDOSRME:
 
+; RINGIO's SP while EXPAND 1 is in view:
+; an NMI's frame then lands at
+; STKBASE+2, in the foot of the BDOS's
+; stack that its quarter free leaves
+; unused, and at the same address in
+; EXPAND 1's free page, BE40h-BEFFh.
+
+NMISP EQU STKBASE+4
+
 ; SD state after the 51-byte BIOS table.
 ; Argument and LBA use different byte
 ; orders. SDXB=0 keeps the saved latch

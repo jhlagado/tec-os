@@ -114,9 +114,10 @@ test("a program's digest covers what it includes, nested", () => {
   rmSync(dir, { recursive: true });
 });
 
-// TNCOUNT 19 with KD-435's TNRING and TNPARSE; it was 17.
+// TNCOUNT 20 with KD-435's TNRING and TNPARSE, after the packed font's 17;
+// it was 17.
 test("abi.inc's numbers reach the tests by name", () => {
-  assert.deepEqual([ABI.TNINFO, ABI.TNRTC, ABI.TNMOUNT, ABI.TNLIST, ABI.TNSHELL, ABI.TNCOUNT, ABI.HWBWRD, ABI.PICOREG, ABI.PICORD], [0, 8, 9, 14, 16, 19, 0x80, 16, 22]);
+  assert.deepEqual([ABI.TNINFO, ABI.TNRTC, ABI.TNMOUNT, ABI.TNLIST, ABI.TNSHELL, ABI.TNCOUNT, ABI.HWBWRD, ABI.PICOREG, ABI.PICORD], [0, 8, 9, 14, 16, 20, 0x80, 16, 22]);
 });
 
 // ABI 3's binaries, which a stored card might hold and which test no major,

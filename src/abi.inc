@@ -232,13 +232,16 @@ TNSHELL EQU 16
 ; itself, not through ABICALL: L is
 ; the byte's offset; carry writes A
 ; there, no carry reads it into A. It
-; returns H=BDh, keeps BC, DE, L and the
-; interrupt state, and holds
+; returns H=BDh, keeps BC, DE, L, IX
+; and the interrupt state, and holds
 ; interrupts off while EXPAND 1 is in
-; view. Added at ABI minor 2. Stack
-; bound 4; RINGIO's own 6.
+; view, with SP where an NMI's frame
+; lands on no state in either bank.
+; Added at ABI minor 2, with service
+; 17, the packed font's TNGLYPH. Stack
+; bound 4; RINGIO's own 8.
 
-TNRING EQU 17
+TNRING EQU 18
 
 ; PARSE: the CCP's name parser. HL = a
 ; name, DE = 36 writable bytes for its
@@ -251,7 +254,7 @@ TNRING EQU 17
 ; carry, the FCB perhaps part filled.
 ; Added at ABI minor 2. Stack bound 8.
 
-TNPARSE EQU 18
+TNPARSE EQU 19
 
 ; TNCOUNT is the exclusive service
 ; bound, not callable. Failures return
@@ -261,7 +264,7 @@ TNPARSE EQU 18
 ; failure does not imply unchanged
 ; workspace, cache or hardware.
 
-TNCOUNT EQU 19
+TNCOUNT EQU 20
 
 TNEBAD EQU 1
 

@@ -251,18 +251,19 @@ test("SH1 rom figure", () => {
   assert.equal(second.hash, first.hash, "two builds, one image");
   const { used, free, regions } = first.rom;
   // The combined integrity build keeps the shared stack allocation; KD-435's
-  // TNRING, RINGIO and TNPARSE add 53, the ROM's CD list 5 fewer and its
+  // TNRING, RINGIO and TNPARSE add 53, RINGIO's NMI-safe SP 15, slot 17
+  // (the packed font's, refused here) 2, the ROM's CD list 5 fewer and its
   // CD FAILED's line end 2.
-  assert.ok(used <= 15763, `${used} used, the combined integrity ceiling 15,763`);
-  assert.ok(free >= 621, `${free} free, at least 621`);
+  assert.ok(used <= 15780, `${used} used, the combined integrity ceiling 15,780`);
+  assert.ok(free >= 604, `${free} free, at least 604`);
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   assert.ok(first.ram.tpa.bytes >= 47240, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
   // abi.inc differs from before the hook by TNSHELL's block, KD-435's TNRING
   // and TNPARSE blocks, and TNCOUNT alone.
   const abi = readText("src/abi.inc");
-  const block = abi.match(/; SHELL: [\s\S]*?\nTNPARSE EQU 18\n\n/)[0];
-  assert.equal(sha(Buffer.from(abiDeclarations(abi.replace(block, "").replace("TNCOUNT EQU 19", "TNCOUNT EQU 16")), "utf8")), ABI_BASE, "abi.inc's declarations changed only by TNSHELL, TNRING, TNPARSE and TNCOUNT");
+  const block = abi.match(/; SHELL: [\s\S]*?\nTNPARSE EQU 19\n\n/)[0];
+  assert.equal(sha(Buffer.from(abiDeclarations(abi.replace(block, "").replace("TNCOUNT EQU 20", "TNCOUNT EQU 16")), "utf8")), ABI_BASE, "abi.inc's declarations changed only by TNSHELL, TNRING, TNPARSE and TNCOUNT");
   console.log(`ROM ${used} used, ${free} free, TPA ${first.ram.tpa.bytes}, ${first.hash.slice(0, 16)}`);
 });
 
