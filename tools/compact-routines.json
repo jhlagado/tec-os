@@ -13,9 +13,11 @@
     "GLCGET",
     "GLCCLR",
     "GLCROW",
+    "GLCWD",
+    "GLSPAN",
+    "GLFILL",
     "GLCSETA",
-    "GLCCMP",
-    "GLGLY"
+    "GLCCMP"
   ],
   "drivers/mon3.asm": [
     "INIT",
@@ -597,7 +599,8 @@
     "RTCCMD",
     "RTCWR",
     "RTCRD",
-    "HWSFONT",
+    "FNTGLY",
+    "HWSNO",
     "SVDRV",
     "SVSHL"
   ],

@@ -1,8 +1,8 @@
-; ABI 5.1 services: CALL ABICALL with
+; ABI 5.2 services: CALL ABICALL with
 ; C=number and B/DE/HL=arguments. See
 ; docs/rom-services.md and abi.inc.
-; Hardware 0-8, hook 12, font 15 and the
-; shell hook 16 are here. Volume and
+; Hardware 0-8, hook 12, the shell hook
+; 16 and glyphs 17 are here. Volume and
 ; registry calls have their own results
 ; and effects.
 ; Hardware/font/hook use resident state
@@ -518,12 +518,75 @@ RTCR1:
   pop bc
   ret
 
-; TNFONT (15): HL=FONT, the ROM font
-; shared by PICO and GLCD.
-; Changes AF. Other registers stay.
+; TNGLYPH (17): glyph B's eight rows at
+; HL, top first, HL advanced eight. Bit
+; 7 of B complements them; low bits
+; below 20h give a space. FONT holds two
+; rows a byte, the upper in the high
+; nibble; FONTW the glyphs with a fifth
+; column and its rows, bit 7 the top.
+; The PICO's pattern load uses it too.
+; Returns A=0, Z, NC. Keeps DE. Changes
+; BC.
 
-HWSFONT:
-  ld hl,FONT
+FNTGLY:
+  push de
+  ld a,b
+  rla            ; bit 7 into carry
+  sbc a,a        ; FFh complements
+  ld e,a
+  ld a,b
+  and $7F
+  push hl        ; the destination
+  ld hl,FONTW
+  ld bc,4        ; four wide glyphs
+  cpir
+  ld d,b         ; none: no fifth
+  jr nz,FNTG1
+  inc hl
+  inc hl
+  inc hl         ; to its rows
+  ld d,(hl)
+
+FNTG1:
+  sub $20
+  jr nc,FNTG2    ; 20h..7Fh
+  xor a          ; controls: a space
+
+FNTG2:
+  ld l,a
+  ld h,b         ; B is 0
+  add hl,hl
+  add hl,hl      ; four bytes a glyph
+  ld bc,FONT
+  add hl,bc
+  ld b,8         ; eight rows
+
+FNTG3:
+  ld a,(hl)
+  bit 0,b        ; odd rows: the low
+  jr z,FNTG4     ; nibble, then on
+  add a,a
+  add a,a
+  add a,a
+  add a,a        ; low nibble up
+  inc hl
+
+FNTG4:
+  and $F0
+  xor e          ; complemented
+  sla d          ; its fifth column?
+  jr nc,FNTG5
+  xor 8
+
+FNTG5:
+  ex (sp),hl     ; to the destination
+  ld (hl),a
+  inc hl
+  ex (sp),hl
+  djnz FNTG3
+  pop hl         ; HL past the rows
+  pop de
   xor a
   ret
 
@@ -544,6 +607,10 @@ SVDRV:
   ld a,b
   cp CMUC1
   jr z,SVDRV1
+
+; TNFONT (15) comes here too: no table.
+
+HWSNO:
   ld a,TNEBAD
   scf
   ret

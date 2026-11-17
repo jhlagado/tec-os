@@ -1,6 +1,6 @@
 ; ST7920 128x64 console: 21x8 cells,
 ; each 6x8 pixels. Resident text/state
-; use the ROM font and LINEBUF.
+; use the ROM's glyphs and LINEBUF.
 ; Pages lie below the prior top. The
 ; word at 0006h points to the BDOS entry
 ; below the resident body.
@@ -45,7 +45,7 @@ VTAB: DW GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
   DB GLCOLS,GLROWS
 LBUF: DW 0
 
-; Install UC1's hook last. Font failure,
+; Install UC1's hook last. No glyphs,
 ; busy timeout, no matrix or an occupied
 ; table causes failure. CON=CRT startup
 ; gives TNENODV (KE-200). Local state
@@ -58,10 +58,11 @@ LBUF: DW 0
 ; Changes AF/BC/DE/HL.
 
 INIT:
-  ld c,TNFONT
-  call ABICALL
+  ld b,' '
+  ld hl,GLCACH
+  ld c,TNGLYPH
+  call ABICALL   ; a ROM with glyphs?
   ret c
-  ld (FONTP),hl
   call GLCWAIT
   ld a,TNENODV
   scf
@@ -266,11 +267,6 @@ GLCPUT:
   call GLCADR
   pop af
   ld (hl),a
-  push bc
-  ld c,0
-  call GLCADR
-  pop bc
-  ld (GLROWP),hl
   ld a,c         ; pixels 6*C..6*C+5
   add a,a
   ld e,a
@@ -289,41 +285,7 @@ GLCPUT:
   srl a
   srl a
   ld e,a         ; last word
-  ld a,b
-  add a,a
-  add a,a
-  add a,a
-  ld (GLY),a
-  ld c,8
-
-GLCPR:
-  ld a,d
-
-GLCPW:
-  ld (GLW),a
-  push bc
-  push de        ; word bounds over
-                 ; address/composition
-  call GLCSETA
-  call GLCCMP
-  ld a,d
-  call GLCDW
-  ld a,e
-  call GLCDW
-  pop de
-  pop bc
-  ld a,(GLW)
-  cp e
-  jr z,GLCPN
-  inc a
-  jr GLCPW
-
-GLCPN:
-  ld hl,GLY
-  inc (hl)
-  dec c
-  jr nz,GLCPR
-  ret
+  jr GLCWD
 
 ; VGET: A=stored byte at valid row B,
 ; column C, including reverse bit 7.
@@ -358,48 +320,104 @@ GLCCL:
   jr nz,GLCCL
   jr GLCROW
 
-; Redraw valid row B=0..7: eight pixel
-; rows from 8*B, eight high/low words
-; each, composed from software text.
-; One address pair per pixel row relies
-; on controller word auto-advance.
-; Keeps B. Changes AF/C/DE/HL and shared
-; scratch. Byte drops do not stop the
-; loops or form an aggregate status.
+; Redraw valid row B=0..7: all eight
+; words. Keeps B. Changes AF/C/DE/HL
+; and shared scratch. Byte drops do not
+; stop the loops or form an aggregate
+; status.
 
 GLCROW:
+  ld de,7        ; words 0 to 7
+
+; Words D..E of row B, one at a time:
+; its characters' glyphs, then eight
+; pixel rows, an address pair each.
+; Leaves GLW=E and GLY=8*B+8.
+
+GLCWD:
+  push bc
   ld c,0
   call GLCADR
+  pop bc
   ld (GLROWP),hl
+  ld a,d
+
+GLCW1:
+  ld (GLW),a
+  push bc
+  push de        ; word bounds over
+                 ; the word's rows
   ld a,b
   add a,a
   add a,a
   add a,a
-  ld (GLY),a
+  ld (GLY),a     ; its first pixel row
+  call GLFILL
   ld c,8
 
-GLCRL:
-  xor a
-  ld (GLW),a
-  push bc
+GLCW2:
+  push bc        ; C rows left
   call GLCSETA
-
-GLCRW:
   call GLCCMP
   ld a,d
   call GLCDW
   ld a,e
   call GLCDW
-  ld hl,GLW
-  inc (hl)
-  ld a,(hl)
-  cp 8
-  jr nz,GLCRW    ; controller advances
-  pop bc
   ld hl,GLY
-  inc (hl)
+  inc (hl)       ; the next pixel row
+  pop bc
   dec c
-  jr nz,GLCRL
+  jr nz,GLCW2
+  pop de
+  pop bc
+  ld a,(GLW)
+  cp e
+  ret z          ; the last word
+  inc a
+  jr GLCW1
+
+; HL at GLCSPAN's entry for word GLW.
+; Changes AF.
+
+GLSPAN:
+  ld a,(GLW)
+  add a,a
+  ld hl,GLCSPAN
+  add a,l
+  ld l,a
+  ret nc
+  inc h          ; table page carry
+  ret
+
+; Word GLW's characters from GLROWP's
+; row: each one's eight rows from the
+; ROM into GLCACH, eight bytes apart.
+; Changes AF/BC/DE/HL.
+
+GLFILL:
+  call GLSPAN
+  ld a,(hl)      ; the first character
+  inc hl
+  ld b,(hl)      ; and how many
+  ld hl,(GLROWP)
+  add a,l
+  ld l,a
+  jr nc,GLFL1    ; text-row page carry
+  inc h
+
+GLFL1:
+  ld de,GLCACH
+
+GLFL2:
+  push bc
+  ld b,(hl)      ; the character
+  ex de,hl
+  ld c,TNGLYPH
+  call ABICALL   ; its rows, HL on
+  ex de,hl       ; DE the next slot
+  inc hl
+  pop bc
+  djnz GLFL2
   ret
 
 ; Address valid GLY=0..63/GLW=0..7.
@@ -427,25 +445,17 @@ GLCSU:
   jp GLCC
 
 ; Compose word GLW=0..7 at GLY=0..63
-; from a valid GLROWP 21-character row.
-; Returns DE pixels, D left/high.
-; Signed offset=6*first-16*word. Shift
-; right for positive, left for negative,
-; discard outside bits then OR pieces.
-; GLGLY keeps accumulating DE. Only loop
-; BC is saved around it, not whole-call
-; BC or F/HL. Changes AF/BC/HL/GLOFF.
+; from GLCACH, which GLFILL filled for
+; this word. Returns DE pixels, D
+; left/high. Signed offset=6*first-
+; 16*word. Shift right for positive,
+; left for negative, discard outside
+; bits then OR pieces. A reversed row's
+; low two bits are dropped here.
+; Changes AF/BC/HL/GLOFF.
 
 GLCCMP:
-  ld a,(GLW)
-  add a,a
-  ld hl,GLCSPAN
-  add a,l
-  ld l,a
-  jr nc,GLCCS    ; table page carry
-  inc h
-
-GLCCS:
+  call GLSPAN
   ld b,(hl)
   inc hl
   ld c,(hl)
@@ -464,19 +474,19 @@ GLCCS:
   add a,l
   ld (GLOFF),a
   ld de,0
+  ld a,(GLY)
+  and 7          ; this pixel row
+  ld hl,GLCACH
+  add a,l
+  ld l,a
+  jr nc,GLCCH    ; cache page carry
+  inc h
 
 GLCCH:
   push bc
-  ld hl,(GLROWP)
-  ld a,b
-  add a,l
-  ld l,a
-  jr nc,GLCCG    ; text-row page carry
-  inc h
-
-GLCCG:
-  ld a,(hl)
-  call GLGLY
+  push hl
+  ld a,(hl)      ; the glyph's row
+  and $FC        ; six pixels
   ld h,a
   ld l,0
   ld a,(GLOFF)
@@ -509,54 +519,12 @@ GLCCO:
   ld a,(GLOFF)
   add a,6
   ld (GLOFF),a
+  pop hl
+  ld bc,8        ; the next glyph
+  add hl,bc
   pop bc
-  inc b
   dec c
   jr nz,GLCCH
-  ret
-
-; A=character, FONTP from successful
-; INIT. Return font row GLY&7 in A.
-; Low-seven-bit controls use a space.
-; Normal font: five pixels and a blank
-; column in bits 7..2. Input bit 7
-; reverses all six, low two bits stay 0.
-; Keeps B/DE. Changes F/C/HL. GLCCMP
-; saves only local BC around this call.
-
-GLGLY:
-  ld c,a
-  and $7F
-  sub $20
-  jr nc,GLGL1
-  xor a
-
-GLGL1:
-  ld l,a
-  ld h,0
-  add hl,hl
-  add hl,hl
-  add hl,hl
-  ld a,(GLY)
-  and 7
-  add a,l        ; low three bits of
-                 ; 8*glyph are zero
-  ld l,a
-
-; Add the full font pointer with carry,
-; keeping character C and pixels DE.
-
-  ld a,(FONTP)
-  add a,l
-  ld l,a
-  ld a,(FONTP+1)
-  adc a,h
-  ld h,a
-  ld a,(hl)
-  bit 7,c
-  ret z
-  cpl
-  and $FC
   ret
 
 ; For each word: the first character it
@@ -570,10 +538,10 @@ GLCSPAN:
 ; At GLCSETA/GLCCMP use, GLY=0..63
 ; and GLW=0..7. After eight pixel rows,
 ; GLY=8*B+8, up to 64 for valid B=7.
-; GLCROW also leaves GLW=8. A clear
-; that skips redraw does not establish
-; these endpoint values.
+; A clear that skips redraw does not
+; establish these endpoint values.
 ; GLROWP is established per operation.
+; GLCACH: up to four glyphs, a word's.
 ; Shared scratch is not re-entrant.
 
 GLTEXT: DS GLCOLS*GLROWS,' '
@@ -584,6 +552,6 @@ GLOFF: DS 1      ; signed cell offset
                  ; from word edge
 GLWN: DS 1       ; busy polls left
 GLOUT: DS 1      ; byte over polling
-FONTP: DW 0      ; INIT's ROM font
+GLCACH: DS 32    ; four glyphs' rows
 
 IMGEND:
