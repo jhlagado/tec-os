@@ -17,6 +17,7 @@ import { pinnedBytes as readPinnedBytes } from "./lib/pins.mjs";
 import { PROFILES } from "./build.mjs";
 import { pageZeroDeclarations } from "./lib/media-source.mjs";
 import { tasAssembler, traceRom } from "./lib/tas-rom.mjs";
+import { bounceSource } from "./lib/bounce-source.mjs";
 
 import { assembleDistributionCom, assembleGlcd, assembleMon3, assembleShell } from "./lib/tas-distribution.mjs";
 
@@ -231,9 +232,10 @@ async function main() {
   files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
   files.push({ name: "BAZA.COM", description: "BAZA, the BASIC compiler: BAZA NAME, NAME.BAS to NAME.COM", bytes: baza });
   files.push({ name: "BAZA.RTL", description: "BAZA's runtime library, which it copies into each program", bytes: rtl });
-  // BOUNCE.BAS, Baza's CALL demonstration, is pinned as LF text: the card
-  // holds it as a CP/M text file, as TIMES.BAS is held.
-  const bounce = Buffer.from(pinnedBytes("BOUNCE.BAS").toString("latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
+  // The pinned example's font access
+  // is adapted to the glyph service
+  // before conversion to CP/M text.
+  const bounce = Buffer.from(bounceSource(ROOT).toString("latin1").replace(/\n/g, "\r\n") + "\x1a", "latin1");
   files.push({ name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D or the arrow keys steer, Q quits", bytes: bounce });
   files.push({ name: "CAVBASIC.BAS", description: "Caverns source for BAZA: BAZA CAVBASIC rebuilds the adventure; TED CAVBASIC.BAS reads it", bytes: text("CAVBASIC.BAS") });
   files.push({ name: "CAVERNS.TXT", description: "Playing Caverns and rebuilding it with BAZA", bytes: text("CAVERNS.TXT") });

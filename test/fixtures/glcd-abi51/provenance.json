@@ -1,0 +1,38 @@
+{
+  "format": "tec-os-legacy-service-fixture-v1",
+  "purpose": "Check clean refusal of the ABI 5.1 GLCD driver on the ABI 5.2 ROM",
+  "repository": "jhlagado/tec-os",
+  "sourceCommit": "c02f4f1815297617a1b1d0a14ad4cba888c55766",
+  "capturedFromCommit": "2056c9164d861b3c4e2b7d84549597597eb7e018",
+  "sourceFiles": [
+    {
+      "path": "drivers/glcd.asm",
+      "sha256": "acb020860b09f13741b9638e43afeec0a6cfb85c0b2f240900f88d2f733697bc"
+    },
+    {
+      "path": "src/abi.inc",
+      "sha256": "98bd6bcc050ad9ca5894b940c650d892fa59318f774c51c1b5f3cdc01f0a33f5"
+    }
+  ],
+  "builder": {
+    "path": "tools/media.mjs",
+    "adapter": "tools/lib/tas-distribution.mjs",
+    "adapterSha256": "7087ce080359d242f9a143b07e69bef05b1cf16570a58755f3d5d8b3ba7d2ccd",
+    "origins": [256, 512]
+  },
+  "assembler": {
+    "repository": "jhlagado/thorium",
+    "commit": "7a217f96c76f11641af3fa0b22d0b34be6e2a467",
+    "path": "dist/TAS.COM",
+    "bytes": 11013,
+    "sha256": "8e1f0efb662e5d6bab5e2b7f9479bc60d6f989d07fb22d11c9ffc70e2f5ed359",
+    "hostRunnerCommit": "3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689"
+  },
+  "serviceFormat": 4,
+  "fontService": 15,
+  "artifact": {
+    "path": "GLCD.SVC",
+    "bytes": 836,
+    "sha256": "ac040f75f8d91226fd80ff9be1764673dec0ec5cde606769425bd815fb75e736"
+  }
+}

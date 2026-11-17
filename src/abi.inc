@@ -1,4 +1,4 @@
-; Public TEC-OS ABI 5.1: eight bytes at
+; Public TEC-OS ABI 5.2: eight bytes at
 ; C003h..C00Ah, containing TNA, major,
 ; minor and JP SVCDSP. Test TNA at
 ; ABITAB and major 5 at ABIMAJ before
@@ -20,7 +20,7 @@ ABITAB EQU $C003
 
 ABIMAJ EQU $C006
 
-; minor version, 1
+; minor version, 2
 
 ABIMIN EQU $C007
 
@@ -205,10 +205,11 @@ TNFIND EQU 13
 
 TNLIST EQU 14
 
-; FONT: return HL=FONT in ROM, 96
-; eight-byte glyphs from character 20h,
-; top row first. Added at ABI minor 1.
-; Stack bound 4.
+; FONT: added at minor 1, refused from
+; minor 2 with TNEBAD and carry, HL
+; unchanged: the ROM's font is packed
+; and has no eight-byte table. GLYPH
+; gives a glyph's rows.
 
 TNFONT EQU 15
 
@@ -225,6 +226,18 @@ TNFONT EQU 15
 
 TNSHELL EQU 16
 
+; GLYPH: B=character, HL points to
+; eight writable bytes: its rows, top
+; first, five pixels in bits 7..3. Bit
+; 7 of B complements all eight bits;
+; low seven bits below 20h give a
+; space. Advance HL eight. Keeps DE.
+; Reentrant; never a housekeeping
+; point. Added at ABI minor 2. Stack
+; bound 4.
+
+TNGLYPH EQU 17
+
 ; TNCOUNT is the exclusive service
 ; bound, not callable. Failures return
 ; status A with carry:
@@ -233,7 +246,7 @@ TNSHELL EQU 16
 ; failure does not imply unchanged
 ; workspace, cache or hardware.
 
-TNCOUNT EQU 17
+TNCOUNT EQU 18
 
 TNEBAD EQU 1
 

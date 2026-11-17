@@ -9,6 +9,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { ABI, GLCD_SVC, ROOT, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { fontGlyphs } from "../tools/lib/font.mjs";
 
 const HWSVC = romFor().symbols.get("ABICALL");
 const HW = Object.fromEntries(["INFO", "DIGIT", "LCD", "VIDEO", "TONE", "JOY", "KEYS", "PUTAT", "RTC"].map((n) => [n, ABI[`TN${n}`]]));
@@ -226,6 +227,39 @@ test("hardware services: a claim stops PUTAT only while the PICO9918 is the cons
   ok(svc(m, HW.VIDEO, { b: 1 }));
   ok(svc(m, HW.PUTAT, { b: 4, hl: BUF }));
   ok(svc(m, HW.VIDEO, { b: 0 }));
+});
+
+// The font at ABI 5.2 (Origo KD-436). TNGLYPH, 17, gives a glyph's eight rows
+// from the ROM's packed font; TNFONT, 15, which gave the table at 5.1, is refused.
+test("TNGLYPH gives every code's eight rows: the font's, complemented for 80h to FFh, a space below 20h", () => {
+  const m = boot(standardCard());
+  const font = fontGlyphs(ROOT);
+  for (let b = 0; b < 256; b += 1) {
+    m.write(BUF - 1, 0xa5);
+    m.write(BUF + 8, 0x5a);
+    const r = svc(m, ABI.TNGLYPH, { b, de: 0x1234, hl: BUF });
+    ok(r);
+    assert.equal(r.hl, BUF + 8, `code ${b}: HL advanced 8`);
+    assert.equal(r.de, 0x1234, `code ${b}: DE kept`);
+    const plain = b & 0x7f;
+    const want = font[plain < 0x20 ? 0 : plain - 0x20].map((v) => (b & 0x80 ? v ^ 0xff : v));
+    assert.deepEqual(Array.from({ length: 8 }, (_, i) => m.read(BUF + i)), want, `code ${b}: its rows`);
+    assert.deepEqual([m.read(BUF - 1), m.read(BUF + 8)], [0xa5, 0x5a], `code ${b}: nothing written either side`);
+  }
+  assert.ok(depths[ABI.TNGLYPH] <= 4, `TNGLYPH used ${depths[ABI.TNGLYPH]} bytes of stack, its bound 4`);
+  assert.deepEqual(m.violations, []);
+});
+
+test("TNFONT, 15, is refused from ABI 5.2: TNEBAD with carry, HL and DE as passed, nothing written", () => {
+  const m = boot(standardCard());
+  const tpa = Array.from({ length: 0x0f00 - 0x0100 }, (_, i) => m.read(0x0100 + i));
+  const r = svc(m, ABI.TNFONT, { de: 0x5678, hl: 0x1234 });
+  assert.equal(r.a, ABI.TNEBAD, "TNEBAD");
+  assert.equal(r.carry, 1, "carry set");
+  assert.equal(r.hl, 0x1234, "HL unchanged");
+  assert.equal(r.de, 0x5678, "DE unchanged");
+  assert.deepEqual(Array.from({ length: 0x0f00 - 0x0100 }, (_, i) => m.read(0x0100 + i)), tpa, "0100h-0EFFh unchanged");
+  assert.equal(m.read(0xc007), 2, "ABI minor 2");
 });
 
 test("hardware services: stack depths", () => {

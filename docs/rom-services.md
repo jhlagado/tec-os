@@ -1,11 +1,15 @@
 # The ROM table and the hardware services
 
-Status: **Built**, ABI 5.1. The *ROM table* is 8 bytes at `C003h`, ending in one jump, `ABICALL`
-at `C008h`, to 17 *numbered services*: 9 *hardware services* in `src/services.asm`, and
-the volumes', the display drivers' hook, the registry's, the font's and the shell hook's. `test/hwsvc.test.mjs`
+Prototype integration: generated resource figures below still describe the
+standalone packed-font build and must be regenerated before qualification.
+
+Status: **Built**, ABI 5.2. The *ROM table* is 8 bytes at `C003h`, ending in one jump, `ABICALL`
+at `C008h`, to 18 *numbered services*: 9 *hardware services* in `src/services.asm`, and
+the volumes', the display drivers' hook, the registry's, the shell hook's and the
+glyphs'. Number 15, the font's table at ABI 5.1, is refused from 5.2. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, which `TAS DEMO` builds from the starter card's `DEMO.ASM`, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,007 bytes (`tecos`) and has 377 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,408 bytes (`tecos`) and has 976 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -25,7 +29,7 @@ the ROM only through the table. The build checks this order from the symbol tabl
 
 ## The ROM table
 
-ABI 5.1. `src/abi.inc`, published in `dist/` as `abi.inc`, gives the table's
+ABI 5.2. `src/abi.inc`, published in `dist/` as `abi.inc`, gives the table's
 addresses and each service's number, arguments, results, carry and stack; the ROM
 assembles from the same file, so the two can't disagree. A program tests for major
 version 5 exactly: a new major may renumber the services, and a new minor only adds
@@ -37,7 +41,7 @@ built for ABI 4, is refused by the loader before its INIT runs.
 | --- | --- | --- |
 | `C003h` | `ABITAB` | `"TNA"` signature |
 | `C006h` | `ABIMAJ` | ABI major version, 5 |
-| `C007h` | `ABIMIN` | ABI minor version, 1: 1 adds `TNFONT` |
+| `C007h` | `ABIMIN` | ABI minor version, 2: 1 added `TNFONT`, 2 adds `TNGLYPH` and refuses `TNFONT` |
 | `C008h` | `ABICALL` | `JP` to the service numbered in C |
 
 EXPAND 1 is TEC-OS's own, and no interface leaves it in view: `BF00h`, `BE00h`
@@ -50,11 +54,32 @@ contents do not survive a reset, and warm boot leaves them.
 
 | C | Arguments | Returns |
 | --- | --- | --- |
-| 15, `TNFONT` | — | HL = the console font in the ROM: 96 characters of 8 bytes, one a row from the top, from 20h |
+| 17, `TNGLYPH` | B = a character, HL → 8 writable bytes | Its 8 rows at HL, the top first, five pixels in bits 7 to 3; HL advanced 8, DE kept. Bit 7 of B complements every bit of every row; a character whose low seven bits are below 20h gives a space |
+| 15, `TNFONT` | — | Refused from ABI 5.2: status 1 with carry, HL unchanged |
 
-The PICO9918's console and the GLCD's driver draw from this copy, built from
-`format/font5x7.txt`; the driver asks for it at `INIT`, and a ROM before ABI 5.1
-refuses the number, and the driver's `INIT` with it. Serial and the LCD need no font.
+The ROM holds the font packed, built from `format/font5x7.txt`: the design is 4 by 7,
+so a glyph is four bytes, two rows a byte, and the four glyphs that light a fifth
+column (`#`, `$`, `+` and 7Fh) carry the rows that do in an 8-byte list beside it.
+There is no 768-byte table to point at, so `TNFONT`, which returned one at ABI 5.1, is
+refused, and a caller that tests carry learns it; one that does not reads whatever
+its HL held. `TNGLYPH` unpacks one glyph. It is reentrant and is never a housekeeping
+point: the dispatcher sends it straight to the unpacker, before the step that can run
+the write-behind worker, so a driver drawing at depth 0 is never printed into by a
+notice in the middle of its draw. The PICO9918's console loads its patterns
+through the same routine, and the GLCD's driver asks for each glyph it draws; a ROM
+before ABI 5.2 refuses number 17 and the driver's `INIT` with it. Serial and the LCD
+need no font.
+
+The starter card carries a TEC-OS adaptation of the pinned Baza BOUNCE
+example. Its font setup calls service 17 for each character from 32 to 127
+through an eight-byte string buffer. Media generation checks the upstream
+file's hash before changing those lines and converting it to CP/M text.
+The upstream source and compiler pins remain unchanged.
+
+**An older `GLCD.SVC` on a card** asks for 15 at `INIT`, gets the refusal and is
+refused itself: its startup line says `GLCD.SVC?`, and a board with only the GLCD has
+no GLCD console, its prompt on the serial terminal and the LCD. Copy this build's
+`GLCD.SVC` onto the card, from a new starter card or `dist/`, to have it back.
 
 ## The shell hook
 
@@ -187,7 +212,7 @@ unchanged. `docs/services.md` gives a service's rules.
 | | **Total** | | | | **485** |
 
 Numbers 9 to 14 are the volumes', the drivers' hook and the registry's, above and in
-`abi.inc`. Number 15 is `TNFONT` and 16 `TNSHELL`. Every number from 17 (`TNCOUNT`) to 255
+`abi.inc`. Number 15 is `TNFONT`, refused, 16 `TNSHELL` and 17 `TNGLYPH`. Every number from 18 (`TNCOUNT`) to 255
 returns status 1 with the other registers
 as they came. Stack is the deepest measured use of the
 caller's stack below the return address.
@@ -252,7 +277,7 @@ carries its own.
 | PICO9918 text console and graphics (`pico.asm`) | 629 | 1, 2 | Stays: the console from the banner on, its RAM a 95-byte block (KS39) |
 | PICO9918 probe (`tms.asm`) | 32 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.SVC`, a driver, loaded by `STARTUP.CMD` |
-| Font, 96 characters, service 15's (`gen/font.asm`) | 768 | 1, 2 | Stays: the PICO9918's console reads it and the GLCD's driver through `TNFONT`; serial and the LCD need none |
+| Font, 96 characters packed, and its unpacker (`gen/font.asm`, `FNTGLY`) | 392 and 83 | 1, 2 | Stays: the PICO9918's console reads it and the GLCD's driver through `TNGLYPH`; serial and the LCD need none |
 | 20 × 4 LCD (`lcd.asm`) | 132 | 2 | Stays |
 | SD driver (`sd.asm`) | 819 | 1 | Stays |
 | Container mount and checks (`vol.asm`, `volsvc.asm`, `volutil.asm`) | 1,269 | 1 | Stays |
@@ -309,7 +334,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->377<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->976<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

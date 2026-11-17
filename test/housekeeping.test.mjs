@@ -523,14 +523,16 @@ for (const coalesced of [false, true]) {
     assert.equal(word(r.m, r.m.sym("APIRTPC")), 12291);
   });
 }
-for (const [name, fn, bound] of [["INFO", 0, 6], ["JOY", 5, 4], ["FONT", 15, 4]]) {
+// GLYPH, 17, writes reversed A's eight rows at 5000h; FONT, 15, is refused from ABI 5.2.
+for (const [name, fn, bound, regs] of [["INFO", 0, 6], ["JOY", 5, 4], ["GLYPH", 17, 4, { b: 0xc1, h: 0x50, l: 0 }]]) {
   test("RIG4/5 " + ("root " + name + " hardware preserves published small stack bound"), () => {
-    const r = fixture(), result = r.call(r.m.sym("ABICALL"), { c: fn });
+    const r = fixture(), result = r.call(r.m.sym("ABICALL"), { c: fn, ...regs });
     assert.equal(result.a, 0);
     assert.equal(result.flags.C, 0);
     const belowReturn = r.stack.callerDeepest - 2;
     assert.ok(belowReturn <= bound, "published " + name + " stack bound");
-    assert.equal(word(r.m, r.m.sym("APIRTPC")), 12291);
+    // GLYPH is never a housekeeping point: no outer context is taken for it.
+    assert.equal(word(r.m, r.m.sym("APIRTPC")), fn === 17 ? 0 : 12291);
     assert.equal(r.m.read(r.m.sym("HKDEP")), 0);
   });
 }
@@ -563,4 +565,29 @@ test("RIG4/5 root hardware selection retains return ownership through nested BDO
   assert.equal(r.m.read(r.m.sym("HKDEP")), 0);
   assert.equal(word(r.m, r.m.sym("APIRTPC")), 12291);
   assert.deepEqual(r.attempts, [r.base, r.base + 1, r.base + 2]);
+});
+
+// A GLCD redraw at housekeeping depth 0 with a failing write pending (Origo
+// lean-rom readback, item 3): the ROM's console selection clears the GLCD
+// at depth 0, and GLCD.SVC fetches each glyph through TNGLYPH. TNGLYPH is
+// never a housekeeping point, so the worker cannot print through the GLCD
+// in the middle of its draw. The clear returns with the screen blank and no
+// notice; the next maintenance point prints "Write pending" once.
+test("RIG4/5 GLCD redraw at depth 0 with a failing write pending returns, the screen right, the notice outside the draw", () => {
+  const r = fixture({ matrix: true, glcd: true });
+  assert.equal(r.m.read(r.m.sym("CONMOD")), 3, "the GLCD the console");
+  r.seed(0, r.base, 73);
+  r.failed.add(r.base);
+  assert.equal(r.m.read(r.m.sym("HKDEP")), 0, "depth 0");
+  const mark = r.m.output.length;
+  const before = r.stats.workerEntries;
+  const done = r.call(r.m.sym("VTCLS"));
+  assert.ok(done.cycles < 3_000_000, `the clear returns, ${done.cycles} T`);
+  assert.equal(r.stats.workerEntries, before, "no worker run inside the draw");
+  assert.doesNotMatch(r.m.text(mark), /Write pending/, "no notice inside the draw");
+  assert.deepEqual(r.m.glcdScreen().filter((l) => l.trim() !== ""), [], "the screen blank");
+  r.api(12);
+  const notices = r.m.text(mark).match(/Write pending/g) ?? [];
+  assert.equal(notices.length, 1, "the notice once, at the next maintenance point");
+  assert.ok(r.m.glcdScreen().some((l) => l.includes("Write pending")), "and on the panel");
 });

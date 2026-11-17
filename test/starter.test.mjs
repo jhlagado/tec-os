@@ -12,6 +12,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { GLCD_SVC, ROOT, boot, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
+import { fontBytes } from "../tools/lib/font.mjs";
+import { bounceSource } from "../tools/lib/bounce-source.mjs";
 import { digitsOf, find, hello3, lcdRows, line, mon3Svc, svcMutant } from "./lib/mon3.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
 import { needsStarter, prepareCard } from "../host/card.mjs";
@@ -25,8 +27,10 @@ const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip;
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 const text = (name) => textAt(`programs/${name}`);
-// Baza's examples/BOUNCE.BAS is LF text: the card holds it as CP/M text, as TIMES.BAS.
-const bounceText = () => Buffer.from(readFileSync(BOUNCE.path, "latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
+// The starter adapts the pinned LF
+// example to the glyph service, then
+// holds it as CP/M text.
+const bounceText = () => Buffer.from(bounceSource(ROOT).toString("latin1").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 
 let built;
 /** The starter card and its recipe, made once by tools/media.mjs. */
@@ -66,6 +70,7 @@ test("the starter card holds exactly fifteen files, each by its hash, the PICO99
     "HELLO3.ASM": textAt("test/programs/hello3.asm"),
   };
   const a = volume(card, "A");
+  assert.equal(sha(bounceText()), "9d9092748d11be539c86e79ba591849191540812c4342f601ac9c1de065fc0d6", "the adapted CP/M source pin");
   assert.deepEqual(a.list().map((f) => f.name).sort(), Object.keys(want).sort());
   assert.deepEqual(recipe.components.map((c) => c.name).sort(), Object.keys(want).sort());
   for (const [name, bytes] of Object.entries(want)) {
@@ -122,15 +127,16 @@ function bounceRound(card) {
   keys("baza bounce\r", "BAZA's build", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
   assert.match(m.text(mark), /COM written\r\n/);
   const com = Buffer.from(volume(card, "A").read("BOUNCE.COM"));
-  assert.equal(com.length, 17408, "BOUNCE.COM's length");
-  assert.equal(sha(com), "45e7829412750d0e5b8b114135c9170fa6c26262f0c2d450b94d616ae764efcd", "BOUNCE.COM as the pinned BAZA compiles it");
+  // The next native qualification must
+  // restate these pre-adaptation pins.
+  assert.equal(com.length, 17408, "requalify adapted BOUNCE.COM's length");
+  assert.equal(sha(com), "45e7829412750d0e5b8b114135c9170fa6c26262f0c2d450b94d616ae764efcd", "requalify adapted BOUNCE.COM as the pinned BAZA compiles it");
   m.enqueueInput("bounce\r", "matrix");
   m.runUntil(() => (m.pumpInput(), !m.pending?.length), 50_000_000, "the command line");
   run(150_000_000);
   let s = vdp();
   assert.deepEqual(text(s.registers), [0, 0xc2, 6, 0x80, 0, 0x36, 7, 1], "Graphics I with 16 x 16 sprites");
-  const font = m.sym("FONT");
-  assert.deepEqual(Array.from(s.vram.slice(0x100, 0x400)), Array.from({ length: 768 }, (_, i) => m.read(font + i)), 'the ROM\'s font at 0100h, found by reg("HL")');
+  assert.deepEqual(Array.from(s.vram.slice(0x100, 0x400)), Array.from(fontBytes(ROOT)), "the ROM's font at 0100h, glyph by glyph through service 17");
   const title = " BAZA BASIC ON THE PICO9918 ";
   assert.equal(Buffer.from(s.vram.slice(0x1802, 0x1802 + title.length)).toString("latin1"), title, "the title in the name table");
   const attrs = (v) => Array.from(v.slice(0x1b00, 0x1b18));
@@ -367,7 +373,8 @@ test("on the card at 40 columns, TED BOUNCE.BAS scrolls sideways along its longe
     m.enqueueInput(s, "matrix");
     m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 3_000_000_000, what);
   };
-  const source = readFileSync(BOUNCE.path, "latin1").replace(/\n$/, "").split("\n");
+  const source = Buffer.from(volume(card, "A").read("BOUNCE.BAS")).toString("latin1")
+    .split("\x1a", 1)[0].replace(/\r\n/g, "\n").replace(/\n$/, "").split("\n");
   const n = source.reduce((best, l, i) => (l.length > source[best].length ? i : best), 0);
   const len = source[n].length;
   assert.ok(len > 40, "a line longer than the screen");
