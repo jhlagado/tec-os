@@ -796,12 +796,7 @@ LTXT EQU LBUF+2
 
 ; LBL holds each drive's volume label,
 ; 11 bytes a drive, valid while its
-; first byte is not zero. CDNAME is the
-; label CD seeks, CDDRV its drive; a
-; walk sets CDIDX to the index found
-; plus 1 and CDON to the drive it is
-; on. VIDX is the walk's index, VLIST
-; set to list. CDNAME is 11 bytes.
+; first byte is not zero.
 
 ; A volume's descriptor, which TNDESC
 ; puts in CFCB, has its drive (FFh for
@@ -811,13 +806,7 @@ DSDRV     EQU   CFCB+14
 DSLBL     EQU   CFCB+16
 
 LBL       EQU   LBUF+130
-CDDRV     EQU   LBL+44
-CDIDX     EQU   CDDRV+1
-CDON      EQU   CDIDX+1
-VIDX      EQU   CDON+1
-VLIST     EQU   VIDX+1
-CDNAME    EQU   VLIST+1
-STKBOT    EQU   CDNAME+11
+STKBOT    EQU   LBL+44
 STKTOP    EQU   STKBOT+48
 HSTACK    EQU   STKTOP-2
 

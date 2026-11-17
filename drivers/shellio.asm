@@ -244,13 +244,7 @@ PUTZ:
   jr PUTZ
 
 ; B bytes at HL, each masked to seven
-; bits: a name, its spaces kept.
-
-PUTN:
-  ld c,0         ; no byte left out
-  jr PT0
-
-; The same with its spaces left out.
+; bits, with the spaces left out.
 
 PUTTRIM:
   ld c,SPACE     ; spaces left out

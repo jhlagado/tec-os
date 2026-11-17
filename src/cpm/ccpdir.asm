@@ -158,9 +158,11 @@ RCDNOMSG:  DB    "CD FAILED$"
 ; labelled RCDNAME sets RCDIDX to its
 ; index plus 1 and RCDON to its drive,
 ; FFh for none. With RVLIST set each is
-; listed, its label and its drive.
-; RVWALKQ clears RVLIST first for a walk
-; that lists nothing.
+; listed, its label and its drive, one a
+; row through LSTCRLF, so a shell's
+; pager can stop the list. RVWALKQ
+; clears RVLIST first for a walk that
+; lists nothing.
 ; Changes all.
 
 RVWALKQ:
@@ -218,7 +220,7 @@ RVW4:
   ld a,(RVLIST)
   or a
   jr z,RVW5      ; not listed
-  call RLSTNL    ; a row
+  call LSTCRLF   ; a row, paged
   jr c,RVWSTOP   ; stopped
   ld hl,RDSLBL
   ld b,11
@@ -280,14 +282,6 @@ RPUTDRV:
   call PUTCHAR   ; the letter
   ld e,':'
   jp PUTCHAR
-
-; A CR/LF row break, returning with
-; carry clear.
-
-RLSTNL:
-  call RCRLF
-  or a
-  ret
 
 ; Print B label bytes from HL, including
 ; spaces. Changes AF, BC, DE and HL.
