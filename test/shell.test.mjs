@@ -642,9 +642,13 @@ function entries(m, lo, hi) {
   const stacks = { bdos: [s("STKBASE"), s("STKTOP")], ccp: [s("CSTKBAS"), s("CSTKTOP")], bios: [s("BSTKB"), s("BSTK")] };
   const use = { bdos: 0, ccp: 0, bios: 0, other: 0 };
   let open = null;
+  // RINGIO (KD-435) sets SP to NMISP, in the BDOS's stack, for its mapped
+  // instructions and pushes nothing there: that SP is no use of the stack.
+  const ring = [m.sym("RINGIO"), m.sym("SVPARS")];
   const step = m.step.bind(m);
   m.step = () => {
     const pc = m.pc;
+    if (pc >= ring[0] && pc < ring[1]) return step();
     const sp = m.cpu.cpu.sp & 0xffff;
     const inside = pc >= lo && pc < hi;
     if (!open && inside) {
