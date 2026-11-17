@@ -34,6 +34,8 @@ export function tree(work, name, rev) {
   mkdirSync(dir, { recursive: true });
   execFileSync("sh", ["-c", `git -C "${ROOT}" archive "${commit(rev)}" | tar -x -C "${dir}"`]);
   symlinkSync(resolve(ROOT, "node_modules"), resolve(dir, "node_modules"));
+  // The pinned inputs (npm run inputs) are not in git: the tree uses this checkout's.
+  if (existsSync(resolve(ROOT, ".inputs"))) symlinkSync(resolve(ROOT, ".inputs"), resolve(dir, ".inputs"));
   return dir;
 }
 
