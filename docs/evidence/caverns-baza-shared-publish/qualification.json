@@ -1,5 +1,5 @@
 {
-  "status": "WIP: full routes, vector controls, Viewer and original write/speed gates pass; two fresh strict runs pending",
+  "status": "Both full strict runs passed; review and main integration pending",
   "compilerCommit": "eee4ee6",
   "COMBytes": 29056,
   "logicalBytes": 28946,
@@ -18,5 +18,21 @@
     "newSingleExtentOutput": 3
   },
   "maximumWriteLimitUnchanged": 168,
-  "timingPercentChange": 1.8248306509304868
+  "timingPercentChange": 1.8248306509304868,
+  "strictRuns": [
+    {
+      "tests": 1432,
+      "pass": 1432,
+      "fail": 0,
+      "skipped": 0,
+      "logSha256": "35683d318a4be1528d9ffd28c02dd153198675694513dd15b54c8b0671fd0698"
+    },
+    {
+      "tests": 1432,
+      "pass": 1432,
+      "fail": 0,
+      "skipped": 0,
+      "logSha256": "ce6fc8c242f12495653e48e95cef0d5e6274288a4bbdcaa51edca1455e7c5b1a"
+    }
+  ]
 }
