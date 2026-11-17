@@ -37,8 +37,8 @@ saved 32-, 40- or 80-column choices are retained. That deployment had a
 sixteen-file starter including a precompiled BASIC Caverns game.
 
 The current repository starter has fifteen files and supplies Caverns as source.
-Choose PICO9918 at 80 columns, compile with `BAZA CAVBASIC`, then run
-`CAVBASIC`; read `CAVERNS.TXT` for instructions. A merge into main is not
+Choose PICO9918 at 80 columns, compile with `BAZA CAVERNS`, then run
+`CAVERNS`; read `CAVERNS.TXT` for instructions. A merge into main is not
 evidence that the live site has been redeployed. The live build details
 identify the version actually running there.
 

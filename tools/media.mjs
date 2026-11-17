@@ -235,7 +235,7 @@ async function main() {
   // holds it as a CP/M text file, as TIMES.BAS is held.
   const bounce = Buffer.from(pinnedBytes("BOUNCE.BAS").toString("latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
   files.push({ name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D or the arrow keys steer, Q quits", bytes: bounce });
-  files.push({ name: "CAVBASIC.BAS", description: "Caverns source for BAZA: BAZA CAVBASIC rebuilds the adventure; TED CAVBASIC.BAS reads it", bytes: text("CAVBASIC.BAS") });
+  files.push({ name: "CAVERNS.BAS", description: "Caverns source for BAZA: BAZA CAVERNS rebuilds the adventure; TED CAVERNS.BAS reads it", bytes: text("CAVERNS.BAS") });
   files.push({ name: "CAVERNS.TXT", description: "Playing Caverns and rebuilding it with BAZA", bytes: text("CAVERNS.TXT") });
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
   const demo = await program("DEMO.COM");
@@ -256,7 +256,7 @@ async function main() {
     id: "starter",
     revision: "17",
     name: "TEC-OS starter",
-    instruction: "Type BAZA CAVBASIC to compile the adventure, then CAVBASIC to play, or TYPE CAVERNS.TXT for instructions. At A:SYSTEM>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, first type TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A:SYSTEM>. The card has four drives: CD ? lists its volumes, CD NAME puts one on the drive you are on and CD D:NAME on another; B: (WORK) is an empty work disk. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. After CD A: to a volume without SHELL.SVC, a reset keeps it; at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC to restore the shell. Power off (Power cycle on the page) gives the card's own drives again.",
+    instruction: "Type BAZA CAVERNS to compile the adventure, then CAVERNS to play, or TYPE CAVERNS.TXT for instructions. At A:SYSTEM>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, first type TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A:SYSTEM>. The card has four drives: CD ? lists its volumes, CD NAME puts one on the drive you are on and CD D:NAME on another; B: (WORK) is an empty work disk. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. After CD A: to a volume without SHELL.SVC, a reset keeps it; at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC to restore the shell. Power off (Power cycle on the page) gives the card's own drives again.",
     profile: "tecos",
     drives: 4,
     volumes: [

@@ -1,0 +1,19 @@
+{
+  "status": "WIP: native compile and first differential/checkpoint checks pass; final refreshed game/TED/card/Viewer checks pending",
+  "sourceFile": "programs/CAVERNS.BAS",
+  "comFile": "programs/CAVERNS.COM",
+  "compiler": "eee4ee6846add13c0ea120fbf2de8be0ec08c0b1",
+  "comBytes": 37376,
+  "logicalBytes": 37255,
+  "shellTPA": 41984,
+  "stackBytes": 768,
+  "dynamicBeforeInitialAllocations": 3961,
+  "proseBytesBefore": 3856,
+  "proseBytesAfter": 10706,
+  "descriptionLinesMax": 79,
+  "sourceSha256": "b2e62b3bb501f657948f001ad4335eed9be9549ec81d8a6d98db3ce6d46c0c53",
+  "comSha256": "27f61ac267dee17c696f502bf5d9400448fede330211246d8f7ebaea5e8553a2",
+  "assemblyArtifact": "programs/CAVASM.COM",
+  "starterSourceOnly": true,
+  "physicalHardwareTested": false
+}

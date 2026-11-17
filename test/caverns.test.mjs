@@ -30,28 +30,28 @@ const element=(m,n,i)=>{const b=word(m,basic.symbols[basic.stateSymbols?.[n+'()'
 let compiled;
 function compileBasic(){
  if(!compiled){
-  assert.equal(sha(read('programs/CAVBASIC.BAS')),basic.sourceSha256,'regenerate BASIC debug fixture after source edits');
+  assert.equal(sha(read('programs/CAVERNS.BAS')),basic.sourceSha256,'regenerate BASIC debug fixture after source edits');
   assert.equal(sha(read('.inputs/BAZA.COM')),basic.compilerSha256);
   const image=card(),m=boot(image,{tms:true,matrix:true,width:80});
-  assert.match(keys(m,'baza cavbasic'),/COM written/,'compiles with the shell resident');
-  compiled=volume(image,'A').read('CAVBASIC.COM');
+  assert.match(keys(m,'baza caverns'),/COM written/,'compiles with the shell resident');
+  compiled=volume(image,'A').read('CAVERNS.COM');
   assert.equal(sha(compiled),basic.comSha256);assert.ok(compiled.length<40000);
   assert.deepEqual(m.violations,[]);
  }
  return compiled;
 }
-function basicGame(){const image=card();volume(image,'A').write('CAVBASIC.COM',compileBasic());const m=boot(image,{tms:true,matrix:true,width:80});keys(m,'con pico 80');assert.equal(m.read(m.sym('VWID')),80);keys(m,'cavbasic',question(m));return m;}
+function basicGame(){const image=card();volume(image,'A').write('CAVERNS.COM',compileBasic());const m=boot(image,{tms:true,matrix:true,width:80});keys(m,'con pico 80');assert.equal(m.read(m.sym('VWID')),80);keys(m,'caverns',question(m));return m;}
 function noDeath(out){assert.doesNotMatch(out,/Another adventure|ERROR IN|killed|smashes your skull/i);}
 const tour=[['galar',16],['east',17],['look',17],['west',33],['north',29],['east',26],['east',25],['west',26],['south',27],['east',28],['get rope',28],['down with rope',35],['east',36],['north',39],['west',38],['north',43],['east',44]];
 
 test('revised map and source-only starter match the author-approved release',()=>{
- const source=read('programs/CAVBASIC.BAS').toString(),revised=json('test/caverns-refined-map.json');
+ const source=read('programs/CAVERNS.BAS').toString(),revised=json('test/caverns-refined-map.json');
  const labels=json('programs/caverns/source-map.json').labels;
  const exits=source.split('\n').filter(l=>Number(l.split(' ')[0])>=labels.EXIT_DATA&&Number(l.split(' ')[0])<labels.OBJECT_DATA).flatMap(l=>l.split('DATA ')[1].split(',').map(Number));
  assert.deepEqual(exits,revised.exits);assert.equal(exits.length,216);
  const files=volume(card(),'A').list().map(x=>x.name);
- assert.ok(!files.includes('CAVERNS.COM'));assert.ok(!files.includes('CAVBASIC.COM'));
- assert.ok(files.includes('CAVBASIC.BAS'));
+ assert.ok(!files.includes('CAVERNS.COM'));assert.ok(!files.includes('CAVERNS.COM'));
+ assert.ok(files.includes('CAVERNS.BAS'));
  const gates={'-1':11,'-2':19,'-3':38,'-4':43,'-5':39,'-6':49};
  const open=revised.exits.map(d=>gates[d]??d),unpaired=[];
  for(let r=1;r<=54;r++)for(let i=0;i<4;i++){
@@ -62,9 +62,9 @@ test('revised map and source-only starter match the author-approved release',()=
 });
 
 test('Caverns80 completes for 126 points, tours all 54 rooms and persists the winning save across reboot',{timeout:300_000},()=>{
- const image=card();volume(image,'A').write('CAVERNS.COM',read('programs/CAVERNS.COM'));
+ const image=card();volume(image,'A').write('CAVASM.COM',read('programs/CAVASM.COM'));
  const m=boot(image,{tms:true,matrix:true,width:80});
- keys(m,'con pico 80');assert.match(keys(m,'caverns',question(m)),/darkened room/);
+ keys(m,'con pico 80');assert.match(keys(m,'cavasm',question(m)),/darkened room/);
  // Addresses refer to the hash-checked 0.1.1 artifact, exported with its route.
  const s=reference.symbols,visited=new Set([1]);
  for(const point of reference.checkpoints){const out=keys(m,point.command,question(m));noDeath(out);assert.equal(m.read(s.playerLocation),point.room,point.command);assert.deepEqual(Array.from({length:24},(_,i)=>m.read(s.objectLocation+i)),point.objects,point.command);visited.add(point.room);}
@@ -75,7 +75,7 @@ test('Caverns80 completes for 126 points, tours all 54 rooms and persists the wi
  assert.match(keys(m,'score',question(m)),/126/);
  assert.match(keys(m,'save',question(m)),/Game saved to disk/);
  keys(m,'quit',question(m));keys(m,'n');
- const rebooted=boot(image,{tms:true,matrix:true,width:80});keys(rebooted,'caverns',question(rebooted));
+ const rebooted=boot(image,{tms:true,matrix:true,width:80});keys(rebooted,'cavasm',question(rebooted));
  assert.match(keys(rebooted,'load',question(rebooted)),/Game loaded\./);
  assert.match(keys(rebooted,'score',question(rebooted)),/126/);
  for(const id of treasures)assert.equal(rebooted.read(s.objectLocation+id-1),1);

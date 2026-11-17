@@ -4,7 +4,7 @@
     {
       "id": 1,
       "key": "HUT",
-      "description": "Inside the bark hut. The door leads north to the clearing.",
+      "description": "You are standing in a darkened room inside a small bark hut. There is a door to the north, leading out into a forest clearing.",
       "exits": {
         "north": 2,
         "south": 0,
@@ -15,7 +15,7 @@
     {
       "id": 2,
       "key": "HUT_CLEARING",
-      "description": "Hut clearing: locked door south, forest west, clover field east.",
+      "description": "You are in a forest clearing before a small bark hut. There are no windows, and the door to the south is locked. The latch engaged when you closed the door. The forest lies to the west, and a field of clovers opens to the east.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -26,7 +26,7 @@
     {
       "id": 3,
       "key": "DARK_FOREST",
-      "description": "Forest path: clearing east, river cliff west. Water glints through the trees.",
+      "description": "You are deep in a dark forest. In the distance you can see a mighty river, its waters glinting through the trees. The path leads east to the hut clearing and west towards a cliff above the river.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -37,7 +37,7 @@
     {
       "id": 4,
       "key": "CLOVER_FIELD",
-      "description": "Clover field: the hut clearing is west; Mount Ymir's slopes lie east.",
+      "description": "You are standing in a field of four-leafed clovers. The hut clearing is to the west, and the lower slopes of Mount Ymir rise to the east.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -48,7 +48,7 @@
     {
       "id": 5,
       "key": "RIVER_CLIFF",
-      "description": "Cliff above the Gioll: forest east; a path descends south to the bank.",
+      "description": "The forest has opened up at this point. You are standing on a cliff overlooking a wide glacial river. A small foot-beaten path leads south to the riverbank. The forest path returns east.",
       "exits": {
         "north": 0,
         "south": 6,
@@ -59,7 +59,7 @@
     {
       "id": 6,
       "key": "RIVERBANK",
-      "description": "Riverbank: cliff north, crater west, rocky outcrop east.",
+      "description": "You are standing at the rocky edge of the mighty river Gioll. The path forks east and west, while a small path climbs north to the cliff.",
       "exits": {
         "north": 5,
         "south": 0,
@@ -70,7 +70,7 @@
     {
       "id": 7,
       "key": "CRATER",
-      "description": "The Gioll pours into a crater. West is a fatal drop. The safe path returns east.",
+      "description": "You are on the edge of an enormous crater. The rim is extremely slippery. Clouds of water vapour rise high in the air as the Gioll pours into it. To the west is a fatal drop; the safe path returns east.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -81,7 +81,7 @@
     {
       "id": 8,
       "key": "OUTCROP",
-      "description": "A distant string bridge is visible south-east, beyond the trees. Reach it via the forest; return west.",
+      "description": "The path stops here. You are on a rocky outcrop, projecting about fifteen feet above the river. In the distance, a tiny string bridge spans the water to the south-east. To reach it, you must return west and take the detour through the forest.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -92,7 +92,7 @@
     {
       "id": 9,
       "key": "YMIR_SLOPES",
-      "description": "Windy slopes of Mount Ymir: clover field west, bridge approach south.",
+      "description": "You are on the lower slopes of Mount Ymir. The forest stretches far away to the west. Arctic winds blow fiercely; it is very cold! A path leads west to the clover field, and another descends south towards the bridge.",
       "exits": {
         "north": 0,
         "south": 10,
@@ -103,7 +103,7 @@
     {
       "id": 10,
       "key": "BRIDGE_APPROACH",
-      "description": "The string bridge crosses the Gioll southwards. Mount Ymir's slopes are north.",
+      "description": "You stand on a rocky precipice high above the river Gioll. Mount Ymir stands to the north. A flimsy string bridge spans the mighty river to the south; the path north returns to the mountain slopes.",
       "exits": {
         "north": 9,
         "south": 11,
@@ -114,7 +114,7 @@
     {
       "id": 11,
       "key": "STRING_BRIDGE",
-      "description": "On the swaying string bridge. Follow it north or south; no footing east or west.",
+      "description": "You have made your way halfway across the creaking bridge. It sways violently from side to side above the river! Hold tight and follow it north or south; there is no footing to the east or west.",
       "exits": {
         "north": 10,
         "south": 12,
@@ -125,7 +125,7 @@
     {
       "id": 12,
       "key": "SOUTH_LANDING",
-      "description": "Southern bank: string bridge north, oak forest west, rope cliff east.",
+      "description": "You are on the southern edge of the mighty river, before the string bridge. The bridge leads north, an oak forest lies to the west, and a path follows the bank east to a cliff face.",
       "exits": {
         "north": 11,
         "south": 0,
@@ -136,7 +136,7 @@
     {
       "id": 13,
       "key": "MUSHROOM_ROCK",
-      "description": "A rock amid poisonous mushrooms: bridge landing east, basalt clearing south.",
+      "description": "You are standing on a rock in the middle of a mighty oak forest. Surrounding you are thousands of poisonous mushrooms. A path leads east to the bridge landing, and another continues south to a clearing.",
       "exits": {
         "north": 0,
         "south": 14,
@@ -147,7 +147,7 @@
     {
       "id": 14,
       "key": "BASALT_CLEARING",
-      "description": "Basalt clearing: oak forest north, cave entrance south.",
+      "description": "You are in a clearing in the forest. An ancient basalt rock formation towers above you. To your south is the entrance of a VERY interesting cave... The path north returns to the oak forest.",
       "exits": {
         "north": 13,
         "south": 16,
@@ -158,7 +158,7 @@
     {
       "id": 15,
       "key": "ROPE_CLIFF",
-      "description": "A shelf above the Gioll's southern bank. The path west returns to the bridge landing.",
+      "description": "You are on a shelf against a cliff face, overlooking the river from its southern bank. The path west returns to the string bridge landing.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -169,7 +169,7 @@
     {
       "id": 16,
       "key": "ENTRANCE",
-      "description": "Daylit cave entrance: outside north, passages south and east. Take a light first.",
+      "description": "You are just inside the cave. Sunlight pours into the entrance, lighting a path to the east and another to the south. I don't mind saying I'm a bit scared! The way north leads outside. You will need a light before venturing deeper.",
       "exits": {
         "north": 14,
         "south": 18,
@@ -180,7 +180,7 @@
     {
       "id": 17,
       "key": "EXPLORER_PASSAGE",
-      "description": "An explorer scratched: Seek the sacred key of Thialfi. The passage returns west.",
+      "description": "This passage appears to be a dead end. An earlier explorer has scratched a message on the wall before you: 'Find the Sacred Key of Thialfi'. The passage returns west to the cave entrance.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -191,7 +191,7 @@
     {
       "id": 18,
       "key": "ENTRANCE_CAVERN",
-      "description": "Entrance cavern: daylight north, old torture chamber west.",
+      "description": "You are deep in a dark cavern. Daylight filters in from the cave entrance to the north. A passage leads west into what appears to be an old torture chamber.",
       "exits": {
         "north": 16,
         "south": 0,
@@ -202,7 +202,7 @@
     {
       "id": 19,
       "key": "TREASURE_ROOM",
-      "description": "The legendary treasure room of the black elves of Svartalfheim. Only exit: west.",
+      "description": "You are in the legendary treasure room of the black elves of Svartalfheim. Every red-blooded Viking has dreamed of entering this sacred room! The only way out leads west through the doorway.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -213,7 +213,7 @@
     {
       "id": 20,
       "key": "TREASURE_DOOR",
-      "description": "Treasure doorway: south returns to the northern cavern.",
+      "description": "You stand before an oak door in the eastern wall, its heavy timber bound with iron. It looks formidable; there is no obvious way through a door barred from within. Perhaps explosives would help. The passage south returns to the cavern.",
       "exits": {
         "north": 0,
         "south": 21,
@@ -224,7 +224,7 @@
     {
       "id": 21,
       "key": "NORTH_CAVERN",
-      "description": "Northern cavern: treasure door north, corridor east, long tunnel south.",
+      "description": "You are deep in a dark cavern north of the long tunnel. A passage leads north to an oak doorway, and a draught comes from the corridor to the east. The long tunnel stretches south into the darkness.",
       "exits": {
         "north": 20,
         "south": 24,
@@ -235,7 +235,7 @@
     {
       "id": 22,
       "key": "CORRIDOR",
-      "description": "Draughty corridor: cavern west, torture chamber south.",
+      "description": "You are standing in an east-west corridor. You can feel a faint breeze stirring the stale air. The western passage returns to the cavern; a doorway to the south leads into an old torture chamber.",
       "exits": {
         "north": 0,
         "south": 23,
@@ -246,7 +246,7 @@
     {
       "id": 23,
       "key": "TORTURE_CHAMBER",
-      "description": "An old torture chamber, stained with blood. Corridor north; entrance cavern east.",
+      "description": "You are standing in what appears to have once been a torture chamber. Apart from the rather comprehensive range of instruments of absolutely inhuman agony, coagulated blood stains on the walls and mangled bits of bone on the floor make me think that a number of would-be adventurers croaked it here! A corridor leads north, and the entrance cavern lies to the east.",
       "exits": {
         "north": 22,
         "south": 0,
@@ -257,7 +257,7 @@
     {
       "id": 24,
       "key": "LONG_TUNNEL",
-      "description": "Long tunnel: cavern north, round chamber south. A sealed crack glows faintly east.",
+      "description": "You stand in a long tunnel which has been bored out of the rock. It runs from north to south, between a cavern and a large round chamber. A faint glow comes from a narrow, sealed crack in the eastern wall.",
       "exits": {
         "north": 21,
         "south": 26,
@@ -268,7 +268,7 @@
     {
       "id": 25,
       "key": "SIDE_CAVE",
-      "description": "Empty side cave. The only exit is west to the round chamber.",
+      "description": "You are deep in a dark cavern. This small side cave is empty and very quiet. Its only passage leads west, back to the large round chamber.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -279,7 +279,7 @@
     {
       "id": 26,
       "key": "ROUND_CHAMBER",
-      "description": "Loki's round chamber: tunnel north, upper ledge south, bat caves west, side cave east.",
+      "description": "You are in a large round room with a number of exits. The walls have been painted a mystical dark purple, and a big chalk star is drawn in the centre of the floor. This is one of the hidden chambers of the infamous pagan sect, the monks of Loki. Norse folk believe them to be gods. The long tunnel is north, a river ledge south, the bat caves west, and a small side cave east.",
       "exits": {
         "north": 24,
         "south": 27,
@@ -290,7 +290,7 @@
     {
       "id": 27,
       "key": "UPPER_LEDGE",
-      "description": "Upper ledge above an underground river: round chamber north, temple balcony east.",
+      "description": "You are standing on a narrow ledge, high above a subterranean river. To the east is a balcony overlooking a huge cavern. The passage north returns to the round chamber.",
       "exits": {
         "north": 26,
         "south": 0,
@@ -301,7 +301,7 @@
     {
       "id": 28,
       "key": "BALCONY",
-      "description": "Temple balcony: sturdy stone rail, floor below. West returns to the upper ledge.",
+      "description": "You are on a balcony overlooking a huge cavern which has been converted into a pagan temple. It is dedicated to Loki, the god of fire, who came to live in Svartalfheim after Odin banished him to exile. Since then he has been waiting for the 'End Of All Things'. A sturdy stone rail borders the balcony. The upper river ledge lies to the west; the temple floor is below.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -312,7 +312,7 @@
     {
       "id": 29,
       "key": "BAT_JUNCTION",
-      "description": "Draughty junction: round chamber east, bat colony south, forked pillar west.",
+      "description": "You are deep in a dark cavern where the passages meet. A draught stirs the air. The round chamber lies to the east, a bat colony to the south, and a forked stone pillar marks the passage west.",
       "exits": {
         "north": 0,
         "south": 33,
@@ -323,7 +323,7 @@
     {
       "id": 30,
       "key": "FORKED_PILLAR",
-      "description": "Forked stone pillar: junction east, pale chamber west.",
+      "description": "You are deep in a dark cavern beside a forked stone pillar. The junction lies to the east, and a passage continues west into a pale limestone chamber.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -334,7 +334,7 @@
     {
       "id": 31,
       "key": "LOW_PASSAGE",
-      "description": "Low, dripping passage: pale chamber north, key chamber east.",
+      "description": "You are deep in a dark cavern. Water drips from the roof of this low passage. It leads north to a pale limestone chamber and east to another chamber beyond.",
       "exits": {
         "north": 32,
         "south": 0,
@@ -345,7 +345,7 @@
     {
       "id": 32,
       "key": "PALE_CHAMBER",
-      "description": "Pale limestone chamber: forked pillar east, low passage south.",
+      "description": "You are deep in a dark cavern whose pale limestone walls catch the light. The passage east leads to a forked stone pillar, while a low, dripping passage turns south.",
       "exits": {
         "north": 0,
         "south": 31,
@@ -356,7 +356,7 @@
     {
       "id": 33,
       "key": "BAT_COLONY",
-      "description": "Bat colony: mind the droppings! Junction north, key chamber west.",
+      "description": "You are in the central cave of a giant bat colony. Above you, hundreds of giant bats hang from the ceiling, and the floor is covered in centuries of giant bat droppings. Careful where you step! Incidentally, the smell is indescribable. A junction lies north, and a passage leads west to another chamber.",
       "exits": {
         "north": 29,
         "south": 0,
@@ -367,7 +367,7 @@
     {
       "id": 34,
       "key": "KEY_CHAMBER",
-      "description": "Key chamber: bat colony east, low passage west.",
+      "description": "You are deep in a dark cavern beyond the bat colony. Passages lead east towards the roosting bats and west into a low, dripping passage.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -378,7 +378,7 @@
     {
       "id": 35,
       "key": "TEMPLE",
-      "description": "Loki's temple: gate north, balcony overhead.",
+      "description": "You are in the temple. To the north is a great gate, and on the wall is a giant statue of Loki, carved out of the living rock itself! High overhead is the balcony from which you descended.",
       "exits": {
         "north": 37,
         "south": 0,
@@ -389,7 +389,7 @@
     {
       "id": 36,
       "key": "WIZARD_CAVERN",
-      "description": "Lower cavern: shaft north, lower river ledge east.",
+      "description": "You are deep in a dark cavern below the temple. A narrow shaft opens to the north, while a passage east leads towards the sound of an underground river.",
       "exits": {
         "north": 39,
         "south": 0,
@@ -400,7 +400,7 @@
     {
       "id": 37,
       "key": "CRYPT",
-      "description": "Crypt: temple gate south, sealed passage east. Four stones name its keeper.",
+      "description": "You stand in an old and musty crypt, the final resting place of hundreds of Loki's devotees. Putrefaction and decay fill the air here. Four stones on the eastern wall name its keeper; the temple gate lies to the south.",
       "exits": {
         "north": 0,
         "south": 35,
@@ -411,7 +411,7 @@
     {
       "id": 38,
       "key": "CELL",
-      "description": "Cell: crypt west, shaft east, service hatch north. Its latch is on the drain side.",
+      "description": "You are in a tiny cell. The passage west returns to the crypt, while a ventilation shaft pierces the eastern wall. There is a service hatch to the north, but its latch is on the drain side.",
       "exits": {
         "north": -4,
         "south": 0,
@@ -422,7 +422,7 @@
     {
       "id": 39,
       "key": "SHAFT",
-      "description": "Beyond the shaft: cell west, lower cavern south.",
+      "description": "You are deep in a dark cavern just beyond the ventilation shaft. The shaft leads west into the cell, and a passage continues south into a lower cavern.",
       "exits": {
         "north": 0,
         "south": 36,
@@ -433,7 +433,7 @@
     {
       "id": 40,
       "key": "LOWER_LEDGE",
-      "description": "Lower river ledge: cavern west. Paths lead north to the waterfall and south to a river bend. East is a sheer edge.",
+      "description": "You are on another ledge high above a subterranean river. Water pours into the cavern through a hole in the roof to the north. The path north leads to the waterfall; south, it follows the ledge to a river bend. The cavern lies west. There is only a sheer drop to the east.",
       "exits": {
         "north": 45,
         "south": 48,
@@ -444,7 +444,7 @@
     {
       "id": 41,
       "key": "WEST_DRAIN",
-      "description": "Straight drain: conduit west, passage east towards the junction.",
+      "description": "Somehow you have found your way into the complex drainage system of this entire cavern network! This straight drain leads west to a freezing conduit and east along the passage towards a junction.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -455,7 +455,7 @@
     {
       "id": 42,
       "key": "MIDDLE_DRAIN",
-      "description": "Straight drain: conduit west, junction east.",
+      "description": "You are in the complex drainage system of the cavern network. The straight passage runs between the conduit to the west and a junction to the east.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -466,7 +466,7 @@
     {
       "id": 43,
       "key": "DRAIN_JUNCTION",
-      "description": "Drain junction: a winding path north leads to the pearl chamber. Branch east, conduit west; OPEN HATCH south.",
+      "description": "You are at a junction in the complex drainage system of the cavern network. A winding passage leads north towards a pearl-white chamber. A branch leads east, and the drain west returns to the conduit. To the south is the cell's service hatch; you can OPEN HATCH here.",
       "exits": {
         "north": 46,
         "south": 38,
@@ -477,7 +477,7 @@
     {
       "id": 44,
       "key": "BLIND_DRAIN",
-      "description": "Blind drainage branch: return west to the junction.",
+      "description": "You are in a blind branch of the cavern's complex drainage system. There is no way onwards; the drain west returns to the junction.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -488,7 +488,7 @@
     {
       "id": 45,
       "key": "WATERFALL",
-      "description": "The Gioll falls through the roof. Stone steps climb north; the lower ledge is south. No safe footing east.",
+      "description": "You are standing near an enormous waterfall which brings water down from the surface, from the river Gioll. Stone steps climb north beside the falling water. The lower ledge lies south; there is no safe footing to the east.",
       "exits": {
         "north": 47,
         "south": 40,
@@ -499,7 +499,7 @@
     {
       "id": 46,
       "key": "PEARL_CHAMBER",
-      "description": "Pearl-white chamber: steps west; a winding path south leads to the drain junction.",
+      "description": "You are deep in a dark cavern whose walls shine pearl-white in your light. Stone steps lie to the west. A winding passage leads south, changing height as it makes its way to a junction in the drains.",
       "exits": {
         "north": 0,
         "south": 43,
@@ -510,7 +510,7 @@
     {
       "id": 47,
       "key": "STONE_STEPS",
-      "description": "Top of the stone steps: waterfall south, pearl-white chamber east.",
+      "description": "You are standing at the top of a stone staircase. The steps lead south towards the roar of the waterfall. To the east is a pearl-white chamber.",
       "exits": {
         "north": 0,
         "south": 45,
@@ -521,7 +521,7 @@
     {
       "id": 48,
       "key": "CASTLE_VIEW",
-      "description": "At a river bend, the castle is visible across the water east. Return north, or cross the drawbridge east. No path south.",
+      "description": "You are on a narrow and crumbling ledge at a bend in the river. Across the water to the east you can see a magic castle. Don't ask me why it is magic... I just know it is! The path north returns to the lower ledge; there is no path south. The drawbridge crossing lies east.",
       "exits": {
         "north": 40,
         "south": 0,
@@ -532,7 +532,7 @@
     {
       "id": 49,
       "key": "DRAWBRIDGE",
-      "description": "Drawbridge: river ledge west, castle courtyard east. Crossing secures the bridge.",
+      "description": "You are on the mighty golden drawbridge, with the river below you and the magic castle ahead. The river ledge lies west and the courtyard east. Crossing secures the bridge in its lowered position.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -543,7 +543,7 @@
     {
       "id": 50,
       "key": "COURTYARD",
-      "description": "Castle courtyard: hzb tzozi. Drawbridge west, magazine east; tunnel south to bank.",
+      "description": "You are in the courtyard of the magic castle. WOW! This castle is really something! On the wall is inscribed 'hzb tzozi'. The drawbridge lies west, and a doorway east leads to the powder magazine. A secret escape tunnel leads south to the riverbank.",
       "exits": {
         "north": 0,
         "south": 52,
@@ -554,7 +554,7 @@
     {
       "id": 51,
       "key": "MAGAZINE",
-      "description": "Powder magazine: return west to the courtyard.",
+      "description": "You are in the powder magazine of this really super castle. The doorway west leads back into the courtyard.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -565,7 +565,7 @@
     {
       "id": 52,
       "key": "EAST_BANK",
-      "description": "Eastern riverbank: castle tunnel north, wooden bridge west.",
+      "description": "You are on the eastern side of the underground river. A small tunnel leads north through the cliff face into the castle. To the west, a wooden bridge crosses the water.",
       "exits": {
         "north": 50,
         "south": 0,
@@ -576,7 +576,7 @@
     {
       "id": 53,
       "key": "WOODEN_BRIDGE",
-      "description": "Wooden bridge: eastern bank east, conduit service path north.",
+      "description": "You stand before a small wooden bridge which crosses the underground river to the east. A narrow service path leads north towards the conduit.",
       "exits": {
         "north": 54,
         "south": 0,
@@ -587,7 +587,7 @@
     {
       "id": 54,
       "key": "CONDUIT",
-      "description": "Freezing conduit: drains east, service path south to the wooden bridge.",
+      "description": "You are in a conduit draining into the river. The water comes up to your knees and is freezing cold. A narrow service path leads south to the wooden bridge, while the drains continue east into the cavern network.",
       "exits": {
         "north": 0,
         "south": 53,

@@ -14,7 +14,7 @@ assert.equal(br.compilerSha256,f.compilerSha256,'native compiler report must mat
 assert.equal(br.librarySha256,f.librarySha256);
 const rtl=fs.readFileSync(process.argv[4]??ROOT+'/../baza/src/generated/rtl.inc','utf8');
 const templateStart=parseInt(/^RTSTART EQU \$([0-9A-F]+)/m.exec(rtl)[1],16);
-const source=fs.readFileSync(ROOT+'/programs/CAVBASIC.BAS','utf8'),b=fs.readFileSync(ROOT+'/programs/CAVBASIC.COM');
+const source=fs.readFileSync(ROOT+'/programs/CAVERNS.BAS','utf8'),b=fs.readFileSync(ROOT+'/programs/CAVERNS.COM');
 const footer=b.lastIndexOf(Buffer.from('BZ01')),end=b.readUInt16LE(footer+4),rtstart=b.readUInt16LE(footer+8),runtime=rtstart-(templateStart-0x103),cells=Math.min(...Object.values(f.symbols).map(s=>s.address));
 // Decode DATA blocks structurally, including digit-only whole numbers (tag 4).
 // Source lines identify blocks; link, end tag and skip target guard the layout.
@@ -57,7 +57,7 @@ const step=m.step.bind(m);let flags;
 m.step=()=>{if(m.pc===0&&word(br.addresses.symbolBaseWord)===br.addresses.imageEnd)flags={math:m.read(br.arithmeticAddresses.selectionWord),numericDisplay:m.read(br.numericAddresses.selectionWord),...Object.fromEntries(Object.entries(br.integerAddresses).filter(([k])=>k.endsWith('Selection')).map(([k,p])=>[k,m.read(p)]))};return step();};
 function command(s){const mark=m.output.length;m.enqueueInput(s+'\r','matrix');m.runUntilChecked(()=>{m.pumpInput();return !m.pending?.length&&m.ready();},800_000_000,s);return m.text(mark);}
 const serviceOutput=command('services'),shellTPA=word(6)-256;
-assert.match(command('baza cavbasic'),/COM written/);assert.equal(createHash('sha256').update(volume(image,'A').read('CAVBASIC.COM')).digest('hex'),f.comSha256);
+assert.match(command('baza caverns'),/COM written/);assert.equal(createHash('sha256').update(volume(image,'A').read('CAVERNS.COM')).digest('hex'),f.comSha256);
 const unloadOutput=command('unload'),bareTPA=word(6)-256;
 const result={gameSha256:f.comSha256,fileBytes:b.length,applicationCodeAndData:runtime-0x103,runtimeCodeAndWorkspace:cells-runtime,scalarCells:footer+256-cells,entryJump:3,footer:10,padding:b.length-(end-256),sourceContextSites:hooks,sourceContextBytes:contextBytes,dataBlocks,numericDataItems,wholeNumberItems,encodedDATABytes:dataBytes,DATAstringBytes:dataText,otherLiteralTextBytes:otherText,remainingApplicationInstructionsAndInlineMetadata:runtime-0x103-dataBytes-otherText-contextBytes,flags,shellTPA,bareTPA,serviceOutput,unloadOutput};
 fs.writeFileSync(ROOT+'/build/caverns/size-audit.json',JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result,null,2));

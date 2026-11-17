@@ -150,7 +150,7 @@ project and session files:
  0 BAZA.COM        13440
  0 BAZA.RTL        13056
  0 BOUNCE.BAS       5376
- 0 CAVBASIC.BAS    18816
+ 0 CAVERNS.BAS    18816
  0 CAVERNS.TXT      2688
  0 DEMO.ASM        15360
  0 GLCD.SVC          896

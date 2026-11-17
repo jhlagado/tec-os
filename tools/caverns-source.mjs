@@ -23,7 +23,17 @@ for(const raw of template.split('\n')){
  const s=raw.trim();if(!s||s.startsWith('#'))continue;
  const label=/^@([A-Z_]+):$/.exec(s);if(label){assert.ok(!Object.hasOwn(labels,label[1])&&!pending.includes(label[1]));pending.push(label[1]);continue;}
  if(s==='@WORLD_DATA'){
-  data(world.rooms.map(r=>quote(r.description)),2);
+  // Keep complete prose; wrap at word boundaries for the 80-column console.
+  for(const room of world.rooms){
+   const pieces=[];let line='';
+   for(const word of room.description.split(' ')){
+    assert.ok(word.length<=79,'prose word exceeds console width');
+    if(line&&line.length+1+word.length>79){pieces.push(line);line='';}
+    line+=(line?' ':'')+word;
+   }
+   if(line)pieces.push(line);
+   data([String(pieces.length),...pieces.map(quote)],2);
+  }
   pending.push('EXIT_DATA');data(world.rooms.flatMap(r=>directionOrder.map(d=>r.exits[d])),27);
   pending.push('OBJECT_DATA');data(world.objects.flatMap(o=>[quote(o.adjective),quote(o.noun)]),10);
   pending.push('INITIAL_DATA');data(world.objects.map(o=>o.initial),24);
@@ -42,6 +52,6 @@ const output=rows.map((s,i)=>{
 const stateSymbols={'A%':'RM%','H%':'HB%','D%':'DB%','W%':'HT%','G%':'SH%','T%':'TD%','E%':'CR%','J%':'JF%','C0%':'CL%','F%':'FT%','U%':'TU%','R0%':'RP%','K0%':'GT%','P%()':'OB%()','S%':'SC%'};
 const metadata={lineStep:10,labels,constants,stateSymbols,banner:labels.BANNER,resume:labels.GAME_LOOP};
 const check=process.argv.includes('--check');
-if(check){assert.equal(readFileSync(root+'programs/CAVBASIC.BAS','utf8'),output);assert.deepEqual(JSON.parse(readFileSync(root+'programs/caverns/source-map.json')),metadata);}
-else{writeFileSync(root+'programs/CAVBASIC.BAS',output);writeFileSync(root+'programs/caverns/source-map.json',JSON.stringify(metadata,null,2)+'\n');}
+if(check){assert.equal(readFileSync(root+'programs/CAVERNS.BAS','utf8'),output);assert.deepEqual(JSON.parse(readFileSync(root+'programs/caverns/source-map.json')),metadata);}
+else{writeFileSync(root+'programs/CAVERNS.BAS',output);writeFileSync(root+'programs/caverns/source-map.json',JSON.stringify(metadata,null,2)+'\n');}
 console.log(`Caverns: ${rows.length} lines, step 10, ${world.rooms.length} rooms; ${check?'source current':'BASIC and source map written'}.`);

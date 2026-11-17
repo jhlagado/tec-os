@@ -11,7 +11,7 @@ It does not restore defects from the archival game or invent new puzzles.
 - `programs/caverns/world.json`: rooms with descriptions and exits, object text
   and starting positions, directions and ordered command vocabulary.
 - `tools/caverns-source.mjs`: resolves named labels/constants to ordinary BASIC.
-- `programs/CAVBASIC.BAS`: distributed reader-editable listing, numbered
+- `programs/CAVERNS.BAS`: distributed reader-editable listing, numbered
   **10, 20, 30, ...** throughout. It compiles directly with native BAZA.
 - `programs/caverns/source-map.json`: label locations, expanded constants and
   logical checkpoint-to-compiler-symbol mappings; not needed to play.
@@ -135,3 +135,15 @@ a 126-point quest through all 54 rooms, verify visible descriptions, restore
 all bundled scenarios, and perform TED copy/edit/save/build/run/exit/reopen.
 The same pinned BAZA compiler and RTL are used. Human gameplay and physical
 TEC-1G checks remain distinct from emulator and browser evidence.
+
+## Restored prose and 80-column layout
+
+Room prose comes from the preserved MicroWorld BASIC listing, reconciled with
+the corrected exits and puzzle rules. It is wrapped at word boundaries into
+lines of at most 79 characters for the 80-column console. Each room's DATA
+begins with a line count, followed by those strings. The engine scans the
+counted lines and prints the selected room, retaining only one temporary
+string rather than caching all room descriptions. This preserves descriptions
+longer than the language's 255-byte string limit without truncating sentences.
+The distributed source is now CAVERNS.BAS, producing CAVERNS.COM. The old
+assembly verification binary is CAVASM.COM and remains development-only.

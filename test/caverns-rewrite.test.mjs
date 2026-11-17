@@ -22,7 +22,18 @@ function state(m,f,l){
  return {objects:Array.from({length:24},(_,i)=>keyWord(m,p+i*2)<<16>>16),variables:Object.fromEntries(scalarNames.map(n=>[n,scalar(m,f,n)])),rng:Buffer.from(Array.from({length:4},(_,i)=>m.read(l.rng+i))).reverse().toString('hex')};
 }
 function keys(m,s){const mark=m.output.length;m.enqueueInput(s+'\r','matrix');m.runUntilChecked(()=>{m.pumpInput();return !m.pending?.length&&((m.waitingForInput()&&m.text().endsWith('? '))||m.ready());},500_000_000,s);return m.text(mark);}
-const normal=s=>s.replace(/\r\n/g,'\n').replace(/(ERROR IN|BREAK IN) \d+/g,'$1 <line>');
+// Only the separately recorded prose and copyright changes are permitted.
+// Every command result, state field and RNG value remains compared.
+const oldProse=json('test/fixtures/caverns-prose-baseline.json');
+const prose=[...world.rooms.map(r=>[r.description,r.id]),...Object.entries(oldProse.descriptionByRoom).map(([id,s])=>[s,Number(id)])].sort((a,b)=>b[0].length-a[0].length);
+const escapeRegex=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const prosePatterns=prose.map(([text,id])=>[new RegExp([...text.replace(/\s+/g,'')].map(escapeRegex).join('\\s*'),'g'),id]);
+function normal(s){
+ s=s.replace(/\r\n/g,'\n').replace(/(ERROR IN|BREAK IN) \d+/g,'$1 <line>');
+ for(const [pattern,id]of prosePatterns)s=s.replace(pattern,'<room-'+id+'>');
+ return s.replace('CAVERNS by John Hardy (c) 1982-83','CAVERNS by John Hardy (c) 1983');
+}
+
 function encodeOld(s){const b=Buffer.from(encodeScenario(s));Buffer.from(old.comSha256,'hex').copy(b,8,0,8);b.writeUInt16LE(0,6);let sum=0;for(let i=0;i<128;i++)if(i!==6&&i!==7)sum+=b[i];b.writeUInt16LE(sum,6);return b;}
 let launcher;
 async function pair(s){
@@ -68,7 +79,7 @@ async function compare(name,s,commands,{quest=false}={}){
 }
 test('rewritten listing uses ten-step numbering, lowercase variables, uppercase keywords and reproducible world data',()=>{
  execFileSync(process.execPath,['tools/caverns-source.mjs','--check'],{cwd:ROOT});
- const lines=read('programs/CAVBASIC.BAS').toString().trimEnd().split('\n');
+ const lines=read('programs/CAVERNS.BAS').toString().trimEnd().split('\n');
  for(let i=0;i<lines.length;i++){
   assert.equal(Number(lines[i].split(' ')[0]),(i+1)*10);
   const body=lines[i].replace(/^\d+ /,'');if(body.startsWith('REM '))continue;
@@ -127,13 +138,13 @@ test('long-input resource behaviour is recorded separately from gameplay equival
 
 test('a reader can insert a BASIC line in the ten-step gap and compile without renumbering',{timeout:120000},()=>{
  const image=new Uint8Array(read('dist/starter.img')),a=volume(image,'A');
- const source=read('programs/CAVBASIC.BAS').toString(),number=sourceMap.banner;
+ const source=read('programs/CAVERNS.BAS').toString(),number=sourceMap.banner;
  const banner=source.split('\n').find(l=>l.startsWith(number+' '));
  const experiment=source.replace(banner,banner+'\n'+(number+1)+' PRINT "An inserted experiment works."');
- const original=a.read('CAVBASIC.BAS');a.write('CAVTRY.BAS',Buffer.from(experiment),{text:true});
+ const original=a.read('CAVERNS.BAS');a.write('CAVTRY.BAS',Buffer.from(experiment),{text:true});
  const m=boot(image,{tms:true,matrix:true,width:80});assert.match(keys(m,'baza cavtry'),/COM written/);
  assert.ok(a.read('CAVTRY.COM').length<40000);
  const out=keys(m,'cavtry');assert.match(out,/An inserted experiment works/);assert.match(out,/bark hut/);
- keys(m,'quit');keys(m,'n');assert.ok(m.ready());assert.deepEqual(a.read('CAVBASIC.BAS'),original);
+ keys(m,'quit');keys(m,'n');assert.ok(m.ready());assert.deepEqual(a.read('CAVERNS.BAS'),original);
  assert.deepEqual(m.violations,[]);
 });

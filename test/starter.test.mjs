@@ -59,7 +59,7 @@ test("the starter card holds exactly fifteen files, each by its hash, the PICO99
     "SAMPLE.ASM": text("SAMPLE.ASM"),
     "TIMES.BAS": text("TIMES.BAS"),
     "BOUNCE.BAS": bounceText(),
-    "CAVBASIC.BAS": text("CAVBASIC.BAS"),
+    "CAVERNS.BAS": text("CAVERNS.BAS"),
     "CAVERNS.TXT": text("CAVERNS.TXT"),
     "DEMO.ASM": text("DEMO.ASM"),
     "MON3.SVC": (await mon3Svc()).file,

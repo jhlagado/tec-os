@@ -12,7 +12,7 @@ CAVLOAD is a testing clone of the qualified BASIC executable. It patches a three
 its opening banner to a native CP/M file loader appended before a relocated
 runtime footer, after normal array/runtime initialisation. It restores the scenario then enters ordinary game code. QUIT
 and Y reload that same scenario; N exits to TEC-OS. There is no in-game SAVE.
-The public starter disk supplies CAVBASIC.BAS for the user to compile, not this
+The public starter disk supplies CAVERNS.BAS for the user to compile, not this
 loader or any scenarios. Repository binaries are verification/development files.
 
 ## Build, create and preserve
@@ -63,7 +63,7 @@ One CP/M record, 128 bytes, little-endian:
 | 4 | 1 | Version 2 |
 | 5 | 1 | Zero |
 | 6 | 2 | Unsigned byte sum, excluding offsets 6 and 7 |
-| 8 | 8 | First eight SHA-256 bytes of qualified CAVBASIC.COM |
+| 8 | 8 | First eight SHA-256 bytes of qualified CAVERNS.COM |
 | 16 | 48 | 24 signed words, P%(1)..P%(24): absent 0, carried -1, room otherwise |
 | 64 | 26 | The 13 scalar words in order below |
 | 90 | 4 | Exact runtime RNG state |

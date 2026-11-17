@@ -92,7 +92,7 @@ CAVERNS.TXT     2688
 DEMO.ASM       15360
 MON3.SVC        5248
 HELLO3.ASM      2176
-CAVBASIC.BAS   18816
+CAVERNS.BAS   18816
 15 files, 110208 bytes
 909312 free on A:SYSTEM
 A:SYSTEM>
@@ -108,9 +108,9 @@ The supplied assembler, `TAS`, turns assembly source into an executable.
 `TED` edits text files. `BAZA` compiles BASIC source such as `TIMES.BAS`
 and uses the library `BAZA.RTL`. The startup files are `SHELL.SVC`,
 `GLCD.SVC` and `STARTUP.CMD`. Leave them as supplied for this session.
-The current card also includes `CAVBASIC.BAS` and `CAVERNS.TXT`, the BASIC
+The current card also includes `CAVERNS.BAS` and `CAVERNS.TXT`, the BASIC
 Caverns source and its instructions. Select `CON PICO 80`, compile it with
-`BAZA CAVBASIC`, then run `CAVBASIC`. The remaining
+`BAZA CAVERNS`, then run `CAVERNS`. The remaining
 demonstrations are optional and are listed under
 [More on the card](#more-on-the-card).
 
@@ -174,7 +174,7 @@ CAVERNS.TXT     2688
 DEMO.ASM       15360
 MON3.SVC        5248
 HELLO3.ASM      2176
-CAVBASIC.BAS   18816
+CAVERNS.BAS   18816
 15 files, 110208 bytes
 909312 free on A:SYSTEM
 A:SYSTEM>B:

@@ -1,13 +1,18 @@
 # Caverns on TEC-OS
 
-The starter disk's main SYSTEM volume supplies **CAVBASIC.BAS** and
+Current prose restoration and rename are under qualification; see
+[caverns-prose-restoration.md](caverns-prose-restoration.md). Its first build
+is 37,376 bytes. The compiler-only measurements below describe the preceding
+text until the final restoration results are recorded.
+
+The starter disk's main SYSTEM volume supplies **CAVERNS.BAS** and
 **CAVERNS.TXT**. Neither the BASIC executable nor the assembly version is
 preinstalled. Build the BASIC game yourself with the included BAZA compiler:
 
 ```
 CON PICO 80
-BAZA CAVBASIC
-CAVBASIC
+BAZA CAVERNS
+CAVERNS
 ```
 
 The current executable is **29,056 bytes**, including its selected runtime.
@@ -19,7 +24,7 @@ Physical TEC-1G qualification remains outstanding.
 ## A first edit/build/run exercise
 
 ```
-COPY CAVBASIC.BAS CAVBOOK.BAS
+COPY CAVERNS.BAS CAVBOOK.BAS
 TED CAVBOOK.BAS
 ```
 
@@ -32,7 +37,7 @@ TED. Alternatively compile and run from the shell with `BAZA CAVBOOK` and
 
 `test/caverns-ted.test.mjs` performs the exact copy, edit, explicit save, build,
 run, exit and reopen after a power cycle. It checks the original source is
-unchanged and no CAVBASIC.COM was supplied on the starter disk. In the Viewer,
+unchanged and no CAVERNS.COM was supplied on the starter disk. In the Viewer,
 TED save preserves the file on the emulated card; download that card to keep
 it outside the browser/container. Downloading it does not save running memory.
 
@@ -89,7 +94,7 @@ The development-only loader is not an in-game SAVE/LOAD command.
 
 ## Exact artifacts and reproduction
 
-Source and qualified binary: `programs/CAVBASIC.BAS`, `programs/CAVBASIC.COM`.
+Source and qualified binary: `programs/CAVERNS.BAS`, `programs/CAVERNS.COM`.
 The latter is retained in the repository for verification, omitted from starter
 recipe revision 17. `test/caverns-basic.json` records the full source, binary,
 compiler and RTL hashes, byte count and native compiler symbol addresses.
@@ -137,6 +142,6 @@ Current rewrite evidence is in `docs/evidence/caverns-rewrite/`.
 - [Archival source analysis](caverns-original.md), historical rather than the
   current gameplay specification.
 
-The separately preserved assembly `programs/CAVERNS.COM` is 22,896 bytes,
+The separately preserved assembly `programs/CAVASM.COM` is 22,896 bytes,
 SHA-256 `6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb`.
 It is tested as a reference in a disposable image and remains development-only.

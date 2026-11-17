@@ -34,7 +34,7 @@ test('scenario launcher preserves public addresses and restores all monsters, ob
  const image=await imageWith(s),m=boot(image,{tms:true,matrix:true,width:80});
  const out=keys(m,'cavload test',question(m));
  assert.match(out,/dark|courtyard/i);assertState(m,s);
- const game=readFileSync(ROOT+'/programs/CAVBASIC.COM'),patched=readFileSync(ROOT+'/build/caverns/CAVLOAD.COM');
+ const game=readFileSync(ROOT+'/programs/CAVERNS.COM'),patched=readFileSync(ROOT+'/build/caverns/CAVLOAD.COM');
  const before=runtimeFooter(game),after=runtimeFooter(patched);
  assert.equal(launcher.patchBytes,3);
  assert.equal(after.address,before.address+launcher.loaderCodeBytes);
@@ -48,8 +48,8 @@ test('scenario launcher preserves public addresses and restores all monsters, ob
  assert.deepEqual(m.violations,[]);
 });
 test('real picked-up objects and encounter state survive exported file and fresh boot; RNG continuation matches',{timeout:120000},async()=>{
- const image=await imageWith(null),v=volume(image,'A');v.write('CAVBASIC.COM',readFileSync(ROOT+'/programs/CAVBASIC.COM'));
- const m=boot(image,{tms:true,matrix:true,width:80});keys(m,'cavbasic',question(m));
+ const image=await imageWith(null),v=volume(image,'A');v.write('CAVERNS.COM',readFileSync(ROOT+'/programs/CAVERNS.COM'));
+ const m=boot(image,{tms:true,matrix:true,width:80});keys(m,'caverns',question(m));
  for(const command of ['take compass','north','west','west','south','west','take sword','east','north','east','east','east','east','south'])keys(m,command,question(m));
  const s=snapshot(m);assert.equal(s.variables['A%'],10);assert.equal(s.objects[7],-1);assert.equal(s.objects[19],-1);
  const file=encodeScenario(s);writeFileSync(ROOT+'/build/caverns/scenario-test-captures/TROLL.CAV',file);
@@ -175,7 +175,7 @@ test('external scenario writer refuses incomplete or out-of-domain states',()=>{
 });
 
 test('launcher rejects damaged runtime footer and startup contracts',()=>{
- const game=readFileSync(ROOT+'/programs/CAVBASIC.COM'),f=runtimeFooter(game);
+ const game=readFileSync(ROOT+'/programs/CAVERNS.COM'),f=runtimeFooter(game);
  for(const at of [0,f.start-256,f.offset,f.offset+4,f.offset+7,f.offset+8]){
   const bad=Buffer.from(game);bad[at]^=0xff;
   assert.throws(()=>runtimeFooter(bad),'corrupt field '+at);

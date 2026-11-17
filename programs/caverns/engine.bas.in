@@ -1,8 +1,8 @@
 # Authoring source: @LABEL targets and {UPPERCASE_CONSTANTS} are resolved by
-# tools/caverns-source.mjs. Distributed CAVBASIC.BAS needs only native BAZA.
+# tools/caverns-source.mjs. Distributed CAVERNS.BAS needs only native BAZA.
 REM CAVERNS - John Hardy (c) 1982-83. Microbee edition copyright 1983.
 REM Dreamcards. GNU GPL release 2019; see CAVERNS.TXT and repository LICENSE.
-REM Original: github.com/jhlagado/caverns d604815, src/caverns.basic.
+REM Original prose: github.com/jhlagado/caverns src/protected/caverns.basic.
 REM Origins: ZX81; VIC-20 port with Ken Stone; Microbee MicroWorld BASIC.
 REM Recovery: Microbee Software Preservation Project; Alan Laughton (ChickenMan).
 REM Author-approved TEC-OS rewrite. The archival listing is unchanged.
@@ -17,7 +17,7 @@ CLS
 GOSUB @RESET_STATE
 @BANNER:
 PRINT "DREAMCARDS presents..."
-PRINT "CAVERNS by John Hardy (c) 1983":PRINT "GNU Public License, 2019":ft%=0:tu%=0
+PRINT "CAVERNS by John Hardy (c) 1982-83":PRINT "GNU Public License, 2019":ft%=0:tu%=0
 PRINT "Bring treasure home for double points. Take the compass!":PRINT "LOOK describes, INVENTORY lists, SCORE totals, QUIT finishes."
 @GAME_LOOP:
 REM Apply view-time candle events before rendering; rendering changes no world state.
@@ -45,8 +45,8 @@ INPUT yn$:IF yn$="N" OR yn$="n" THEN END ELSE IF yn$="Y" OR yn$="y" THEN GOTO @N
 END
 
 @LOAD_TABLES:
-REM Immutable il: 1..24 starting locations, 25..48 values. Descriptions use one string.
-RESTORE:FOR ix%=1 TO {ROOM_COUNT}:READ ds$:NEXT ix%
+REM Immutable il: starts and values. Counted prose lines fit the 80-column display.
+RESTORE:FOR ix%=1 TO {ROOM_COUNT}:READ dc%:FOR iy%=1 TO dc%:READ ds$:NEXT iy%:NEXT ix%
 FOR ix%=1 TO 216:READ ex%(ix%):NEXT ix%
 FOR ix%=1 TO {OBJECT_COUNT}:READ ad$(ix%),no$(ix%):NEXT ix%
 FOR ix%=1 TO {INITIAL_DATA_COUNT}:READ il%(ix%):NEXT ix%
@@ -78,7 +78,8 @@ cl%=0:ce%=2:RETURN
 @DESCRIBE_ROOM:
 PRINT
 IF vs%=0 THEN PRINT "It's very dark, too dark to see anything...I'm scared!":GOTO @DESCRIBE_FOES
-RESTORE:FOR ix%=1 TO rm%:READ ds$:NEXT ix%:PRINT ds$
+RESTORE:FOR ix%=1 TO rm%:READ dc%:FOR iy%=1 TO dc%:READ ds$:IF ix%=rm% THEN PRINT ds$
+NEXT iy%:NEXT ix%
 IF rm%={ROOM_TREASURE_DOOR} THEN IF td%=0 THEN PRINT "East: iron-bound door, barred within. Try explosives." ELSE PRINT "East doorway blasted open."
 IF rm%={ROOM_BALCONY} OR rm%={ROOM_TEMPLE} THEN IF rp%=1 THEN PRINT "The secured rope reaches the floor. Use UP or DOWN."
 IF rm%={ROOM_TEMPLE} THEN IF gt% THEN PRINT "North gate open." ELSE PRINT "North gate locked."

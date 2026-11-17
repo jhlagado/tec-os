@@ -7,7 +7,7 @@ import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {ROOT,boot,volume} from './lib/fixtures.mjs';
 
-const source=readFileSync(resolve(ROOT,'programs/CAVBASIC.BAS'),'utf8');
+const source=readFileSync(resolve(ROOT,'programs/CAVERNS.BAS'),'utf8');
 const original='DREAMCARDS presents...',replacement='TEC-OS Book presents';
 const expected=source.replace(original,replacement);
 const bannerLine=source.split('\n').findIndex(l=>l.includes('PRINT \"DREAMCARDS presents...\"'))+1;
@@ -21,12 +21,12 @@ function keys(m,s,what,done){
 }
 test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen after power cycle',{timeout:300_000},()=>{
  const image=new Uint8Array(readFileSync(resolve(ROOT,'dist/starter.img'))),a=volume(image,'A');
- const originalSource=sha(a.read('CAVBASIC.BAS')),originalCom=sha(readFileSync(resolve(ROOT,'programs/CAVBASIC.COM')));
+ const originalSource=sha(a.read('CAVERNS.BAS')),originalCom=sha(readFileSync(resolve(ROOT,'programs/CAVERNS.COM')));
  let m=boot(image,{tms:true,matrix:true,width:80});
  const status=()=>m.screen()[23];
  keys(m,'con pico 80\r','select the documented console width',()=>m.ready());
  assert.equal(m.read(m.sym('VWID')),80);
- keys(m,'copy cavbasic.bas cavbook.bas\r','copy original to a working file',()=>m.ready());
+ keys(m,'copy caverns.bas cavbook.bas\r','copy original to a working file',()=>m.ready());
  assert.equal(text(a),source);
  keys(m,`ted cavbook.bas ${bannerLine}\r`,'open the banner in TED',()=>/CAVBOOK\.BAS/.test(status())&&status().includes(`L${bannerLine} C1`));
  // The banner prefix comes from the generated listing. Move to the literal,
@@ -45,8 +45,8 @@ test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen afte
  keys(m,' ','return to TED',()=>/CAVBOOK\.BAS/.test(status()));
  keys(m,'\x11','leave TED',()=>m.ready());
  assert.equal(text(a),expected);
- assert.equal(sha(a.read('CAVBASIC.BAS')),originalSource);
- assert.ok(!a.list().some(f=>f.name==='CAVBASIC.COM'),'starter keeps Caverns as source only');
+ assert.equal(sha(a.read('CAVERNS.BAS')),originalSource);
+ assert.ok(!a.list().some(f=>f.name==='CAVERNS.COM'),'starter keeps Caverns as source only');
  assert.deepEqual(m.violations,[]);
  // Boot the same disk with fresh RAM and reopen, proving saved disk contents.
  m=boot(image,{tms:true,matrix:true,width:80,ramFill:0x76});

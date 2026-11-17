@@ -11,7 +11,7 @@ const root=new URL('../',import.meta.url);
 const read=p=>readFileSync(new URL(p,root));
 const hash=b=>createHash('sha256').update(b).digest();
 const basic=JSON.parse(read('test/caverns-basic.json'));
-const game=read('programs/CAVBASIC.COM');
+const game=read('programs/CAVERNS.COM');
 assert.equal(hash(game).toString('hex'),basic.comSha256,'launcher must match the qualified BASIC executable');
 export const scalarNames=['A%','H%','D%','W%','G%','T%','E%','J%','C0%','F%','U%','R0%','K0%'];
 export function encodeScenario(s){

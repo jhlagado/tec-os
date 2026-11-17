@@ -1,5 +1,10 @@
 # TEC-OS Book: BASIC Caverns handover
 
+Current prose restoration and rename are under qualification; see
+[caverns-prose-restoration.md](caverns-prose-restoration.md). Its first build
+is 37,376 bytes. The compiler-only measurements below describe the preceding
+text until the final restoration results are recorded.
+
 This is the current practical-manual handover, including the behaviour-preserving
 BASIC rewrite, landmark wording corrections and compact compiler emission. Walkthrough spoilers are in
 [caverns-walkthrough.md](caverns-walkthrough.md), not this teaching outline.
@@ -27,8 +32,8 @@ to its original compiler and binary.
 | Artifact | Repository / pin / path |
 |---|---|
 | Qualified gameplay/source | jhlagado/tec-os, `caverns-baza-qualification`; exact source hash below |
-| Source supplied on SYSTEM | programs/CAVBASIC.BAS |
-| Verification executable, not on starter | programs/CAVBASIC.COM; 29,056 bytes |
+| Source supplied on SYSTEM | programs/CAVERNS.BAS |
+| Verification executable, not on starter | programs/CAVERNS.COM; 29,056 bytes |
 | Source/binary/compiler/RTL hashes | test/caverns-basic.json |
 | Instructions supplied on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume starter recipe | dist/starter.recipe.json, revision 17; image dist/starter.img |
@@ -57,7 +62,7 @@ not magically substitute new source. On a fresh card:
 
 ```
 CON PICO 80
-COPY CAVBASIC.BAS CAVBOOK.BAS
+COPY CAVERNS.BAS CAVBOOK.BAS
 TED CAVBOOK.BAS
 ```
 
@@ -162,9 +167,9 @@ baseline; current-main integration preserves its compiler and game hashes.
 - [Engine and authoring structure](caverns-engine.md).
 - [Map/prose audit, spoilers](caverns-map-audit.md).
 
-BASIC Caverns is the intended public worked example. Only CAVBASIC.BAS and
+BASIC Caverns is the intended public worked example. Only CAVERNS.BAS and
 CAVERNS.TXT are supplied for it; users compile their own COM. The assembly
-CAVERNS.COM remains in the repository for development/reference, excluded from
+CAVASM.COM remains in the repository for development/reference, excluded from
 the starter disk until gameplay parity is separately established. Developer
 checkpoint files/loader are likewise excluded. Player instructions and the
 banner-edit exercise do not need the spoiler walkthrough or full map.
