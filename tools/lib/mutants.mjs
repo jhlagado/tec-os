@@ -682,11 +682,11 @@ export const MUTANTS_KS38B = [
 // KD-434: services claim RST 7 alone, and the sweep clears RST 1 to 6. The same
 // five run as byte patches in test/svc.test.mjs ("restart mutant").
 export const MUTANTS_KD434 = [
-  { name: "M1 the sweep stopping after RST 1", ...ks34(B, ["CP $38", "JR NZ,RSTCLR"], ["CP $10", "JR NZ,RSTCLR"], VEC) },
-  { name: "M5 the sweep stopping before RST 6", ...ks34(B, ["CP $38", "JR NZ,RSTCLR"], ["CP $30", "JR NZ,RSTCLR"], [...VEC, "test/system.test.mjs"]) },
-  { name: "M2 a claim of RST 1 to 6 let through", ...ks34("src/loader.asm", ["SCF", "RET NZ"], ["SCF", "NOP"], VEC) },
-  { name: "M3 the release not clearing 0038h", ...ks34("src/loader.asm", ["LD (RST7),A"], ["NOP"], VEC) },
-  { name: "M4 the keep test at 0038h inverted", ...ks34(B, ["CCF", "RET NC"], ["CCF", "RET C"], VEC) },
+  { name: "M1 the sweep stopping after RST 1", edits: [text(B, "  cp $38\n  jr nz,RSTCLR", "  cp $10\n  jr nz,RSTCLR")], tests: VEC },
+  { name: "M5 the sweep stopping before RST 6", edits: [text(B, "  cp $38\n  jr nz,RSTCLR", "  cp $30\n  jr nz,RSTCLR")], tests: [...VEC, "test/system.test.mjs"] },
+  { name: "M2 a claim of RST 1 to 6 let through", edits: [text("src/loader.asm", "  scf\n  ret nz         ; RST 1 to 6: refused", "  scf\n  nop")], tests: VEC },
+  { name: "M3 the release not clearing 0038h", edits: [text("src/loader.asm", "  ld (RST7),a    ; mark for default", "  nop")], tests: VEC },
+  { name: "M4 the keep test at 0038h inverted", edits: [text(B, "  ccf\n  ret nc         ; kept", "  ccf\n  ret c")], tests: VEC },
 ];
 
 // KS36c: one mutant a part (KG44).
