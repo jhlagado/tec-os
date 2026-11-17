@@ -206,7 +206,7 @@ TMSR2:
 ; 0000h..07FFh. R1 combines mode bits
 ; with the supported IE shadow PITIE.
 ; Raw R1 writes do not update PITIE.
-; Keeps E.
+; Keeps E. Uses LINEBUF's first eight.
 ; Changes AF, BC, D and HL. Maskable
 ; interrupts are excluded only within
 ; each control pair.
@@ -243,36 +243,18 @@ TMSRI:
   call TMSWA
   ld d,0         ; Character code.
 
+; Each code's glyph goes through
+; LINEBUF: FNTGLY maps controls to a
+; space and complements 80h..FFh.
+
 TMSPAT:
-  ld a,d
-  and $7F        ; Map low seven bits.
-  sub $20
-  jr nc,TMSCH    ; 20h..7Fh: FONT glyph.
-  xor a          ; Controls use space.
-
-TMSCH:
-  ld l,a
-  ld h,0
-  add hl,hl
-  add hl,hl
-  add hl,hl
-  ld bc,FONT
-  add hl,bc
-
-TMSGLY:
-  ld b,8         ; Eight rows per glyph.
-
-TMSROW:
-  ld a,(hl)
-  bit 7,d        ; High bit reverses.
-  jr z,TMSOUT
-  cpl
-
-TMSOUT:
-
-  out (VDPDAT),a
-  inc hl
-  djnz TMSROW
+  ld b,d         ; Character code.
+  ld hl,LINEBUF
+  push hl
+  call FNTGLY    ; Keeps D.
+  pop hl
+  ld bc,8*256+VDPDAT
+  otir           ; Its eight rows.
   inc d
   jr nz,TMSPAT
   ld a,(PIWID)
