@@ -7,14 +7,14 @@ nav_group: "Reference"
 
 # Appendix E. The container format
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -27,7 +27,7 @@ support image decoders and diagnosis of rejected cards.
 
 `format/format.json` defines the fields and geometries. The build generates
 `src/gen/format.asm` and `src/gen/geom.asm` from it; these are build outputs,
-not tracked source files (`241b438:tools/build.mjs:79-134`). The host container module and `tecvol` read the
+not tracked source files (`b95b2a9:tools/build.mjs:79-134`). The host container module and `tecvol` read the
 same definition through `tools/lib/format.mjs`. All multibyte numbers are
 little-endian. Each block is 512 bytes and its number counts from the
 container's start. `tecvol install` puts that start at the card's block 0.
@@ -41,7 +41,7 @@ followed by two descriptors.
 od -A x -t x1 -N 96 dist/starter.img
 ```
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS 57a8c38: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
 ```text
 000000 54 45 43 4f 53 56 4f 4c 01 01 00 02 20 00 05 00
 000010 00 68 00 00 77 12 04 00 00 00 00 00 00 00 00 00
@@ -71,19 +71,19 @@ The header's fields (`format/format.json`, `header`):
 
 The header checksum covers all 512 bytes of block 0 except its own two bytes. It
 is a 16-bit sum, including the descriptors as well as the header fields
-(`241b438:tools/lib/container.mjs:51-59`). A change anywhere in block 0 therefore needs
+(`b95b2a9:tools/lib/container.mjs:51-59`). A change anywhere in block 0 therefore needs
 a new checksum. The ROM reads 32 bytes at a time from a line in the block cache,
 sums the whole block and subtracts the two checksum bytes
-(`241b438:src/vol.asm:479-498`, `241b438:src/volutil.asm:83-124`).
+(`b95b2a9:src/vol.asm:479-498`, `b95b2a9:src/volutil.asm:83-124`).
 
 A card's minor version sets three things. A 1.0 card has no drives field and
 no table sum and `tecvol` gives it at most 8 volumes. A 1.1 card may have up
 to 127, may give a number of drives and has the table sum
-(`241b438:tools/lib/container.mjs:75-79`, `241b438:tools/lib/container.mjs:137-145`).
+(`b95b2a9:tools/lib/container.mjs:75-79`, `b95b2a9:tools/lib/container.mjs:137-145`).
 `tecvol create` makes a 1.1 card when it is given more than 8 volumes or
 `--drives` and a 1.0 card otherwise. The ROM rejects a 1.0 card of more than
-8 volumes with code `24h` (`241b438:src/vol.asm:89-115`). It treats any minor
-version other than 0 as 1.1 (`241b438:src/vol.asm:135-137`).
+8 volumes with code `24h` (`b95b2a9:src/vol.asm:89-115`). It treats any minor
+version other than 0 as 1.1 (`b95b2a9:src/vol.asm:135-137`).
 
 ## The volume descriptor
 
@@ -114,26 +114,26 @@ The volume id stays with the volume when the drive assignment changes.
 Byte 15 is reserved. It once marked one volume written behind. TEC-OS now
 allows multiple dirty blocks on the logged drive and one pending boundary
 off it. Ordinary outer calls also attempt queued work, so this no longer
-promises cross-call batching (`a40d482:docs/recovery.md:33-52`).
+promises cross-call batching (`0701241:docs/recovery.md:33-52`).
 [Chapter 19](19-cache-and-persistence.md) explains why no descriptor marks one. `tecvol` and the container library
 write the byte zero, and neither they nor the ROM read it. A card made with
 the mark still mounts, its drive's flags holding only the read-only bit.
 `tecvol create` refuses `:wb` as an unknown flag, and `createContainer`
 refuses a volume that names `writeBehind`
-(`241b438:format/format.json:36`, `241b438:tools/lib/container.mjs:84`,
+(`b95b2a9:format/format.json:36`, `b95b2a9:tools/lib/container.mjs:84`,
 `docs/container-format.md`). `tecvol create` starts the first volume at
 block 2,048, 1 MiB into the card. Each later volume starts at the next
 multiple of 2,048 blocks after the one before. `--align` puts another multiple
-of 8 in place of 2,048 (`241b438:tools/lib/container.mjs:14`,
-`241b438:tools/lib/container.mjs:87-97`). `tecvol create` fills each payload with
-`E5h`, giving it an empty CP/M directory (`241b438:tools/lib/container.mjs:118`).
+of 8 in place of 2,048 (`b95b2a9:tools/lib/container.mjs:14`,
+`b95b2a9:tools/lib/container.mjs:87-97`). `tecvol create` fills each payload with
+`E5h`, giving it an empty CP/M directory (`b95b2a9:tools/lib/container.mjs:118`).
 
 ## The table beyond block 0
 
 Block 0 holds the header and descriptors 0 to 14, at offsets 32 to 511. A 1.1
 card with more than 15 volumes goes on in blocks 1 to 7, 16 descriptors to a
 block. With block 0's 15 that gives the limit of 127
-(`241b438:tools/lib/container.mjs:33-42`, `format/format.json`). Descriptor `i`, for
+(`b95b2a9:tools/lib/container.mjs:33-42`, `format/format.json`). Descriptor `i`, for
 `i` of 15 or more, is in block `1 + floor((i − 15) / 16)`, at
 `32 × ((i − 15) mod 16)` within it. No volume can start below block 8 so
 blocks 1 to 7 remain outside every volume, whether or not the table uses
@@ -141,46 +141,46 @@ them.
 
 The table sum at header offset 23 is the 16-bit sum of every byte in the
 descriptor blocks after block 0, including their unused bytes
-(`241b438:tools/lib/container.mjs:44-49`). The ROM reads `floor(count / 16)` such
+(`b95b2a9:tools/lib/container.mjs:44-49`). The ROM reads `floor(count / 16)` such
 blocks. With 15 descriptors in block 0, that is the number needed for the
-remaining descriptors (`241b438:src/vol.asm:148-172`). When those blocks exist, a
-sum difference gives `25h` (`241b438:src/vol.asm:174-180`).
+remaining descriptors (`b95b2a9:src/vol.asm:148-172`). When those blocks exist, a
+sum difference gives `25h` (`b95b2a9:src/vol.asm:174-180`).
 
 With 15 or fewer descriptors the ROM skips this comparison entirely.
 The host validator still compares the stored table sum with the computed
 sum of zero so a 1.1 image must store zero in that field when its table
-fits in block 0 (`241b438:src/vol.asm:148-154`, `241b438:tools/lib/container.mjs:142-145`).
+fits in block 0 (`b95b2a9:src/vol.asm:148-154`, `b95b2a9:tools/lib/container.mjs:142-145`).
 
 ## The checks and their codes
 
 The ROM's `MOUNT` checks the header before walking the descriptors in
 table order. It mounts each assigned volume as its descriptor passes.
 The first failure stops the walk and unmounts every drive mounted so far
-(`241b438:src/vol.asm:42-365`). Cold boot prints the error code at the diagnostic
+(`b95b2a9:src/vol.asm:42-365`). Cold boot prints the error code at the diagnostic
 prompt described in [Chapter 28](28-diagnose-the-machine.md). The table
 below follows the check order so the same code appears more than once.
 
 | Code | Check | Source |
 | --- | --- | --- |
-| `20h` | Block 0 can't be read | `241b438:src/vol.asm:43-50` |
-| `21h` | The first 8 bytes are not `TECOSVOL` | `241b438:src/vol.asm:51-62` |
-| `22h` | The major version is not 1 | `241b438:src/vol.asm:64-71` |
-| `23h` | The header bytes are not 512 or the descriptor bytes not 32 | `241b438:src/vol.asm:75-87` |
-| `24h` | The number of volumes is 0, more than 8 on a 1.0 card or more than 127 | `241b438:src/vol.asm:89-115` |
-| `25h` | The checksum differs | `241b438:src/vol.asm:112-115` |
-| `23h` | 1.1: the drives field is more than 4 | `241b438:src/vol.asm:139-143` |
-| `20h` | 1.1: a block of the table can't be read | `241b438:src/vol.asm:161-169` |
-| `25h` | 1.1 with descriptors beyond block 0: the table sum differs | `241b438:src/vol.asm:174-180` |
-| `26h` | A volume's id is 0, a flag other than read-only is set, the geometry is unknown, the length is not the geometry's or the start is 0 or not a multiple of 8 | `241b438:src/vol.asm:204-244`, `241b438:src/vol.asm:357-358` |
-| `28h` | A volume starts before the end of the one before it in the table | `241b438:src/vol.asm:245-252` |
-| `27h` | The exclusive end exceeds `FFFFFFFFh` or the container length or a standard-capacity card's last volume block exceeds `7FFFFFh` | `241b438:src/vol.asm:254-296` |
-| `29h` | A drive byte is neither `FFh` nor 0 to 3, the drive is past the number the drives field gives or two volumes name one drive | `241b438:src/vol.asm:307-334` |
-| `2Ah` | No volume is on drive A | `241b438:src/vol.asm:343-353` |
+| `20h` | Block 0 can't be read | `b95b2a9:src/vol.asm:43-50` |
+| `21h` | The first 8 bytes are not `TECOSVOL` | `b95b2a9:src/vol.asm:51-62` |
+| `22h` | The major version is not 1 | `b95b2a9:src/vol.asm:64-71` |
+| `23h` | The header bytes are not 512 or the descriptor bytes not 32 | `b95b2a9:src/vol.asm:75-87` |
+| `24h` | The number of volumes is 0, more than 8 on a 1.0 card or more than 127 | `b95b2a9:src/vol.asm:89-115` |
+| `25h` | The checksum differs | `b95b2a9:src/vol.asm:112-115` |
+| `23h` | 1.1: the drives field is more than 4 | `b95b2a9:src/vol.asm:139-143` |
+| `20h` | 1.1: a block of the table can't be read | `b95b2a9:src/vol.asm:161-169` |
+| `25h` | 1.1 with descriptors beyond block 0: the table sum differs | `b95b2a9:src/vol.asm:174-180` |
+| `26h` | A volume's id is 0, a flag other than read-only is set, the geometry is unknown, the length is not the geometry's or the start is 0 or not a multiple of 8 | `b95b2a9:src/vol.asm:204-244`, `b95b2a9:src/vol.asm:357-358` |
+| `28h` | A volume starts before the end of the one before it in the table | `b95b2a9:src/vol.asm:245-252` |
+| `27h` | The exclusive end exceeds `FFFFFFFFh` or the container length or a standard-capacity card's last volume block exceeds `7FFFFFh` | `b95b2a9:src/vol.asm:254-296` |
+| `29h` | A drive byte is neither `FFh` nor 0 to 3, the drive is past the number the drives field gives or two volumes name one drive | `b95b2a9:src/vol.asm:307-334` |
+| `2Ah` | No volume is on drive A | `b95b2a9:src/vol.asm:343-353` |
 
 A volume must begin at or after the previous volume's exclusive end.
 Both format versions require this ascending, nonoverlapping order.
 An out-of-order or overlapping descriptor produces `28h`. `tecvol` applies
-the same check to every card (`241b438:tools/lib/container.mjs:169`).
+the same check to every card (`b95b2a9:tools/lib/container.mjs:169`).
 
 The following example swaps two starter-card descriptors and repairs the
 checksum. The resulting `build/swapped.img` fails `tecvol verify`, and the
@@ -205,12 +205,12 @@ writeFileSync("build/swapped.img", img);
 node tools/tecvol.mjs verify build/swapped.img
 ```
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS 57a8c38: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
 ```text
 tecvol: volume 1: not after volume 0
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/swapped.img. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card build/swapped.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 No volume mounted, error 28
@@ -222,16 +222,16 @@ order so a card made by either passes the ROM's order check.
 
 On a 1.1 card the drives field can restrict the assignments. A nonzero
 value N permits only drives A through the Nth drive. A value of 0 leaves
-all four available, as on a 1.0 card (`241b438:src/vol.asm:319-321`). A violation
+all four available, as on a 1.0 card (`b95b2a9:src/vol.asm:319-321`). A violation
 stops cold boot at the diagnostic prompt with code `29h`. `tecvol` makes the
-same check (`241b438:tools/lib/container.mjs:173`). `tecvol verify` rejects such a
+same check (`b95b2a9:tools/lib/container.mjs:173`). `tecvol verify` rejects such a
 card and `tecvol create` rejects a volume on drive C with `--drives 2`:
 
 ```sh
 node tools/tecvol.mjs create build/drv2.img --volume G1M:SYSTEM:A --volume G1M:EXTRA:C --drives 2
 ```
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS 57a8c38: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
 ```text
 tecvol: volume 1: drive C is past the card's 2 drive(s)
 ```
@@ -240,7 +240,7 @@ An image validator can check the stored layout but cannot determine the
 physical card's addressing mode from those bytes. The standard-capacity
 bound therefore remains a separate ROM check. The host validator checks
 volume count, descriptor order and drive assignments
-(`241b438:tools/lib/container.mjs:127-186`) and applies the additional requirements
+(`b95b2a9:tools/lib/container.mjs:127-186`) and applies the additional requirements
 below in `tecvol`:
 
 | `tecvol` also requires |
@@ -273,7 +273,7 @@ one bit for each allocation block. Its size is `floor(DSM / 8) + 1` bytes.
 particular card.
 
 Their disk parameter blocks, emitted into generated `src/gen/geom.asm`
-by `241b438:tools/build.mjs:123-134`:
+by `b95b2a9:tools/build.mjs:123-134`:
 
 | Field | G8M | G1M | Meaning |
 | --- | ---: | ---: | --- |
@@ -294,8 +294,8 @@ Each directory occupies four allocation blocks. G8M's 512 entries of
 2,048 allocation blocks on G8M or 512 on G1M.
 
 The ROM's geometry table has 6 bytes for each geometry in generated
-`src/gen/geom.asm` (`241b438:tools/build.mjs:114-122`):
+`src/gen/geom.asm` (`b95b2a9:tools/build.mjs:114-122`):
 the id, a 0, the payload in blocks as a word and the disk parameter block's
-address. `GEOFIND` finds an id in it (`241b438:src/volutil.asm:29-39`). The length
+address. `GEOFIND` finds an id in it (`b95b2a9:src/volutil.asm:29-39`). The length
 check compares the descriptor's length with that word and requires its two
-high bytes to be 0 (`241b438:src/vol.asm:217-229`).
+high bytes to be 0 (`b95b2a9:src/vol.asm:217-229`).

@@ -8,9 +8,9 @@ nav_group: "Using the machine"
 # 3. Build a BASIC program
 
 <!-- Source and test contracts checked at TEC-OS
-     46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+     57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      programs/TIMES.BAS, test/times.test.mjs and test/ted-baza.test.mjs.
-     TED.COM is pinned at Thorium 20339b8 and Baza at 5f6b58d. The BAZA
+     TED.COM is pinned at Thorium 02b63d8 and Baza at 5f6b58d. The BAZA
      screen was retaken with the landed firmware; outputs taken from strict
      test assertions are labelled as source-derived excerpts, not captures.
      Both full firmware strict passes include the BASIC and TED scenarios.
@@ -32,7 +32,7 @@ TIMES.BAS is on A beside the supplied tools. `TYPE TIMES.BAS` displays
 the file at `A:SYSTEM>`. Chapter 4 explains this command and its page
 controls. The complete source is:
 
-<!-- TEC-OS 8b69e51 programs/TIMES.BAS, lines 1-22, complete. The starter
+<!-- TEC-OS de6216f programs/TIMES.BAS, lines 1-22, complete. The starter
      card stores it with CRLF line ends and a final ^Z (tools/media.mjs). -->
 ```text
 10 REM TIMES.BAS, a first BASIC program
@@ -90,7 +90,7 @@ cycles through `|`, `/`, `-` and `\` at the start of the line. Each is
 followed by a backspace. Completion prints `COM written` over the last
 mark and returns to the prompt:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'BAZA TIMES'. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --board pico --screen 'BAZA TIMES'. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -115,7 +115,7 @@ The command `TIMES` runs TIMES.COM. This 40-column output is checked by
 the TEC-OS host-model test with answers `TEC`, 13 and then 7. The starting
 `A:SYSTEM>TIMES` line is omitted:
 
-<!-- TEC-OS 8b69e51 test/times.test.mjs:28-40, the asserted output, with
+<!-- TEC-OS de6216f test/times.test.mjs:28-40, the asserted output, with
      the screen check at :120-122: answers TEC, 13 and 7, trailing spaces
      removed. Not a separate capture. -->
 ```text
@@ -209,7 +209,7 @@ on B.
 reset or power-off. Its read attempts pending writes, but a prompt after
 `Write pending` is insufficient. Resolve the original backend refusal and await
 `Cache clear`; closing the file and browser persistence remain separate
-(`a40d482:docs/recovery.md:69-117`). Chapter 1 explains why.
+(`0701241:docs/recovery.md:69-117`). Chapter 1 explains why.
 
 ## A failed compile
 
@@ -219,7 +219,7 @@ between BASIC lines 90 and 100. Its number is in order but its expression
 is unfinished. After `^T B` saved the file, BAZA printed this message
 over the last progress mark:
 
-<!-- TEC-OS 8b69e51 test/ted-baza.test.mjs:94-101, the asserted console
+<!-- TEC-OS de6216f test/ted-baza.test.mjs:94-101, the asserted console
      text with the spinner's marks taken out (:29-31). Not a separate
      capture. -->
 ```text
@@ -281,14 +281,14 @@ the same TIMES.COM as its earlier all-lower-case source. Text inside
 quotes is preserved, so its greeting prints in capitals
 (`Baza 5f6b58d:docs/language.md:19`). The book's prompt commands use
 capitals, but lower case also works. The host-model test types
-`baza times` (`46cf3f1:test/times.test.mjs:79`).
+`baza times` (`57a8c38:test/times.test.mjs:79`).
 
 On the four-drive starter card TED has 28,182 bytes of text room with
 the shell loaded. Leaving a MON-3 session with `EXIT` keeps `MON3.SVC`
 installed, and TED then has 23,318 bytes, or 22,550 with the GLCD driver
 too. Unload MON3.SVC before editing a larger source. These are host-model
 measurements with the seventeen-page shell and the nineteen-page monitor
-(`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/compatibility.md:233`).
+(`TEC-OS 1cded94eed6a077bd0cddea4554c2a2245c40a5a:docs/compatibility.md:233`).
 
 ## Machine code from BASIC
 
@@ -304,7 +304,7 @@ way. Three of its lines show the pattern
 (`Baza 5f6b58d:examples/BOUNCE.BAS:6`, `11`, `18`):
 
 <!-- Baza 5f6b58d examples/BOUNCE.BAS file lines 6, 11 and 18, as the
-     card holds it (TEC-OS 8b69e51 tools/media.mjs:224-227). -->
+     card holds it (TEC-OS de6216f tools/media.mjs:224-227). -->
 ```text
 50 DEF CALL vi = ROM 3: DEF CALL bp = ROM 4: DEF CALL ft = ROM 15
 100 CALL vi, b = 1
@@ -367,7 +367,7 @@ While a program holds the PICO9918, TEC-OS hides the console. If the
 program then stops on a run-time error, it gives the display back before
 printing, so the message shows at the prompt. The host-model test checks
 this with a program that claims the display and then divides by zero
-(`Baza 5f6b58d:docs/call.md:66-70`, `46cf3f1:test/times.test.mjs:213-233`).
+(`Baza 5f6b58d:docs/call.md:66-70`, `57a8c38:test/times.test.mjs:213-233`).
 
 On the card, `BAZA BOUNCE` compiles it and `BOUNCE` runs it on
 the PICO9918, which it needs. Tap W, A, S and D, or the arrow keys, to steer
@@ -375,5 +375,5 @@ the ship. The matrix arrows send Esc, `[` and a letter from `A` to `D`.
 Lines 950 to 999 translate these sequences to W, S, D or A. Q ends the
 game, restores the display console and prints the score at `A:SYSTEM>`.
 The host-model test checks each of these steps
-(`46cf3f1:tools/media.mjs:218-221`, `46cf3f1:test/starter.test.mjs:103-184`,
+(`57a8c38:tools/media.mjs:218-221`, `57a8c38:test/starter.test.mjs:103-184`,
 `Baza 5f6b58d:examples/BOUNCE.BAS:84`, `103-115`).

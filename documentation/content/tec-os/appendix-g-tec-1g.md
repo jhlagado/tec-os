@@ -7,14 +7,14 @@ nav_group: "Reference"
 
 # Appendix G. The TEC-1G as TEC-OS uses it
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -32,7 +32,7 @@ log that records what a particular board did.
 
 ## The ports
 
-The shared port names are in `241b438:src/layout.asm:9-17`, `241b438:src/abi.inc:300-323`. The individual drivers
+The shared port names are in `b95b2a9:src/layout.asm:9-17`, `b95b2a9:src/abi.inc:300-323`. The individual drivers
 define their other ports.
 
 | Port | Direction | Device | TEC-OS's use |
@@ -54,17 +54,17 @@ define their other ports.
 Reading `00h` does not supply a TEC-OS keypad character. In the Debug80 model
 that read starts the next queued serial input byte. On the board it reads the
 keypad encoder and the ROM discards the value. It is a model input trigger,
-not a hardware serial buffer (`241b438:src/console.asm:10-18`,
-`241b438:src/console.asm:184-204`, `241b438:src/console.asm:280-292`).
+not a hardware serial buffer (`b95b2a9:src/console.asm:10-18`,
+`b95b2a9:src/console.asm:184-204`, `b95b2a9:src/console.asm:280-292`).
 
 Cold boot probes the PICO9918 by writing and reading two patterns at video
 memory (VRAM) address `3FFFh`. A successful probe sets its device bit. With the
 Matrix switch enabled the ROM then installs its PICO console before printing the
-banner (`241b438:src/tms.asm:13-41`, `241b438:src/video.asm:18-24`, `241b438:src/pico.asm:53-68`). The
+banner (`b95b2a9:src/tms.asm:13-41`, `b95b2a9:src/video.asm:18-24`, `b95b2a9:src/pico.asm:53-68`). The
 current source starts that console at 40 columns. With the switch off it
 performs no console setup after the probe. The entry to warm boot then writes
 `80h` to the chip's register 1, which leaves its display blanked
-(`241b438:src/boot.asm:117-143`, `241b438:src/pico.asm:326-362`). A program can still claim the
+(`b95b2a9:src/boot.asm:117-143`, `b95b2a9:src/pico.asm:326-362`). A program can still claim the
 responding display through `VIDEO`.
 
 ## Port 01h and the serial line
@@ -73,15 +73,15 @@ A write to port `01h` affects serial output as well as the digits and
 speaker. Bit 6 must stay high while serial is idle. Clearing it resembles
 the start of another serial character. `DIGIT` keeps the bit high during
 and after each digit's lit interval. `TONE` keeps it high while toggling
-speaker bit 7 (`241b438:src/services.asm:23-31`, `241b438:src/services.asm:106-139`,
-`241b438:src/services.asm:244-268`). Programs can use those services to preserve
+speaker bit 7 (`b95b2a9:src/services.asm:23-31`, `b95b2a9:src/services.asm:106-139`,
+`b95b2a9:src/services.asm:244-268`). Programs can use those services to preserve
 the shared serial bit. Chapter 12 gives their calling interface.
 
 The CPU generates the serial bits itself. It sends through `01h` bit 6 and
 receives through `03h` bit 7. The connection uses 4800 baud, eight data bits, no
 parity and two stop bits. The delay counts assume a 4 MHz clock so the board
-requires FAST with the 4 MHz oscillator (`241b438:tools/build.mjs:26-27`,
-`241b438:tools/build.mjs:39-77`, `241b438:src/console.asm:306-331`, `241b438:src/console.asm:363-393`).
+requires FAST with the 4 MHz oscillator (`b95b2a9:tools/build.mjs:26-27`,
+`b95b2a9:tools/build.mjs:39-77`, `b95b2a9:src/console.asm:306-331`, `b95b2a9:src/console.asm:363-393`).
 
 Serial reception depends on the CPU polling for the start bit and sampling
 the bits that follow. There is no hardware receive buffer, so a program
@@ -100,19 +100,19 @@ TEC-OS reads these three input bits:
 | 7 | Serial receive line | During serial status and input calls | Supplies the incoming bits |
 
 `CONINIT` records bit 0 directly. It does not probe for a keyboard response
-(`241b438:src/console.asm:42-45`). With the switch off the console does not scan the
+(`b95b2a9:src/console.asm:42-45`). With the switch off the console does not scan the
 matrix, PICO console setup returns and GLCD registration fails
-(`241b438:src/keyboard.asm:17-30`, `241b438:src/pico.asm:53-55`, `241b438:src/video.asm:142-166`).
+(`b95b2a9:src/keyboard.asm:17-30`, `b95b2a9:src/pico.asm:53-55`, `b95b2a9:src/video.asm:142-166`).
 The keypad sample and serial input are separate reads
-(`241b438:src/cpm/ccpcmd.asm:767-769`, `241b438:src/console.asm:184-204`,
-`241b438:src/console.asm:280-331`).
+(`b95b2a9:src/cpm/ccpcmd.asm:767-769`, `b95b2a9:src/console.asm:184-204`,
+`b95b2a9:src/console.asm:280-331`).
 
 The board documents and the model describe other bits of `03h` differently.
 Both describe bit 6 as low while a keypad key is down. The retired
 diagnostics ROM's T11 recorded the port's readings
-(`46be5a4:docs/diagnostics.md:166-169`). The current board diagnostics do not
+(`eee9f64:docs/diagnostics.md:166-169`). The current board diagnostics do not
 read it, and which description is true on the board is still open
-(`241b438:docs/diagnostics.md:388-391`). The physical Protect and
+(`b95b2a9:docs/diagnostics.md:388-391`). The physical Protect and
 Expand switches are not input conditions checked by TEC-OS. They are distinct
 from the similarly named bits it writes to the system latch.
 
@@ -120,7 +120,7 @@ from the similarly named bits it writes to the system latch.
 
 The board documents describe `FFh` as write-only. TEC-OS keeps its last value
 at `0040h`, named `LATCHV`, and constructs later writes from that copy
-(`241b438:src/layout.asm:19-28`, `241b438:src/abi.inc:302-305`, `241b438:src/layout.asm:64-69`, `241b438:src/abi.inc:307-309`).
+(`b95b2a9:src/layout.asm:19-28`, `b95b2a9:src/abi.inc:302-305`, `b95b2a9:src/layout.asm:64-69`, `b95b2a9:src/abi.inc:307-309`).
 
 | Bit | Value | Name | TEC-OS's use |
 | ---: | ---: | --- | --- |
@@ -134,8 +134,8 @@ At reset the latch is `00h`. With SHADOW low the first 2 KiB of ROM also
 appear at `0000h–07FFh`. The Z80 starts at `0000h` and executes the overlaid
 copy of the ROM jump at `C000h`, whose target is `RSTENT`. At reset that entry
 continues to `COLD`,
-which writes `01h` to remove the overlay (`241b438:src/reset.asm:1-13`,
-`241b438:src/boot.asm:22-40`). Chapter 16 distinguishes this from a program reaching
+which writes `01h` to remove the overlay (`b95b2a9:src/reset.asm:1-13`,
+`b95b2a9:src/boot.asm:22-40`). Chapter 16 distinguishes this from a program reaching
 the reset entry while EXPAND 1 is selected.
 
 The latch shadow must be updated whenever a program writes the latch.
@@ -143,15 +143,15 @@ Otherwise a later TEC-OS write uses an obsolete value from `0040h`.
 Cold boot tests and clears EXPAND 1. During normal operation TEC-OS uses
 it only for the cache. Cache accesses restore the recorded value afterwards
 and perform no stack operation while that bank hides the
-resident EXPAND 0 stacks (`241b438:src/cache.asm:16-44`,
-`241b438:docs/memory-map.md:83-96`). Chapter 15 explains the memory boundary.
+resident EXPAND 0 stacks (`b95b2a9:src/cache.asm:16-44`,
+`b95b2a9:docs/memory-map.md:83-96`). Chapter 15 explains the memory boundary.
 
 The model decodes bits 3–6 as a further bank field. The board documents
 show them unconnected to U9. TEC-OS uses only bit 2 among bits 2–6.
 The retired diagnostics ROM's T12 mapped what those bits select
-(`46be5a4:docs/diagnostics.md:185-190`). The current board diagnostics change
+(`eee9f64:docs/diagnostics.md:185-190`). The current board diagnostics change
 only bit 2 and do not probe bits 3–6, so how a board decodes them remains
-unrecorded (`241b438:docs/diagnostics.md:397-399`).
+unrecorded (`b95b2a9:docs/diagnostics.md:397-399`).
 
 ## U9 and the RAM
 
@@ -160,14 +160,14 @@ two 16 KiB halves behind `8000h–BFFFh`, called EXPAND 0 and EXPAND 1.
 TEC-OS needs both, for 64 KiB of physical RAM in total. The board's recommended
 build leaves U9 empty. The prepared setup therefore adds a 62256 or similar
 and sets the EXPAND jumpers for a 32 KiB chip. That setting is recorded in
-the earlier board checklist (`46be5a4:docs/board-run.md:45-47`). The current
+the earlier board checklist (`eee9f64:docs/board-run.md:45-47`). The current
 checklist does not repeat it.
 
 Before printing the banner, cold boot checks both ends of the visible window
 with complementary patterns and checks for the separate half behind it. Failure
 prints `TEC-OS needs 64K RAM` on serial and stops. The serial failure path uses
 the boot stack in fixed RAM and does not require the resident workspace in U9
-(`241b438:src/boot.asm:59-65`, `241b438:src/boot.asm:424-498`). Chapters 11 and 15 give the
+(`b95b2a9:src/boot.asm:59-65`, `b95b2a9:src/boot.asm:424-498`). Chapters 11 and 15 give the
 program and resident layouts once this check succeeds.
 
 ## The hex keypad and its NMI
@@ -187,8 +187,8 @@ instructions must not be applied to an ordinary TEC-OS session.
 ## The 20 × 4 LCD
 
 The HD44780 character LCD uses `04h` for commands and status and `84h` for
-data (`241b438:src/abi.inc:319-321`). Cold boot sends four initialisation commands
-(`241b438:src/lcd.asm:13-21`, `241b438:src/tables.asm:44-51`):
+data (`b95b2a9:src/abi.inc:319-321`). Cold boot sends four initialisation commands
+(`b95b2a9:src/lcd.asm:13-21`, `b95b2a9:src/tables.asm:44-51`):
 
 | Command | Effect |
 | --- | --- |
@@ -199,35 +199,35 @@ data (`241b438:src/abi.inc:319-321`). Cold boot sends four initialisation comman
 
 Before a command or character `LCDWAIT` reads the busy flag, bit 7 of port
 `04h`, at most 256 times. The write follows readiness or expiry of that limit so
-a missing LCD cannot hold this wait indefinitely (`241b438:src/lcd.asm:29-54`). The four
-row address commands are `80h`, `C0h`, `94h` and `D4h` (`241b438:src/tables.asm:50-51`).
+a missing LCD cannot hold this wait indefinitely (`b95b2a9:src/lcd.asm:29-54`). The four
+row address commands are `80h`, `C0h`, `94h` and `D4h` (`b95b2a9:src/tables.asm:50-51`).
 
 Cold boot writes the banner on row 0 and drives A and B on rows 1 and 2.
 Row 3 holds the recovery words `CARD?` and `GLCD?`, described in Appendix D.
 The `LCD` hardware service writes a complete row for a program. Writing row 3
 through that call clears its recovery-word ownership flag so later console
-selection leaves the program's text alone (`241b438:src/lcd.asm:115-146`,
-`241b438:src/services.asm:141-168`). Chapter 26 explains that ownership boundary.
+selection leaves the program's text alone (`b95b2a9:src/lcd.asm:115-146`,
+`b95b2a9:src/services.asm:141-168`). Chapter 26 explains that ownership boundary.
 
 ## The 8 × 8 LEDs
 
 The ROM supplies no service for the 8 × 8 LEDs and does not write their ports.
 DEMO writes them itself. Its host-model mapping uses `05h` for row selection
 and `06h`, `F8h` and `F9h` for red, green and blue column patterns
-(`241b438:programs/DEMO.ASM:48-51`). Chapter 12 describes the program. Its source,
+(`b95b2a9:programs/DEMO.ASM:48-51`). Chapter 12 describes the program. Its source,
 DEMO.ASM, is on the starter card, and `TAS DEMO` builds it there.
 
 The board's port list instead gives `05h` and `06h` as the X and Y axes of
 a single-colour matrix. DEMO's pattern need not look the same on that wiring.
 The retired diagnostics ROM's T24 had a visual procedure for recording the
-pattern (`46be5a4:docs/diagnostics.md:352-355`). The current board diagnostics
+pattern (`eee9f64:docs/diagnostics.md:352-355`). The current board diagnostics
 do not check the 8 × 8 LEDs, so the board's wiring is still unrecorded
-(`241b438:docs/diagnostics.md:380-381`). A host-model picture cannot settle
+(`b95b2a9:docs/diagnostics.md:380-381`). A host-model picture cannot settle
 that board difference.
 
 ## The DS1302 clock
 
-The clock add-on uses port `FCh` (`241b438:src/services.asm:19-22`):
+The clock add-on uses port `FCh` (`b95b2a9:src/services.asm:19-22`):
 
 | Bit | Use |
 | ---: | --- |
@@ -241,18 +241,18 @@ The command and data bytes travel least significant bit first. `RTCHAS`
 reads the seconds register and treats a value below `60h` as a responding
 clock. An empty port returning `FFh` fails that check. This is the ROM's
 presence test, not validation of every BCD digit or the date
-(`241b438:src/services.asm:435-458`, `241b438:src/services.asm:463-518`).
+(`b95b2a9:src/services.asm:435-458`, `b95b2a9:src/services.asm:463-518`).
 
 Cold boot makes the test once and records the result in `CONDEV` bit 3.
 `INFO` reports it in bit 3 of `B` without a port read. `RTC` tests again on
 each valid call and transfers seven BCD fields: seconds, minutes, hours,
 date, month, weekday and year. Chapter 12 gives the read/set contract
-(`241b438:src/boot.asm:68-72`, `241b438:src/services.asm:85-91`,
-`241b438:src/services.asm:377-436`).
+(`b95b2a9:src/boot.asm:68-72`, `b95b2a9:src/services.asm:85-91`,
+`b95b2a9:src/services.asm:377-436`).
 
 ## The SD card adaptor
 
-The SD adaptor uses port `FDh` (`241b438:src/layout.asm:15-20`, `241b438:src/sd.asm:1-7`):
+The SD adaptor uses port `FDh` (`b95b2a9:src/layout.asm:15-20`, `b95b2a9:src/sd.asm:1-7`):
 
 | Bit | Use |
 | ---: | --- |
@@ -263,14 +263,14 @@ The SD adaptor uses port `FDh` (`241b438:src/layout.asm:15-20`, `241b438:src/sd.
 
 Output data changes while the clock is low and the card samples it on a
 rising edge. Idle output is `05h`: chip select high, data high and clock low
-(`241b438:src/sd.asm:35-89`).
+(`b95b2a9:src/sd.asm:35-89`).
 
 High-capacity cards take a block number as the command address.
 Standard-capacity cards take a 32-bit byte address. Their last addressable
 512-byte block is `7FFFFFh`. A volume including `800000h` or a later block fails mount
 validation with `27h`. A direct transfer beyond the bound returns driver
-error 9 before sending a command (`241b438:src/vol.asm:275-296`,
-`241b438:src/sd.asm:354-387`, `241b438:src/sd.asm:397-400`, `241b438:src/sd.asm:667-670`).
+error 9 before sending a command (`b95b2a9:src/vol.asm:275-296`,
+`b95b2a9:src/sd.asm:354-387`, `b95b2a9:src/sd.asm:397-400`, `b95b2a9:src/sd.asm:667-670`).
 
 Every card wait has a finite limit. A missing or unsuitable response returns
 one of the driver codes in Appendix D. Chapter 18 follows initialisation,
@@ -278,14 +278,14 @@ block transfers and the container checks.
 
 For cache transfers the block loop selects EXPAND 1 and restores the recorded
 latch afterwards. It uses no stack while the bank is visible
-(`241b438:src/sd.asm:469-478`, `241b438:src/sd.asm:566-591`, `241b438:src/sd.asm:646-655`). The retained `46cf3f1` host-model
+(`b95b2a9:src/sd.asm:469-478`, `b95b2a9:src/sd.asm:566-591`, `b95b2a9:src/sd.asm:646-655`). The retained `57a8c38` host-model
 measurement of TEC-OS's `SDREAD` is 219,232 T-states a block, about 55 ms
 at 4 MHz, as [Chapter 18](18-card-blocks-and-volumes.md) gives. The retired
 diagnostics ROM's documents at `b706f61` give 354,216 T-states per block
 plus 678 for each token poll, about 89 ms, for that ROM's separate driver.
 The retired ROM recorded a board's token polls with T20 and its read rate
-with the timed T34 (`46be5a4:docs/diagnostics.md:283-290`,
-`46be5a4:docs/diagnostics.md:430-433`). The current board diagnostics record
+with the timed T34 (`eee9f64:docs/diagnostics.md:283-290`,
+`eee9f64:docs/diagnostics.md:430-433`). The current board diagnostics record
 them with SD3's margins and SD6's read speed, timed by the DS1302 or by a
 stopwatch between two beeps, in a log that names its image
-(`241b438:docs/diagnostics.md:168-173`, `241b438:docs/diagnostics.md:193-196`).
+(`b95b2a9:docs/diagnostics.md:168-173`, `b95b2a9:docs/diagnostics.md:193-196`).

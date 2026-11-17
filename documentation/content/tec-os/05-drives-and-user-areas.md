@@ -7,14 +7,14 @@ nav_group: "Using the machine"
 
 # 5. Drives and user areas
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -37,7 +37,7 @@ GAMES and SPARE are present on the card but unassigned. The prompt
 `CD ?` lists the card's volumes, in the card's order, each with the drive it
 is on:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD ?'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs 'CD ?'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -69,7 +69,7 @@ drive can be named explicitly, as in `DIR B:` or `TYPE A:SAMPLE.ASM`.
 Selecting an empty drive or naming a file on it gives `Select`. This
 starter-card run selects B and then uses empty drive D:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs B: '@start D:' '@key x' '@start DIR D:' '@key x'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs B: '@start D:' '@key x' '@start DIR D:' '@key x'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -111,7 +111,7 @@ listed, erased or run from the prompt. In this example NOTES.TXT is in area
 3 of WORK, put there from the PC with `tecvol put card.img B NOTES.TXT
 --text --user 3`. Neither `DIR` nor `TYPE` finds it:
 
-<!-- TEC-OS 426bb14, ROM 35893cab: node tools/capture.mjs --card build/area.img 'DIR B:' 'TYPE B:NOTES.TXT'. Complete captured console transcript. -->
+<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card build/area.img 'DIR B:' 'TYPE B:NOTES.TXT'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -159,7 +159,7 @@ only. Loading from A also leaves the current drive unchanged. In this
 capture, both `A:TAS` and plain `TAS` run
 A's program and print its usage line. The prompt remains on B:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs B: A:TAS TAS STARTUP.CMD. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs B: A:TAS TAS STARTUP.CMD. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -223,7 +223,7 @@ slot large enough for either geometry, so any volume fits any drive.
 This run assigns GAMES to D, displays that assignment and attempts to
 put WORK on C before listing all volumes:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD D:GAMES' 'CD D:' 'CD C:WORK' 'CD ?'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs 'CD D:GAMES' 'CD D:' 'CD C:WORK' 'CD ?'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -271,7 +271,7 @@ change to the current drive immediately reselects it to use the new
 volume. The shell fills its prompt-label table at its first prompt
 and updates it through `CD`. A program using ROM mount calls can
 therefore leave an old label displayed. `CD` alone rereads the card
-and updates it (`241b438:docs/shell.md:142-198`).
+and updates it (`b95b2a9:docs/shell.md:142-198`).
 
 ### CD on drive A
 
@@ -282,7 +282,7 @@ selection, so a reset after `CD A:GAMES` starts from GAMES, which has no
 startup file and no shell. The bare prompt `A>` follows. ROM CD commands
 remain available to restore SYSTEM:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD A:GAMES' TAS @reset 'CD ?' 'CD A:SYSTEM' SHELL.SVC. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs 'CD A:GAMES' TAS @reset 'CD ?' 'CD A:SYSTEM' SHELL.SVC. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -361,7 +361,7 @@ in location, size, geometry and flags and fit the drive's slot.
 This run assigns GAMES to D and then resets. The boot banner and volume
 listing show that D still contains GAMES:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD D:GAMES' @reset 'CD ?'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs 'CD D:GAMES' @reset 'CD ?'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -551,8 +551,8 @@ address for one run. LOAD never runs automatically,
 and moving bytes does not relocate absolute operands. TAS produces genuine
 HEX with `TAS NAME OUT.HEX`, using data 00/EOF 01 and no entry record. These
 address forms follow the later development components
-(`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/mon3.md:60-143`,
-`Thorium 0c8adea809ff8752e504bad9c40256e2572f2462:docs/language.md:167-185`).
+(`TEC-OS 1cded94eed6a077bd0cddea4554c2a2245c40a5a:docs/mon3.md:60-143`,
+`Thorium 7a217f96c76f11641af3fa0b22d0b34be6e2a467:docs/language.md:167-185`).
 GO flushes the cache before it runs anything. If a write fails, the data
 stays queued, GO prints `?` and no program starts. It runs once the card has
 taken the write and the console shows `Cache clear`.
@@ -575,7 +575,7 @@ that ended a program out of the command line. Serial has no such wait.
 Warm boot preserves MON3.SVC. `UNLOAD` or reset removes it. Its
 current 4,781-byte header and image occupy 19 pages. With relocation data
 the file occupies 5,237 bytes. These later measurements belong to the monitor
-at `TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e`; the earlier checked
+at `TEC-OS 1cded94eed6a077bd0cddea4554c2a2245c40a5a`; the earlier checked
 header/captures above retain their historical ownership. These pages hold the service code,
 line buffer and recovery stack above the MON-3 program's load area.
 The program itself uses MON-3's stack below `0880h`.
@@ -586,7 +586,7 @@ to 41,472, or 40,704 with GLCD.SVC too. On the starter card, the
 shell is already installed. Installing MON3 changes that address from `A500h` to `9200h` and
 reduces program memory from 41,984 to 37,120 bytes. Adding
 GLCD.SVC gives `8F00h` and 36,352 bytes
-(`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/mon3.md:47-58`).
+(`TEC-OS 1cded94eed6a077bd0cddea4554c2a2245c40a5a:docs/mon3.md:47-58`).
 
 The return-to-prompt key handling uses TEC-OS's `KBLAST` state. Each
 MON3 matrix read stores the detected key there. A later TEC-OS scan

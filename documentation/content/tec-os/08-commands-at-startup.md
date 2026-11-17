@@ -7,14 +7,14 @@ nav_group: "Using the machine"
 
 # 8. Commands at startup
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -37,18 +37,18 @@ After saving, exit the editor normally and check the file result. After
 `Write pending`, a prompt alone does not establish a complete file. Resolve
 the original backend failure and await `Cache clear` before reset; queue
 clearance does not repair rejected metadata or finish an unclosed FCB
-(`a40d482:docs/recovery.md:69-117`).
+(`0701241:docs/recovery.md:69-117`).
 
 If bootstrap reset or saved-drive selection fails, Disk reset failed / Enter
 retries replaces normal command input. Only CR retries reset; LF, ordinary keys
 and input Ctrl-C do not. A previously buffered cold-start line waits and runs
 once after success, not inside recovery. Printing/input can still service queued
 writes but run no SDINIT and authorise no replay onto an inserted stranger
-(`a40d482:src/cpm/ccp.asm:75-134`).
+(`0701241:src/cpm/ccp.asm:75-134`).
 
 The starter card's file has two lines:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'TYPE STARTUP.CMD'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs 'TYPE STARTUP.CMD'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -92,7 +92,7 @@ cp dist/starter.img lines.img
 node tools/tecvol.mjs put lines.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 426bb14, ROM 35893cab: node tools/capture.mjs --card lines.img. Complete captured console transcript. -->
+<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card lines.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -132,7 +132,7 @@ cp dist/starter.img bare.img
 node tools/tecvol.mjs put bare.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 426bb14, ROM 35893cab: node tools/capture.mjs --card bare.img. Complete captured console transcript. -->
+<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card bare.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -320,7 +320,7 @@ cp dist/starter.img cut.img
 node tools/tecvol.mjs put cut.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 426bb14, ROM 35893cab: node tools/capture.mjs --card cut.img. Complete captured console transcript. -->
+<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card cut.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -345,7 +345,7 @@ cp dist/starter.img long.img
 node tools/tecvol.mjs put long.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 426bb14, ROM 35893cab: node tools/capture.mjs --card long.img. Complete captured console transcript. -->
+<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card long.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -390,7 +390,7 @@ cp dist/starter.img semi.img
 node tools/tecvol.mjs put semi.img A startup.cmd --text
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card semi.img. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card semi.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -449,7 +449,7 @@ printf 'DIR\n' > startup.cmd
 node tools/tecvol.mjs put spare.img SPARE startup.cmd --text
 ```
 
-<!-- TEC-OS 426bb14, ROM 35893cab: node tools/capture.mjs --card spare.img 'CD A:SPARE' @reset. Complete captured console transcript. -->
+<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card spare.img 'CD A:SPARE' @reset. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -514,7 +514,7 @@ cp dist/starter.img nostart.img
 node tools/tecvol.mjs era nostart.img A STARTUP.CMD
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card nostart.img --lcd 'CON UC1'. Complete captured console transcript and LCD rows. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card nostart.img --lcd 'CON UC1'. Complete captured console transcript and LCD rows. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -542,7 +542,7 @@ node tools/tecvol.mjs put gname.img A dist/files/GLCD.SVC G.SVC
 node tools/tecvol.mjs era gname.img A GLCD.SVC
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card gname.img --board glcd --lcd 'CON UC1' G.SVC CON. Complete captured console transcript and LCD rows. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card gname.img --board glcd --lcd 'CON UC1' G.SVC CON. Complete captured console transcript and LCD rows. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

@@ -7,14 +7,14 @@ nav_group: "Reference"
 
 # Appendix A. BDOS functions
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -85,7 +85,7 @@ the separate error registers specified under [The errors](#the-errors).
 A BDOS call begins with the function number in `C` and its argument in `E`
 or `DE`. The program then calls `0005h`. The result returns in `HL`, with
 its low byte copied to `A` and its high byte to `B`
-(`241b438:src/cpm/bdos.asm:195-216`). A byte result has 0 in `H` and `B`.
+(`b95b2a9:src/cpm/bdos.asm:195-216`). A byte result has 0 in `H` and `B`.
 The value is 0 for entries labelled “returns nothing”.
 
 A caller tests the documented result instead of using carry as a general
@@ -93,16 +93,16 @@ success flag. Other registers and result flags have no preservation
 guarantee. The call places its
 two-byte return address on the program's stack. BDOS then switches to its
 own 64-byte stack allocation
-(`241b438:src/cpm/bdos.asm:124-129`, `241b438:src/layout.asm:110`).
+(`b95b2a9:src/cpm/bdos.asm:124-129`, `b95b2a9:src/layout.asm:110`).
 
 A function that takes an FCB uses its first byte to select a drive: 0 for
 the default drive, 1 to 16 for A to P. The FCB is a 36-byte file control
 block, laid out in [Chapter 20](20-a-file-through-the-bdos.md). Selection
 precedes functions 15, 16, 17, 19 to 23, 30, 33 to 35 and 40
-(`241b438:src/tables.asm:85-93`, `241b438:src/cpm/bdos.asm:157-182`). A `?` in the drive byte
+(`b95b2a9:src/tables.asm:85-93`, `b95b2a9:src/cpm/bdos.asm:157-182`). A `?` in the drive byte
 is allowed only for function 17. An explicit FCB drive changes the selected
 drive for that operation without changing the logical default. The caller's
-drive byte is left intact (`241b438:src/cpm/bdosfile.asm:128-195`).
+drive byte is left intact (`b95b2a9:src/cpm/bdosfile.asm:128-195`).
 
 A directory code identifies the entry within a 128-byte directory record.
 File functions that return a directory code use `A`, as in CP/M 2.2.
@@ -112,7 +112,7 @@ Each admitted outer BDOS call first has an ordinary housekeeping opportunity.
 Descriptions below of no update or unsupported work concern the requested
 function; the call can still first write previously acknowledged data. That
 maintenance does not replace the function's documented result
-(`241b438:src/cpm/bdos.asm:124-135`, `241b438:src/hk.asm:124-202`).
+(`b95b2a9:src/cpm/bdos.asm:124-135`, `b95b2a9:src/hk.asm:124-202`).
 
 ## The errors
 
@@ -120,18 +120,18 @@ A disk operation that cannot proceed gives one of four BDOS errors. By
 default the BDOS prints the message, takes a key and warm boots without
 returning. An ordinary key retained during output can satisfy that wait.
 Output-time `^S` and `^P` have their separate console effects. The remaining
-command chain is dropped (`241b438:src/cpm/bdoscon.asm:47-64`, `241b438:src/cpm/bdoscon.asm:119-127`, `241b438:src/cpm/bdoscon.asm:298-323`,
-`241b438:src/cpm/bdos.asm:103-105`). Function 45 instead permits silent or printed
+command chain is dropped (`b95b2a9:src/cpm/bdoscon.asm:47-64`, `b95b2a9:src/cpm/bdoscon.asm:119-127`, `b95b2a9:src/cpm/bdoscon.asm:298-323`,
+`b95b2a9:src/cpm/bdos.asm:103-105`). Function 45 instead permits silent or printed
 returns with `A` = `L` = `FFh` and `H` = `B` = the error code. Those returns
 preserve the chain. They are distinct from an ordinary not-found, end-of-file
 or full-directory result listed under a function.
 
 | Code | Message | Given for |
 | ---: | --- | --- |
-| 1 | `Bdos Err On d: Bad Sector` | A failed data/directory transfer or a read/write allocation-block reference beyond the volume (`241b438:src/cpm/bdosrec.asm:69-82`, `241b438:src/cpm/bdosrec.asm:222-225`, `241b438:src/cpm/bdosrec.asm:705-706`, `241b438:src/cpm/bdoslog.asm:83-108`, `241b438:src/cpm/bdoscon.asm:28-30`, `241b438:src/cpm/bdoscon.asm:75-91`) |
-| 2 | `Bdos Err On d: R/O` | A change by function 19, 21, 22, 23, 30, 34 or 40 to a drive protected by function 28 or by the mounted volume's flag. Close instead succeeds without writing (`241b438:src/cpm/bdoslog.asm:211-216`, `241b438:src/cpm/bdoslog.asm:733-750`, `241b438:src/cpm/bdosfile.asm:252-258`) |
-| 3 | `Bdos Err On d: File R/O` | Function 19 or 23 reached a read-only directory entry or function 21, 34 or 40 received an FCB with that attribute (`241b438:src/cpm/bdosfile.asm:355-366`, `241b438:src/cpm/bdosfile.asm:393-399`, `241b438:src/cpm/bdosfile.asm:539-545`, `241b438:src/cpm/bdosfile.asm:592-599`, `241b438:src/cpm/bdosrec.asm:280-283`) |
-| 4 | `Bdos Err On d: Select` | An unmounted drive, a drive past D or an FCB's `?` drive outside function 17 (`241b438:src/bios.asm:61-92`, `241b438:src/cpm/bdosfile.asm:176-195`, `241b438:src/cpm/bdoslog.asm:758-761`) |
+| 1 | `Bdos Err On d: Bad Sector` | A failed data/directory transfer or a read/write allocation-block reference beyond the volume (`b95b2a9:src/cpm/bdosrec.asm:69-82`, `b95b2a9:src/cpm/bdosrec.asm:222-225`, `b95b2a9:src/cpm/bdosrec.asm:705-706`, `b95b2a9:src/cpm/bdoslog.asm:83-108`, `b95b2a9:src/cpm/bdoscon.asm:28-30`, `b95b2a9:src/cpm/bdoscon.asm:75-91`) |
+| 2 | `Bdos Err On d: R/O` | A change by function 19, 21, 22, 23, 30, 34 or 40 to a drive protected by function 28 or by the mounted volume's flag. Close instead succeeds without writing (`b95b2a9:src/cpm/bdoslog.asm:211-216`, `b95b2a9:src/cpm/bdoslog.asm:733-750`, `b95b2a9:src/cpm/bdosfile.asm:252-258`) |
+| 3 | `Bdos Err On d: File R/O` | Function 19 or 23 reached a read-only directory entry or function 21, 34 or 40 received an FCB with that attribute (`b95b2a9:src/cpm/bdosfile.asm:355-366`, `b95b2a9:src/cpm/bdosfile.asm:393-399`, `b95b2a9:src/cpm/bdosfile.asm:539-545`, `b95b2a9:src/cpm/bdosfile.asm:592-599`, `b95b2a9:src/cpm/bdosrec.asm:280-283`) |
+| 4 | `Bdos Err On d: Select` | An unmounted drive, a drive past D or an FCB's `?` drive outside function 17 (`b95b2a9:src/bios.asm:61-92`, `b95b2a9:src/cpm/bdosfile.asm:176-195`, `b95b2a9:src/cpm/bdoslog.asm:758-761`) |
 
 A failed transfer can follow successful or partial physical writes. Those
 writes are not rolled back.
@@ -141,48 +141,48 @@ recovery procedures.
 ## The functions
 
 **0 System reset.** Ends the program by warm boot through the RAM BIOS
-table's warm boot entry (`241b438:src/cpm/bdos.asm:222`). Does not return.
+table's warm boot entry (`b95b2a9:src/cpm/bdos.asm:222`). Does not return.
 
 **1 Console input.** Waits for a character and echoes it to the console. A
 character kept from an earlier status call or typed during output comes first
-(`241b438:src/cpm/bdos.asm:282-288`). Returns the character in `A`. Every character is
+(`b95b2a9:src/cpm/bdos.asm:282-288`). Returns the character in `A`. Every character is
 echoed, including control characters. Tab is expanded to spaces. This
 differs from CP/M 2.2's restricted echo of printing characters, CR, LF, tab
-and backspace (`241b438:src/cpm/bdoscon.asm:253-265`).
+and backspace (`b95b2a9:src/cpm/bdoscon.asm:253-265`).
 
 **2 Console output.** Prints the character in `E`. A tab becomes spaces to the
 next multiple of 8 columns. Before each character the BDOS checks for a key.
 `^S` stops the output until the next key. A `^C` then ends the program by warm
 boot and any other key resumes the output and is discarded. `^P` turns the
 copy of the output to the list device on or off. Any other key is kept for the
-next input call (`241b438:src/cpm/bdos.asm:296-299`, `241b438:src/cpm/bdoscon.asm:169-194`,
-`241b438:src/cpm/bdoscon.asm:300-331`). Returns nothing. The `^C` after `^S` ends the
+next input call (`b95b2a9:src/cpm/bdos.asm:296-299`, `b95b2a9:src/cpm/bdoscon.asm:169-194`,
+`b95b2a9:src/cpm/bdoscon.asm:300-331`). Returns nothing. The `^C` after `^S` ends the
 program in CP/M 2.2 too.
 
 **3 Reader input.** Waits for a byte from the reader device, the serial port
-(`241b438:src/cpm/bdos.asm:304-305`, `241b438:src/console.asm:478-489`). Returns it in `A`.
+(`b95b2a9:src/cpm/bdos.asm:304-305`, `b95b2a9:src/console.asm:478-489`). Returns it in `A`.
 
 **4 Punch output.** Sends the byte in `E` to the punch device, the serial port
-(`241b438:src/cpm/bdos.asm:311-314`, `241b438:src/console.asm:474-475`). Returns nothing.
+(`b95b2a9:src/cpm/bdos.asm:311-314`, `b95b2a9:src/console.asm:474-475`). Returns nothing.
 
 **5 List output.** Sends the byte in `E` to the list device, which discards it
-(`241b438:src/cpm/bdos.asm:316-322`, `241b438:src/console.asm:458-459`). Returns nothing.
+(`b95b2a9:src/cpm/bdos.asm:316-322`, `b95b2a9:src/console.asm:458-459`). Returns nothing.
 
 **6 Direct console I/O.** With `E` = `FFh`, reads a waiting character without
 echo. With any other `E`, sends `E` to the console with no tab expansion, no
-`^S` check and no copy to the list device (`241b438:src/cpm/bdos.asm:331-349`).
+`^S` check and no copy to the list device (`b95b2a9:src/cpm/bdos.asm:331-349`).
 Returns the character in `A` or 0 if none is waiting. The values `FEh` and
 `FDh`, which CP/M 3 gives a meaning of their own, are sent as characters.
 
-**7 Get IOBYTE.** Reads the byte at `0003h` (`241b438:src/cpm/bdos.asm:355-356`).
+**7 Get IOBYTE.** Reads the byte at `0003h` (`b95b2a9:src/cpm/bdos.asm:355-356`).
 Returns it in `A`.
 
-**8 Set IOBYTE.** Writes `E` to `0003h` (`241b438:src/cpm/bdos.asm:364-366`). Returns
+**8 Set IOBYTE.** Writes `E` to `0003h` (`b95b2a9:src/cpm/bdos.asm:364-366`). Returns
 nothing. TEC-OS acts only on the IOBYTE's console field
-(`241b438:src/console.asm:75-133`).
+(`b95b2a9:src/console.asm:75-133`).
 
 **9 Print string.** Prints the characters from `DE` up to a `$`, which is not
-printed, as function 2 prints each (`241b438:src/cpm/bdos.asm:375-387`). Returns
+printed, as function 2 prints each (`b95b2a9:src/cpm/bdos.asm:375-387`). Returns
 nothing.
 
 **10 Read console buffer.** Reads a line into the buffer at `DE`. The buffer's
@@ -191,69 +191,69 @@ line. Reaching the buffer's maximum ends it too. The editing keys are
 backspace, Delete, `^U`, `^R`, `^X`, `^E`, `^P` and `^C` while the line is
 empty. At the CCP's prompt `^W` and `^N` recall lines from command history.
 For a program they are characters
-(`241b438:src/cpm/bdos.asm:405-664`, `241b438:src/cpm/bdos.asm:484-488`). Returns the number
+(`b95b2a9:src/cpm/bdos.asm:405-664`, `b95b2a9:src/cpm/bdos.asm:484-488`). Returns the number
 read in the buffer's second byte, with the characters from the third on.
 Returns 0 in `A`. The returned line excludes the editing controls. Backspace
 erases the removed character on screen while Delete echoes it. `^C` is
 ignored while the line contains characters. On an empty line it ends the
 program by warm boot and drops the remaining command chain. Deleting or
 clearing all characters restores that abort condition
-(`241b438:src/cpm/bdos.asm:501-542`, `241b438:src/cpm/bdos.asm:555-624`).
+(`b95b2a9:src/cpm/bdos.asm:501-542`, `b95b2a9:src/cpm/bdos.asm:555-624`).
 [Chapter 23](23-the-history-ring.md) explains the history storage. The recall works only for the first function 10 after the shell's
-`LINE` call, and the history is the shell's (`241b438:src/cpm/bdos.asm:475-492`,
-`241b438:docs/shell.md:308-322`). With no shell installed `^W` and `^N` are
+`LINE` call, and the history is the shell's (`b95b2a9:src/cpm/bdos.asm:475-492`,
+`b95b2a9:docs/shell.md:308-322`). With no shell installed `^W` and `^N` are
 characters at the prompt too.
 
 **11 Get console status.** Tests for a waiting character. A character the BIOS
-has is read and kept for the next input call (`241b438:src/cpm/bdos.asm:709-722`).
+has is read and kept for the next input call (`b95b2a9:src/cpm/bdos.asm:709-722`).
 Returns 1 in `A` if a character is waiting and 0 if not.
 
 **12 Return version number.** Returns `0022h` in `HL`: CP/M 2.2
-(`241b438:src/cpm/bdos.asm:729-730`).
+(`b95b2a9:src/cpm/bdos.asm:729-730`).
 
 **13 Reset disk system.** Logs out every drive, clears the read-only vector,
 selects drive A and sets the DMA address to `0080h`. Drive A is logged in again
-(`241b438:src/cpm/bdosfile.asm:19-44`). Returns 0. The user number stays as it is, as in
+(`b95b2a9:src/cpm/bdosfile.asm:19-44`). Returns 0. The user number stays as it is, as in
 CP/M 2.2. The CCP's call at each warm boot sets a flag first. Drives with no
 dirty flag and a matching allocation-vector sum then stay logged in
-(`241b438:src/cpm/bdosfile.asm:61-107`).
+(`b95b2a9:src/cpm/bdosfile.asm:61-107`).
 
 **14 Select disk.** Makes the drive in `E`, 0 to 15 for A to P, the default
-drive, logging it in if it is not (`241b438:src/cpm/bdosfile.asm:116-136`). Returns
+drive, logging it in if it is not (`b95b2a9:src/cpm/bdosfile.asm:116-136`). Returns
 nothing. A drive past D or with no volume gives the `Select` error.
 
 **15 Open file.** Searches for the FCB's file and logical extent and copies
 the entry's name through allocation map into the FCB, replacing any `?` in
 the name. EX retains the requested logical extent. RC describes that extent
 and S2's bit 7 marks the FCB unmodified
-(`241b438:src/cpm/bdosfile.asm:205-207`, `241b438:src/cpm/bdosfn.asm:489-529`). Returns the
+(`b95b2a9:src/cpm/bdosfile.asm:205-207`, `b95b2a9:src/cpm/bdosfn.asm:489-529`). Returns the
 directory code or `FFh` if there is no such file. The FCB's `CR` is not
 changed: a program sets it to 0 before reading from the start.
 
 **16 Close file.** Writes the FCB's extent, record count and allocation map
 back to the file's directory entry. An FCB on an earlier extent than its
-entry's writes back only the allocation map (`241b438:src/cpm/bdosfile.asm:229-287`).
+entry's writes back only the allocation map (`b95b2a9:src/cpm/bdosfile.asm:229-287`).
 Returns the directory code or `FFh` if the entry is not found. Returns 0
 and writes nothing when S2's bit 7 marks the FCB unmodified since open or
 make. On a read-only drive it writes nothing and returns 0 even for an FCB
 that was never opened, as CP/M 2.2's close does
-(`241b438:src/cpm/bdosfile.asm:229-258`).
+(`b95b2a9:src/cpm/bdosfile.asm:229-258`).
 
 **17 Search for first.** Searches for the first entry that matches the FCB,
 with `?` matching any character. It copies the containing directory record
-to the DMA address (`241b438:src/cpm/bdosfile.asm:313-335`). A `?` in the FCB's extent
+to the DMA address (`b95b2a9:src/cpm/bdosfile.asm:313-335`). A `?` in the FCB's extent
 byte matches every extent. Otherwise matching respects the DPB's extent
 mask and uses module 0 because ordinary search clears S2. A `?` in the drive
 byte matches every directory entry of the default drive, in use or not.
 Returns the directory code or `FFh` if none matches
-(`241b438:src/cpm/bdosfn.asm:584-650`).
+(`b95b2a9:src/cpm/bdosfn.asm:584-650`).
 
 **18 Search for next.** Continues the last search from the entry after the one
-found (`241b438:src/cpm/bdosfile.asm:343-344`). `DE` is not used. Returns the
+found (`b95b2a9:src/cpm/bdosfile.asm:343-344`). `DE` is not used. Returns the
 directory code or `FFh` if none matches.
 
 **19 Delete file.** Erases every entry that matches the FCB and frees its
-allocation blocks. `?` is allowed (`241b438:src/cpm/bdosfile.asm:380-415`). Each entry's
+allocation blocks. `?` is allowed (`b95b2a9:src/cpm/bdosfile.asm:380-415`). Each entry's
 blocks are freed only once its directory write has returned. A write that
 fails in a mode of function 45 that returns the error therefore leaves that
 entry's blocks in use. It does not establish that a failed physical write
@@ -263,92 +263,92 @@ error. The entries erased before it stay erased.
 
 **20 Read sequential.** Reads the record at the FCB's `CR` into the DMA
 address and moves on to the next extent after record 127
-(`241b438:src/cpm/bdosrec.asm:178-233`). Returns 0 on success. It returns 1 when CR
+(`b95b2a9:src/cpm/bdosrec.asm:178-233`). Returns 0 on success. It returns 1 when CR
 reaches RC, when a needed map block is missing, when the next extent is
 absent or when closing the extent returns `FFh`. A transfer failure instead
 takes the BDOS error path.
 
 **21 Write sequential.** Writes the record at the DMA address at the FCB's
 `CR` and moves on. It takes a new allocation block or a new extent when the
-record falls in one (`241b438:src/cpm/bdosrec.asm:20-158`). Returns 0 on success.
+record falls in one (`b95b2a9:src/cpm/bdosrec.asm:20-158`). Returns 0 on success.
 Returns 1 when the directory has no entry for a new extent or when the close
 of the extent it leaves finds no entry for it. Returns 2 when the drive is
 full. After a 1 the FCB stays on its extent with `CR` at 128 so a later
 write, once an entry has been freed, makes the extent the FCB needs
-(`241b438:src/cpm/bdosrec.asm:94-135`). A block taken for a write that then fails
+(`b95b2a9:src/cpm/bdosrec.asm:94-135`). A block taken for a write that then fails
 stays in the FCB's map. A later successful close publishes it in the entry
-(`241b438:src/cpm/bdosrec.asm:593-619`). An FCB with the read-only attribute set gives
-the `File R/O` error (`241b438:src/cpm/bdosfile.asm:355-366`). On any drive, a successful data
+(`b95b2a9:src/cpm/bdosrec.asm:593-619`). An FCB with the read-only attribute set gives
+the `File R/O` error (`b95b2a9:src/cpm/bdosfile.asm:355-366`). On any drive, a successful data
 return can mean acceptance into cache. Off the logged drive there remains one
 pending boundary, but ordinary outer calls also attempt an eligible line first.
 Functions 21, 34 and 40 no longer promise cross-call batching; their received
 updates still preserve neighbouring records. Required directory/input/flush
-paths keep their obligations (`a40d482:docs/recovery.md:25-67`).
+paths keep their obligations (`0701241:docs/recovery.md:25-67`).
 [Chapter 19](19-cache-and-persistence.md) explains the queue.
 
 **22 Make file.** Creates an empty entry for the FCB's name in the current
 user area, writes it to the directory and opens it
-(`241b438:src/cpm/bdosfile.asm:428-514`). Does not test for a file of the same name.
+(`b95b2a9:src/cpm/bdosfile.asm:428-514`). Does not test for a file of the same name.
 Returns the directory code or `FFh` if the directory is full. After the
 drive-write check it clears `S2` before searching for a free entry and keeps
 `EX`, selecting an extent among the file's first 32 as in CP/M 2.2. This
 `S2` reset occurs even when the directory is full
-(`241b438:src/cpm/bdosfile.asm:428-435`, `241b438:src/cpm/bdosfile.asm:459-468`). On the successful path it clears
+(`b95b2a9:src/cpm/bdosfile.asm:428-435`, `b95b2a9:src/cpm/bdosfile.asm:459-468`). On the successful path it clears
 `S1`, `RC` and the allocation map, then copies the entry with module 0 into
 the directory buffer. It sets the FCB's `S2` bit 7 before calling the
 directory write. The returned FCB's `S2` is therefore `80h`, marking it
-unmodified (`241b438:src/cpm/bdosfile.asm:458-514`).
+unmodified (`b95b2a9:src/cpm/bdosfile.asm:458-514`).
 
 **23 Rename file.** Gives every entry of the file named in the FCB's first 16
-bytes the name and type at offsets 17 to 27 (`241b438:src/cpm/bdosfile.asm:558-612`).
+bytes the name and type at offsets 17 to 27 (`b95b2a9:src/cpm/bdosfile.asm:558-612`).
 The second drive byte, at offset 16, is not read. Returns 0 or `FFh` if there
 is no such file. An entry with its read-only attribute set gives the `File
-R/O` error (`241b438:src/cpm/bdosfile.asm:592-599`).
+R/O` error (`b95b2a9:src/cpm/bdosfile.asm:592-599`).
 
 **24 Return login vector.** Returns in `HL` a bit for each logged-in drive,
-bit 0 for A (`241b438:src/cpm/bdosfn.asm:10-12`).
+bit 0 for A (`b95b2a9:src/cpm/bdosfn.asm:10-12`).
 
 **25 Return current disk.** Returns the default drive in `A`, 0 for A
-(`241b438:src/cpm/bdosfn.asm:21-22`).
+(`b95b2a9:src/cpm/bdosfn.asm:21-22`).
 
 **26 Set DMA address.** Sets the address of the 128-byte record buffer to `DE`
-(`241b438:src/cpm/bdosfn.asm:34-39`). Returns nothing.
+(`b95b2a9:src/cpm/bdosfn.asm:34-39`). Returns nothing.
 
 **27 Get allocation vector address.** Returns in `HL` the address of the
-default drive's allocation vector (`241b438:src/cpm/bdosfn.asm:48-53`). A `MOUNT`
+default drive's allocation vector (`b95b2a9:src/cpm/bdosfn.asm:48-53`). A `MOUNT`
 onto the default drive selects it again so this is the new volume's vector at
-once (`241b438:src/volsvc.asm:335-345`).
+once (`b95b2a9:src/volsvc.asm:335-345`).
 
 **28 Write protect disk.** Sets the default drive's bit in the read-only
 vector until the next warm boot, disk reset or function 37 for the drive
-(`241b438:src/cpm/bdosfn.asm:122-135`, `241b438:src/cpm/bdosfn.asm:343-355`). Returns nothing.
+(`b95b2a9:src/cpm/bdosfn.asm:122-135`, `b95b2a9:src/cpm/bdosfn.asm:343-355`). Returns nothing.
 A later modifying call gives the `R/O` error. Close is the exception: it
 succeeds without writing.
 
 **29 Get read-only vector.** Returns the read-only vector in `HL`, bit 0 for A
-(`241b438:src/cpm/bdosfn.asm:141-142`). A volume that the card marks read-only appears
-in it once its drive has been selected (`241b438:src/cpm/bdoslog.asm:211-216`).
+(`b95b2a9:src/cpm/bdosfn.asm:141-142`). A volume that the card marks read-only appears
+in it once its drive has been selected (`b95b2a9:src/cpm/bdoslog.asm:211-216`).
 
 **30 Set file attributes.** Copies the FCB's name and type with their bit 7
-attributes into every entry of the file (`241b438:src/cpm/bdosfile.asm:542-546`,
-`241b438:src/cpm/bdosfile.asm:579-612`). Bit 7 of the first type byte is the
+attributes into every entry of the file (`b95b2a9:src/cpm/bdosfile.asm:542-546`,
+`b95b2a9:src/cpm/bdosfile.asm:579-612`). Bit 7 of the first type byte is the
 read-only attribute and bit 7 of the second the system attribute, which `DIR`
 hides. Returns 0 or `FFh` if there is no such file.
 
 **31 Get disk parameter block address.** Returns in `HL` the address of the
-default drive's DPB (`241b438:src/cpm/bdosfn.asm:151-153`). After a `MOUNT` onto that
+default drive's DPB (`b95b2a9:src/cpm/bdosfn.asm:151-153`). After a `MOUNT` onto that
 drive it is the new volume's at once, as for function 27.
 
 **32 Set or get user code.** With `E` = `FFh`, reads the user number. With any
 other `E`, sets the user number to the low five bits of `E`, as in CP/M 2.2
-(`241b438:src/cpm/bdosfn.asm:162-177`). Returns the user number in `A` or 0 after a
+(`b95b2a9:src/cpm/bdosfn.asm:162-177`). Returns the user number in `A` or 0 after a
 set. The area lasts while the program runs: warm boot clears it, and the
 command processor works in area 0 only.
 
 **33 Read random.** Reads the record numbered by the FCB's `R0` and `R1`
 into the DMA address. The FCB's extent and `CR` remain at that record, so a
 following sequential read reads it again
-(`241b438:src/cpm/bdosrec.asm:243-249`, `241b438:src/cpm/bdosrec.asm:317-427`). Returns 0 on
+(`b95b2a9:src/cpm/bdosrec.asm:243-249`, `b95b2a9:src/cpm/bdosrec.asm:317-427`). Returns 0 on
 success. Returns 1 when the record has not been written. Returns 3 when the
 current extent can't be closed. Returns 4 when the extent has not been
 written. Returns 6 when `R2` is not 0. After a 4 the FCB's `EX` and `S2`
@@ -358,7 +358,7 @@ requested extent.
 
 **34 Write random.** Writes the record at the DMA address to the record whose
 number is in `R0` and `R1`. It makes the extent when the record falls in one
-the file lacks (`241b438:src/cpm/bdosrec.asm:259-427`). Returns 0 on success. Returns
+the file lacks (`b95b2a9:src/cpm/bdosrec.asm:259-427`). Returns 0 on success. Returns
 2 when the drive is full. Returns 3 when the current extent can't be closed.
 Returns 5 when the directory has no entry for the extent. Returns 6 when `R2`
 is not 0. After a 5 the FCB's `EX` and `S2` are restored to name the extent
@@ -368,123 +368,123 @@ An FCB with the read-only attribute set gives the `File R/O` error.
 
 **35 Compute file size.** Sets `R0` to `R2` to the file's size in records,
 from whichever of its entries ends highest or to 0 if there is no such file
-(`241b438:src/cpm/bdosfn.asm:196-248`). Returns `FFh` in `A`.
+(`b95b2a9:src/cpm/bdosfn.asm:196-248`). Returns `FFh` in `A`.
 
 **36 Set random record.** Sets `R0` to `R2` from the FCB's extent and `CR`,
 the record the next sequential call would read or write
-(`241b438:src/cpm/bdosfn.asm:260-281`). Returns 0.
+(`b95b2a9:src/cpm/bdosfn.asm:260-281`). Returns 0.
 
 **37 Reset drive.** Logs out each drive whose bit is set in `DE`, bit 0 for A,
-and clears its bit in the read-only vector (`241b438:src/cpm/bdosfn.asm:343-355`). The
+and clears its bit in the read-only vector (`b95b2a9:src/cpm/bdosfn.asm:343-355`). The
 drive's next selection logs it in again with a full directory scan.
 Returns 0.
 
 **38 Access drive** and **39 Free drive.** MP/M's functions, which CP/M 2.2
-does not define. Both unsupported operations return 0 after ordinary entry service (`241b438:src/tables.asm:92`).
+does not define. Both unsupported operations return 0 after ordinary entry service (`b95b2a9:src/tables.asm:92`).
 
 **40 Write random with zero fill.** Function 34, with each allocation block the
 write newly allocates filled with zeros before the record is written
-(`241b438:src/cpm/bdosrec.asm:259-285`, `241b438:src/cpm/bdosrec.asm:643-685`). After each
+(`b95b2a9:src/cpm/bdosrec.asm:259-285`, `b95b2a9:src/cpm/bdosrec.asm:643-685`). After each
 zero-fill write the BIOS DMA address is restored to the program's DMA buffer
-before error handling (`241b438:src/cpm/bdoslog.asm:100-108`). It is already restored
+before error handling (`b95b2a9:src/cpm/bdoslog.asm:100-108`). It is already restored
 if the BDOS returns a write error in the mode set by function 45. Returns as
 function 34 does.
 
 **44 Set multi-sector count.** With `E` = 1 returns 0. With any other `E`
-makes no change to the one-record count mode and returns `FFh` in `A` (`241b438:src/cpm/bdos.asm:189-203`). TEC-OS
+makes no change to the one-record count mode and returns `FFh` in `A` (`b95b2a9:src/cpm/bdos.asm:189-203`). TEC-OS
 reads and writes one record a call so 1 is the only count.
 
-**45 Set BDOS error mode.** Sets the mode to `E` (`241b438:src/cpm/bdos.asm:234-237`).
+**45 Set BDOS error mode.** Sets the mode to `E` (`b95b2a9:src/cpm/bdos.asm:234-237`).
 With `E` = `FFh` a BDOS error returns to the program with `A` = `FFh` and the
 error's code in `H`, prints nothing and keeps the rest of a chained line. With
 `E` = `FEh` it prints the message first and then returns in the same way. Any
 other `E` is the default: the message, a key and the end of the program, with
-the rest of a chained line dropped (`241b438:src/cpm/bdoscon.asm:47-64`). A warm boot
-puts the default back (`241b438:src/boot.asm:402-409`, `241b438:src/ram.asm:222-223`). Returns 0.
+the rest of a chained line dropped (`b95b2a9:src/cpm/bdoscon.asm:47-64`). A warm boot
+puts the default back (`b95b2a9:src/boot.asm:402-409`, `b95b2a9:src/ram.asm:222-223`). Returns 0.
 A sequential read or write that returns a transfer error leaves
 the FCB on the record it didn't read or write, as in CP/M 3
-(`241b438:src/cpm/bdosrec.asm:69-82`, `241b438:src/cpm/bdosrec.asm:220-224`).
+(`b95b2a9:src/cpm/bdosrec.asm:69-82`, `b95b2a9:src/cpm/bdosrec.asm:220-224`).
 
 **46 Get disk free space.** Selects the drive in `E`, 0 to 15 for A to P, as
 it selects an FCB's drive. It puts the drive's free space in records in the
-three bytes at the DMA address, low byte first (`241b438:src/cpm/bdosfn.asm:68-119`).
+three bytes at the DMA address, low byte first (`b95b2a9:src/cpm/bdosfn.asm:68-119`).
 The default drive stays as it was. Returns 0. A drive past D or with no volume
 gives the `Select` error.
 
 **47 Chain to program.** Replaces what is left of the CCP's command line with
 the command at the DMA address, which ends with a 0 within its first 128
 bytes. It ends the program by warm boot and the CCP runs the command next
-(`241b438:src/cpm/bdos.asm:52-94`). The command may hold `!` and `&`. `E` is ignored.
+(`b95b2a9:src/cpm/bdos.asm:52-94`). The command may hold `!` and `&`. `E` is ignored.
 The shell splits the command at `!` and `&` and its first
 piece runs whatever the program's result was. With no shell the ROM runs the
-command whole as one command (`241b438:src/cpm/bdos.asm:52-94`,
-`241b438:docs/compatibility.md:27-32`).
+command whole as one command (`b95b2a9:src/cpm/bdos.asm:52-94`,
+`b95b2a9:docs/compatibility.md:27-32`).
 Warm boot attempts pending records before the next command. Failure retains
 acknowledged data but cancels the chain; reporting uses its separate episode
-state (`a40d482:src/cache.asm:638-649`). Does not return on success.
+state (`0701241:src/cache.asm:638-649`). Does not return on success.
 Returns `FFh` in `A` for a command with no 0 in its first 128 bytes or with
 a CR or LF before the 0. The program then continues with the line unchanged
-(`a40d482:src/cpm/bdos.asm:52-83`).
+(`0701241:src/cpm/bdos.asm:52-83`).
 
 **48 Flush buffers.** Writes every changed line of the block cache to the card
-(`241b438:src/cpm/bdos.asm:246-247`, `241b438:src/volsvc.asm:373-388`). `E` = `FFh`, CP/M 3's
+(`b95b2a9:src/cpm/bdos.asm:246-247`, `b95b2a9:src/volsvc.asm:373-388`). `E` = `FFh`, CP/M 3's
 purge, gives the same flush. Returns 0 in `A` or `FFh` if any write failed.
 A failed acknowledged line is retained; the pending block off the logged
-drive is among the lines attempted (`241b438:src/volsvc.asm:360-389`,
-`241b438:docs/compatibility.md:37-40`). Earlier
+drive is among the lines attempted (`b95b2a9:src/volsvc.asm:360-389`,
+`b95b2a9:docs/compatibility.md:37-40`). Earlier
 or partial card writes are not undone. This explicit call reports failure
 through its own return value; queue notices preserve that functional result
-(`a40d482:src/cache.asm:265-306`, `a40d482:src/hk.asm:204-237`).
+(`0701241:src/cache.asm:265-306`, `0701241:src/hk.asm:204-237`).
 
-**99 Truncate file.** Performs no truncation (`241b438:src/cpm/bdos.asm:81-82`,
-`241b438:src/cpm/bdos.asm:144-145`). Returns `FFh` in `A`. TEC-OS has no truncate.
+**99 Truncate file.** Performs no truncation (`b95b2a9:src/cpm/bdos.asm:81-82`,
+`b95b2a9:src/cpm/bdos.asm:144-145`). Returns `FFh` in `A`. TEC-OS has no truncate.
 
 **108 Get or set program return code.** With `DE` = `FFFFh`, reads the code.
-With any other `DE`, sets the code to `DE` (`241b438:src/cpm/bdos.asm:259-274`). All
+With any other `DE`, sets the code to `DE` (`b95b2a9:src/cpm/bdos.asm:259-274`). All
 programs share one code. A cold reset clears it to 0 and warm boot keeps it
-(`241b438:src/boot.asm:61-65`, `241b438:src/boot.asm:392-411`, `241b438:src/ram.asm:372-373`). The
+(`b95b2a9:src/boot.asm:61-65`, `b95b2a9:src/boot.asm:392-411`, `b95b2a9:src/ram.asm:372-373`). The
 CCP sets the code to 0 as it takes each command and to `FF00h` when a command
 fails. Under the shell a piece after ` &` runs only when the code is outside
-`FF00h` to `FFFEh` (`241b438:src/cpm/ccp.asm:266-269`, `241b438:src/cpm/ccp.asm:609-614`,
-`241b438:drivers/shell.asm:200-226`). Returns the code in
+`FF00h` to `FFFEh` (`b95b2a9:src/cpm/ccp.asm:266-269`, `b95b2a9:src/cpm/ccp.asm:609-614`,
+`b95b2a9:drivers/shell.asm:200-226`). Returns the code in
 `HL` or 0 after a set.
 
 ## Other numbers
 
 Every other function number, from 41 to 255 except 44 to 48, 99 and 108, does
-no function-specific operation and returns 0 in `A` and `HL` (`241b438:src/cpm/bdos.asm:146-147`). Function
+no function-specific operation and returns 0 in `A` and `HL` (`b95b2a9:src/cpm/bdos.asm:146-147`). Function
 50, CP/M 3's direct BIOS call, is one of them. A program reaches the BIOS
 through its jump table, whose warm boot entry is the address at `0001h`
-(`241b438:src/boot.asm:308-318`).
+(`b95b2a9:src/boot.asm:308-318`).
 
 ## Differences from Digital Research's BDOS
 
 TEC-OS reports CP/M 2.2 through function 12. Its BDOS derives from Portable
 CP/M, an independent implementation of that interface
-(`241b438:src/cpm/PROVENANCE.md:1-7`). Programs written for Digital Research's BDOS
+(`b95b2a9:src/cpm/PROVENANCE.md:1-7`). Programs written for Digital Research's BDOS
 encounter the following differences.
 
 - The BDOS code is in ROM. Writing to it cannot install a hook. The BDOS
   calls the RAM BIOS jump table, where a program can replace an entry
-  (`241b438:src/rom.asm:36-41`, `241b438:src/cpm/bdos.asm:12-33`).
+  (`b95b2a9:src/rom.asm:36-41`, `b95b2a9:src/cpm/bdos.asm:12-33`).
 - Functions 44 to 48, 99 and 108 occupy selected CP/M 3 numbers with the
   limited meanings above. Function 99 returns `FFh` without truncating.
   Every other number above 40 returns 0 with no function-specific effect
-  (`241b438:src/cpm/bdos.asm:131-147`).
+  (`b95b2a9:src/cpm/bdos.asm:131-147`).
 - The CCP's warm-entry disk reset retains clean drives whose allocation
   vector sums still match. Dirty drives rebuild from the directory up to
   the retained bound while an unmarked sum mismatch requires a full scan.
   A program's function 13 resets every drive
-  (`241b438:src/cpm/bdosfile.asm:19-107`).
+  (`b95b2a9:src/cpm/bdosfile.asm:19-107`).
 - `^P` during output toggles the list copy. Digital Research's BDOS retains
   that key for input and handles the toggle in line input. TEC-OS also
   echoes every character in function 1, including control characters,
   rather than restricting the echo to printing characters, CR, LF, tab and
-  backspace (`241b438:src/cpm/bdos.asm:282-288`, `241b438:src/cpm/bdoscon.asm:253-265`,
-  `241b438:src/cpm/bdoscon.asm:298-323`).
+  backspace (`b95b2a9:src/cpm/bdos.asm:282-288`, `b95b2a9:src/cpm/bdoscon.asm:253-265`,
+  `b95b2a9:src/cpm/bdoscon.asm:298-323`).
 - Function 10 uses `^W` and `^N` for history only at the CCP's prompt. A
-  program receives those keys as characters (`241b438:src/cpm/bdos.asm:484-488`).
+  program receives those keys as characters (`b95b2a9:src/cpm/bdos.asm:484-488`).
 - Neither geometry uses the check vector: both set CKS to 0. This mechanism
   therefore does not detect a card exchanged while TEC-OS is running
-  (`241b438:format/format.json:51`, `241b438:format/format.json:58`). Follow the card-change procedure in
+  (`b95b2a9:format/format.json:51`, `b95b2a9:format/format.json:58`). Follow the card-change procedure in
   [Chapter 6](06-cards-on-the-pc.md#writing-the-physical-card).

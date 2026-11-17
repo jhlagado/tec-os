@@ -27,13 +27,13 @@ The manual may describe tested emulator behaviour with that boundary.
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Qualified gameplay/source | jhlagado/tec-os, 485bf24f15de668da748e5598eb850fe20f4ae99 |
+| Qualified gameplay/source | jhlagado/tec-os, 3d0aa36a6caa9f2a80c69debad36c79946a257e5 |
 | Source supplied on SYSTEM | programs/CAVBASIC.BAS |
 | Verification executable, not on starter | programs/CAVBASIC.COM; 33,280 bytes |
 | Source/binary/compiler/RTL hashes | test/caverns-basic.json |
 | Instructions supplied on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume starter recipe | dist/starter.recipe.json, revision 17; image dist/starter.img |
-| Matching Viewer integration | jhlagado/tec-os-viewer, 5e7bb9dc8ede62fcb7fe1650043e1e33e3cc26c4 |
+| Matching Viewer integration | jhlagado/tec-os-viewer, a87771beeaa466a7a1745132761d9d81826e62e8 |
 | BAZA compiler/runtime pins | jhlagado/baza, 5f6b58d07b70e570bc993cfc430ec0196f4855d0, dist/BAZA.COM and dist/BAZA.RTL |
 | Supporting editor/compiler/runtime | TED.COM, BAZA.COM, BAZA.RTL on SYSTEM, pinned by test/inputs.json |
 | Scenario tools, development only | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
@@ -127,7 +127,7 @@ combined coverage records, not claims of single all-green full-suite runs.
 
 - [Current-main firmware qualification](evidence/caverns-main-integration/qualification.json).
 - [Fresh matching-main browser trial](evidence/caverns-main-integration/viewer-result.json).
-- [Viewer qualification](https://github.com/jhlagado/tec-os-viewer/blob/5e7bb9dc8ede62fcb7fe1650043e1e33e3cc26c4/docs/evidence/caverns-main-integration/qualification.json).
+- [Viewer qualification](https://github.com/jhlagado/tec-os-viewer/blob/a87771beeaa466a7a1745132761d9d81826e62e8/docs/evidence/caverns-main-integration/qualification.json).
 
 The earlier compact-emission records below remain the detailed first-increment
 baseline; current-main integration preserves its compiler and game hashes.

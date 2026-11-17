@@ -7,14 +7,14 @@ nav_group: "Writing programs"
 
 # 13. Results and command chains
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
+<!-- Checked against TEC-OS 57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
      Baza is the qualified 5f6b58d payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
@@ -161,7 +161,7 @@ A new line starts independently of the preceding result. It cannot begin with
 full. TEC-OS also omits CP/M 3's `:` conditional prefix and rejects a first
 piece beginning with `:` as a bad name:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs '&DIR *.CMD' ':DIR *.CMD'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs '&DIR *.CMD' ':DIR *.CMD'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -246,7 +246,7 @@ At `B:WORK>`, `A:TAS EXISTS` and `A:TAS RUN` create `EXISTS.COM` and
 and lists only when the file exists. The capture repeats it before and after
 COPY creates the file:
 
-<!-- TEC-OS 426bb14, ROM 35893cab: node tools/capture.mjs --card chain.img B: 'A:TAS EXISTS' 'A:TAS RUN' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'COPY A:STARTUP.CMD NOTES.TXT' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'EXISTS NONE.TXT !DIR *.COM' 'EXISTS NONE.TXT &DIR *.COM !CD &DIR *.COM'. Complete captured console transcript. -->
+<!-- TEC-OS 767349b, ROM 35893cab: node tools/capture.mjs --card chain.img B: 'A:TAS EXISTS' 'A:TAS RUN' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'COPY A:STARTUP.CMD NOTES.TXT' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'EXISTS NONE.TXT !DIR *.COM' 'EXISTS NONE.TXT &DIR *.COM !CD &DIR *.COM'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -328,7 +328,7 @@ warm boot. The following events cancel them:
 - `^C` ends the `[more]` pause in a TYPE or DIR listing.
 - A key ends a BDOS error in the default error mode.
 - A warm pass fails: continuation is cancelled but acknowledged dirty data
-  stays queued (`a40d482:src/cache.asm:638-649`).
+  stays queued (`0701241:src/cache.asm:638-649`).
 - A reset clears the pending commands.
 
 Reset restarts startup from its beginning. After the other cancellations the
@@ -339,7 +339,7 @@ lines available.
 Here D has no mounted volume. The key `x` ends the default BDOS error and the
 following CD is cancelled:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs '@start DIR D:!CD' '@key x'. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs '@start DIR D:!CD' '@key x'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -374,7 +374,7 @@ original line. Acceptance does not return to the caller.
 The next load still depends on warm boot's write attempt. Failure retains
 acknowledged data but cancels continuation, including a function-47 replacement.
 Its pending/clear notice concerns the data queue, not command execution or file
-closure (`a40d482:src/cache.asm:638-649`, `a40d482:src/hk.asm:204-237`).
+closure (`0701241:src/cache.asm:638-649`, `0701241:src/hk.asm:204-237`).
 An accepted line may therefore never execute.
 
 RUN uses its own command tail as the replacement:
@@ -493,8 +493,8 @@ TED places file names and `THOR.PRJ`'s `ARGS` value on the command line. It
 truncates either at a shell separator: any `!` or an `&` following a blank.
 Thus `ARGS X &Y` makes `^T R` run once with tail ` X` and nothing afterwards.
 An embedded `&` in `/M:&HE000` remains literal
-(`Thorium 20339b8:README.md:51-58`, `241b438:docs/compatibility.md:231`,
-`241b438:test/ted.test.mjs:305-333`).
+(`Thorium 02b63d8:README.md:51-58`, `b95b2a9:docs/compatibility.md:231`,
+`b95b2a9:test/ted.test.mjs:305-333`).
 
 The load-drive byte at `0050h`, explained in Chapter 11, identifies TED's tool
 drive. With tools loaded from A and source on current drive B, TED supplies
@@ -533,7 +533,7 @@ node tools/tecvol.mjs put schain.img A startup.cmd --text
 
 On the serial-only model those lines produced:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card schain.img. Complete captured console transcript. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --card schain.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

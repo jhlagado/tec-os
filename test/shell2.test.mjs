@@ -835,7 +835,7 @@ const BASE11 = { nothing: 4928, onB: 8_661_934, onA: 8_859_172 };
 
 const QUALIFIED_POLL = (() => {
   const asset = JSON.parse(readFileSync(new URL("./fixtures/rom-qualified-shell2.json", import.meta.url), "utf8"));
-  assert.equal(asset.sourceCommit, "c4ec0f4950446f92b658643ee23b63e2c02bb33b");
+  assert.equal(asset.sourceCommit, "be50c71c85af55f2a8f5132824c41a4ef2cf7fda");
   const rom = Buffer.from(asset.rom, "base64"), entries = Object.entries(asset.symbols).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
   assert.equal(createHash("sha256").update(rom).digest("hex"), "a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1");
   assert.equal(createHash("sha256").update(JSON.stringify(entries)).digest("hex"), "9d86c0e1825833902eacfeb749612c3d0ef2c9d73f6cc71545f52924a82210e1");
