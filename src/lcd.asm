@@ -1,6 +1,5 @@
-; HD44780 20 x 4 LCD: boot status, and
-; the console for UC1 while no loaded
-; driver holds it. Cold boot uses row 0
+; HD44780 character LCD: boot status
+; and the ROM console selected on UC1. Cold boot uses row 0
 ; for the banner and rows 1/2 for A: and
 ; B: labels. While the LCD is the
 ; console it owns all four rows, and the
@@ -16,32 +15,146 @@ LCDCON:
   cp 4
   ret
 
-; Console restore: the mode commands and
-; home again, without the clear, so the
-; screen stays over a warm boot and a
-; program's display shift does not.
+; Console restore: the panel's width,
+; then the mode commands and home on
+; each controller, without the clear.
 
 LCVRST:
+  call LCDCOL
+  ld (VWID),a
   ld b,4
-  jr LCDI0
+  jp LCDI0
 
-; Attempt LCDSEQ's five commands:
-; 8-bit, two-line, display on, cursor
-; off, incrementing writes, home, clear.
-; Nothing while the LCD is the console:
-; a retry after a card error leaves its
-; screen alone.
-; Changes AF, B, HL; returns B=0 for
-; cold boot's row-zero write.
+; The ROM panel's columns: 20, or 40 on
+; two controllers. Changes AF.
+
+LCDCOL:
+  ld a,(LCDPRF)
+  or a
+  ld a,20
+  ret z
+  add a,a
+  ret
+
+; Initialise the selected panel profile.
+; Cold boot's zero profile uses only
+; the original controller. A second
+; controller is probed only by LCDWID.
+; Nothing while LCD owns the console.
 
 LCDINIT:
   call LCDCON
   ret z
   ld b,5
+  jp LCDI0
 
-; B commands from LCDSEQ's start.
+; A=20 or 40 selects that ROM profile.
+; The explicit 40-column request proves
+; two independent address counters.
+; Failure keeps the profile and display
+; data unchanged, returning carry/NZ.
+; Success returns carry clear. Changes
+; AF, BC, DE and HL.
+
+LCDWID:
+  cp 40
+  jr z,LCDW40
+  cp 20
+  jp nz,LCD40F
+  ld a,(LCDPRF)
+  or a
+  ret z
+  ld c,LCD2CMD
+  ld a,$0C       ; second cursor off
+  call LCDC
+  xor a
+  jr LCDWSET
+
+LCDW40:
+  call LCD40
+  jp nz,LCD40F
+  ld a,8
+
+LCDWSET:
+  ld hl,LCDPRF
+  cp (hl)
+  ret z
+  ld (hl),a
+  ld a,(CONMOD)
+  cp CMUC1
+  jr nz,LCDWOK
+  ld a,(CONAUX)
+  or a
+  jr nz,LCDWOK
+  ld (CONMOD),a  ; refresh LCD geometry
+
+LCDWOK:
+  xor a
+  ret
+
+; Probe without writing display data.
+; Save both address counters before
+; changing either, then restore them on
+; success or mismatch. Initial busy
+; failure precedes all address writes.
+
+LCD40:
+  ld c,LCDCMD
+  call LCDWAIT
+  jr c,LCD40F
+  in a,(c)
+  and $7F
+  ld e,a
+  ld c,LCD2CMD
+  call LCDWAIT
+  jr c,LCD40F
+  in a,(c)
+  and $7F
+  ld d,a
+  ld a,$AA
+  call LCDC
+  ld c,LCDCMD
+  ld a,$95
+  call LCDC
+  ld b,$15
+  call LCDPRB
+  jr nz,LCD40R
+  ld c,LCD2CMD
+  ld b,$2A
+  call LCDPRB
+
+LCD40R:
+  push af
+  ld c,LCDCMD
+  ld a,e
+  or $80
+  call LCDC
+  ld c,LCD2CMD
+  ld a,d
+  or $80
+  call LCDC
+  pop af
+  ret
+
+LCD40F:
+  ld a,1
+  or a
+  scf
+  ret
+
+; B commands on each controller.
 
 LCDI0:
+  ld c,LCDCMD
+  push bc
+  call LCDI1
+  pop bc
+  ld a,(LCDPRF)
+  or a
+  ret z
+  ld c,LCD2CMD
+
+LCDI1:
   ld hl,LCDSEQ
 
 LCDI:
@@ -51,16 +164,28 @@ LCDI:
   djnz LCDI
   ret
 
-; Return after ready or 256 polls.
-; Carry is the last busy bit (bit 7).
+; Z if the controller at port C is ready
+; with address counter B.
+
+LCDPRB:
+  call LCDWAIT
+  jr c,LCD40F
+  in a,(c)
+  cp b
+  ret
+
+; Wait for the controller whose command
+; or data port is C: ready or 256 polls.
+; Carry is the last busy bit.
 ; Changes AF; keeps BC, DE and HL.
 
 LCDWAIT:
   push bc
-  ld b,0
+  res 7,c        ; busy is on the
+  ld b,0         ; command port
 
 LCDW:
-  in a,(LCDCMD)
+  in a,(c)
   rlca
   jr nc,LCDWX
   djnz LCDW
@@ -69,70 +194,71 @@ LCDWX:
   pop bc
   ret
 
-; Console put: A at row B, column C.
-; The panel has no reverse video, so
-; bit 7 is dropped. 80h alone is the
-; terminal's cursor flip, since the
-; console's get returns 0: nothing is
-; written, the hardware cursor goes on
-; while the terminal shows its cursor
-; (VCURV) and off otherwise, and the
-; address returns to the cell, where
-; that cursor stands.
+; Console put: A at row B, column C. As
+; before; 80h is the cursor flip, sent
+; to the cell's own controller. The
+; terminal keeps its column in C.
 ; Changes AF, E and HL.
 
 LCVPUT:
+  push bc
   cp $80
   jr z,LCVP1     ; a cursor flip
   and $7F
   ld e,a
   call LCSEL
   ld a,e
-  jr LCDD
+
+LCVPX:
+  call LCDC
+  pop bc
+  ret
 
 LCVP1:
+  call LCSEL
+  res 7,c        ; its command port
   ld a,(VCURV)
   add a,a        ; 0Ch, or 0Eh shown
   or $0C
-  call LCDC
+  jr LCVPX
 
-; Address row B, column C: B=0..3,
-; C below 20. LCDROWS lies in one page.
-; Keeps BC and DE. Changes AF and HL.
+; Address row B, column C on the row's
+; controller. Returns C = its data port.
+; LCDROWS lies in one page.
+; Keeps B and DE. Changes AF and HL.
 
 LCSEL:
-  ld hl,LCDROWS
-  ld a,b
-  add a,l
+  ld a,(LCDPRF)
+  add a,b
+  add a,b        ; two bytes a row
+  add a,LOW(LCDROWS)
   ld l,a
-  ld a,(hl)
-  add a,c        ; the cell's address
+  ld h,HIGH(LCDROWS)
+  ld a,(hl)      ; the row's controller
+  inc hl
+  ld h,(hl)      ; its first address
+  ld l,c
+  ld c,a
+  ld a,h
+  add a,l
+  call LCDC
+  set 7,c        ; data follows
+  ret
 
-; Output command A after the bounded
-; wait, even if still busy. Keeps AF,
-; BC, DE and HL.
+; Output A to port C, a command or data,
+; after the bounded wait, even if still
+; busy. Keeps AF, BC, DE and HL.
 
+LCDD:
 LCDC:
   push af
   call LCDWAIT
   pop af
-  out (LCDCMD),a
-  ret
-
-; Output data A the same way. The
-; display steps to the next column.
-
-LCDD:
-  push af
-  call LCDWAIT
-  pop af
-  out (LCDDAT),a
+  out (c),a
   ret
 
 ; Console clear: row B from column C to
-; its end. C at or past the width, a
-; pending wrap, clears nothing.
-; Changes AF, E and HL.
+; its end. Changes AF, E and HL.
 
 LCVCLR:
   ld a,(VWID)
@@ -140,18 +266,20 @@ LCVCLR:
   ret c
   ret z
   ld e,a         ; cells to blank
+  push bc
   call LCSEL
 
 LCVC1:
   ld a,' '
-  call LCDD
+  call LCDC
   dec e
   jr nz,LCVC1
+  pop bc
   ret
 
-; Console row read: row B into LINEBUF,
-; from the panel's own display memory,
-; which is the only copy of the screen.
+; Console row read and write between
+; LINEBUF and row B, the panel's width
+; after one address command.
 ; Changes AF, BC and HL.
 
 LCVRD:
@@ -163,9 +291,6 @@ LCVR1:
   jr nz,LCVR1
   ret
 
-; Console row write: LINEBUF to row B.
-; Changes AF, BC and HL.
-
 LCVWR:
   call LCVROW
 
@@ -175,14 +300,12 @@ LCVW1:
   jr nz,LCVW1
   ret
 
-; Address row B's first cell. Returns
-; HL=LINEBUF, B=20 cells, C=data port.
-
 LCVROW:
   ld c,0
   call LCSEL
   ld hl,LINEBUF
-  ld bc,20*256+LCDDAT
+  ld a,(VWID)
+  ld b,a
   ret
 
 ; Mark row 3 ROM-owned (CDWRD), then
@@ -226,7 +349,7 @@ LCDS:
   ld a,(hl)
   cp 1           ; zero: carry, NZ
   ret c
-  call LCDD
+  call LCDC
   inc hl
   jr LCDS
 

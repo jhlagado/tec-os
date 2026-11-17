@@ -47,6 +47,11 @@ NLINES EQU 30    ; cache lines
 ; user area 0.
 
 IOBYTE EQU $0003
+
+; A 40 x 4 LCD's second controller, rows
+; 2 and 3. The ports wait for the board.
+
+LCD2CMD EQU $0C
 PZDU EQU $0004
 
 ; Page-zero JP. Target at 0006h is

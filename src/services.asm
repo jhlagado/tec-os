@@ -159,16 +159,17 @@ HWSLCD:
 HWSL1:
   push bc
   ld c,0
-  call LCSEL     ; the row's address
-  pop bc
+  call LCSEL     ; C = the row's port
+  pop de         ; E = the caller's C
   pop hl
   ld b,20
 
 HWSLC:
   ld a,(hl)
-  call LCDD
+  call LCDC
   inc hl
   djnz HWSLC
+  ld c,e
   xor a
   ret
 

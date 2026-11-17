@@ -7,12 +7,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
 import { ABI, GLCD_SVC, ROOT, TEST_CLOCK, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
-import { makeSvc } from "../tools/lib/svc.mjs";
 
-const LCD_SVC = (await makeSvc(resolve(ROOT, "drivers/lcd.asm"), { work: resolve(ROOT, "build/svc") })).file;
 const BANNER = "\r\nTEC-OS 0.1 for TEC-1G\r\n";
 
 /** A machine at its first prompt. files: name to bytes on A:. shell: SHELL.SVC and its startup line. */
@@ -27,13 +24,16 @@ function start({ files = {}, card = true, shell = false, prompt = /A(:\S*)?>$/, 
   m.lcdReads = 0;
   m.statusWrites = 0;
   m.statusCalls = 0;
+  m.lcdSecondAccesses = 0;
   const { ioRead, ioWrite } = m.cpu.hardware;
   m.cpu.hardware.ioRead = (port) => {
+    if ([0x0c, 0x8c].includes(port & 0xff)) m.lcdSecondAccesses += 1;
     if ((port & 0xff) === 0x84) m.lcdReads += 1;
     return ioRead(port);
   };
   let inRow = -1;
   m.cpu.hardware.ioWrite = (port, value) => {
+    if ([0x0c, 0x8c].includes(port & 0xff)) m.lcdSecondAccesses += 1;
     if (inRow >= 0 && (port & 0xff) === 0x84) m.statusWrites += 1;
     return ioWrite(port, value);
   };
@@ -400,57 +400,48 @@ test("LC-9 [more] pages three lines at a time under the shell, and twenty-three 
 });
 
 for (const panel of [true, "runtime"]) {
-  const name = panel === true ? "the host's two-controller panel" : "a panel of two of the runtime's controllers";
-  test(`LC-10 LCD.SVC on ${name} is 40 x 4, and UNLOAD gives UC1 back to the ROM's console`, () => {
-    const { rom, symbols } = romFor();
-    const image = standardCard();
-    const a = volume(image, "A");
-    a.write("LCD.SVC", LCD_SVC);
-    a.write("STARTUP.CMD", startupFile("LCD.SVC"));
-    a.write("INFO.COM", INFO);
-    a.write("S.TXT", text(["0123456789012345678901234567890123456789XY"]));
-    const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, matrix: true, glcd: false, lcd40: panel });
-    m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
-    m.runUntil(() => m.ready(), 200_000_000, "the first prompt");
+  const name = panel === true ? "the host panel" : "two runtime controllers";
+  test(`LC-10 explicit ROM LCD 40 on ${name} wraps and scrolls across both controllers`, () => {
+    const m = start({ matrix: true, lcd40: panel, files: {
+      "INFO.COM": INFO,
+      "S.TXT": text(["0123456789012345678901234567890123456789XY"]),
+    } });
+    const before = entry(m);
+    assert.equal(m.lcdSecondAccesses, 0, "default boot does not access second ports");
+    con(m, "CON LCD 40");
+    assert.ok(m.lcdSecondAccesses > 0);
     assert.deepEqual(geometry(m), [40, 4]);
-    assert.equal(entry(m) & 0xff, 0, "a loaded driver's page");
+    assert.equal(entry(m), before, "no resident or extra TPA allocation");
     m.command("TYPE S.TXT");
-    // Written on row 3, the second controller's, and scrolled up to row 0, the first's.
-    assert.deepEqual(rows40(m), ["0123456789012345678901234567890123456789", "XY", "", "A>"], "rows moved from one controller to the other");
-    assert.deepEqual(m.lcd40.cursor(), { row: 3, col: 2 }, "the cursor on the second controller alone");
+    assert.deepEqual(rows40(m), ["0123456789012345678901234567890123456789", "XY", "", "A>"], "a row crosses controllers while scrolling");
+    assert.deepEqual(m.lcd40.cursor(), { row: 3, col: 2 });
     m.command("INFO");
-    assert.deepEqual([m.read(0x130), m.read(0x131)], [40, 4], "INFO's L and H");
-    assert.equal(m.read(0x132) & 0x04, 0, "no GLCD bit for a four-row driver");
-    assert.match(m.command("CON LCD 40"), /CON: UC1:/);
-    assert.match(m.command("CON LCD 20"), /\r\n20\?\r\n/);
-    assert.match(m.command("CON GLCD"), /\r\nGLCD\?\r\n/, "CON GLCD is refused: another display's driver holds UC1");
-    assert.deepEqual(geometry(m), [40, 4]);
-    assert.match(con(m, "CON TTY"), /CON: TTY:/);
-    assert.match(m.command("CON GLCD"), /\r\nGLCD\?\r\n/);
-    assert.equal(m.read(m.sym("CONMOD")), 0, "and nothing changed");
-    assert.match(con(m, "CON UC1"), /CON: UC1:/);
-    assert.deepEqual(geometry(m), [40, 4], "CON UC1 selects what holds UC1");
-    m.command("UNLOAD");
-    assert.deepEqual(geometry(m), [20, 4], "the ROM's console");
+    assert.deepEqual([m.read(0x130), m.read(0x131)], [40, 4]);
+    assert.equal(m.read(0x132) & 0x04, 0);
+    con(m, "CON TTY");
+    con(m, "CON UC1");
+    assert.deepEqual(geometry(m), [40, 4], "omitted width retains the profile");
+    con(m, "CON LCD 20");
+    assert.deepEqual(geometry(m), [20, 4]);
+    assert.equal(entry(m), before);
     assert.deepEqual(m.violations, []);
   });
 }
 
-test("LC-10 LCD.SVC is refused, with nothing loaded, unless two separate controllers answer", () => {
-  // The 20 x 4 panel; that panel seen at the second ports too; and no panel.
+test("LC-10 explicit LCD 40 rejects one, aliased or absent controllers without changing the profile", () => {
   for (const [what, opts] of [
     ["one controller", {}],
-    ["one controller at both ports", { lcdReal: "aliased" }],
-    ["no panel", { lcd: false }],
+    ["aliased controller", { lcdReal: "aliased" }],
+    ["absent controller", { lcd: false }],
   ]) {
-    const typed = start({ matrix: true, files: { "LCD.SVC": LCD_SVC }, ...opts });
-    const before = entry(typed);
-    assert.match(typed.command("LCD.SVC"), /LCD\.SVC\?/, what);
-    assert.equal(entry(typed), before, `${what}: nothing loaded`);
-    assert.deepEqual(geometry(typed), [20, 4], `${what}: the ROM's console stays`);
-    const quiet = start({ matrix: true, files: { "LCD.SVC": LCD_SVC, "STARTUP.CMD": startupFile("LCD.SVC") }, ...opts });
-    assert.doesNotMatch(quiet.text(0), /LCD\.SVC\?/, `${what}: quiet from a startup line`);
-    assert.equal(entry(quiet), before);
+    const m = start({ matrix: true, ...opts });
+    const before = entry(m);
+    assert.equal(m.lcdSecondAccesses, 0, what);
+    assert.match(m.command("CON LCD 40"), /40\?/, what);
+    assert.deepEqual(geometry(m), [20, 4], what);
+    assert.equal(m.read(m.sym("LCDPRF")), 0, what);
+    assert.equal(entry(m), before, what);
+    assert.deepEqual(m.violations, [], what);
   }
 });
 

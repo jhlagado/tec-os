@@ -51,7 +51,8 @@ KBSHIFT:
 LCDSEQ: DB $38,$0C,$06,$02,$01
 
 LCDROWS:
-  DB $80,$C0,$94,$D4
+  DB LCDCMD,$80,LCDCMD,$C0,LCDCMD,$94,LCDCMD,$D4
+  DB LCDCMD,$80,LCDCMD,$C0,LCD2CMD,$80,LCD2CMD,$C0
 
 ; The LCD console's table, as CONSWV
 ; copies one: six terminal words, no

@@ -89,7 +89,8 @@ PIWID: DS 12     ; columns, rows, five
                  ; entries
 PIREC: DS 13     ; 13-byte registry tail
 PITIE: DS 1      ; tracked supported IE
-  DS 1           ; remaining LBUF pad:
+LCDPRF: DS 1     ; LCD rows: 0, or 8
+                 ; for two controllers;
                  ; keeps shown at 42
 PITPD: DS 1      ; drawn: 0 or PITPG
 PITPS: DS 1      ; shown: 0 or PITPG

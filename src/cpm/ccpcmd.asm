@@ -200,12 +200,11 @@ CONNW:
 ; different width fails before effects.
 
 CONLCD:
-  ld hl,LCVTAB+14
   ld a,c
   or a
-  jr z,CONLOK    ; width omitted
-  cp (hl)
-  jr z,CONLOK
+  jr z,CONLOK    ; retain the profile
+  call LCDWID
+  jr nc,CONLOK
 
 CONLB:
   jp BADCMD      ; the later refusals

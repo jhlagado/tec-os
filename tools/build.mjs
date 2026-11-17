@@ -251,7 +251,7 @@ async function buildProfile(name, assemble) {
   // while block 0 has 15 descriptors after the header.
   check(at("DSCBLK0") === 15, `DESCIX needs DSCBLK0 15, the format gives ${at("DSCBLK0")}`);
   // LCSEL adds the row to the table's low byte with no carry into the high.
-  check(at("LCDROWS") >> 8 === (at("LCDROWS") + 3) >> 8, `LCDROWS must lie in one page, not at ${hex(at("LCDROWS"))}`);
+  check(at("LCDROWS") >> 8 === (at("LCDROWS") + 15) >> 8, `LCDROWS must lie in one page, not at ${hex(at("LCDROWS"))}`);
   // RAM the ROM reads or writes as a word, or steps through by INC/DEC HL,
   // so each name must follow the first at its offset.
   const runs = [

@@ -103,6 +103,7 @@ COLDNC:
 COLDRT:
   ld sp,STKTOP
   call LCDINIT
+  ld b,0         ; row 0
   ld hl,LCDBAN
   call LCDROW
   call SDINIT
