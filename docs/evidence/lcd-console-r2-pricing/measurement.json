@@ -1,0 +1,69 @@
+{
+  "sourcePin": "20a9a2d8fa5e407d0713f20da9662c18831fbae1",
+  "started": "2026-11-17T15:28:55.259Z",
+  "node": "v24.22.1",
+  "components": {
+    "env": "TAS_COM",
+    "default": "../thorium/dist/TAS.COM",
+    "source": "jhlagado/thorium 7a217f9, dist/TAS.COM",
+    "repo": "jhlagado/thorium",
+    "commit": "7a217f96c76f11641af3fa0b22d0b34be6e2a467",
+    "path": "dist/TAS.COM",
+    "bytes": 11013,
+    "sha256": "8e1f0efb662e5d6bab5e2b7f9479bc60d6f989d07fb22d11c9ffc70e2f5ed359"
+  },
+  "normal": {
+    "command": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "status": 1,
+    "signal": null,
+    "seconds": 1.1,
+    "stdoutSha256": "d76621764d8a996ffb9f4617facf370bb16e6398062884067fbe65982c856234",
+    "stderrSha256": "b4b4c6a612f58c8ee12e0dc0f80be448b444d1ff40b936e2e55245ac57001e80"
+  },
+  "lowerOrigin": {
+    "command": [
+      "node",
+      "tools/lcd-model.mjs",
+      "--diagnostic-lower-origin"
+    ],
+    "status": 0,
+    "signal": null,
+    "seconds": 1.197,
+    "stdoutSha256": "40a62544b5e24ca4841af8c904361ca29988a0d33ffa8baeb5649f96e96c68b2",
+    "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "diagnostic": {
+    "diagnosticOnly": true,
+    "sourceSha256": "15c9d535add4058f32c8bd877be861abad00ef9040c742b82639870611346708",
+    "romBytes": 16728,
+    "normalOriginEnd": 65880,
+    "freeAtNormalOrigin": -344,
+    "tstates": 102104488
+  },
+  "classification": "normal-address-overflow",
+  "finished": "2026-11-17T15:28:57.558Z",
+  "finalSourcePin": "20a9a2d8fa5e407d0713f20da9662c18831fbae1",
+  "schema": "tecos-lcd-diagnostic-pricing-v1",
+  "fontComponentPin": "51c87bd1cc230a3fd6c5d09ff2a7bd1618892742",
+  "requiredRomReserve": 128,
+  "netSavingsRequired": 472,
+  "guard": {
+    "limitMB": 800,
+    "heapMB": 128,
+    "peakMB": 127,
+    "processes": 4,
+    "seconds": 2.5,
+    "outcome": "exit 0",
+    "startedUTC": "2026-11-17T15:28:55.211Z",
+    "finishedUTC": "2026-11-17T15:28:57.754Z",
+    "waitedSeconds": 1027
+  },
+  "rawProvenanceSha256": "804e071a3f68f21710b4ae85a9c8ac31108978644380f4631453045870942e60",
+  "rawGuardLogSha256": "06469446d6216e811762962d51537eb85ba48d7154715ef6e98c076faa012a0c",
+  "portabilityNote": "The lower-origin command records node instead of the host executable path. The four stdout/stderr logs are copied byte for byte. Raw provenance and guard-log hashes identify the preserved local records.",
+  "qualification": "Diagnostic byte pricing only. No normal-origin artifact, target execution, RAM census, stack result, timing result or physical-board qualification."
+}

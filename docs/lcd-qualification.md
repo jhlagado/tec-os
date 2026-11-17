@@ -13,15 +13,24 @@ must name the exact integration pin it actually ran.
 
 ## Current evidence
 
-A normal-origin build of
-`bb17b636b2a592b65469a96c74a7449ca01009c0` stopped at the root source's
-end with TAS reporting `out of memory`. It produced no census for that
-candidate. The assembler can report this for an image beyond FFFFh or for
-arena exhaustion. The error alone does not establish a byte count.
+The latest byte measurement is at source pin
+`20a9a2d8fa5e407d0713f20da9662c18831fbae1`. Its normal-origin build stops
+at the root source's end with TAS reporting `out of memory`. The tracked
+lower-origin diagnostic succeeds and measures 16,728 ROM bytes. Its implied
+normal end is 10158h, 344 bytes beyond the 16 KiB ROM. The candidate needs
+472 bytes of net savings to retain the mandatory 128-byte reserve.
 
-The build's monitored process tree peaked at 97 MB and exited after 1.5
-seconds. This is host resource evidence, not a ROM or target timing result.
-Later source corrections have not yet had another native build.
+This establishes address overflow for the measured source. The earlier
+normal build at `bb17b636b2a592b65469a96c74a7449ca01009c0` had reported
+the same error without a census. Its error alone did not distinguish address
+overflow from assembler arena exhaustion.
+
+The latest job's monitored process tree peaked at 127 MB and exited after
+2.5 seconds. These are host resources, not target performance. The exact
+logs, component pins, source-input hash and diagnostic census are in
+[evidence/lcd-console-r2-pricing](evidence/lcd-console-r2-pricing/README.md).
+No normal-origin firmware artifact or workspace census was produced. The
+relocated image was discarded and never run.
 
 The transaction uses six new classic-bank snapshot bytes and one auxiliary
 selection byte. The LCD profile uses existing PIBLK padding. These are
@@ -48,7 +57,7 @@ distribution directories.
 
 This diagnostic does not establish normal-origin placement, the 128-byte
 ROM reserve, RAM layout, service compatibility or runtime correctness. A
-normal-origin build and the full qualification gates remain required.
+fitting normal-origin build and the full qualification gates remain required.
 
 ## Pending checks
 
