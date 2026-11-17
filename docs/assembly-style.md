@@ -8,7 +8,8 @@ own exact source and provenance; they are not formatting targets.
 
 The ROM sources under `src/`, `drivers/glcd.asm`, `programs/SAMPLE.ASM`,
 `programs/DEMO.ASM`, the diagnostics in `diag/`, `test/programs/mon3stub.asm`,
-`test/programs/area.asm` and `test/programs/put.asm` use the compact layout.
+`test/programs/area.asm`, `test/programs/area3.asm` and `test/programs/put.asm`
+use the compact layout.
 Other live test programs retain their existing layout. A comment edit does not
 authorize a layout or case migration.
 
