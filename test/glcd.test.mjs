@@ -93,7 +93,17 @@ function run(m, line) {
     ignoredArrow(m, "\x05"); // matrix left, after retyping XYZ
     m.type("Q\r");
   } else if (line === "\x03") {
-    ignoredArrow(m, line); // matrix up: no new prompt or synthetic Enter
+    heldInput(m);
+    const position = [m.read(m.sym("VROW")), m.read(m.sym("VCOL"))];
+    const lineText = () => {
+      const p = word(m, m.sym("PARAM")), n = m.read(m.sym("LINCNT"));
+      return String.fromCharCode(...Array.from({ length: n }, (_, i) => m.read(p + 2 + i)));
+    };
+    m.type(line); heldInput(m);
+    assert.equal(lineText(), "XYZQ", "up recalls the preceding command");
+    m.type("\x04"); heldInput(m);
+    assert.equal(lineText(), "", "down passes the newest history entry");
+    assert.deepEqual([m.read(m.sym("VROW")), m.read(m.sym("VCOL"))], position);
     return;
   } else m.type(line);
   const prompt = /\r\n[A-P](:\S*)?>$/;
