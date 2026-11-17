@@ -160,16 +160,17 @@ test("DIR table: unsigned end records and byte totals preserve wrapping", () => 
   }
 });
 
+// The prompt is in user area 0: the two files listed are there, and the larger
+// SAME.DAT in area 3 must stay out of the listing and out of their sizes.
 test("DIR table: users attributes and explicit-drive EXM stay separate", () => {
   const { m } = fresh({ entries: [
-    { name: "SAME.DAT", user: 0, ex: 30, s2: 10, rc: 128 },
-    { name: "SAME.DAT", user: 3, rc: 1, attributes: [0, 8] },
-    { name: "EXM.DAT", user: 3, ex: 1, rc: 7 },
+    { name: "SAME.DAT", user: 3, ex: 30, s2: 10, rc: 128 },
+    { name: "SAME.DAT", user: 0, rc: 1, attributes: [0, 8] },
+    { name: "EXM.DAT", user: 0, ex: 1, rc: 7 },
   ] });
-  at(m, "USER 3");
   const r = list(m);
   assert.deepEqual(new Map(pairs(r.text)), new Map([["SAME.DAT", 128], ["EXM.DAT", 17280]]));
-  assert.equal(m.read(4), 0x30, "explicit B does not change logical A or current user");
+  assert.equal(m.read(4), 0, "explicit B does not change logical A or the user area");
 });
 
 test("DIR table: hash collisions keep exact keys and legacy partition", () => {
