@@ -4,8 +4,9 @@ The BASIC source and game rules are unchanged. The compiler now emits a
 seven-byte CALL/inline-coordinate prefix instead of nine instruction bytes for
 each BASIC statement, retaining the full line and statement identifiers.
 
-The published BAZA pin is recorded in test/inputs.json. BAZA.COM remains 13,184
-bytes; its matching RTL file is 12,928 bytes. Only ten extra helper bytes are
+In this increment BAZA.COM stayed 13,184 bytes and its matching RTL file was
+12,928 bytes; the present pin is in test/inputs.json and
+[caverns.md](caverns.md). Only ten extra helper bytes are
 linked into Caverns. The 669 shorter sites save 1,338 bytes, for a net logical
 saving of 1,328 bytes. The COM is 38,272 bytes, down from 39,680.
 

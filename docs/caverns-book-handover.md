@@ -9,14 +9,15 @@ BASIC rewrite, landmark wording corrections and compact compiler emission. Walkt
 Qualified in the native TEC-OS emulator: compile with the shell resident;
 126-point quest; all 54 rooms and displayed descriptions; automatic homecoming;
 reversible rope/gates; complete checkpoint restoration; TED edit/save/build/run,
-exit and reopen after power cycle. The compact compiler passes 714 native
-regression cases and 49 independent control/arithmetic expectations. Current
-TEC-OS checks include 16 game/scenario/TED tests, a 480-command comparison in
-36 scenarios, native insertion of line 151 without renumbering and 19 starter
-checks. Eleven Viewer native/bundle checks cover Caverns, BOUNCE and the bundle.
-A separate real Chromium trial compiles the exact expected COM from a fresh
-source-only card, plays opening commands and exports/restores a checkpoint in
-fresh browser storage. Physical TEC-1G testing and final human review remain
+exit and reopen after power cycle. The compact-code compiler passes 714 native
+regression cases and 49 independent control/arithmetic expectations (Baza's
+`docs/compact-code.md`). Current TEC-OS checks include 16 game/scenario/TED
+tests, a 480-command comparison in 36 scenarios, native insertion of line 151
+without renumbering and 19 starter checks. Eleven Viewer native/bundle checks
+cover Caverns, BOUNCE and the bundle, and a separate real Chromium trial
+compiles the exact expected COM from a fresh source-only card, plays opening
+commands and exports/restores a checkpoint in fresh browser storage; both were
+taken with the print-helper compiler and are not yet repeated with this one. Physical TEC-1G testing and final human review remain
 outstanding before calling the public release fully qualified.
 The qualified changes are merged and pushed to main in BAZA, TEC-OS and the
 Viewer. This is not a claim of public-site deployment or physical-board testing.
@@ -86,7 +87,20 @@ A card-image download is not a game-memory snapshot.
 
 ## Evidence and release scope
 
-The current print-helper increment passes 714 compiler cases (552 successful
+The current compact-code increment pins BAZA at Baza `5f6b58d`. GOTO, GOSUB and
+THEN n are direct jumps, integer = and <> skip the sign-bit turn, FOR and DIM
+drop repeated slot-top resets, a numeric literal is CALL NUMLIT with its tag
+address and f32 bytes inline, and a whole number in DATA keeps only its digits.
+The unchanged source compiles to 33,280 bytes, 3,359 fewer logical bytes, with
+the same 42 symbols each 3,359 bytes lower. On TEC-OS the four Caverns test
+files pass all 20 tests, among them the 480-command comparison in 36 scenarios
+with the baseline, with identical output, state and RNG; the starter, TIMES,
+TED and BAZA, and card-write files pass too. No BASIC source or game rule
+changed.
+
+- [Compiler round and its evidence](https://github.com/jhlagado/baza/blob/5f6b58d07b70e570bc993cfc430ec0196f4855d0/docs/compact-code.md).
+
+The print-helper increment before it passed 714 compiler cases (552 successful
 native compilations), 49 independent compatibility expectations, 14 checkpoint/
 differential tests, 34 game/editor/starter tests, three unchanged write/speed
 gates and eleven Viewer native/bundle tests. The real Chromium trial compiles

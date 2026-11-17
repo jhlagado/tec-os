@@ -145,10 +145,10 @@ node tools/tecvol.mjs dir card.img B
 A's complete listing contains the fifteen starter files plus TED's
 project and session files:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): host-tool output of the commands above. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 3b70301a): host-tool output of the commands above. -->
 ```text
- 0 BAZA.COM        13184
- 0 BAZA.RTL        12928
+ 0 BAZA.COM        13312
+ 0 BAZA.RTL        13056
  0 BOUNCE.BAS       5376
  0 CAVBASIC.BAS    18816
  0 CAVERNS.TXT      2688

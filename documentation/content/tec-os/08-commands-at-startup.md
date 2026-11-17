@@ -210,7 +210,7 @@ node tools/tecvol.mjs put w32.img A startup.cmd --text
 The banner and volumes first appeared at 40 columns. Selecting 32
 cleared the screen before the reply. A later DIR produced this display:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs --card w32.img --board pico --screen DIR. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 3b70301a): node tools/capture.mjs --card w32.img --board pico --screen DIR. Full screen; trailing empty rows omitted. -->
 ```text
 CON: CRT:
 A:SYSTEM>GLCD.SVC
@@ -224,15 +224,15 @@ TED.COM        12416
 SAMPLE.ASM      4608
 TIMES.BAS        640
 TAS.COM        11136
-BAZA.COM       13184
-BAZA.RTL       12928
+BAZA.COM       13312
+BAZA.RTL       13056
 BOUNCE.BAS      5376
 CAVERNS.TXT     2688
 DEMO.ASM       15360
 MON3.SVC        5248
 HELLO3.ASM      2176
 CAVBASIC.BAS   18816
-15 files, 109824 bytes
+15 files, 110080 bytes
 909312 free on A:SYSTEM
 A:SYSTEM>
 ```
