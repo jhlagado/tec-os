@@ -33,7 +33,7 @@ export function sources(root = ROOT) {
   walk("src");
   walk("drivers");
   walk("diag");
-  out.push("programs/SAMPLE.ASM", "programs/DEMO.ASM", "test/programs/mon3stub.asm", "test/programs/area.asm", "test/programs/put.asm");
+  out.push("programs/SAMPLE.ASM", "programs/DEMO.ASM", "test/programs/mon3stub.asm", "test/programs/area.asm", "test/programs/area3.asm", "test/programs/put.asm");
   return out;
 }
 

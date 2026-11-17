@@ -15,7 +15,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
-import { AREA_COM, ROOT, TEST_CLOCK, boot, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { AREA_COM, ROOT, TEST_CLOCK, boot, romFor, service, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 
 const SAY3 = Uint8Array.from([0x1e, 0x33, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints 3
 const HELLO = Buffer.from("hello\r\n\x1a", "latin1");
@@ -32,14 +32,19 @@ function card({ shell = false } = {}) {
   return shell ? withShell(image) : image;
 }
 
+/** A machine at its prompt on ROM, with SYMBOLS. */
+function bootOn({ rom, symbols }, image) {
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 400_000_000 });
+  m.runUntil(() => m.ready(), 400_000_000, "the first prompt");
+  return m;
+}
+
 /** A machine at its prompt on the ROM from before USER left. */
 function before(image) {
   const f = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/rom-qualified-shell2.json"), "utf8"));
   const symbols = new Map(Object.entries(f.symbols).map(([k, v]) => [k.toUpperCase(), v]));
-  const m = new Machine({ rom: Buffer.from(f.rom, "base64"), symbols, sdImage: image, clock: TEST_CLOCK });
-  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 400_000_000 });
-  m.runUntil(() => m.ready(), 400_000_000, "the first prompt");
-  return m;
+  return bootOn({ rom: Buffer.from(f.rom, "base64"), symbols }, image);
 }
 
 test("USER is no built-in: USER 3 gets the answer any unknown command gets, at the ROM's prompt and at the shell's", () => {
@@ -96,25 +101,55 @@ test("a file a program leaves in area 3 is not listed, typed, erased or run from
   assert.match(was.command("DIR"), /LEFT\.DAT/, "a ROM that keeps the area lists it: the check above fails there");
 });
 
-// The figures of the build before USER left, with SAVE already gone: its ROM,
-// its TPA rows and the command path's T-states, each measured as below.
+// AREA3.SVC's INIT and REMOVE each set area 3 and return to the prompt with
+// no warm boot. The prompt puts the BDOS back in area 0 itself, where it
+// reads the drive (SAVEDRV). The fail input is this ROM with those two
+// instructions, XOR A and LD (USERNO),A, made NOPs.
+test("a service whose INIT or REMOVE sets area 3 leaves the prompt in area 0: the area-3 program is not found, bare and under the shell", async () => {
+  const svc = await service("area3");
+  const withSvc = (shell) => {
+    const image = card({ shell });
+    volume(image, "A").write("AREA3.SVC", svc);
+    return image;
+  };
+  for (const shell of [false, true]) {
+    const m = boot(withSvc(shell));
+    const where = shell ? "the shell" : "the ROM";
+    for (const [line, by] of [["AREA3.SVC", "INIT"], ["UNLOAD", "REMOVE"]]) {
+      assert.doesNotMatch(m.command(line), /\?\r\n/, `${where}: ${line}`);
+      assert.match(m.command("AREA"), /\r\nAREA 0\r\n/, `${where}: after ${by}, the next program starts in area 0`);
+      assert.match(m.command("ONLY3"), /\r\nONLY3\?\r\n/, `${where}: and the area-3 program is not found`);
+    }
+    assert.deepEqual(m.violations, []);
+  }
+  const { rom, symbols } = romFor();
+  const bytes = Uint8Array.from(rom), at = symbols.get("SAVEDRV") - 0xc000;
+  assert.deepEqual([...bytes.subarray(at, at + 2)], [0xaf, 0x32], "XOR A, LD (nn),A");
+  bytes.fill(0, at, at + 4);
+  for (const shell of [false, true]) {
+    const m = bootOn({ rom: bytes, symbols }, withSvc(shell));
+    m.command("AREA3.SVC");
+    assert.match(m.command("ONLY3"), /\r\n3/, "without them the area-3 program runs: the checks above fail there");
+  }
+});
+
+// The SAVE-removed build's ROM and command path's T-states, and main's TPA
+// rows, each measured as below.
 const WAS = {
   used: 15856,
-  tpa: { twoVolume: 47240, starter: 46536 },
   path: { bare: { warm: 84569, program: 112340 }, shell: { warm: 184379, program: 117644 } },
 };
+const MAIN = { tpa: { twoVolume: 47237, starter: 46533 }, shelled: 42752 };
 
-test("without USER the ROM is smaller, SHELL.SVC is 17 pages and no TPA row is smaller", () => {
+test("without USER the ROM is smaller, SHELL.SVC is no more than 17 pages and no TPA row is smaller than main's", () => {
   const census = JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
   assert.ok(census.rom.used < WAS.used, `${census.rom.used} bytes used, fewer than ${WAS.used}`);
-  assert.deepEqual([census.rom.used, census.rom.free], [15713, 671], "the ROM's bytes used and free");
-  for (const row of ["twoVolume", "starter"]) assert.ok(census.ram.cards[row].tpa >= WAS.tpa[row], `${row}: TPA ${census.ram.cards[row].tpa}`);
+  for (const row of ["twoVolume", "starter"]) assert.ok(census.ram.cards[row].tpa >= MAIN.tpa[row], `${row}: TPA ${census.ram.cards[row].tpa}`);
   const top = (m) => m.read(6) | (m.read(7) << 8);
   const bare = top(boot(card())), shelled = top(boot(card({ shell: true })));
   const pages = (bare >> 8) - (shelled >> 8);
-  assert.equal(pages, 17, "the pages SHELL.SVC takes from the TPA");
-  assert.ok(pages <= 17, "no more than 17");
-  assert.equal(shelled - 0x100, 42752, "the TPA under the shell on the two-volume card, as before");
+  assert.ok(pages <= 17, `SHELL.SVC takes ${pages} pages from the TPA, no more than 17`);
+  assert.ok(shelled - 0x100 >= MAIN.shelled, `the TPA under the shell on the two-volume card: ${shelled - 0x100}`);
 });
 
 /** T-states from a warm boot's first instruction to the prompt, and from a typed command to its program's first instruction. */

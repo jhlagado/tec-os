@@ -159,6 +159,10 @@
     "lines": [],
     "headers": {}
   },
+  "test/programs/area3.asm": {
+    "lines": [],
+    "headers": {}
+  },
   "test/programs/put.asm": {
     "lines": [],
     "headers": {}
