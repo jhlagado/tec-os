@@ -261,6 +261,7 @@ CONSHOW:
   push bc
   ld de,PRESSK   ; "Press a key"
   call PUTSTR
+  ld hl,KWPOLL   ; about ten seconds
   call KEYWT     ; NZ: a key came
   pop bc
   jr nz,CONOK
@@ -299,25 +300,28 @@ CONSH1:
   ld de,CRLFMSG
   jp PUTSTR
 
-; Wait about ten seconds for a key from
-; the console in effect, through BDOS 6,
-; which shows the cursor. NZ: a key came
-; and is taken. Z: none. A matrix
+; Wait HL polls for a key from the
+; console in effect, through the BIOS,
+; which shows the cursor. KWPOLL polls
+; are about ten seconds. NZ: a key came
+; and is taken, in A. Z: none. A matrix
 ; console's poll is padded to the length
 ; of a serial one, so that the wait is
-; the same on each. Changes AF/BC/DE/HL.
+; the same on each. Cold boot calls it
+; before the BDOS runs.
+; Changes AF/BC/DE/HL.
 
 KEYWT:
-  ld hl,KWPOLL
-
-KEYW1:
   push hl
-  ld e,$FF       ; 6: input, no wait
-  ld c,6
-  call BDOS
+  call BCONSTC   ; routes, cursor shown
   pop hl
   or a
-  ret nz         ; a key
+  jr z,KEYW1
+  call BCONIN    ; a key: take it
+  or a           ; NZ: never a zero
+  ret
+
+KEYW1:
   ld a,(CONMOD)
   rrca           ; matrix consoles
   jr nc,KEYW3
@@ -330,7 +334,7 @@ KEYW3:
   dec hl
   ld a,h
   or l
-  jr nz,KEYW1
+  jr nz,KEYWT
   ret            ; Z: no key
 
 ; Prepare transient page zero after a
