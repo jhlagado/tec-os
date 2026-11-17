@@ -1,8 +1,8 @@
-; ABI 5.1 services: CALL ABICALL with
+; ABI 5.2 services: CALL ABICALL with
 ; C=number and B/DE/HL=arguments. See
 ; docs/rom-services.md and abi.inc.
-; Hardware 0-8, hook 12, font 15 and the
-; shell hook 16 are here. Volume and
+; Hardware 0-8, hook 12, the shell hook
+; 16 and glyphs 17 are here. Volume and
 ; registry calls have their own results
 ; and effects.
 ; Hardware/font/hook use resident state
@@ -29,8 +29,16 @@ TXIDLE EQU $40   ; serial idle,
 ; An outer call replaces its return word with HKAPIRET; nested calls
 ; inherit that context. Dispatch still uses four temporary caller bytes.
 ; Changes AF and service-defined regs.
+; TNGLYPH goes straight to FNTGLY, never
+; a housekeeping point: it touches no
+; disk or cache, and a driver drawing
+; at depth 0 must not have the worker
+; print through it mid-draw.
 
 SVCDSP:
+  ld a,c
+  cp TNGLYPH
+  jp z,FNTGLY    ; no maintenance here
   ld a,(HKDEP)
   or a
   jr nz,SVGO
@@ -518,12 +526,89 @@ RTCR1:
   pop bc
   ret
 
-; TNFONT (15): HL=FONT, the ROM font
-; shared by PICO and GLCD.
-; Changes AF. Other registers stay.
+; TNGLYPH (17): glyph B's eight rows at
+; HL, top first, HL advanced eight. Bit
+; 7 of B complements them; low bits
+; below 20h give a space. FONT holds two
+; rows a byte, the upper in the high
+; nibble. FONTW lists the glyphs with a
+; fifth column, then the rows that have
+; it, bit 0 the bottom. The PICO's
+; pattern load uses it too. Returns A=0,
+; Z, NC. Keeps DE. Changes BC. Pushes 4
+; bytes; reached from ABICALL with no
+; dispatch bytes of its own.
 
-HWSFONT:
-  ld hl,FONT
+FNTGLY:
+  push de
+  ex de,hl       ; DE: the destination
+  ld a,b
+  rla            ; bit 7 into carry
+  sbc a,a        ; FFh complements
+  ld c,a
+  ld a,b
+  and $7F
+  push af        ; the code, for FONTW
+  sub $20
+  jr nc,FNTG1    ; 20h..7Fh
+  xor a          ; controls: a space
+
+FNTG1:
+  ld l,a
+  ld h,0
+  add hl,hl
+  add hl,hl      ; four bytes a glyph
+  ld a,l
+  add a,LOW(FONT)
+  ld l,a
+  ld a,h
+  adc a,HIGH(FONT)
+  ld h,a         ; HL at its bytes
+  ld b,4         ; two rows a byte
+
+FNTG2:
+  ld a,(hl)
+  and $F0        ; the upper row
+  xor c
+  ld (de),a
+  inc de
+  ld a,(hl)
+  add a,a
+  add a,a
+  add a,a
+  add a,a        ; the lower row
+  xor c
+  ld (de),a
+  inc de
+  inc hl
+  djnz FNTG2
+  pop af
+  ld hl,FONTW
+  ld bc,4        ; four wide glyphs
+  cpir
+  jr nz,FNTG5    ; not one of them
+  inc hl
+  inc hl
+  inc hl         ; to its rows
+  ld c,(hl)
+  ld h,d
+  ld l,e         ; past the rows
+  ld b,8
+
+FNTG3:
+  dec hl         ; up from the bottom
+  srl c          ; this row's fifth?
+  jr nc,FNTG4
+  ld a,(hl)
+  xor 8          ; the fifth column
+  ld (hl),a
+
+FNTG4:
+  djnz FNTG3
+
+FNTG5:
+  ex de,hl       ; HL past the rows
+  pop de
   xor a
   ret
 
@@ -544,6 +629,10 @@ SVDRV:
   ld a,b
   cp CMUC1
   jr z,SVDRV1
+
+; TNFONT (15) comes here too: no table.
+
+HWSNO:
   ld a,TNEBAD
   scf
   ret

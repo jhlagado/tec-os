@@ -37,11 +37,52 @@ export function fontGlyphs(root) {
 /** The font as 768 bytes. */
 export const fontBytes = (root) => Uint8Array.from(fontGlyphs(root).flat());
 
-/** The font as source: a heading, the label FONT and DB rows. */
-export function fontSource(root, heading) {
-  const rows = fontGlyphs(root).map((g) => `\tDB\t${g.map(hex).join(",")}`);
-  return [heading, "FONT:", ...rows].join("\n") + "\n";
+/**
+ * The font packed as the ROM holds it. A glyph is a 4 by 7 design but for the
+ * few rows that light a fifth column (bit 3). FONT is four bytes a glyph, two
+ * rows a byte, the upper row in the high nibble. FONTW lists the glyphs with a
+ * fifth column: their codes, then for each the rows that have it, bit 7 the
+ * top row. The ROM's FNTGLY turns them back into eight rows.
+ */
+export function packFont(glyphs) {
+  const packed = [];
+  const wide = [];
+  glyphs.forEach((rows, i) => {
+    let mask = 0;
+    rows.forEach((v, r) => {
+      if (v & 0x07) throw new Error(`font: glyph ${(i + 0x20).toString(16)} lights a sixth column`);
+      if (v & 0x08) mask |= 0x80 >> r;
+    });
+    for (let r = 0; r < 8; r += 2) packed.push((rows[r] & 0xf0) | (rows[r + 1] >> 4));
+    if (mask) wide.push([i + 0x20, mask]);
+  });
+  if (wide.length !== FONTWN) throw new Error(`font: ${wide.length} glyphs with a fifth column, the ROM takes ${FONTWN}`);
+  return { packed, codes: wide.map(([c]) => c), masks: wide.map(([, m]) => m) };
 }
 
-/** drivers/font.asm's text. */
-export const romFontSource = (root) => fontSource(root, "; The console font, 8 bytes a character from 20h, service 15's. Generated from\n; format/font5x7.txt by tools/build.mjs. Do not edit.");
+/** The glyphs FNTGLY gives back from a packing: what the ROM draws. */
+export function unpackFont({ packed, codes, masks }) {
+  return Array.from({ length: 96 }, (_, i) => {
+    const w = codes.indexOf(i + 0x20);
+    return Array.from({ length: 8 }, (_, r) => {
+      const b = packed[i * 4 + (r >> 1)];
+      const row = r & 1 ? (b << 4) & 0xf0 : b & 0xf0;
+      return w >= 0 && masks[w] & (0x80 >> r) ? row | 0x08 : row;
+    });
+  });
+}
+
+/** The number of glyphs with a fifth column FNTGLY searches. */
+export const FONTWN = 4;
+
+/** The packed font as source: a heading, FONT, then FONTW's codes and rows. */
+export function fontSource(root, heading) {
+  const glyphs = fontGlyphs(root);
+  const pack = packFont(glyphs);
+  if (JSON.stringify(unpackFont(pack)) !== JSON.stringify(glyphs)) throw new Error("font: the packing does not give the font back");
+  const rows = glyphs.map((_, i) => `\tDB\t${pack.packed.slice(i * 4, i * 4 + 4).map(hex).join(",")}`);
+  return [heading, "FONT:", ...rows, "FONTW:", `\tDB\t${pack.codes.map(hex).join(",")}`, `\tDB\t${pack.masks.map(hex).join(",")}`].join("\n") + "\n";
+}
+
+/** src/gen/font.asm's text. */
+export const romFontSource = (root) => fontSource(root, "; The console font packed, four bytes a character from 20h, and\n; the glyphs with a fifth column: FNTGLY's. Generated from\n; format/font5x7.txt by tools/build.mjs. Do not edit.");
