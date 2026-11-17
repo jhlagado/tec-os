@@ -626,8 +626,8 @@ test("KG59 duplicates unchanged", async () => {
   const q = boot({ "GLCD.SVC": GLCD_SVC, "SHELL.SVC": SHELL_SVC, "STARTUP.CMD": two }, { matrix: true });
   assert.match(q.text(), /GLCD\.SVC\?/, "CON: off CRT:: GLCD.SVC?");
   assert.deepEqual(services(q).map((l) => l.split(" ")[0]), ["GLCD", "SHELL"]);
-  // A service claiming a slot, twice: the slot holds its JP, so refused.
-  const claim = (await demoSvc({ V_VEC: 1, VECAT: 0x10, FLAGS: 0x05 })).file;
+  // A service claiming RST 7, twice: the slot holds its JP, so refused.
+  const claim = (await demoSvc({ V_VEC: 1, VECAT: 0x38, FLAGS: 0x81 })).file;
   const c = boot({ "CLAIM.SVC": claim });
   assert.deepEqual(typed(c, "CLAIM.SVC").code, 0);
   r = typed(c, "CLAIM.SVC");
@@ -810,21 +810,20 @@ function refusedAtEntry(m, message) {
 /** CLAIMnn.SVC: a test service claiming slot nn and writing its JP there. */
 const claimFiles = async (slots) => Object.fromEntries(await Promise.all(slots.map(async (s) => [`CLAIM${hex2(s)}.SVC`, (await demoSvc({ V_VEC: 1, VECAT: s, FLAGS: 1 | (1 << (s >> 3)) })).file])));
 
-test("KG61 held slot refused", async () => {
+test("KG61 RST 1 to 6 are never held at the entry: a program's JP is swept, and a claim is refused at load", async () => {
   const sets = Object.fromEntries(SLOTS.map((s) => [`SET${hex2(s)}.COM`, setJp(s, 0xc003)]));
   const m = await installed(undefined, { ...sets, ...(await claimFiles(SLOTS)) });
   for (const s of SLOTS) {
-    // A JP into ROM that a finished program left, which warm boot keeps.
+    // A JP into ROM that a finished program left: the warm boot sweeps it (Origo KD-434).
     m.command(`SET${hex2(s)}`);
-    assert.deepEqual(bytesAt(m, s, 3), [0xc3, 0x03, 0xc0]);
-    refusedAtEntry(m, `RST ${hex2(s)} held: UNLOAD or reset\r\n`);
-    bytesAt(m, s, 8).forEach((_, i) => m.write(s + i, DEFAULT_SLOT[i]));
-    // A claiming service's JP.
-    assert.equal(typed(m, `CLAIM${hex2(s)}.SVC`).code, 0, `CLAIM${hex2(s)}.SVC claims it`);
-    assert.equal(m.read(s), 0xc3);
-    m.command("X"); // a warm boot puts the slot in the form it keeps
-    refusedAtEntry(m, `RST ${hex2(s)} held: UNLOAD or reset\r\n`);
-    m.command("UNLOAD");
+    assert.deepEqual(bytesAt(m, s, 8), DEFAULT_SLOT, `RST ${hex2(s)} swept`);
+    const r = typed(m, "MON3.SVC");
+    assert.ok(r.mon3, `MON3> with RST ${hex2(s)} swept`);
+    leave(m, r);
+    // A service claiming the slot: refused before anything changes.
+    const c = typed(m, `CLAIM${hex2(s)}.SVC`);
+    assert.match(c.out, new RegExp(`CLAIM${hex2(s)}\\.SVC\\?`), `CLAIM${hex2(s)}.SVC refused`);
+    assert.equal(m.read(m.sym("SVCRC")), 0, "SVCRC 0: refused");
     assert.deepEqual(bytesAt(m, s, 8), DEFAULT_SLOT);
   }
 });
@@ -1557,10 +1556,10 @@ test("KG63 mutant: a REMOVE that leaves the hook has UNLOAD leave the target in 
 // machine installs MON3.SVC from its card's startup file first
 // (test/lib/machine.mjs).
 const INACTIVE = {
-  "test/system.test.mjs": ["BDOS file functions pass the probe", "warm boot clears the restart vectors except jumps into ROM, and a stale RST returns"],
+  "test/system.test.mjs": ["BDOS file functions pass the probe", "warm boot clears RST 1 to 6 whatever they hold, a jump into ROM too, and a stale RST returns"],
   "test/tas.test.mjs": ["TAS assembles a program on TEC-OS and the program runs"],
   "test/svc.test.mjs": ["a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h"],
-  "test/times.test.mjs": ["with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it compiles and gives the JP back, TIMES runs, and the GLCD is still the console"],
+  "test/times.test.mjs": ["with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it compiles and gives the JP back before it exits, TIMES runs, and the GLCD is still the console"],
   "test/ted-baza.test.mjs": [
     "TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No debugger, ^T R runs TIMES, and a syntax error brings TED back on its line",
     "a project on B: builds with A:'s BAZA, which finds BAZA.RTL on its load drive",
