@@ -29,8 +29,16 @@ TXIDLE EQU $40   ; serial idle,
 ; An outer call replaces its return word with HKAPIRET; nested calls
 ; inherit that context. Dispatch still uses four temporary caller bytes.
 ; Changes AF and service-defined regs.
+; TNGLYPH goes straight to FNTGLY, never
+; a housekeeping point: it touches no
+; disk or cache, and a driver drawing
+; at depth 0 must not have the worker
+; print through it mid-draw.
 
 SVCDSP:
+  ld a,c
+  cp TNGLYPH
+  jp z,FNTGLY    ; no maintenance here
   ld a,(HKDEP)
   or a
   jr nz,SVGO
@@ -527,9 +535,9 @@ RTCR1:
 ; fifth column, then the rows that have
 ; it, bit 0 the bottom. The PICO's
 ; pattern load uses it too. Returns A=0,
-; Z, NC. Keeps DE. Changes BC and FNTCH,
-; which holds the code: the routine
-; pushes DE alone, 2 bytes.
+; Z, NC. Keeps DE. Changes BC. Pushes 4
+; bytes; reached from ABICALL with no
+; dispatch bytes of its own.
 
 FNTGLY:
   push de
@@ -540,7 +548,7 @@ FNTGLY:
   ld c,a
   ld a,b
   and $7F
-  ld (FNTCH),a   ; the code, for FONTW
+  push af        ; the code, for FONTW
   sub $20
   jr nc,FNTG1    ; 20h..7Fh
   xor a          ; controls: a space
@@ -574,7 +582,7 @@ FNTG2:
   inc de
   inc hl
   djnz FNTG2
-  ld a,(FNTCH)
+  pop af
   ld hl,FONTW
   ld bc,4        ; four wide glyphs
   cpir

@@ -6,7 +6,7 @@ the volumes', the display drivers' hook, the registry's, the shell hook's and th
 glyphs'. Number 15, the font's table at ABI 5.1, is refused from 5.2. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, which `TAS DEMO` builds from the starter card's `DEMO.ASM`, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,705 bytes (`tecos`) and has 679 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,707 bytes (`tecos`) and has 677 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -59,7 +59,10 @@ so a glyph is four bytes, two rows a byte, and the four glyphs that light a fift
 column (`#`, `$`, `+` and 7Fh) carry the rows that do in an 8-byte list beside it.
 There is no 768-byte table to point at, so `TNFONT`, which returned one at ABI 5.1, is
 refused, and a caller that tests carry learns it; one that does not reads whatever
-its HL held. `TNGLYPH` unpacks one glyph. The PICO9918's console loads its patterns
+its HL held. `TNGLYPH` unpacks one glyph. It is reentrant and is never a housekeeping
+point: the dispatcher sends it straight to the unpacker, before the step that can run
+the write-behind worker, so a driver drawing at depth 0 is never printed into by a
+notice in the middle of its draw. The PICO9918's console loads its patterns
 through the same routine, and the GLCD's driver asks for each glyph it draws; a ROM
 before ABI 5.2 refuses number 17 and the driver's `INIT` with it. Serial and the LCD
 need no font.
@@ -314,7 +317,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->679<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->677<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

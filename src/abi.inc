@@ -232,7 +232,9 @@ TNSHELL EQU 16
 ; 7 of B complements all eight bits;
 ; low seven bits below 20h give a
 ; space. Advance HL eight. Keeps DE.
-; Added at ABI minor 2. Stack bound 4.
+; Reentrant; never a housekeeping
+; point. Added at ABI minor 2. Stack
+; bound 4.
 
 TNGLYPH EQU 17
 

@@ -686,6 +686,7 @@ export const MUTANTS_KS36C = [
   { name: "the font: the last wide glyph's fifth column lost", ...ks34("src/services.asm", ["LD BC,4", "CPIR"], ["LD BC,3", "CPIR"], ["test/compact-display.test.mjs"]) },
   { name: "the font: no complement for 80h to FFh", ...ks34("src/services.asm", ["RLA", "SBC A,A"], ["RLA", "XOR A"], ["test/pico.test.mjs", "test/hwsvc.test.mjs"]) },
   { name: "the font: service 15 succeeds, HL as the caller left it", ...ks34("src/tables.asm", ["DW SVLST,HWSNO"], ["DW SVLST,RETZERO"], ["test/hwsvc.test.mjs"]) },
+  { name: "the font: TNGLYPH a housekeeping point again", ...ks34("src/services.asm", ["LD A,C", "CP TNGLYPH", "JP Z,FNTGLY"], [], ["test/housekeeping.test.mjs"]) },
   { name: "the startup rule: quiet for TNEBAD, not TNENODV", ...ks34(CCPF, ["AND H", "XOR TNENODV"], ["AND H", "XOR TNEBAD"], ["test/startup.test.mjs"]) },
   { name: "the startup rule: quiet typed too, STFLAG not read", ...ks34(CCPF, ["LD A,(STFLAG)", "AND H"], ["LD A,$FF", "AND H"], ["test/startup.test.mjs"]) },
   { name: "CON's aliases: GLCD taken for CRT:", ...ks34(CCPF, ["CPL", "ADD A,12"], ["CPL", "ADD A,10"], ["test/console.test.mjs"]) },
