@@ -1007,6 +1007,10 @@
     "KEYWT",
     "KEYUP",
     "KWSPOLL",
+    "KWACT",
+    "KWNEXT",
+    "KWACT",
+    "KWNEXT",
     "STCHOOSE",
     "STBYP"
   ]

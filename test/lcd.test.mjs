@@ -830,3 +830,53 @@ test("LC-20 unanswered BAT confirmation restores the former LCD", () => {
   assert.match(m.serialText(), /Press a key\r\n$/);
   assert.deepEqual(m.violations, []);
 });
+
+
+for (const [name, bytes] of [["CSI arrow", [27, 91, 65]], ["SS3 arrow", [27, 79, 65]], ["CR LF", [13, 10]]]) {
+  test(`LC-20 a complete serial ${name} burst confirms without reaching the next command line`, () => {
+    const m = start({ matrix: true });
+    asked(m, "CON TTY");
+    m.tec1g.queueSerial(bytes);
+    m.runUntil(() => m.read(m.sym("CONMOD")) === 0 && m.ready(), 200_000_000, "the serial prompt after one action");
+    const until = m.cycles + 100_000;
+    m.runUntil(() => m.cycles >= until, 110_000, "after the complete serial burst");
+    assert.equal(lineTaken(m), "", "no confirmation tail reaches FNLINE");
+    assert.equal(m.read(m.sym("RXFULL")), 0);
+    assert.equal(m.read(m.sym("KBTN")), 0);
+    assert.deepEqual(m.violations, []);
+  });
+}
+
+
+for (const [name, byte, firstStop] of [["NUL", 0, 1], ["bad stop", 0x41, 0]]) {
+  for (const [remaining, offset] of [[90, 0], [45, 19], [1, 40]]) {
+    test(`LC-20 ${name} frames after idle rearming at poll ${remaining} plus ${offset} T remain bounded`, () => {
+      const m = start({ matrix: true });
+      const begun = asked(m, "CON TTY");
+      const bitCycles = CLOCK / 4800;
+      const frame = [0, ...Array.from({ length: 8 }, (_, bit) => byte >> bit & 1), firstStop, 1];
+      const read = m.cpu.hardware.ioRead;
+      let frameAt = -Infinity;
+      let frames = 0;
+      m.cpu.hardware.ioRead = (port) => {
+        const value = read(port);
+        if ((port & 255) !== m.sym("STSPORT")) return value;
+        const bit = Math.floor((m.cycles - frameAt) / bitCycles);
+        return (value & 0x7f) | ((bit >= 0 && bit < frame.length ? frame[bit] : 1) << 7);
+      };
+      const step = m.step.bind(m);
+      m.step = () => {
+        if (m.pc === m.sym("KWSLOOK") && m.cpu.cpu.b === remaining && m.cycles > frameAt + frame.length * bitCycles) {
+          frameAt = m.cycles + offset;
+          frames += 1;
+        }
+        return step();
+      };
+      const seconds = (backOnLcd(m) - begun) / CLOCK;
+      assert.ok(frames > 10, "repeated frames after independent idle rearming");
+      assert.ok(seconds > 9.5 && seconds < 10.5, `${seconds.toFixed(3)} seconds`);
+      assert.equal(m.read(m.sym("CONMOD")), 3);
+      assert.deepEqual(m.violations, []);
+    });
+  }
+}

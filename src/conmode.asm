@@ -287,7 +287,7 @@ KEYWS1:
   push hl
   call KWSPOLL
   pop hl
-  jr nz,KEYWTAKE
+  jp nz,KWACT
   ld b,1
   jr nc,KEYWS2
   ld b,3         ; a received frame
@@ -305,6 +305,10 @@ KEYWTAKE:
   xor a
   ld (RXFULL),a
   ld (KBTN),a
+  pop af
+
+KEYWRET:
+  push af
   call CURHIDE
   pop af
   or a
@@ -338,8 +342,10 @@ KEYUP1:
 ; a prior partial frame cannot confirm.
 ; Armed: detect a start with the normal
 ; tight poll, receive one byte and check
-; both stop bits. Any rejected frame
-; returns to idle qualification.
+; both stop bits. No padding gap follows
+; the armed poll: a late start must be
+; sampled within half a bit. Rejected
+; frames return to idle qualification.
 ; A=0/Z for none, key/NZ for a fresh
 ; non-NUL frame. Carry charges a frame
 ; as three slots instead of one.
@@ -375,17 +381,13 @@ KWSLOW:
   jr KWSNONE
 
 KWSARM:
-  ld b,RXPOLL
+  ld b,90        ; match idle-slot work
 
 KWSLOOK:
   in a,(STSPORT)
   rlca
   jr nc,KWSSTART
   djnz KWSLOOK
-  ld b,38
-
-KWSPAD:
-  djnz KWSPAD
   xor a
   ret
 
@@ -418,6 +420,93 @@ KWSBAD:
   ld de,0
   xor a
   scf
+  ret
+
+; Consume the rest of a recognised
+; serial action before leaving the
+; question. CSI/SS3 end at a final byte,
+; and CR may consume LF. A different
+; byte after CR or bare ESC is kept for
+; normal input. Every tail poll spends
+; the original budget plus a short
+; inter-byte limit. Changes AF/BC/DE/HL.
+
+KWACT:
+  cp 27
+  jr z,KWESC
+  cp 13
+  jp nz,KEYWTAKE
+  push af
+  call KWNEXT
+  jr z,KWACTEND
+  cp 10
+  jr z,KWACTEND
+  jr KWSTASH
+
+KWESC:
+  push af
+  call KWNEXT
+  jr z,KWACTEND
+  cp '['
+  jr z,KWCSI
+  cp 'O'
+  jr nz,KWSTASH
+
+KWCSI:
+  call KWNEXT
+  jr z,KWACTEND
+  cp $40         ; parameters precede final
+  jr c,KWCSI
+  jr KWACTEND
+
+KWSTASH:
+  ld (RXCHAR),a
+  ld a,$FF
+  ld (RXFULL),a
+
+KWACTEND:
+  xor a
+  ld (KBTN),a
+  pop af
+  jp KEYWRET
+
+; Receive a possible action tail, at
+; most sixteen poll slots apart. The
+; outer HL budget still bounds damaged
+; frames and arbitrarily long CSI text.
+; NZ returns a byte. Z means no tail.
+; Changes AF/BC/DE/HL.
+
+KWNEXT:
+  ld c,16
+
+KWNEXT1:
+  push bc
+  push hl
+  call KWSPOLL
+  pop hl
+  pop bc
+  push af
+  ld b,1
+  jr nc,KWNEXT2
+  ld b,3
+
+KWNEXT2:
+  dec hl
+  ld a,h
+  or l
+  jr z,KWNEXT0
+  djnz KWNEXT2
+  pop af
+  ret nz
+  dec c
+  jr nz,KWNEXT1
+  xor a
+  ret
+
+KWNEXT0:
+  pop af
+  xor a
   ret
 
 KWSEND:
