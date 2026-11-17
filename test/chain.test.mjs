@@ -148,7 +148,7 @@ test("SH8 the code is cleared as each piece is taken, before the command is look
 test("SH8 a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file", () => {
   const m = boot(card({ "X.COM": Uint8Array.from([0xc9]) }));
   assert.equal(count(run(m, "ERA X.COM &SAY"), /\nSAY\r/g), 1, "a file erased");
-  for (const bad of ["ERA X.COM", "REN NEW.COM=NONE.COM", "REN SAY.COM=RC.COM", "TYPE NONE.TXT"]) {
+  for (const bad of ["ERA X.COM", "REN NEW.COM=NONE.COM", "REN SAY.COM=RC.COM", "TYPE NONE.TXT", "DIR A B"]) {
     assert.equal(count(run(m, `${bad} &SAY`), /\nSAY\r/g), 0, bad);
     assert.equal(code(m), 0xff00, bad);
   }
