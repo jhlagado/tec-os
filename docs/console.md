@@ -43,8 +43,9 @@ remains discarded and its IOBYTE field stays BAT.
 
 A colon may follow a console name. A typed CON or STARTUP.CMD selection that
 changes the device or width displays `Press a key` on the target. A fresh key
-from its keyboard keeps the change. An unanswered question restores the
-previous device, PICO width and LCD profile. The intended interval is about
+from its keyboard keeps the change, except for bare or incomplete Escape
+actions. Those wait through the remaining question budget then revert.
+An unanswered question restores the previous device, PICO width and LCD profile. The intended interval is about
 ten seconds at 4 MHz and remains subject to timing qualification. The former
 screen is restored and cleared. No previous bitmap is retained.
 
