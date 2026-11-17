@@ -21,10 +21,16 @@ export function validateNotices({source,dist},{canonical,expected}){
 }
 
 // Evergreen checks use the current mapped slot, without freezing unrelated code.
+// The ROM holds the font packed: FONT's 384 bytes, two rows a byte, and
+// FONTW's four codes and their fifth-column rows, bit 7 the top. What FNTGLY
+// gives back from them must be the chosen font, byte for byte.
 export function validateCurrentFont(image,map,font) {
- const symbol=map.symbols.find(s=>s.name==='FONT');assert.ok(symbol,'mapped FONT');
- const at=(symbol.address??symbol.value)-0xc000;assert.ok(at>=0&&at+768<=image.length);
+ const at=name=>{const symbol=map.symbols.find(s=>s.name===name);assert.ok(symbol,'mapped '+name);return (symbol.address??symbol.value)-0xc000};
+ const fontAt=at('FONT'),wideAt=at('FONTW');assert.ok(fontAt>=0&&fontAt+384<=image.length&&wideAt+8<=image.length);
  assert.equal(sha(font),'5d732cefca4013fe6082728a00cae5e3aceaf3e6eb99aaa31e0289c0b3efe1d8','fixed chosen font');
- eq(image.subarray(at,at+768),font,'current mapped FONT bytes');
- return {entrypoint:'validateCurrentFont',fontAt:at+0xc000,fontBytes:768};
+ const packed=image.subarray(fontAt,fontAt+384),codes=[...image.subarray(wideAt,wideAt+4)],masks=[...image.subarray(wideAt+4,wideAt+8)];
+ const rows=Buffer.alloc(768);
+ for(let i=0;i<96;i++)for(let r=0;r<8;r++){const b=packed[i*4+(r>>1)],w=codes.indexOf(i+32);rows[i*8+r]=(r&1?(b<<4)&0xf0:b&0xf0)|(w>=0&&masks[w]&(0x80>>r)?8:0)}
+ eq(rows,font,'current mapped FONT bytes');
+ return {entrypoint:'validateCurrentFont',fontAt:fontAt+0xc000,fontBytes:392};
 }
