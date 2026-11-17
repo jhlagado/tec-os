@@ -51,14 +51,18 @@ test("UNLOAD is refused with no resident, and removes residents last in, first o
   assert.deepEqual(m.violations, []);
 });
 
-test("nothing is kept for a level: the table ends at ABICALL's jump and the page at BE00h is free", async () => {
+// KD-435: the shell's ring moved to the ROM's history page in EXPAND 1,
+// which it reaches through RINGIO; the row said no ring was there.
+test("nothing is kept for a level: the table ends at ABICALL's jump, and BD00h is the history page", async () => {
   const m = await machine({}, { ram96: true });
-  assert.equal(m.symbols.get("HRING"), undefined, "no history ring in EXPAND 1: it is the shell's");
+  assert.equal(m.symbols.get("HRING"), 0xbd00, "the history page in EXPAND 1, the shell's through RINGIO");
   assert.equal(m.sym("ABIEND"), m.sym("ABICALL") + 3);
   assert.deepEqual(m.violations, []);
 });
 
-test("SH11 a write to BD00h-BFFFh in EXPAND 1 fails the host's watch: the history's page is free", async () => {
+// KD-435: BD00h-BDFFh holds the history ring, which the host's watch lets
+// any writer write; the row had all of BD00h-BFFFh free.
+test("SH11 a write to BE00h-BFFFh in EXPAND 1 fails the host's watch, and the history page does not", async () => {
   const m = await machine();
   const poke = (a) => {
     // EXPAND 1 in view, one byte written, EXPAND 0 back, from a stub in page zero.
@@ -69,7 +73,7 @@ test("SH11 a write to BD00h-BFFFh in EXPAND 1 fails the host's watch: the histor
     Object.assign(m.cpu.cpu, { pc, sp });
   };
   for (const a of [0xbd00, 0xbdff, 0xbe00, 0xbeff, 0xbf00, 0xbfff]) poke(a);
-  assert.deepEqual(m.expand1Writes.map((w) => w.addr), [0xbd00, 0xbdff, 0xbe00, 0xbeff, 0xbf00, 0xbfff]);
+  assert.deepEqual(m.expand1Writes.map((w) => w.addr), [0xbe00, 0xbeff, 0xbf00, 0xbfff]);
   for (const w of m.expand1Writes) EXPAND1_WRITES.splice(EXPAND1_WRITES.indexOf(w), 1); // these were asked for
 });
 
@@ -246,16 +250,19 @@ test("SH1 rom figure", () => {
   const second = { ...census(), hash: sha(readFileSync(resolve(ROOT, "build/tecos/tecos.rom"))) };
   assert.equal(second.hash, first.hash, "two builds, one image");
   const { used, free, regions } = first.rom;
-  // The combined integrity build keeps the shared stack allocation.
-  assert.ok(used <= 15713, `${used} used, the combined integrity ceiling 15,713`);
-  assert.ok(free >= 671, `${free} free, at least 671`);
+  // The combined integrity build keeps the shared stack allocation; KD-435's
+  // TNRING, RINGIO and TNPARSE add 53, the ROM's CD list 5 fewer and its
+  // CD FAILED's line end 2.
+  assert.ok(used <= 15763, `${used} used, the combined integrity ceiling 15,763`);
+  assert.ok(free >= 621, `${free} free, at least 621`);
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   assert.ok(first.ram.tpa.bytes >= 47240, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
-  // abi.inc differs from before the hook by TNSHELL's block and TNCOUNT alone.
+  // abi.inc differs from before the hook by TNSHELL's block, KD-435's TNRING
+  // and TNPARSE blocks, and TNCOUNT alone.
   const abi = readText("src/abi.inc");
-  const block = abi.match(/; SHELL: [\s\S]*?\nTNSHELL EQU 16\n\n/)[0];
-  assert.equal(sha(Buffer.from(abiDeclarations(abi.replace(block, "").replace("TNCOUNT EQU 17", "TNCOUNT EQU 16")), "utf8")), ABI_BASE, "abi.inc's declarations changed only by TNSHELL and TNCOUNT");
+  const block = abi.match(/; SHELL: [\s\S]*?\nTNPARSE EQU 18\n\n/)[0];
+  assert.equal(sha(Buffer.from(abiDeclarations(abi.replace(block, "").replace("TNCOUNT EQU 19", "TNCOUNT EQU 16")), "utf8")), ABI_BASE, "abi.inc's declarations changed only by TNSHELL, TNRING, TNPARSE and TNCOUNT");
   console.log(`ROM ${used} used, ${free} free, TPA ${first.ram.tpa.bytes}, ${first.hash.slice(0, 16)}`);
 });
 

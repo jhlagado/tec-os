@@ -503,17 +503,18 @@ test("an old NAME.DRV is no service: the COM path says NAME.DRV? with nothing lo
   assert.equal(m.read(m.sym("SVCHEAD")), 0, "nothing loaded");
 });
 
+// The shell is 10 pages since KD-435's stage; it was 17.
 test("SH11 SERVICES lists each service and its pages, the newest first, with none and after UNLOAD", async () => {
   const image = withShell(standardCard()); // SERVICES is the shell's, and lists it
   volume(image, "A").write("OK.SVC", (await svc()).file);
   volume(image, "A").write("TWO.SVC", (await svc({ HDRNAME: '"TWO     "', XTRA: 300 })).file);
   const t = bench(boot(image));
-  assert.match(t.m.command("SERVICES"), /^SERVICES\r\r\nSHELL 17\r\nA(:\S*)?>$/, "the shell alone");
+  assert.match(t.m.command("SERVICES"), /^SERVICES\r\r\nSHELL 10\r\nA(:\S*)?>$/, "the shell alone");
   t.m.command("OK.SVC");
   t.m.command("TWO.SVC");
-  assert.match(t.m.command("SERVICES"), /TWO 2\r\nDEMO 1\r\nSHELL 17\r\n/);
+  assert.match(t.m.command("SERVICES"), /TWO 2\r\nDEMO 1\r\nSHELL 10\r\n/);
   t.m.command("UNLOAD");
-  assert.match(t.m.command("SERVICES"), /SERVICES\r\r\nDEMO 1\r\nSHELL 17\r\n/);
+  assert.match(t.m.command("SERVICES"), /SERVICES\r\r\nDEMO 1\r\nSHELL 10\r\n/);
 });
 
 test("a demonstration file is 60 bytes: a 25-byte header, 31 of image, 4 of relocation", async () => {
@@ -535,7 +536,7 @@ test("the relocation data decodes to the same fixups by delta, and a long gap ta
 test("the table has no removal: function 2 is refused and the service stays", async () => {
   const t = await machine();
   t.load((await svc()).file);
-  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 17 }).carry, 1); // past the last, TNSHELL
+  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 19 }).carry, 1); // past the last, TNPARSE (KD-435; it was 17, past TNSHELL)
   assert.equal(t.find("DEMO").carry, 0);
 });
 
@@ -1100,7 +1101,7 @@ for (const opts of [{}, { tms: true, matrix: true }]) {
       assert.equal(m.videoConsole(), true, "the ROM's PICO9918 console");
       say("SERVICES");
       assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+SHELL +17\s+A(:\S*)?>/, "the loaded two and the shell: the ROM's console is no service");
-    } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\nSHELL 17\r\n/);
+    } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\nSHELL 10\r\n/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     say("KEEP.SVC");

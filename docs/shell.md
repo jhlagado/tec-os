@@ -20,15 +20,19 @@ Every other command it hands back to the ROM to run. The starter card's
 `STARTUP.CMD` starts with `SHELL.SVC`, so the shell is in after every reset.
 A key held through reset skips `STARTUP.CMD`, and the bare prompt comes back.
 
-`SHELL.SVC` occupies 17 pages: a 4,352-byte allocation containing its image
-and extra RAM. Its history is a 256-byte ring in its own last page. Its own stack
+`SHELL.SVC` occupies 10 pages: a 2,560-byte allocation containing its image
+and extra RAM. Its history is a 256-byte ring in EXPAND 1's history page,
+BD00h–BDFFh, which it reaches a byte at a time through the ROM's `RINGIO`
+(`TNRING`). Sized `DIR` is `A:DIR.COM`, a transient the shell runs, and `CD`
+is the ROM's. Its own stack
 is 48 bytes, of which the census's workload uses 16 and the deepest path, the
 prompt's reading of the volume labels with every cache line changed and
 kept, 34 (`test/shell.test.mjs` and `test/shell2.test.mjs`, which read a guard
-pattern laid under it); no path may use more than 36. It declares 6 bytes of
-the BDOS's stack and none of the BIOS's or the CCP's, so `GLCD.SVC` and
-`MON3.SVC` install beside it. With the shell alone the word at 0006h is A500h
-on the starter card, a TPA of 41,984 bytes.
+pattern laid under it); no path may use more than 36. It declares no bytes of
+the BDOS's, the BIOS's or the CCP's stacks: `HREC` and `HSTORE` move to its
+own, as `LINE` and `PAGE` do, so `GLCD.SVC` and
+`MON3.SVC` install beside it. With the shell alone the word at 0006h is AC00h
+on the starter card, a TPA of 43,776 bytes.
 
 ## With no shell
 

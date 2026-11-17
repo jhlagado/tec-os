@@ -71,9 +71,10 @@ test("SH16 version fields", () => {
   const inc = readFileSync(resolve(ROOT, "src/abi.inc"), "utf8");
   assert.match(inc, /^SVCFMT EQU 4$/m);
   assert.equal(ABI.TNSHELL, 16);
-  assert.equal(ABI.TNCOUNT, 17);
+  // KD-435's stage appends TNRING and TNPARSE at minor 2.
+  assert.equal(ABI.TNCOUNT, 19);
   const { rom } = romFor();
-  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 1], "TNA 5.1: ABIMIN unchanged");
+  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 2], "TNA 5.2");
   for (const f of [SHELL.file, MON3.file, HOOK.file]) assert.deepEqual([...f.subarray(25, 28)], [0x45, 0x58, 1], "the record's version byte stays 1");
   assert.match(readFileSync(resolve(ROOT, "tools/build.mjs"), "utf8"), /^const VERSION = \{ major: 0, minor: 1 \};$/m);
 });
@@ -626,10 +627,12 @@ test("SH14 mutant: withoutDisplay keeping its : makes a kept piece a bad name", 
 
 const pages = (svc) => Math.ceil((svc.image + (svc.file[8] | (svc.file[9] << 8))) / 256);
 
+// KD-435: sized DIR is A:DIR.COM, the ring is in EXPAND 1, the parser
+// and CD are the ROM's. The shell had 17 pages with its ring page-aligned.
 test("SH7 size", () => {
-  assert.ok(pages(SHELL) <= 17, `SHELL.SVC in 17 pages: ${SHELL.image} + extra`);
-  assert.ok(SHELL.image + (SHELL.file[8] | (SHELL.file[9] << 8)) <= 4352);
-  assert.equal(sym.RING % 256, 0, "the ring's page aligned");
+  assert.ok(pages(SHELL) <= 10, `SHELL.SVC in 10 pages: ${SHELL.image} + extra`);
+  assert.ok(SHELL.image + (SHELL.file[8] | (SHELL.file[9] << 8)) <= 2560);
+  assert.equal(sym.RING, undefined, "no ring in its pages");
 });
 
 /** The deepest each of the three stacks goes below a service entry's SP, as svc.test.mjs's watch measures. */
@@ -676,13 +679,15 @@ function workload(m) {
 const LONG = Buffer.from(`${"W".repeat(100)}\r\n${Array.from({ length: 40 }, (_, i) => `line ${i}\r\n`).join("")}\x1a`, "latin1");
 const WORK = { "S.CMD": Buffer.from("TYPE HELLO.TXT\r\n; c\r\nDIR\r\n\x1a", "latin1"), "L.TXT": LONG, "CH.COM": chain("F &SAY!SAY") };
 
+// HREC and HSTORE moved to the shell's own stack with the ring (KD-435):
+// the declaration was BDOS 6.
 test("SH7 declared stacks", () => {
-  assert.deepEqual([...SHELL.file.subarray(12, 15)], [6, 0, 0], "declared: BDOS 6, BIOS 0, CCP 0");
+  assert.deepEqual([...SHELL.file.subarray(12, 15)], [0, 0, 0], "declared: BDOS 0, BIOS 0, CCP 0");
   const m = shelled(WORK);
   const page = pageOf(m);
   const use = entries(m, page, page + pages(SHELL) * 256);
   workload(m);
-  assert.ok(use.bdos <= 6, `the BDOS's: ${use.bdos}`);
+  assert.equal(use.bdos, 0, "HREC and HSTORE take the shell's own stack at once");
   assert.equal(use.bios, 0);
   assert.equal(use.ccp, 0, "LINE and PAGE take the shell's own stack at once");
   // The allowance is a sum: SHELL.SVC's and GLCD.SVC's together within SVCLIM.
@@ -698,13 +703,14 @@ test("SH7 declared stacks", () => {
 const glcdBoard = (lines) => shellMachine(shellCard({ "GLCD.SVC": GLCD_SVC, "MON3.SVC": MON3.file }, { startup: lines }), { matrix: true, glcd: true, noWait: true });
 const names = (m) => owners(m).map((o) => o.name).reverse().join(",");
 
+// The shell's seven pages fewer (KD-435) move each figure up 0700h.
 test("SH7 with glcd and mon3", () => {
   {
     const m = glcdBoard(["SHELL.SVC", "GLCD.SVC", "MON3.SVC"]);
     m.runUntil(() => M3.test(m.text(0)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "SHELL,GLCD,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3, "the GLCD the console");
-    assert.equal(word(m, 6), 0x9200);
+    assert.equal(word(m, 6), 0x9900);
   }
   {
     const m = glcdBoard(["SHELL.SVC", "MON3.SVC", "GLCD.SVC"]);
@@ -713,7 +719,7 @@ test("SH7 with glcd and mon3", () => {
     m.type("EXIT\r");
     m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 900_000_000, "GLCD.SVC after EXIT");
     assert.equal(names(m), "SHELL,MON3,GLCD");
-    assert.equal(word(m, 6), 0x9200);
+    assert.equal(word(m, 6), 0x9900);
   }
   {
     const m = glcdBoard(["GLCD.SVC"]);
@@ -724,30 +730,32 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(m.mark)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "GLCD,SHELL,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3);
-    assert.equal(word(m, 6), 0x9200);
+    assert.equal(word(m, 6), 0x9900);
   }
 });
 
 test("SH7 tpa figures", () => {
   const m = shelled({ "MON3.SVC": MON3.file });
-  assert.equal(word(m, 6), 0xa800, "SHELL.SVC alone: TPA 42,752");
+  assert.equal(word(m, 6), 0xaf00, "SHELL.SVC alone: TPA 44,544");
   at(m, "MON3.SVC", { re: M3 });
-  assert.equal(word(m, 6), 0x9500, "with MON3.SVC: 37,888");
+  assert.equal(word(m, 6), 0x9c00, "with MON3.SVC: 39,680");
   const g = glcdBoard(["SHELL.SVC", "GLCD.SVC"]);
   g.runUntil(() => g.ready() && g.read(g.sym("CONMOD")) === 3, 900_000_000, "the GLCD's prompt");
-  assert.equal(word(g, 6), 0xa500, "with GLCD.SVC: 41,984");
+  assert.equal(word(g, 6), 0xac00, "with GLCD.SVC: 43,776");
 });
 
 test("SH7 mutant: SHELL.SVC declaring 6 on the CCP's stack makes GLCD.SVC?", async () => {
-  const mut = await shellVariant([["  DB 6,0,0\n", "  DB 6,0,6\n"]]);
+  const mut = await shellVariant([["  DB 0,0,0\n", "  DB 0,0,6\n"]]);
   const m = shellMachine(shellCard({ "GLCD.SVC": GLCD_SVC }, { startup: ["SHELL.SVC", "GLCD.SVC"], shell: mut.file }), { matrix: true, glcd: true, noWait: true });
   m.runUntil(() => m.ready(), 900_000_000, "the prompt");
   assert.match(m.text(0), /GLCD\.SVC\?/);
 });
 
-test("SH7 mutant: a 128-byte recall buffer takes an eighteenth page", async () => {
-  const mut = await shellVariant([["STKTOP    EQU   STKBOT+48\n", "STKTOP    EQU   STKBOT+48+128\n"]]);
-  assert.equal(pages(mut), 18);
+// The tenth page has 11 bytes to spare (KD-435): the mutant was a 128-byte
+// recall buffer and an eighteenth page.
+test("SH7 mutant: 12 bytes more of RAM take an eleventh page", async () => {
+  const mut = await shellVariant([["STKTOP    EQU   STKBOT+48\n", "STKTOP    EQU   STKBOT+48+12\n"]]);
+  assert.equal(pages(mut), 11);
 });
 
 // --- Pieces, separators and lines ------------------------------------------
@@ -1124,8 +1132,8 @@ test("SH11 mutant: the ring's duplicate test removed stores a line twice", async
   const m = shellMachine(shellCard({}, { startup: ["SHELL.SVC"], shell: mut.file }));
   at(m, "SAY");
   at(m, "SAY");
-  const ring = pageOf(m) + mut.symbols.RING;
-  const text = toLatin1(Uint8Array.from(Array.from({ length: 16 }, (_, i) => m.read(ring + i))));
+  const bank = m.expand ? m.expand[1] : m.banks[0];
+  const text = toLatin1(Uint8Array.from(Array.from({ length: 16 }, (_, i) => bank[m.sym("HRING") - 0x8000 + i])));
   assert.equal(count(text, /SAY\0/g), 2);
 });
 

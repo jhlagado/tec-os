@@ -149,7 +149,7 @@ RCDELSE:
   jp RCFAILR     ; code FF00h
 
 RISONMSG:  DB    " is on $"
-RCDNOMSG:  DB    "CD FAILED$"
+RCDNOMSG:  DB    "CD FAILED",CR,LF,'$'
 
 ; Walk the card's volumes from index 0,
 ; each described by TNDESC into RCFCB,
