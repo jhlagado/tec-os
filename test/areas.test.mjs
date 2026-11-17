@@ -138,14 +138,20 @@ function path(m) {
 
 test("the ordinary command path is no slower without USER: to the prompt after a warm boot, and from a typed command to the program", (t) => {
   const now = {}, kept = {};
+  // KD-435's shell needs TNRING, which the kept ROM has not: under it the
+  // shell is 4d7795e's, pinned.
+  const BEFORE = Buffer.from(JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/shell-before-slim.json"), "utf8")).file, "base64");
   for (const shell of [false, true]) {
-    const image = () => {
+    const image = (old) => {
       const made = standardCard();
       volume(made, "A").write("X.COM", Uint8Array.from([0xc9]));
-      return shell ? withShell(made) : made;
+      if (!shell) return made;
+      withShell(made);
+      if (old) volume(made, "A").write("SHELL.SVC", BEFORE);
+      return made;
     };
-    now[shell ? "shell" : "bare"] = path(boot(image()));
-    kept[shell ? "shell" : "bare"] = path(before(image()));
+    now[shell ? "shell" : "bare"] = path(boot(image(false)));
+    kept[shell ? "shell" : "bare"] = path(before(image(true)));
   }
   t.diagnostic(JSON.stringify({ now, was: WAS.path, kept }));
   for (const k of ["bare", "shell"]) {
