@@ -1,8 +1,9 @@
 ; SHELL.SVC's built-ins that left the
-; ROM: SERVICES and COPY, with a copy
-; of the ROM's name parser. Included by
-; shell.asm, whose LINE enters each
-; handler with HL after its word.
+; ROM: SERVICES and COPY, and the ROM's
+; name parser reached through TNPARSE.
+; Included by shell.asm, whose LINE
+; enters each handler with HL after its
+; word.
 
 ; SERVICES: each resident from the
 ; lowest owner, B at LINE, upward: its
@@ -235,10 +236,26 @@ UNAMBIG:
   inc hl
   ld a,(hl)      ; the name's first
   cp SPACE       ; blank: no name
-  jr z,CHRRET    ; no name: Z, carry
+  jr z,UNRET     ; no name: Z, carry
   ld bc,11       ; name and type
   ld a,'?'       ; wild?
   cpir           ; Z if a ? is found
-  jr CHRRET
 
-%INCLUDE "fcbparse.asm"
+UNRET:
+  pop bc         ; restore
+  pop hl
+  scf            ; Z: carry, refused
+  ret z          ; refused
+  or a           ; NZ: clear carry
+  ret
+
+; The name at HL into the 36-byte FCB at
+; DE, by the ROM's parser: carry for a
+; bad name or drive, and HL at the
+; delimiter. FCBBASE keeps the FCB for
+; UNAMBIG. Changes AF, BC and DE.
+
+PARSEFCB:
+  ld (FCBBASE),de
+  ld c,TNPARSE
+  jp ABICALL     ; the CCP's parser

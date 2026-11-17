@@ -912,7 +912,8 @@
     "ENDCHK",
     "SETDMA",
     "DOSSEQ",
-    "UNAMBIG"
+    "UNAMBIG",
+    "PARSEFCB"
   ],
   "drivers/shellio.asm": [
     "STOPEN",
@@ -963,12 +964,6 @@
     "RCRLF",
     "RCFAILR"
   ],
-  "drivers/fcbparse.asm": [
-    "PARSEFCB",
-    "PARFLD",
-    "VALIDCHR",
-    "FCBEND"
-  ],
   "drivers/dirsize.asm": [
     "DIRGO",
     "DSRCH",
@@ -1009,6 +1004,7 @@
     "FAILED",
     "BDONE",
     "ERRMSG",
-    "DOSSEQ"
+    "DOSSEQ",
+    "PARSEFCB"
   ]
 }

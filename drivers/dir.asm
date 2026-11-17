@@ -25,8 +25,8 @@ FAILCODE EQU 255*256
 ; The CCP enters with the tail at 0081h,
 ; zero-ended. Its own parse of FCBONE
 ; passes over a bad name, so the tail is
-; parsed again here. ABI 5 is required
-; before any numbered call.
+; parsed again here. ABI 5.2 or later
+; is required: TNPARSE is minor 2.
 
 START:
   ld sp,STKTOP   ; DIR.COM's own stack
@@ -41,6 +41,9 @@ ST1:
   inc hl
   inc de
   djnz ST1       ; all four bytes
+  ld a,(hl)      ; the minor version
+  cp 2
+  jr c,NOABI     ; before TNPARSE
   call PGFIND    ; the shell's PAGE
   ld hl,TAIL     ; the tail
   call SKIPSP    ; to the operand
@@ -254,15 +257,22 @@ DOSSEQ:
 DOSGO:
   jp BDOS
 
+; The name at HL into the FCB at DE, by
+; the ROM's parser: carry for a bad name
+; or drive, and HL at the delimiter.
+; Changes AF, BC and DE.
+
+PARSEFCB:
+  ld c,TNPARSE
+  jp ABICALL     ; the CCP's parser
+
 %INCLUDE "dirsize.asm"
-%INCLUDE "fcbparse.asm"
 
 IMGEND:
 
 ; RAM after the image, not in the file.
 ; CFCB is the pattern and then TNDESC's
-; descriptor; FCBBASE the FCB the
-; parser fills; PGADR the shell's PAGE.
+; descriptor; PGADR the shell's PAGE.
 ; DIR: DDRV its drive, DSKIP the
 ; matches consumed, DNUM the files
 ; shown, DTOT their bytes, NUMV a
@@ -277,8 +287,7 @@ CFCB      EQU   IMGEND
 CFEX      EQU   CFCB+12
 DSDRV     EQU   CFCB+14
 DSLBL     EQU   CFCB+16
-FCBBASE   EQU   CFCB+36
-PGADR     EQU   FCBBASE+2
+PGADR     EQU   CFCB+36
 DDRV      EQU   PGADR+2
 DSKIP     EQU   DDRV+1
 DNUM      EQU   DSKIP+2

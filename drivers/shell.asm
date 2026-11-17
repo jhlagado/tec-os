@@ -774,7 +774,9 @@ LCOND EQU PGSP+2
 ; capacity, count and LTXT, the text,
 ; which also holds a script's line and
 ; a recalled one. The shell's 48-byte
-; stack is under STKTOP.
+; stack is under STKTOP; HREC and
+; HSTORE take it at HSTACK, under the
+; one frame TYPED holds there.
 
 CLAIMD EQU LCOND+1
 FCBBASE EQU CLAIMD+1
@@ -817,6 +819,7 @@ VLIST     EQU   VIDX+1
 CDNAME    EQU   VLIST+1
 STKBOT    EQU   CDNAME+11
 STKTOP    EQU   STKBOT+48
+HSTACK    EQU   STKTOP-2
 
 XEND EQU STKTOP
 XTRA EQU XEND-IMGEND

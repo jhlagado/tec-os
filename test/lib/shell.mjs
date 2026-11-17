@@ -13,8 +13,8 @@ import { Machine } from "./machine.mjs";
 import { ROOT, TEST_CLOCK, program, romFor, standardCard, startupFile, volume } from "./fixtures.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
-const SOURCES = ["shell.asm", "shellcmd.asm", "shellio.asm", "shellcd.asm", "fcbparse.asm"];
-const DIR_SOURCES = ["dir.asm", "dirsize.asm", "fcbparse.asm"];
+const SOURCES = ["shell.asm", "shellcmd.asm", "shellio.asm", "shellcd.asm"];
+const DIR_SOURCES = ["dir.asm", "dirsize.asm"];
 
 /** SHELL.SVC from drivers/shell.asm: { file, symbols (offsets from the header), image }. */
 export const shellSvc = () => makeSvc(resolve(ROOT, "drivers/shell.asm"), { work: resolve(ROOT, "build/svc") });

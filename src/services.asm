@@ -556,15 +556,16 @@ RINGIO:
   push af
   ld a,(LATCHV)
   or LATEXP
-  out (SYSLAT),a ; EXPAND 1 in view
-  inc c          ; Z: a write
+  out (SYSLAT),a
+  inc c          ; Z: a write, and
+                 ; EXPAND 1 in view
   jr nz,RIO1
   ld (hl),b      ; the byte written
 
 RIO1:
   ld b,(hl)      ; and read back
-  ld a,(LATCHV)
-  out (SYSLAT),a ; the program's view
+  ld a,(LATCHV)  ; the program's view
+  out (SYSLAT),a
   pop af
   jp po,RIO2     ; they were off
   ei
@@ -572,6 +573,18 @@ RIO1:
 RIO2:
   ld a,b         ; the byte
   pop bc
+  ret
+
+; TNPARSE (18): the CCP's PARSEFCB, the
+; name at HL into the FCB at DE, with
+; HL returned at the delimiter. Changes
+; AF, B and DE.
+
+SVPARS:
+  call PARSEFCB
+  ld a,TNEBAD
+  ret c          ; a bad name: carry
+  xor a
   ret
 
 ; TNDRVR: B=3 (UC1), HL=eight-word

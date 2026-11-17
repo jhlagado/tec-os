@@ -240,6 +240,19 @@ TNSHELL EQU 16
 
 TNRING EQU 17
 
+; PARSE: the CCP's name parser. HL = a
+; name, DE = 36 writable bytes for its
+; FCB: drive 0 for none, the name and
+; type blank-padded, * as ?s, the rest
+; zero. The name ends at a zero, a
+; space, = or the type's dot. Returns
+; HL at the delimiter. A bad drive,
+; byte or field returns TNEBAD with
+; carry, the FCB perhaps part filled.
+; Added at ABI minor 2. Stack bound 8.
+
+TNPARSE EQU 18
+
 ; TNCOUNT is the exclusive service
 ; bound, not callable. Failures return
 ; status A with carry:
@@ -248,7 +261,7 @@ TNRING EQU 17
 ; failure does not imply unchanged
 ; workspace, cache or hardware.
 
-TNCOUNT EQU 18
+TNCOUNT EQU 19
 
 TNEBAD EQU 1
 

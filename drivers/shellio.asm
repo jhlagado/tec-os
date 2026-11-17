@@ -505,12 +505,14 @@ HREC:
   ld hl,HREC0    ; ^W or ^N
   jr HSWAP
 
+; HSTORE: HSTO0 on the shell's stack.
+
 HSTO:
   ld hl,HSTO0    ; a typed line
 
 HSWAP:
   ld (HSP),sp    ; the BDOS's stack
-  ld sp,STKTOP-2 ; under TYPED's frame
+  ld sp,HSTACK   ; under TYPED's frame
   call JPHL      ; HREC0 or HSTO0
   ld sp,(HSP)    ; back, flags kept
   ret
