@@ -4,7 +4,7 @@
 // and names in lower case. BAZA builds it on TEC-OS and TIMES runs on the
 // PICO9918 at 40 columns, turns away a number outside 1 to 12 and returns
 // to the prompt. With GLCD.SVC loaded and a JP held in RST 1, BAZA takes
-// RST 1 while it compiles and gives the held JP back, TIMES runs, and the
+// RST 1 while it compiles and gives the held JP back before it exits, TIMES runs, and the
 // GLCD is still the console. A failed compile's return code stops a chained
 // line, and a compile onto a read-only drive fails through BAZA's own exit.
 // Emulator evidence. BAZA.COM and BAZA.RTL are pinned inputs (test/inputs.json).
@@ -54,13 +54,30 @@ function card(image = standardCard()) {
 const code = (m) => m.read(m.sym("PRGCODE")) | (m.read(m.sym("PRGCODE") + 1) << 8);
 
 /**
- * Plant JP ABICALL in RST 1, which a warm boot's sweep keeps
- * (test/svc.test.mjs): the three bytes.
+ * Plant a distinct JP in each of RST 1 to 6 at the prompt, RST 1's to
+ * ABICALL: programs' slots and the debugger's (Origo KD-434), so the next
+ * warm boot's sweep clears them (test/svc.test.mjs). Once a program has
+ * changed RST 1, all eight bytes of each of the six as each sweep then finds
+ * them are logged in SEEN. Returns RST 1's three bytes; PLANTED is all six.
  */
-function holdRst1(m) {
+const SLOTS6 = [0x08, 0x10, 0x18, 0x20, 0x28, 0x30];
+const six = (m) => SLOTS6.map((s) => Array.from({ length: 8 }, (_, i) => m.read(s + i)));
+function holdRst1(m, seen = [], planted = []) {
   const abicall = m.sym("ABICALL");
-  const held = [0xc3, abicall & 0xff, abicall >> 8];
-  held.forEach((b, i) => m.write(0x08 + i, b));
+  SLOTS6.forEach((s, k) => {
+    const to = k === 0 ? abicall : abicall + 0x10 * k;
+    [0xc3, to & 0xff, to >> 8].forEach((b, i) => m.write(s + i, b));
+  });
+  planted.push(...six(m));
+  const held = planted[0].slice(0, 3);
+  const sweep = m.sym("PZSWP"), prev = m.mvWatch;
+  const rst1 = () => [0, 1, 2].map((i) => m.read(0x08 + i));
+  let changed = false;
+  m.mvWatch = (pc) => {
+    changed ||= rst1().some((v, i) => v !== held[i]);
+    if (pc === sweep && changed) seen.push(six(m));
+    prev?.(pc);
+  };
   return held;
 }
 
@@ -127,23 +144,23 @@ test("BAZA builds TIMES on TEC-OS, and TIMES runs at 40 columns and returns to t
   assert.deepEqual(m.violations, []);
 });
 
-test("with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it compiles and gives the JP back, TIMES runs, and the GLCD is still the console", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
+test("with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it compiles and gives the JP back before it exits, TIMES runs, and the GLCD is still the console", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
   const m = boot(withShell(card(), "GLCD.SVC"), { matrix: true });
   assert.ok(m.videoConsole(), "the GLCD is the console");
   const head = m.read(m.sym("SVCHEAD")) << 8; // SERVICES is the shell's: the owner list read here
   assert.equal(String.fromCharCode(...Array.from({ length: 4 }, (_, i) => m.read(head + 17 + i))), "GLCD", "GLCD.SVC loaded");
-  // Once BAZA has taken RST 1, only BAZA's own restore puts the held JP back.
-  const held = holdRst1(m);
+  // Once BAZA has taken RST 1, only BAZA's own restore puts the held JP back,
+  // before its exit's warm boot sweeps RST 1 to 6.
+  const seen = [], planted = [];
+  const held = holdRst1(m, seen, planted);
   const rst1 = () => [0, 1, 2].map((i) => m.read(0x08 + i));
-  const rest = () => Array.from({ length: 0x28 }, (_, i) => m.read(0x10 + i)); // RST 2 to RST 6, 10h-37h
-  const others = rest();
   let taken;
   const run = buildAndRun(m, () => {
     if (!taken && rst1().some((b, i) => b !== held[i])) taken = rst1();
   });
   assert.ok(taken, "BAZA took RST 1 while it compiled");
-  assert.deepEqual(rst1(), held, "the held JP after BAZA and TIMES");
-  assert.deepEqual(rest(), others, "RST 2 to RST 6 after BAZA and TIMES");
+  assert.deepEqual(seen[0], planted, "RST 1 to 6, all eight bytes each, as planted when BAZA's warm boot swept");
+  assert.deepEqual(six(m), SLOTS6.map(() => [0, 0, 0, 0, 0, 0, 0, 0xc9]), "RST 1 to 6 swept after BAZA and TIMES");
   assert.ok(run.includes(RUN.join("\r\n") + "\r\n"), run);
   assert.ok(m.videoConsole(), "the GLCD is still the console");
   keys(m, "dir /w times.*\r", "DIR", () => m.ready());
@@ -175,7 +192,7 @@ test("a failed compile's return code stops a chained line: BAZA BAD &TIMES runs 
 
 // BAZA sets CP/M 3's error mode FEh (BDOS function 45), so a disk error
 // returns to it and it leaves through its own exit.
-test("a compile onto a read-only drive fails with return code FF00h, gives back RST 1's held JP and ends at A>", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
+test("a compile onto a read-only drive fails with return code FF00h, gives back RST 1's held JP before it exits and ends at A>", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
   const image = card(createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
     { geometry: "G8M", label: "WORK", mount: "B" },
@@ -184,7 +201,8 @@ test("a compile onto a read-only drive fails with return code FF00h, gives back 
   const c = volume(image, "C");
   c.write("TIMES.BAS", Buffer.from(SOURCE), { text: true });
   const m = boot(withShell(image), { tms: true, matrix: true });
-  const held = holdRst1(m);
+  const seen = [], planted = [];
+  const held = holdRst1(m, seen, planted);
   const rst1 = () => [0, 1, 2].map((i) => m.read(0x08 + i));
   let taken = false;
   const mark = m.output.length;
@@ -199,7 +217,8 @@ test("a compile onto a read-only drive fails with return code FF00h, gives back 
   assert.match(out, /File I\/O failed\r\n\r\nA(:\S*)?>$/, `BAZA's failure, then the & piece skipped:\n${out}`);
   assert.doesNotMatch(out, /10 REM/, "TYPE didn't run");
   assert.ok(taken, "BAZA took RST 1 while it compiled");
-  assert.deepEqual(rst1(), held, "the held JP after the failure");
+  assert.deepEqual(seen[0], planted, "RST 1 to 6 as planted when BAZA's warm boot swept");
+  assert.deepEqual(rst1(), [0, 0, 0], "RST 1 swept after the failure");
   assert.equal(code(m), 0xff00, "the return code, which the skipped piece leaves");
   // A guard only: the emulated read-only volume keeps C: as it was whatever BAZA does.
   assert.deepEqual(volume(image, "C").list().map((f) => f.name), ["TIMES.BAS"], "C: unchanged");
