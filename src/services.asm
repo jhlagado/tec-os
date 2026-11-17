@@ -527,7 +527,9 @@ RTCR1:
 ; fifth column, then the rows that have
 ; it, bit 0 the bottom. The PICO's
 ; pattern load uses it too. Returns A=0,
-; Z, NC. Keeps DE. Changes BC.
+; Z, NC. Keeps DE. Changes BC and FNTCH,
+; which holds the code: the routine
+; pushes DE alone, 2 bytes.
 
 FNTGLY:
   push de
@@ -538,7 +540,7 @@ FNTGLY:
   ld c,a
   ld a,b
   and $7F
-  push af        ; the code, for FONTW
+  ld (FNTCH),a   ; the code, for FONTW
   sub $20
   jr nc,FNTG1    ; 20h..7Fh
   xor a          ; controls: a space
@@ -572,8 +574,7 @@ FNTG2:
   inc de
   inc hl
   djnz FNTG2
-  pop af
-  push de        ; past the rows
+  ld a,(FNTCH)
   ld hl,FONTW
   ld bc,4        ; four wide glyphs
   cpir
@@ -581,26 +582,24 @@ FNTG2:
   inc hl
   inc hl
   inc hl         ; to its rows
-  ld b,(hl)
-  ex de,hl
+  ld c,(hl)
+  ld h,d
+  ld l,e         ; past the rows
+  ld b,8
 
 FNTG3:
   dec hl         ; up from the bottom
-  srl b          ; this row's fifth?
-  jr c,FNTG4
-  jr nz,FNTG3    ; more above
-  jr FNTG5
-
-FNTG4:
+  srl c          ; this row's fifth?
+  jr nc,FNTG4
   ld a,(hl)
   xor 8          ; the fifth column
   ld (hl),a
-  inc b
-  dec b          ; more above?
-  jr nz,FNTG3
+
+FNTG4:
+  djnz FNTG3
 
 FNTG5:
-  pop hl         ; HL past the rows
+  ex de,hl       ; HL past the rows
   pop de
   xor a
   ret

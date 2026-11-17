@@ -26,11 +26,11 @@ IOBYTE EQU $0003
 ; Removable format-4 header, no deps.
 ; Writer fills REMOVE, size, relocation
 ; and INIT. Extra RAM is zero. Declared
-; stack use: BDOS 6, BIOS 0, CCP 6.
+; stack use: BDOS 2, BIOS 0, CCP 6.
 
 HDR: DB 'D',SVCFMT,0,1
   DW 0,0,0,0
-  DB 6,0,6
+  DB 2,0,6
   DW 0
   DB "GLCD    "
 
@@ -273,17 +273,19 @@ GLCPUT:
   add a,a
   add a,e
   ld e,a
-  srl a
-  srl a
-  srl a
-  srl a
+  rrca
+  rrca
+  rrca
+  rrca
+  and $0F
   ld d,a         ; first word
   ld a,e
   add a,5
-  srl a
-  srl a
-  srl a
-  srl a
+  rrca
+  rrca
+  rrca
+  rrca
+  and $0F
   ld e,a         ; last word
   jr GLCWD
 
@@ -332,22 +334,23 @@ GLCROW:
 ; Words D..E of row B, one at a time:
 ; its characters' glyphs, then eight
 ; pixel rows, an address pair each.
-; Leaves GLW=E and GLY=8*B+8.
+; B and E wait in GLB and GLE, so the
+; glyph calls go no deeper. Leaves
+; GLW=E and GLY=8*B+8.
 
 GLCWD:
-  push bc
   ld c,0
   call GLCADR
-  pop bc
   ld (GLROWP),hl
+  ld a,b
+  ld (GLB),a
+  ld a,e
+  ld (GLE),a
   ld a,d
 
 GLCW1:
   ld (GLW),a
-  push bc
-  push de        ; word bounds over
-                 ; the word's rows
-  ld a,b
+  ld a,(GLB)
   add a,a
   add a,a
   add a,a
@@ -385,10 +388,12 @@ GLFL2:
   dec a
   ld (GLOFF),a
   jr nz,GLFL2
-  ld c,8
+
+; Eight pixel rows, until GLY reaches
+; the next text row's first: nothing
+; more on the stack.
 
 GLCW2:
-  push bc        ; C rows left
   call GLCSETA
   call GLCCMP
   ld a,d
@@ -397,13 +402,14 @@ GLCW2:
   call GLCDW
   ld hl,GLY
   inc (hl)       ; the next pixel row
-  pop bc
-  dec c
+  ld a,(hl)
+  and 7
   jr nz,GLCW2
-  pop de
-  pop bc
+  ld a,(GLB)
+  ld b,a         ; B as it came
   ld a,(GLW)
-  cp e
+  ld hl,GLE
+  cp (hl)
   ret z          ; the last word
   inc a
   jr GLCW1
@@ -554,5 +560,7 @@ GLOFF: DS 1      ; signed cell offset
 GLWN: DS 1       ; busy polls left
 GLOUT: DS 1      ; byte over polling
 GLCACH: DS 32    ; four glyphs' rows
+GLB: DS 1        ; GLCWD's row
+GLE: DS 1        ; and its last word
 
 IMGEND:

@@ -127,7 +127,7 @@ The rules that make the hardware services safe for CP/M programs:
 - **The caller's stack.** Hardware handlers retain their published caller-stack
   bounds and do not touch TPA beyond their buffers. Outer-entry housekeeping
   temporarily uses its separate worker stack, then resumes the handler on
-  the caller stack. The deepest, `PUTAT` on a GLCD console, takes24 caller
+  the caller stack. The deepest, `PUTAT` on a GLCD console, takes22 caller
   bytes, counting the dispatcher but not the `CALL`.
 - **Resident state only.** The hardware services keep their state in the resident
   workspace: the claim flag, 1 byte.
@@ -182,7 +182,7 @@ unchanged. `docs/services.md` gives a service's rules.
 | 4 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 51 T-states | 4 | 29 |
 | 5 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
 | 6 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
-| 7 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial, or while the PICO9918 is claimed and is the console | 24 | 68 |
+| 7 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial, or while the PICO9918 is claimed and is the console | 22 | 68 |
 | 8 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 138 |
 | | **Total** | | | | **485** |
 
