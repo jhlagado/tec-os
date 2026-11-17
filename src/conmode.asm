@@ -313,28 +313,12 @@ KEYWM4:
   jr KEYWZERO    ; expired without a key
 
 KEYWS:
-  ld de,0        ; D: idle slots, E
+  ld de,0        ; idle count, then
                  ; armed
-
-KEYWS1:
-  push hl        ; receiver keeps budget
-  call KWSPOLL
-  pop hl
-  jp nz,KWACT    ; consume the whole
-                 ; action
-  ld b,1
-  jr nc,KEYWS2   ; no frame: one slot
-  ld b,3         ; a received frame
-
-KEYWS2:
-  dec hl         ; charge bounded RX
-                 ; work
-  ld a,h
-  or l
-  jr z,KEYWZERO  ; no underflow allowed
-  djnz KEYWS2    ; frames cost three
-                 ; slots
-  jr KEYWS1
+  call KWBYTE    ; same whole wait
+                 ; budget
+  jp nz,KWACT
+  jr KEYWZERO
 
 KEYWTAKE:
   push af        ; retain the fresh key
@@ -453,114 +437,111 @@ KWSBAD:
   scf            ; rejection still costs
   ret
 
-; Consume the rest of a recognised
-; serial action before leaving the
-; question. CSI/SS3 end at a final byte,
-; and CR may consume LF. A different
-; An incomplete CSI/SS3 rolls back. A
-; byte after CR or bare ESC is kept for
-; normal input. Every tail poll spends
-; the original budget plus a short
-; inter-byte limit. Changes AF/BC/DE/HL.
+; Complete serial Escape actions within
+; the whole question budget, including
+; a delayed CSI/SS3 prefix. Bare Escape
+; times out rather than leaking a late
+; suffix into normal input. CR waits at
+; most sixteen extra poll slots for LF.
+; Other following bytes remain pending.
+; Changes AF, BC, DE and HL.
 
 KWACT:
-  cp 27          ; ESC may begin an
-                 ; arrow
+  cp 27          ; Escape may have a
+                 ; tail
   jr z,KWESC
-  cp 13          ; CR may have trailing
+  cp 13          ; CR may be followed by
                  ; LF
+
+; ordinary key is final
+
   jp nz,KEYWTAKE
-  push af        ; retain confirming key
-  call KWNEXT
-  jr z,KWACTEND  ; bare CR is sufficient
-  cp 10          ; consume only its LF
-  jr z,KWACTEND  ; bare CR is sufficient
-  jr KWSTASH     ; keep a different key
+  push af        ; retain CR
+                 ; confirmation
+  push hl        ; retain question
+                 ; budget
+  ld hl,16       ; optional-LF bound
+  call KWBYTE
+  pop hl
+  jr z,KWACTEND  ; a bare CR confirms
+  cp 10
+  jr z,KWACTEND  ; consume the matching
+                 ; LF
+  jr KWSTASH
 
 KWESC:
-  push af
-  call KWNEXT    ; short bare-ESC wait
-  jr z,KWACTEND
-  cp '['         ; recognised CSI prefix
+  push af        ; retained only if
+                 ; complete
+  call KWBYTE
+  jr z,KWABORT   ; no prefix before
+                 ; expiry
+  cp '['
   jr z,KWCSI
-  cp 'O'         ; recognised SS3 prefix
-  jr nz,KWSTASH
+  cp 'O'
+  jr nz,KWSTASH  ; a different next
+                 ; action
 
 KWCSI:
-  call KWNEXT
+  call KWBYTE    ; spend whole remaining
+                 ; HL
   jr z,KWABORT   ; incomplete action
                  ; fails
   cp $40         ; parameters precede
                  ; final
-  jr c,KWCSI     ; consume parameter
-                 ; bytes
-  jr KWACTEND    ; a final ends the
-                 ; action
+  jr c,KWCSI
+  jr KWACTEND
 
 KWSTASH:
-  ld (RXCHAR),a
-  ld a,$FF       ; publish unrelated
-                 ; byte
+  ld (RXCHAR),a  ; not part of this
+                 ; action
+  ld a,$FF
   ld (RXFULL),a
 
 KWACTEND:
-  ld a,h
-  or l           ; must retain whole
-                 ; budget
-  jr z,KWABORT   ; exhaustion is not a
-                 ; key
   xor a
-  ld (KBTN),a    ; no synthetic arrow
-                 ; tail
+  ld (KBTN),a    ; no matrix arrow tail
   pop af
-  jp KEYWRET     ; keep any stashed byte
+  jp KEYWRET
 
 KWABORT:
   pop af         ; discard confirmation
   jp KEYWZERO
 
-; Receive a possible action tail, at
-; most sixteen poll slots apart. The
-; outer HL budget still bounds damaged
-; frames and arbitrarily long CSI text.
-; NZ returns a byte. Z means no tail.
-; Changes AF/BC/DE/HL.
+; Receive within HL's finite poll-slot
+; budget. Each frame costs three slots,
+; every empty poll one. NZ returns a
+; non-NUL byte. An in-progress frame
+; completes before return. Z means no
+; complete byte before expiry.
+; Changes AF, BC, DE and HL.
 
-KWNEXT:
-  ld c,16        ; short inter-byte
-                 ; limit
-
-KWNEXT1:
-  push bc        ; retain short limit
-  push hl        ; retain whole budget
+KWBYTE:
+  ld a,h         ; never wrap a spent HL
+  or l
+  ret z
+  push hl        ; polling keeps budget
   call KWSPOLL
   pop hl
-  pop bc
-  push af        ; retain receiver flags
+  push af        ; keep byte and result
   ld b,1
-  jr nc,KWNEXT2  ; one poll or three
-                 ; slots
-  ld b,3         ; received frame cost
+  jr nc,KWBYTE1
+  ld b,3         ; charge received frame
 
-KWNEXT2:
-  dec hl         ; charge every tail
-                 ; poll
+KWBYTE1:
+  dec hl         ; finite even under
+                 ; NULs
   ld a,h
   or l
-  jr z,KWNEXT0   ; whole budget
-                 ; exhausted
-  djnz KWNEXT2
-  pop af
-  ret nz         ; a complete tail byte
-  dec c          ; spend inter-byte
-                 ; limit
-  jr nz,KWNEXT1
-  xor a          ; tail wait expired
-  ret
+  jr z,KWBYTE0
+  djnz KWBYTE1
+  pop af         ; restore receiver
+                 ; flags
+  ret nz
+  jr KWBYTE
 
-KWNEXT0:
-  pop af
-  xor a          ; expiry returns Z
+KWBYTE0:
+  pop af         ; last complete frame
+                 ; wins
   ret
 
 KWSEND:

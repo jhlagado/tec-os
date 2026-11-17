@@ -930,7 +930,7 @@ for (const choice of ["L", "S", "C"]) {
 }
 
 
-test("LC-20 an incomplete recognised serial action rolls back at its inter-byte bound", () => {
+test("LC-20 an incomplete recognised serial action rolls back when the whole question budget expires", () => {
   const m = start({ matrix: true });
   asked(m, "CON TTY");
   m.tec1g.queueSerial([27, 91]);
@@ -938,7 +938,7 @@ test("LC-20 an incomplete recognised serial action rolls back at its inter-byte 
   const began = m.cycles;
   backOnLcd(m);
   const elapsed = (m.cycles - began) / CLOCK;
-  assert.ok(elapsed >= 0.010 && elapsed < 0.030, `${elapsed.toFixed(6)} seconds including rollback`);
+  assert.ok(elapsed >= 9.5 && elapsed < 10.5, `${elapsed.toFixed(6)} seconds including rollback`);
   assert.equal(m.read(m.sym("CONMOD")), 3);
   assert.deepEqual(m.violations, []);
 });
@@ -953,3 +953,58 @@ test("LC-20 a long unterminated CSI cannot exhaust the whole budget and confirm 
   assert.equal(m.read(m.sym("RXFULL")), 0);
   assert.deepEqual(m.violations, []);
 });
+
+
+for (const prefix of [[27], [27, 91]]) {
+  test(`LC-20 delayed serial CSI after ${prefix.length} prefix byte(s) is consumed within the question`, () => {
+    const m = start({ matrix: true });
+    asked(m, "CON TTY");
+    m.tec1g.queueSerial(prefix);
+    m.runUntil(() => m.pc === m.sym(prefix.length === 1 ? "KWESC" : "KWCSI"), 2_000_000, "the Escape action prefix");
+    const afterDelay = m.cycles + CLOCK / 20;
+    m.runUntil(() => m.cycles >= afterDelay, CLOCK / 10, "a 50 ms suffix delay");
+    assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0x80, "the question still owns input");
+    m.tec1g.queueSerial(prefix.length === 1 ? [91, 65] : [65]);
+    m.runUntil(() => m.ready(), 2_000_000, "the serial prompt after the completed action");
+    assert.equal(m.read(m.sym("CONMOD")), 0);
+    assert.equal(lineTaken(m), "");
+    assert.deepEqual(m.violations, []);
+  });
+}
+
+test("LC-20 bare serial Escape exhausts the question budget and restores LCD", () => {
+  const m = start({ matrix: true });
+  const began = asked(m, "CON TTY");
+  m.tec1g.queueSerial([27]);
+  const seconds = (backOnLcd(m) - began) / CLOCK;
+  assert.ok(seconds > 9.5 && seconds < 10.5, `${seconds.toFixed(3)} seconds`);
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  assert.deepEqual(m.violations, []);
+});
+
+for (const arrival of ["last poll", "after expiry"]) {
+  test(`LC-20 the optional LF boundary handles arrival at ${arrival}`, (t) => {
+    const m = start({ matrix: true });
+    asked(m, "CON TTY");
+    m.tec1g.queueSerial([13]);
+    m.runUntil(() => m.pc === m.sym("KWBYTE") && m.cpu.cpu.h === 0 && m.cpu.cpu.l === 16, 2_000_000, "CR's optional LF interval");
+    const began = m.cycles;
+    const boundary = arrival === "last poll"
+      ? () => m.pc === m.sym("KWBYTE") && m.cpu.cpu.h === 0 && m.cpu.cpu.l === 1
+      : () => m.pc === m.sym("KWBYTE0");
+    m.runUntil(boundary, 100_000, "the optional LF boundary");
+    const milliseconds = 1000 * (m.cycles - began) / CLOCK;
+    assert.ok(milliseconds >= 12 && milliseconds < 15, `${milliseconds.toFixed(3)} ms`);
+    t.diagnostic(`optional LF ${arrival}: ${milliseconds.toFixed(3)} ms at 4 MHz`);
+    m.tec1g.queueSerial([10]);
+    if (arrival === "last poll") {
+      m.runUntil(() => m.ready(), 2_000_000, "confirmed TTY without LF typeahead");
+      assert.equal(lineTaken(m), "");
+    } else {
+      m.runUntil(() => m.pc === m.sym("CINRX") && m.cpu.cpu.a === 10, 2_000_000, "late LF delivered through normal serial input");
+      assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
+    }
+    assert.equal(m.read(m.sym("CONMOD")), 0);
+    assert.deepEqual(m.violations, []);
+  });
+}

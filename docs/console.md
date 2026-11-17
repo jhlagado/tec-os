@@ -51,6 +51,11 @@ screen is restored and cleared. No previous bitmap is retained.
 The command's Enter key, buffered characters and arrow tails cannot confirm.
 Serial confirmation begins after the question finishes transmitting and after
 an idle interval. NULs, bad frames and a low line use the same finite budget.
+Escape-prefixed CSI and SS3 actions retain input for the whole remaining
+question budget, including delayed suffixes. A bare Escape or incomplete
+action times out and restores the former console. CR confirmation accepts
+an optional LF only within sixteen subsequent poll slots. A later LF is
+ordinary input. The poll-slot interval still needs timing qualification.
 An identical selection and a report-only CON need no question. Invalid syntax,
 invalid width, unavailable PICO and a held PICO claim leave the route intact.
 A failed GLCD load restores the former route.
