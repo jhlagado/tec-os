@@ -15,7 +15,7 @@ BAZA CAVERNS
 CAVERNS
 ```
 
-The current executable is **29,056 bytes**, including its selected runtime.
+The current restored-prose executable is **37,376 bytes**, including its selected runtime.
 Compilation and play work with the shell resident (TPA 41,984 bytes); no UNLOAD
 is needed. BAZA.RTL is required for compilation, not beside the running game.
 Use the PICO9918 console at 80 columns and matrix keyboard input, as tested.
@@ -110,7 +110,7 @@ see [compiler integration evidence](caverns-compact-emission.md). Shared print
 helpers then made it 36,736 bytes, and the compact-code compiler at `5f6b58d`
 (direct jumps, equality compares, inline numeric literals and digit-only whole
 numbers in `DATA`; Baza's `docs/compact-code.md`) made it 33,280. The later restart-based coordinates, short constant FOR loops
-and shared numeric publishing at `eee4ee6` reduce it to 29,056 bytes. The engine
+and shared numeric publishing at `eee4ee6` reduced that abbreviated-text build to 29,056 bytes. Restoring the original prose brings the current build to 37,376 bytes. The engine
 and world data are separated, with ten-step numbering and the requested casing.
 See [engine structure and authoring](caverns-engine.md). Descriptions
 are scanned from compact DATA into one temporary string rather than retaining

@@ -124,10 +124,10 @@ node tools/tecvol.mjs verify card.img
 
 The verified copy has this layout and directory summary:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): host-tool output of the commands above; starter payload sizes refreshed from the current recipe card, with TED project/session rows retained from the worked card. -->
+<!-- Source-derived worked-card summary: starter payload from ROM 35893cab, card fb3c0358; TED project/session rows retained from the historical worked card. -->
 ```text
 container: format 1.1, 26624 blocks (13631488 bytes), 5 volume(s), 4 drive(s) wanted
-  A: SYSTEM      id 1 G1M start 2048 rw 17 file(s), 905216 bytes free
+  A: SYSTEM      id 1 G1M start 2048 rw 17 file(s), 897024 bytes free
   B: WORK        id 2 G8M start 4096 rw 3 file(s), 8359936 bytes free
   C: PROJECTS    id 3 G1M start 20480 rw 0 file(s), 1040384 bytes free
   -: GAMES       id 4 G1M start 22528 rw 0 file(s), 1040384 bytes free
@@ -145,12 +145,12 @@ node tools/tecvol.mjs dir card.img B
 A's complete listing contains the fifteen starter files plus TED's
 project and session files:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 3b70301a): host-tool output of the commands above; starter payload sizes refreshed from the current recipe card, with TED project/session rows retained from the worked card. -->
+<!-- Source-derived worked-card summary: starter payload from ROM 35893cab, card fb3c0358; TED project/session rows retained from the historical worked card. -->
 ```text
  0 BAZA.COM        13440
  0 BAZA.RTL        13056
  0 BOUNCE.BAS       5376
- 0 CAVERNS.BAS    18816
+ 0 CAVERNS.BAS     27008
  0 CAVERNS.TXT      2688
  0 DEMO.ASM        15360
  0 GLCD.SVC          896
@@ -272,10 +272,10 @@ prepared starter image this command produces:
 node tools/tecvol.mjs info dist/starter.img
 ```
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): host-tool output of the command above. -->
+<!-- TEC-OS with the sized DIR (ROM 35893cab, starter card fb3c0358): host-tool output of the command above. -->
 ```text
 container: format 1.1, 26624 blocks (13631488 bytes), 5 volume(s), 4 drive(s) wanted
-  A: SYSTEM      id 1 G1M start 2048 rw 15 file(s), 909312 bytes free
+  A: SYSTEM      id 1 G1M start 2048 rw 15 file(s), 901120 bytes free
   B: WORK        id 2 G8M start 4096 rw 0 file(s), 8372224 bytes free
   C: PROJECTS    id 3 G1M start 20480 rw 0 file(s), 1040384 bytes free
   -: GAMES       id 4 G1M start 22528 rw 0 file(s), 1040384 bytes free

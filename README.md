@@ -194,8 +194,8 @@ runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
 an `.ASM` with TAS.
 
 The starter card also includes the author-refined Caverns BASIC source and
-`CAVERNS.TXT`. Select `CON PICO 80`, compile with `BAZA CAVBASIC`, then run
-`CAVBASIC`. Its executable is created by the user; the separate assembly
+`CAVERNS.TXT`. Select `CON PICO 80`, compile with `BAZA CAVERNS`, then run
+`CAVERNS`. Its executable is created by the user; the separate assembly
 comparison remains development-only. [Caverns](docs/caverns.md) records the
 current rules, qualification and provenance.
 
