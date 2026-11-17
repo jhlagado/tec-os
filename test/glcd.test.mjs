@@ -15,6 +15,7 @@
 // The three editing screens were retaken when buffered input began ignoring
 // navigation. Matrix 05h and 03h mean left and up, not Ctrl-E and Ctrl-C.
 // Their old screens included the cursor corruption. The other seventeen stay.
+// Up recalls history; Down restores empty input before its pixel capture.
 // KS48 keeps this historical oracle on its original-font input. Only the
 // historical pixel workload uses a disposable FONT-span restoration. Other
 // GLCD tests and Compact alias/rendering tests use the unmodified production ROM.
@@ -29,7 +30,7 @@ import {restoreHistoricalFont,validateHistoricalFont,historicalFontContext} from
 import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay, withShell } from "./lib/fixtures.mjs";
 
 const referenceBytes = readFileSync(resolve(ROOT, "test/glcd-screens.json"));
-assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"d9872e1efa123cde62df01a758c0d553beee28c34f84ad732522d29f0dc8b165","the historical command list and oracle, with the DIR, PUT and navigation screens retaken");
+assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"2ef985ddeb2a183420f1274da0bc338c2669950697141a27ee4d4aedb2191eee","the historical command list and oracle, with the DIR, PUT and navigation screens retaken");
 const REF = JSON.parse(referenceBytes);
 // Bind the clone to this build's untouched input, not to a permanent ROM pin.
 const productionInput = romFor();

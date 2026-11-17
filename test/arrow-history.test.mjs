@@ -20,6 +20,12 @@ function setup(board){
 for(const board of ['serial','pico','glcd']){
  test(`${board} up/down recalls, edits and executes shell history`,()=>{
   const m=setup(board),up=board==='serial'?'\x1b[A':'\x03',down=board==='serial'?'\x1b[B':'\x04';
+  m.type('partial');assert.equal(held(m),'partial');
+  const emptyMark=m.output.length;
+  m.type(up);assert.equal(held(m),'partial');
+  m.type(down);assert.equal(held(m),'partial');
+  assert.equal(m.text(emptyMark),'','empty history leaves partial input alone');
+  m.type('\x18');assert.equal(held(m),'');
   m.command('ECHO FIRST');m.command('ECHO SECOND');
   const mark=m.output.length;
   m.type('partial');assert.equal(held(m),'partial');
@@ -55,10 +61,3 @@ test('arrow recall respects the existing line maximum without submitting it',()=
  assert.deepEqual(m.violations,[]);
 });
 
-test('arrow recall clips to the existing line capacity',()=>{
- const m=setup('serial');m.command('ECHO '+ 'X'.repeat(35));
- m.write(m.sym('LINMAX'),12);
- m.type('\x1b[A');
- assert.equal(held(m),'ECHO '+ 'X'.repeat(7));
- assert.deepEqual(m.violations,[]);
-});
