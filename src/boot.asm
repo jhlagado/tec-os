@@ -321,17 +321,15 @@ PZINIT:
 ; Sweep after warm boot or service-page
 ; release. First drop the shell hook if
 ; its table lies below PZTOP's page,
-; where pages were freed. Then sweep
-; 0008h..003Fh: keep only JP
-; targets strictly greater than PZTOP,
-; clearing their five trailing bytes.
-; Equal targets are cleared too. Other
-; slots become seven zeros and RET.
-; If 0038h has no retained JP, install
-; EI/RETI and clear its remaining bytes.
-; PZSWP itself preserves interrupt
-; state. Return carry clear. Change
-; AF/BC/HL.
+; where pages were freed. RST 1 to 6 are
+; programs' and the debugger's: each
+; becomes seven zeros and RET. 0038h
+; keeps a JP whose target is strictly
+; above PZTOP, its five trailing bytes
+; cleared; anything else becomes EI,
+; RETI and zeros. PZSWP itself
+; preserves interrupt state. Return
+; carry clear. Change AF/BC/HL.
 
 PZSWP:
   ld a,(SHOWN+1)
@@ -345,44 +343,50 @@ PZSW1:
   ld hl,$0008
 
 RSTCLR:
-
-  ld bc,7*256+$C9
-  ld a,(hl)
-  cp $C3
-  jr nz,RSTZERO
-  inc hl
-  ld a,(PZTOP)
-  sub (hl)
-  inc hl
-
-  ld a,(PZTOP+1)
-  sbc a,(hl)
-  dec hl
-  dec hl
-  jr nc,RSTZERO
-  inc hl
-  inc hl
-  inc hl
-  ld bc,4*256+0
+  ld b,7
 
 RSTZERO:
   ld (hl),0
   inc hl
   djnz RSTZERO
-  ld (hl),c
+  ld (hl),$C9    ; RET
   inc hl
   ld a,l
-  cp $40
-  jr nz,RSTCLR
-  ld a,(RST7)
+  cp $38
+  jr nz,RSTCLR   ; RST 1 to 6
+  ld l,$3B
+  ld b,5
+
+RST7Z:
+  ld (hl),0      ; 003Bh to 003Fh
+  inc hl
+  djnz RST7Z
+  ld l,$38
+  ld a,(hl)
   cp $C3
-  ret z
-  xor a
-  ld (RST7+7),a
-  ld hl,$4DED
-  ld (RST7+1),hl
-  ld a,$FB
+  jr nz,RST7D    ; no JP: the default
+  inc hl
+  ld a,(PZTOP)
+  sub (hl)
+  inc hl
+  ld a,(PZTOP+1)
+  sbc a,(hl)     ; carry: above PZTOP
+  ccf
+  ret nc         ; kept
+
+; RET stands at 0038h while RETI goes
+; in, and EI is written last.
+
+RST7D:
+  ld l,$38
+  ld (hl),$C9
+  inc l
+  ld (hl),$ED
+  inc l
+  ld (hl),$4D    ; RETI
+  ld a,$FB       ; EI
   ld (RST7),a
+  or a
   ret
 
 ; The stack guard's bytes.
