@@ -1,5 +1,5 @@
 ; Console transactions and cold choice.
-; The command parser stays in ccpcmd.asm.
+; The CCP parses command operands.
 ; All waits are cooperative and bounded.
 
 ; Snapshot the effective console, not
@@ -10,21 +10,22 @@
 ; Changes AF, BC, DE and HL.
 
 CONSAVE:
-  call CONSEL
+  call CONSEL    ; apply direct IOBYTE
   ld a,(CONOLD)
   and $40        ; cold bypass latch
-  ld b,a
-  ld a,(CONMOD)
+  ld b,a         ; retain bypass flag
+  ld a,(CONMOD)  ; effective old route
   or b
-  or $80
+  or $80         ; block nested hotkeys
   ld (CONOLD),a
-  ld a,(CONAUX)
+  ld a,(CONAUX)  ; old physical UC1
   ld (CAXOLD),a
-  ld a,(PIWID)
+  ld a,(PIWID)   ; include PICO geometry
   ld (CPIOLD),a
-  ld a,(LCDPRF)
+  ld a,(LCDPRF)  ; include LCD geometry
   ld (CLDOLD),a
-  ld hl,(GLVEC)
+  ld hl,(GLVEC)  ; identity, not a
+                 ; vector
   ld (CGLDOLD),hl
   ret
 
@@ -35,43 +36,51 @@ CONSAVE:
 
 CONDIFF:
   ld a,(CONOLD)
-  and 3
+  and 3          ; exclude control flags
   ld b,a
   ld a,(CONMOD)
-  xor b
-  ret nz
+  xor b          ; different IOBYTE mode
+  ret nz         ; same UC1 is not
+                 ; enough
   ld a,b
-  cp CMCRT
+  cp CMCRT       ; PICO width may change
   jr z,CONDPIC
   cp CMUC1
-  jr nz,CONDYES
+  jr nz,CONDYES  ; TTY/BAT have no width
   ld a,(CAXOLD)
   ld hl,CONAUX
-  xor (hl)
-  ret nz
+  xor (hl)       ; LCD versus live
+                 ; driver
+  ret nz         ; same UC1 is not
+                 ; enough
   ld a,(CONAUX)
   or a
-  jr nz,CONDGLC
+  jr nz,CONDGLC  ; compare live
+                 ; ownership
   ld a,(CLDOLD)
   ld hl,LCDPRF
-  cp (hl)
+  cp (hl)        ; LCD profile may
+                 ; change
   ret
 
 CONDPIC:
   ld a,(CPIOLD)
-  ld hl,PIWID
-  cp (hl)
+  ld hl,PIWID    ; current PICO geometry
+  cp (hl)        ; same device, new
+                 ; width
   ret
 
 CONDGLC:
   ld hl,(CGLDOLD)
-  ld de,(GLVEC)
-  or a
-  sbc hl,de
+  ld de,(GLVEC)  ; current installation
+  or a           ; comparison has no
+                 ; borrow
+  sbc hl,de      ; owner must still
+                 ; match
   ret
 
 CONDYES:
-  xor a
+  xor a          ; identical route: Z
   ret
 
 ; Confirm only a changed device or
@@ -82,16 +91,16 @@ CONDYES:
 
 CONASK:
   call CONDIFF
-  ret z
+  ret z          ; no needless question
   ld hl,PRESSK
-  call CONTXT
-  ld hl,KWPOLL
+  call CONTXT    ; visible on target
+  ld hl,KWPOLL   ; whole question budget
   call KEYWT
-  push af
+  push af        ; retain timeout result
   call CONCRLF
   pop af
-  ret nz
-  call CONROLL
+  ret nz         ; fresh key commits
+  call CONROLL   ; timeout restores all
   jp CONREP
 
 ; Restore the former profile and route.
@@ -106,50 +115,60 @@ CONASK:
 CONROLL:
   ld a,(CLDOLD)
   or a
-  jr nz,CONR40
-  ld a,20
+  jr nz,CONR40   ; old dual controller
+  ld a,20        ; hide second cursor
+                 ; too
   call LCDWID
-  jr CONRPIC
+  jr CONRPIC     ; restore both profiles
 
 CONR40:
-  call LCDWSET
+  call LCDWSET   ; already proved
+                 ; profile
 
 CONRPIC:
   ld a,(CPIOLD)
   ld hl,PIWID
-  cp (hl)
-  jr z,CONRAUX
+  cp (hl)        ; avoid a display reset
+  jr z,CONRAUX   ; geometry unchanged
   or a
   jr z,CONRAUX   ; no former PICO
-  call TMSWID
-  jr nc,CONRAUX
-  xor a
+  call TMSWID    ; restore retained
+                 ; width
+  jr nc,CONRAUX  ; old PICO still usable
+  xor a          ; safe ROM LCD fallback
   call CONASEL
-  ld a,CMUC1
+  ld a,CMUC1     ; CONSW checks keyboard
   jp CONSW       ; unavailable width
 
 CONRAUX:
   ld a,(CONOLD)
-  and 3
-  ld b,a
+  and 3          ; remove snapshot flags
+  ld b,a         ; mode across CONASEL
   ld a,(CAXOLD)
-  or a
-  jr z,CONRSET
+  or a           ; clear comparison
+                 ; borrow
+  jr z,CONRSET   ; former ROM LCD route
+
+; invalidated on drop
+
   ld hl,(CGLDOLD)
   ld a,h
   or l
   jr z,CONRSET   ; old identity gone
-  ld de,(GLVEC)
-  or a
+  ld de,(GLVEC)  ; resolve live
+                 ; ownership
+  or a           ; clear comparison
+                 ; borrow
   sbc hl,de
-  ld a,0
-  jr nz,CONRSET
+  ld a,0         ; mismatch falls to LCD
+  jr nz,CONRSET  ; never republish
+                 ; pointer
   inc a          ; the same live driver
 
 CONRSET:
-  call CONASEL
+  call CONASEL   ; only route preference
   ld a,b
-  jp CONSW
+  jp CONSW       ; copy live vectors now
 
 ; End a transaction after success or
 ; rollback. Error and warm-boot paths
@@ -157,35 +176,38 @@ CONRSET:
 
 CONTEND:
   ld hl,CONOLD
-  res 7,(hl)
+  res 7,(hl)     ; enable recovery
+                 ; hotkey
   ret
 
 ; Report through ROM output, available
 ; before BDOS initialisation as well.
 
 CONREP:
-  call CONSEL
+  call CONSEL    ; apply requested route
   ld hl,CONHDR
-  call CONTXT
+  call CONTXT    ; works before BDOS
   ld a,(CONMOD)
-  add a,a
-  add a,a
+  add a,a        ; four-byte mode record
+  add a,a        ; four-byte mode record
   ld l,a
-  ld h,0
+  ld h,0         ; unsigned record
+                 ; offset
   ld de,CONNAMS
-  add hl,de
-  ld b,4
+  add hl,de      ; mode name plus colon
+  ld b,4         ; fixed record length
 
 CONSH1:
-  push bc
-  push hl
+  push bc        ; output may use B
+  push hl        ; retain name pointer
   ld a,(hl)
   call CONPUT
   pop hl
-  pop bc
+  pop bc         ; retain record count
   inc hl
-  djnz CONSH1
-  jp CONCRLF
+  djnz CONSH1    ; exactly four chars
+  jp CONCRLF     ; finish visible
+                 ; feedback
 
 ; Transaction feedback is visible on
 ; serial even when BAT discards normal
@@ -195,36 +217,38 @@ CONSH1:
 CONTXT:
   ld a,(hl)
   or a
-  ret z
-  push hl
+  ret z          ; zero ends ROM text
+  push hl        ; driver may change HL
   call CONPUT
   pop hl
-  inc hl
-  jr CONTXT
+  inc hl         ; next feedback byte
+  jr CONTXT      ; stop at string end
 
 CONCRLF:
-  ld a,13
+  ld a,13        ; same route for CR/LF
   call CONPUT
-  ld a,10
+  ld a,10        ; fall into feedback
 
 CONPUT:
-  push af
+  push af        ; retain feedback byte
   ld a,(CONMOD)
-  cp CMBAT
-  jr nz,CONPUT1
+  cp CMBAT       ; BAT still needs a
+                 ; query
+  jr nz,CONPUT1  ; other physical route
   pop af
-  jp TXBYTE
+  jp TXBYTE      ; IOBYTE stays BAT
 
 CONPUT1:
   pop af
-  jp PUTA
+  jp PUTA        ; normal ROM dispatch
 
 ; Wait a finite processor-work budget
 ; for a fresh key on the selected
 ; keyboard. Discard prior bytes and
-; arrow tails. Matrix input first needs
-; all keys released. Serial first needs
-; at least twelve idle bit periods.
+; arrow tails. A complete KBPOLL scan
+; must report all keys released first.
+; Serial first needs twelve idle bit
+; periods before a fresh start.
 ; No housekeeping or route change runs
 ; inside this timed wait. Normal BIOS
 ; input keeps its existing behaviour.
@@ -233,108 +257,102 @@ CONPUT1:
 ; Changes AF, BC, DE and HL.
 
 KEYWT:
-  xor a
+  xor a          ; discard earlier input
   ld (RXFULL),a
-  ld (KBTN),a
+  ld (KBTN),a    ; drop matrix arrow
+                 ; tail
   ld a,(CONMOD)
-  rrca
-  jr nc,KEYWS
-  push hl
+  rrca           ; odd modes use matrix
+  jr nc,KEYWS    ; TTY/BAT use serial
+  push hl        ; cursor may use HL
   call CURSHOW
   pop hl
   ld de,0        ; E: release observed
 
 KEYWM:
-  push hl
-  push de
-  call KEYUP
-  pop de
-  jr nz,KEYWM1
-  ld e,1
-
-KEYWM1:
-  push de
-  call KBPOLL
+  push hl        ; retain whole budget
+  push de        ; retain release latch
+  call KBPOLL    ; one complete raw scan
   pop de
   pop hl
-  jr z,KEYWM3
+  jr z,KEYWMREL  ; may have seen release
   ld a,e
-  or a
-  jr z,KEYWM2
+  or a           ; fresh key needs
+                 ; release
+  jr z,KEYWM2    ; reject held/pending
+                 ; key
   ld a,(RXCHAR)
-  jr KEYWTAKE
+  jr KEYWTAKE    ; consume its arrow
+                 ; tail
 
 KEYWM2:
   xor a          ; held/pending input
   ld (RXFULL),a
-  ld (KBTN),a
+  ld (KBTN),a    ; reject any queued
+                 ; tail
+
+KEYWMREL:
+  ld a,(KBLAST)
+  inc a          ; FFh means all
+                 ; released
+  jr nz,KEYWM3   ; a key remains held
+  ld e,1         ; full scan found no
+                 ; key
 
 KEYWM3:
-  ld b,KWPAD
+  ld b,KWPAD     ; finite per-scan work
 
 KEYWM4:
   djnz KEYWM4
-  dec hl
+  dec hl         ; charge one matrix
+                 ; scan
   ld a,h
-  or l
+  or l           ; whole budget
+                 ; remaining
   jr nz,KEYWM
-  jr KEYWZERO
+  jr KEYWZERO    ; expired without a key
 
 KEYWS:
-  ld de,0        ; D: idle slots, E armed
+  ld de,0        ; D: idle slots, E
+                 ; armed
 
 KEYWS1:
-  push hl
+  push hl        ; receiver keeps budget
   call KWSPOLL
   pop hl
-  jp nz,KWACT
+  jp nz,KWACT    ; consume the whole
+                 ; action
   ld b,1
-  jr nc,KEYWS2
+  jr nc,KEYWS2   ; no frame: one slot
   ld b,3         ; a received frame
 
 KEYWS2:
-  dec hl
+  dec hl         ; charge bounded RX
+                 ; work
   ld a,h
   or l
-  jr z,KEYWZERO
-  djnz KEYWS2
+  jr z,KEYWZERO  ; no underflow allowed
+  djnz KEYWS2    ; frames cost three
+                 ; slots
   jr KEYWS1
 
 KEYWTAKE:
-  push af
+  push af        ; retain the fresh key
   xor a
   ld (RXFULL),a
-  ld (KBTN),a
+  ld (KBTN),a    ; matrix arrow consumed
   pop af
 
 KEYWRET:
   push af
-  call CURHIDE
+  call CURHIDE   ; undo cursor ownership
   pop af
-  or a
+  or a           ; NZ means confirmation
   ret
 
 KEYWZERO:
   call CURHIDE
-  xor a
-  ret
-
-; Scan every matrix row at fixed cost.
-; Z means all keys are up. No key is
-; translated or published here.
-; Changes AF, BC and D.
-
-KEYUP:
-  ld bc,$FEFE
-  ld d,$FF
-
-KEYUP1:
-  in a,(c)
-  and d
-  ld d,a
-  rlc b
-  jr c,KEYUP1
-  inc d
+  xor a          ; Z means rollback
   ret
 
 ; One bounded serial poll. Unarmed:
@@ -352,32 +370,38 @@ KEYUP1:
 ; Keeps HL. Changes AF, BC and DE.
 
 KWSPOLL:
+
+; prime emulated input
+
   in a,(KEYPORT)
   ld a,e
   or a
-  jr nz,KWSARM
-  ld c,$FF
-  ld b,97
+  jr nz,KWSARM   ; already idle-
+                 ; qualified
+  ld c,$FF       ; AND all raw samples
+  ld b,97        ; finite idle window
 
 KWSIDLE:
   in a,(STSPORT)
-  and c
+  and c          ; any low breaks idle
   ld c,a
-  djnz KWSIDLE
+  djnz KWSIDLE   ; sample the whole
+                 ; window
   rlc c
-  jr nc,KWSLOW
-  inc d
+  jr nc,KWSLOW   ; partial frame ignored
+  inc d          ; consecutive idle
+                 ; window
   ld a,d
   cp 4           ; over twelve bit times
-  jr c,KWSNONE
-  ld e,1
+  jr c,KWSNONE   ; not a fresh line yet
+  ld e,1         ; accept the next start
 
 KWSNONE:
-  xor a
+  xor a          ; Z/CF clear: one slot
   ret
 
 KWSLOW:
-  ld d,0
+  ld d,0         ; restart idle proof
   jr KWSNONE
 
 KWSARM:
@@ -386,89 +410,114 @@ KWSARM:
 KWSLOOK:
   in a,(STSPORT)
   rlca
+
+; sample low start soon
+
   jr nc,KWSSTART
-  djnz KWSLOOK
-  xor a
+  djnz KWSLOOK   ; finite tight window
+  xor a          ; no frame this slot
   ret
 
 KWSSTART:
-  call RXBITS
-  push af
+  call RXBITS    ; bounded eight-bit
+                 ; read
+  push af        ; retain received byte
   in a,(STSPORT)
   ld c,a         ; first stop sample
-  ld d,RXDLY
+  ld d,RXDLY     ; one more stop
+                 ; interval
 
 KWSSTOP:
   dec d
-  jr nz,KWSSTOP
+  jr nz,KWSSTOP  ; fixed stop-bit delay
   in a,(STSPORT)
   and c          ; both stops high
-  and $80
+  and $80        ; test only serial
+                 ; level
   ld e,a
   pop af
-  bit 7,e
-  jr z,KWSBAD
-  and $7F
-  jr z,KWSBAD
+  bit 7,e        ; require both stops
+  jr z,KWSBAD    ; NUL never confirms
+  and $7F        ; seven-bit console key
+  jr z,KWSBAD    ; NUL never confirms
 
 KWSRX:
-  or a
-  scf
+  or a           ; NZ for a usable key
+  scf            ; charge received frame
   ret
 
 KWSBAD:
-  ld de,0
+  ld de,0        ; require fresh idle
+                 ; again
   xor a
-  scf
+  scf            ; rejection still costs
   ret
 
 ; Consume the rest of a recognised
 ; serial action before leaving the
 ; question. CSI/SS3 end at a final byte,
 ; and CR may consume LF. A different
+; An incomplete CSI/SS3 rolls back. A
 ; byte after CR or bare ESC is kept for
 ; normal input. Every tail poll spends
 ; the original budget plus a short
 ; inter-byte limit. Changes AF/BC/DE/HL.
 
 KWACT:
-  cp 27
+  cp 27          ; ESC may begin an
+                 ; arrow
   jr z,KWESC
-  cp 13
+  cp 13          ; CR may have trailing
+                 ; LF
   jp nz,KEYWTAKE
-  push af
+  push af        ; retain confirming key
   call KWNEXT
-  jr z,KWACTEND
-  cp 10
-  jr z,KWACTEND
-  jr KWSTASH
+  jr z,KWACTEND  ; bare CR is sufficient
+  cp 10          ; consume only its LF
+  jr z,KWACTEND  ; bare CR is sufficient
+  jr KWSTASH     ; keep a different key
 
 KWESC:
   push af
-  call KWNEXT
+  call KWNEXT    ; short bare-ESC wait
   jr z,KWACTEND
-  cp '['
+  cp '['         ; recognised CSI prefix
   jr z,KWCSI
-  cp 'O'
+  cp 'O'         ; recognised SS3 prefix
   jr nz,KWSTASH
 
 KWCSI:
   call KWNEXT
-  jr z,KWACTEND
-  cp $40         ; parameters precede final
-  jr c,KWCSI
-  jr KWACTEND
+  jr z,KWABORT   ; incomplete action
+                 ; fails
+  cp $40         ; parameters precede
+                 ; final
+  jr c,KWCSI     ; consume parameter
+                 ; bytes
+  jr KWACTEND    ; a final ends the
+                 ; action
 
 KWSTASH:
   ld (RXCHAR),a
-  ld a,$FF
+  ld a,$FF       ; publish unrelated
+                 ; byte
   ld (RXFULL),a
 
 KWACTEND:
+  ld a,h
+  or l           ; must retain whole
+                 ; budget
+  jr z,KWABORT   ; exhaustion is not a
+                 ; key
   xor a
-  ld (KBTN),a
+  ld (KBTN),a    ; no synthetic arrow
+                 ; tail
   pop af
-  jp KEYWRET
+  jp KEYWRET     ; keep any stashed byte
+
+KWABORT:
+  pop af         ; discard confirmation
+  jp KEYWZERO
 
 ; Receive a possible action tail, at
 ; most sixteen poll slots apart. The
@@ -478,35 +527,40 @@ KWACTEND:
 ; Changes AF/BC/DE/HL.
 
 KWNEXT:
-  ld c,16
+  ld c,16        ; short inter-byte
+                 ; limit
 
 KWNEXT1:
-  push bc
-  push hl
+  push bc        ; retain short limit
+  push hl        ; retain whole budget
   call KWSPOLL
   pop hl
   pop bc
-  push af
+  push af        ; retain receiver flags
   ld b,1
-  jr nc,KWNEXT2
-  ld b,3
+  jr nc,KWNEXT2  ; one poll or three
+                 ; slots
+  ld b,3         ; received frame cost
 
 KWNEXT2:
-  dec hl
+  dec hl         ; charge every tail
+                 ; poll
   ld a,h
   or l
-  jr z,KWNEXT0
+  jr z,KWNEXT0   ; whole budget
+                 ; exhausted
   djnz KWNEXT2
   pop af
-  ret nz
-  dec c
+  ret nz         ; a complete tail byte
+  dec c          ; spend inter-byte
+                 ; limit
   jr nz,KWNEXT1
-  xor a
+  xor a          ; tail wait expired
   ret
 
 KWNEXT0:
   pop af
-  xor a
+  xor a          ; expiry returns Z
   ret
 
 KWSEND:
@@ -520,45 +574,50 @@ KWSEND:
 ; and complete rollback.
 
 STCHOOSE:
-  call STBYP
+  call STBYP     ; physical reset bypass
   jr nz,STCH1
   ld hl,CONOLD
-  set 6,(hl)
+  set 6,(hl)     ; survive early release
   ret
 
 STCH1:
   call LCDCON
-  ret nz
-  ld hl,LCDBAN
+  ret nz         ; serial board stays
+                 ; TTY
+  ld hl,LCDBAN   ; before first card
+                 ; access
   call PUTS
   call PUTCRLF
-  ld hl,STCMSG
+  ld hl,STCMSG   ; offer base consoles
   call PUTS
-  call CONSAVE
+  call CONSAVE   ; same rollback
+                 ; contract
   ld hl,KWPOLL*3/10
-  call KEYWT
-  push af
+  call KEYWT     ; fresh matrix choice
+  push af        ; retain choice over LF
   call PUTCRLF
   pop af
-  jr z,STCHEND
-  and $DF
+  jr z,STCHEND   ; unavailable keeps LCD
+  and $DF        ; accept lowercase too
   ld b,CMTTY
-  cp 'S'
+  cp 'S'         ; explicit serial
+                 ; choice
   jr z,STCHSEL
   cp 'C'
-  jr nz,STCHEND
+  jr nz,STCHEND  ; L/other keeps base
+                 ; LCD
   ld a,(PIVEC+1)
-  or a
-  jr z,STCHEND
+  or a           ; PICO table available
+  jr z,STCHEND   ; unavailable keeps LCD
   ld b,CMCRT
 
 STCHSEL:
-  call CONFLD
+  call CONFLD    ; change CON bits only
   call CONREP
-  call CONASK
+  call CONASK    ; fresh target keyboard
 
 STCHEND:
-  jp CONTEND
+  jp CONTEND     ; release hotkey lock
 
 ; Z for a reset-bypass key held now.
 ; Matrix Fn is row 0, bit 2. Changes
@@ -566,9 +625,10 @@ STCHEND:
 
 STBYP:
   in a,(STSPORT)
-  and $40
-  ret z
-  ld bc,$FEFE
+  and $40        ; physical keypad held
+  ret z          ; latched before card
+                 ; I/O
+  ld bc,$FEFE    ; matrix modifier row
   in a,(c)
-  and $04
+  and $04        ; Fn held is bypass
   ret

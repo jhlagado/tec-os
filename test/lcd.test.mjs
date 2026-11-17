@@ -928,3 +928,28 @@ for (const choice of ["L", "S", "C"]) {
     assert.deepEqual(m.violations, []);
   });
 }
+
+
+test("LC-20 an incomplete recognised serial action rolls back at its inter-byte bound", () => {
+  const m = start({ matrix: true });
+  asked(m, "CON TTY");
+  m.tec1g.queueSerial([27, 91]);
+  m.runUntil(() => m.pc === m.sym("KWCSI"), 2_000_000, "the recognised CSI prefix");
+  const began = m.cycles;
+  backOnLcd(m);
+  const elapsed = (m.cycles - began) / CLOCK;
+  assert.ok(elapsed >= 0.010 && elapsed < 0.030, `${elapsed.toFixed(6)} seconds including rollback`);
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-20 a long unterminated CSI cannot exhaust the whole budget and confirm TTY", () => {
+  const m = start({ matrix: true });
+  asked(m, "CON TTY");
+  m.tec1g.queueSerial(Buffer.from("\x1b[" + "1".repeat(5000) + "A", "latin1"));
+  backOnLcd(m);
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
+  assert.equal(m.read(m.sym("RXFULL")), 0);
+  assert.deepEqual(m.violations, []);
+});
