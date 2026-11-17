@@ -2,11 +2,22 @@
 
 This document retains the pre-optimisation 39,680-byte baseline. The 38,272-byte
 build after it, from compact source-location emission, is in
-[compact emission](caverns-compact-emission.md). The current 33,280-byte build,
-compiled by Baza `5f6b58d`, is in [Caverns](caverns.md) and the
+[compact emission](caverns-compact-emission.md). The current 29,056-byte build,
+compiled by Baza `eee4ee6`, is in [Caverns](caverns.md) and the
 [book handover](caverns-book-handover.md).
 The audit tool measures its current checkout; use the historical baseline commit
 to reproduce the older numbers below.
+
+Run on the current build with Baza `eee4ee6`'s `dist/compiler-build.json`, its
+two files and its `src/generated/rtl.inc`, the tool gives: 20,930 bytes of
+application, 7,915 of runtime code and workspace, 88 of scalar cells, the
+3-byte entry jump, the 10-byte footer and 110 bytes of padding, 29,056 in all.
+The same 669 source-context sites now take 2,408 bytes: 268 first statements
+at three bytes (RST 1 and the line word) and 401 later ones at four (RST 2,
+the line word and the statement byte). DATA and the other literal text are as
+below; the remaining instructions and inline metadata are 8,430 bytes. The
+runtime selections are as below. The shell-resident TPA is 41,984 bytes and
+46,536 after `UNLOAD`.
 
 Read-only investigation prompted by the author's priority: shrink compiled
 BASIC before adding file handling; consider shell unloading separately.

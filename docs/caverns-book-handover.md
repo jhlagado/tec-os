@@ -29,23 +29,23 @@ The manual may describe tested emulator behaviour with that boundary.
 |---|---|
 | Qualified gameplay/source | jhlagado/tec-os, 3d0aa36a6caa9f2a80c69debad36c79946a257e5 |
 | Source supplied on SYSTEM | programs/CAVBASIC.BAS |
-| Verification executable, not on starter | programs/CAVBASIC.COM; 33,280 bytes |
+| Verification executable, not on starter | programs/CAVBASIC.COM; 29,056 bytes |
 | Source/binary/compiler/RTL hashes | test/caverns-basic.json |
 | Instructions supplied on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume starter recipe | dist/starter.recipe.json, revision 17; image dist/starter.img |
 | Matching Viewer integration | jhlagado/tec-os-viewer, a87771beeaa466a7a1745132761d9d81826e62e8 |
-| BAZA compiler/runtime pins | jhlagado/baza, 5f6b58d07b70e570bc993cfc430ec0196f4855d0, dist/BAZA.COM and dist/BAZA.RTL |
+| BAZA compiler/runtime pins | jhlagado/baza, eee4ee6846add13c0ea120fbf2de8be0ec08c0b1, dist/BAZA.COM and dist/BAZA.RTL |
 | Supporting editor/compiler/runtime | TED.COM, BAZA.COM, BAZA.RTL on SYSTEM, pinned by test/inputs.json |
 | Scenario tools, development only | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 
-Compiler SHA-256: c4088acee056d0c46bce0f9d77ade7706e67f851c3b963a19d7415f5f423363e.
-Runtime SHA-256: edf1a19dca59b88aa8d10a54834933cb630b368e9effbbcf89f5b68d6dc64f08.
+Compiler SHA-256: f8d4b8944be95451faa7aa0bc99e611f6793b7d4a8e413344e951e26ede07498.
+Runtime SHA-256: 29c07740630069921f93581c8527d5db057c63a073a95b37c7a020df92ae5e38.
 Source SHA-256: f64fdb84ead251e3e49590c4c156d7951afc52fb02ffad959cf819b20760b9e0.
-Executable SHA-256: 25501ede99c5dc22d228ae7839378e9da5ab371ca112df0167fac4d63a08879f.
+Executable SHA-256: 0c0d74e09bbb0bafee43a22e75d2dab3c3fa69071c96cd94e77a4e6d9464117e.
 The rewrite itself required no compiler change. Subsequent compact source-location
-emission, shared literal/newline helpers and the compact-code compiler (direct jumps,
+emission, shared literal/newline helpers, the compact-code compiler (direct jumps,
 equality compares, inline numeric literals, digit-only whole numbers in DATA)
-reduce the executable while preserving diagnostics. Engine authoring source
+and the restart-vector compiler reduce the executable while preserving diagnostics. Engine authoring source
 and world data are separate; the supplied BAS uses ten-step numbering,
 uppercase keywords and lowercase variables. Native compilation needs no generator. RTL is linked
 selectively into the COM; its 13,056-byte file is not loaded beside the game.
@@ -75,8 +75,8 @@ that browser trial. No physical-board claim applies to either.
 ## Requirements and limits
 
 Tested console: PICO9918 at 80 columns, matrix keyboard input. Shell-resident
-TPA: 41,984 bytes; COM: 33,280 bytes; logical image: 33,259 bytes. After
-reserving 768 bytes for the CPU stack, 7,957 bytes remain for dynamic arrays,
+TPA: 41,984 bytes; COM: 29,056 bytes; logical image: 28,946 bytes. After
+reserving 768 bytes for the CPU stack, 12,270 bytes remain for dynamic arrays,
 strings and control. This space is used during initialisation and play. The no-shell TPA is 46,536 bytes, but this example does not need it.
 Growth is constrained; use the small banner change, not a large library feature.
 There are eleven carrying slots, finite candle life and random combat risk.
@@ -87,7 +87,24 @@ A card-image download is not a game-memory snapshot.
 
 ## Evidence and release scope
 
-The current compact-code increment pins BAZA at Baza `5f6b58d`. GOTO, GOSUB and
+The current increment pins BAZA at Baza `eee4ee6`. A line's first statement
+records its source with RST 1 and the line word, a later one with RST 2, the
+line word and the statement byte; an inline print is RST 3, a newline RST 4
+and the slot reset RST 5. The program takes RST 1 to 5 as it starts and gives
+them back on every exit, never RST 6 (Origo KD-434). A constant integer FOR
+without STEP is one call with its cell, start and limit inline, a computed
+number is published by one shared call, and GOTO and THEN n no longer select
+the transfer module. The unchanged source compiles to 29,056 bytes, 4,313 fewer
+logical bytes, with the same 42 symbols each 4,313 bytes lower. The scenario
+tool finds the banner and resume lines in the restart form, and the scenario
+loader now gives RST 1 to 5 back before it refuses a file, as the game's own
+exits do. On TEC-OS the four Caverns test files pass all 20 tests, with the
+480-command comparison in 36 scenarios unchanged; the starter, TIMES, TED and
+BAZA, and card-write files pass too. No BASIC source or game rule changed.
+
+- [Compiler rounds and their evidence](https://github.com/jhlagado/baza/blob/eee4ee6846add13c0ea120fbf2de8be0ec08c0b1/docs/compact-code.md).
+
+The compact-code increment before it pinned BAZA at Baza `5f6b58d`. GOTO, GOSUB and
 THEN n are direct jumps, integer = and <> skip the sign-bit turn, FOR and DIM
 drop repeated slot-top resets, a numeric literal is CALL NUMLIT with its tag
 address and f32 bytes inline, and a whole number in DATA keeps only its digits.

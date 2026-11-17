@@ -80,14 +80,18 @@ object bounds before applying the record. The external generator additionally
 validates scalar domains and rope consistency; arbitrary handcrafted records
 are development inputs, not a trusted public save format. It uses the ordinary
 CP/M filename/FCB and checks missing, truncated and extra-record files.
+The loader runs after the game's START has taken RST 1 to 5, so a refused file
+gives them back through the runtime's own exchange, as the game's exits do,
+before the message and the warm boot; a JP held in RST 1 survives the refusal
+(`test/caverns-scenario.test.mjs`).
 
-The loader no longer needs to fit inside the opening banner. Its 348 bytes are
+The loader no longer needs to fit inside the opening banner. Its 351 bytes are
 appended before the runtime footer; only a three-byte banner jump and the
 runtime's footer pointer are patched in the public image. The footer's image
 end moves with it, so normal startup and allocation account for the extra
 memory. The CPU stack reserve and all existing game code/data/cell addresses
 stay unchanged. The public game is neither padded nor enlarged. This build's
-development COM is 33,664 bytes versus the 33,280-byte public COM (record
+development COM is 29,312 bytes versus the 29,056-byte public COM (record
 padding included); future compiler sizes are recorded by the generator.
 `build/caverns/scenario-loader.json` records exact addresses, sizes and hashes.
 Full compiler symbols are in `test/caverns-basic.json`. Its explicit
