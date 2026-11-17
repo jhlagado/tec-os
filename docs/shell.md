@@ -7,7 +7,7 @@ has CP/M's built-ins `DIR`, `ERA`, `REN` and `TYPE`, with
 `SHELL.SVC` is a resident service that takes over the prompt through the
 ROM's shell hook. It holds what left the ROM:
 
-- the command history, ^W and ^N;
+- the command history, Up/Down and ^W/^N;
 - the drive's directory selection in the prompt, and `CD` with script-drive
   protection; the same basic selection commands also work in ROM;
 - `DIR` with each file's size, `COPY`, `DEL`, `SERVICES`, `CLS`, `ECHO` and
@@ -263,9 +263,11 @@ reported as zero. Ordinary drive and read errors keep their BDOS handling.
 - The history ring keeps the lines typed at the prompt; ^W shows the one before
   and ^N the one after. A line equal to the newest is not stored again. A
   program's line input receives ^W and ^N as characters.
-- Arrow and other terminal navigation sequences are ignored during line input.
-  They neither alter the command nor move its cursor. History still uses
-  ^W and ^N. Programs reading raw characters can handle arrows themselves.
+- Plain Up and Down (CSI or SS3) perform the same older/newer history actions
+  as ^W and ^N. Recall replaces partial input, with an empty line past the
+  newest. Modified arrows and other navigation remain ignored. The bare CCP
+  has no history and ignores arrows. Programs reading raw characters can
+  handle arrows themselves.
 
 ## Loading, `UNLOAD` and recovery
 
