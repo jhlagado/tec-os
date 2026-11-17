@@ -297,7 +297,9 @@ test("LC-5 a running COM can register UC1 and write through its table before ret
   const code = [0x21, 0x80, 0x01, 0x11, 0, 0x80, 0x01, 33, 0, 0xed, 0xb0,
     0x06, 3, 0x21, 0, 0x80, 0x0e, ABI.TNDRVR, 0xcd, ABI.ABICALL & 255, ABI.ABICALL >> 8,
     0x32, 0x30, 0x01, 0x1e, 88, 0x0e, 2, 0xcd, 5, 0,
-    0x3a, 0x20, 0x80, 0x32, 0x31, 0x01, 0xc9];
+    0x3a, 0x20, 0x80, 0x32, 0x31, 0x01,
+    0x0e, ABI.TNINFO, 0xcd, ABI.ABICALL & 255, ABI.ABICALL >> 8, 0x22, 0x32, 0x01,
+    0x06, 3, 0x21, 0, 0, 0x0e, ABI.TNDRVR, 0xcd, ABI.ABICALL & 255, ABI.ABICALL >> 8, 0xc9];
   while (code.length < 0x80) code.push(0);
   for (let i = 0; i < 7; i++) code.push(0x10, 0x80);
   code.push(16, 4, 0x21, 0x20, 0x80, 0x34, 0xc9);
@@ -306,9 +308,10 @@ test("LC-5 a running COM can register UC1 and write through its table before ret
   m.command("REG");
   assert.equal(m.read(0x130), 0, "registered");
   assert.ok(m.read(0x131) > 0, "the running COM's output called its new table");
-  assert.equal(m.read(m.sym("GLVEC")) | m.read(m.sym("GLVEC") + 1) << 8, 0x8000);
-  assert.deepEqual(geometry(m), [16, 4]);
-  assert.equal(m.read(m.sym("CONAUX")), 1);
+  assert.deepEqual([m.read(0x132), m.read(0x133)], [16, 4], "the running COM observed its registered geometry");
+  assert.equal(m.read(m.sym("GLVEC")) | m.read(m.sym("GLVEC") + 1) << 8, 0, "the COM removes its transient driver before returning");
+  assert.deepEqual(geometry(m), [20, 4]);
+  assert.equal(m.read(m.sym("CONAUX")), 0);
   assert.equal(m.read(m.sym("CONMOD")), 3);
 });
 
@@ -566,11 +569,15 @@ test("LC-21 the hotkey cycles LCD, PICO, loaded GLCD and LCD without unloading",
   m.command("GLCD.SVC");
   con(m, "CON LCD");
   const before = entry(m);
+  m.write(3, 0xa7); // retain the other IOBYTE device fields
   hotkey(m);
+  assert.equal(m.read(3) & 0xfc, 0xa4);
   assert.equal(m.read(m.sym("CONMOD")), 1, "PICO");
   hotkey(m);
+  assert.equal(m.read(3) & 0xfc, 0xa4);
   assert.deepEqual(geometry(m), [21, 8], "GLCD");
   hotkey(m);
+  assert.equal(m.read(3) & 0xfc, 0xa4);
   assert.deepEqual(geometry(m), [20, 4], "LCD");
   assert.equal(entry(m), before, "no service removed");
   assert.ok(m.read(m.sym("GLVEC") + 1) !== 0);
@@ -580,13 +587,16 @@ test("LC-21 the hotkey cycles LCD, PICO, loaded GLCD and LCD without unloading",
 
 test("LC-20 a same-mode PICO width request is confirmed and timeout restores its former width", () => {
   const m = start({ matrix: true, tms: true });
+  m.write(3, 0xa7);
   con(m, "CON PICO 40");
+  assert.equal(m.read(3) & 0xfc, 0xa4);
   assert.deepEqual(geometry(m), [40, 24]);
   asked(m, "CON PICO 80");
   assert.deepEqual(geometry(m), [80, 24]);
   m.runUntil(() => m.ready() && m.read(m.sym("PIWID")) === 40, 200_000_000, "the former PICO width");
   assert.deepEqual(geometry(m), [40, 24]);
   assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
+  assert.equal(m.read(3) & 0xfc, 0xa4, "rollback preserves unrelated device fields");
   assert.deepEqual(m.violations, []);
 });
 
