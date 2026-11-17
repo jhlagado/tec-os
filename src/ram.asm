@@ -130,6 +130,17 @@ VCLAIM: DS 1     ; CDCLM while claimed
 CONMOD: DS 1     ; effective mode
 CONAUX: DS 1     ; UC1: 0 LCD, 1 driver
 
+; CON transaction state stays outside
+; the TPA and warm-boot bulk clear.
+; CONOLD bit 7 blocks recursive swaps;
+; bit 6 latches cold startup bypass.
+
+CONOLD: DS 1     ; saved mode and flags
+CAXOLD: DS 1     ; auxiliary selection
+CPIOLD: DS 1     ; PICO width
+CLDOLD: DS 1     ; LCD profile
+CGLDOLD: DS 2    ; old live driver identity
+
 ; Warm boot's BIOS stack, outside
 ; CCPCLR..BDOSRME. Cold boot and DIAG
 ; use STKTOP (KE-173).

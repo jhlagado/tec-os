@@ -141,6 +141,8 @@ DIAGNZ:
 
 WBOOTR:
   di
+  ld hl,CONOLD
+  res 7,(hl)     ; no abandoned question
   ld a,LATCLAS
   ld (LATCHV),a
   out (SYSLAT),a

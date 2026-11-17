@@ -188,6 +188,8 @@ VIDHOFF:
 
   cp LOW(GLVEC+1)
   jr nz,VIDHF1
+  ld hl,0
+  ld (CGLDOLD),hl ; invalidate saved owner
   ld hl,CONDEV
   res 2,(hl)
   ld hl,CONAUX
@@ -212,4 +214,5 @@ VIDHF1:
   xor (hl)
   ret nz
   ld (hl),a
+  ld (VCURV),a   ; no call to dropped code
   ret

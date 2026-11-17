@@ -141,6 +141,8 @@ STARTED:
 ; startup line, else 0.
 
 MAINLOOP:
+  ld hl,CONOLD
+  ld (hl),0      ; end errors and bypass
   ld sp,CSTKTOP  ; discard leftover
                  ; stack
 

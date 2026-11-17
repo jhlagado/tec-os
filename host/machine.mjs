@@ -360,10 +360,11 @@ export class Machine {
     this.inputRanges ??= [
       ["CINLP", "CINWE"],
       ["CSTPOLL", "CSTGOT"],
+      ["KWSARM", "KWSSTART"],
       ["CINMX", "CINME"],
       ["CSTMX", "CSTMXE"],
       ["KBPOLL", "KBDELIV"], // scanning the matrix keyboard for a key
-    ].map(([a, b]) => [this.sym(a), this.sym(b)]);
+    ].map(([a, b]) => [this.symbols.get(a), this.symbols.get(b)]).filter(([a, b]) => a !== undefined && b !== undefined);
     for (const [a, b] of this.inputRanges) if (pc >= a && pc < b) return true;
     return false;
   }
@@ -404,12 +405,13 @@ export class Machine {
     if (this.videoConsole()) return this.typeMatrix(text, maxCycles);
     const cin = this.sym("CINRX");
     const cst = this.sym("CSTRX");
+    const ckw = this.symbols.get("KWSRX");
     for (const ch of text) {
       const code = ch.charCodeAt(0);
       this.runUntil(() => this.waitingForInput(), maxCycles, `input request for ${JSON.stringify(ch)}`);
       this.tec1g.queueSerial([code]);
       this.runUntil(
-        () => (this.pc === cin || this.pc === cst) && (this.cpu.cpu.a & 0x7f) === (code & 0x7f),
+        () => (this.pc === cin || this.pc === cst || this.pc === ckw) && (this.cpu.cpu.a & 0x7f) === (code & 0x7f),
         maxCycles,
         `reception of ${JSON.stringify(ch)}`,
       );
@@ -574,7 +576,7 @@ export class Machine {
       return;
     }
     const pc = this.pc;
-    if ((pc === this.sym("CINRX") || pc === this.sym("CSTRX")) && (this.cpu.cpu.a & 0x7f) === (head.code & 0x7f)) {
+    if ((pc === this.sym("CINRX") || pc === this.sym("CSTRX") || pc === this.symbols.get("KWSRX")) && (this.cpu.cpu.a & 0x7f) === (head.code & 0x7f)) {
       p.shift();
     }
   }

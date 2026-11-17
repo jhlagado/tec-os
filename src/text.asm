@@ -50,9 +50,11 @@ CONNAMS:
 ; VALIDCHR scans them by count.
 
 CONHDR:
-  DB "CON: ",'$'
+  DB "CON: ",0
 PRESSK:
-  DB "Press a key",'$'
+  DB "Press a key",0
+LCD40MSG:
+  DB "LCD40?",CR,LF,0
 FILEEX:
   DB "FILE EXISTS",'$'
 ALLQUERY:

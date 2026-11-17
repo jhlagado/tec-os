@@ -553,3 +553,61 @@ test("LC-21 the hotkey cycles LCD, PICO, loaded GLCD and LCD without unloading",
   assert.ok(m.read(m.sym("GLVEC") + 1) !== 0);
   assert.deepEqual(m.violations, []);
 });
+
+
+test("LC-20 a same-mode PICO width request is confirmed and timeout restores its former width", () => {
+  const m = start({ matrix: true, tms: true });
+  con(m, "CON PICO 40");
+  assert.deepEqual(geometry(m), [40, 24]);
+  asked(m, "CON PICO 80");
+  assert.deepEqual(geometry(m), [80, 24]);
+  m.runUntil(() => m.ready() && m.read(m.sym("PIWID")) === 40, 200_000_000, "the former PICO width");
+  assert.deepEqual(geometry(m), [40, 24]);
+  assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-20 LCD to GLCD under UC1 asks and timeout restores the LCD without unloading", () => {
+  const m = start({ matrix: true, glcd: true, files: { "GLCD.SVC": GLCD_SVC } });
+  m.command("GLCD.SVC");
+  con(m, "CON LCD");
+  const before = entry(m);
+  asked(m, "CON GLCD");
+  assert.deepEqual(geometry(m), [21, 8]);
+  backOnLcd(m);
+  assert.deepEqual(geometry(m), [20, 4]);
+  assert.equal(m.read(m.sym("CONAUX")), 0);
+  assert.equal(entry(m), before);
+  assert.ok(m.read(m.sym("GLVEC") + 1) !== 0);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-20 LCD profile rollback restores 20 columns after a successful but unanswered 40-column request", () => {
+  const m = start({ matrix: true, lcd40: true });
+  asked(m, "CON LCD 40");
+  assert.deepEqual(geometry(m), [40, 4]);
+  backOnLcd(m);
+  assert.deepEqual(geometry(m), [20, 4]);
+  assert.equal(m.read(m.sym("LCDPRF")), 0);
+  assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-20 serial NUL traffic does not confirm or suspend the finite wait", () => {
+  const m = start({ matrix: true });
+  const from = asked(m, "CON TTY");
+  m.tec1g.queueSerial(Array(10000).fill(0));
+  const seconds = (backOnLcd(m) - from) / CLOCK;
+  assert.ok(seconds >= 9.5 && seconds <= 10.5, `NUL traffic: ${seconds} seconds`);
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-20 an invalid command clears its transaction so the recovery hotkey still works", () => {
+  const m = start({ matrix: true, tms: true });
+  assert.match(m.command("CON LCDX"), /LCDX\?/);
+  assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
+  hotkey(m);
+  assert.equal(m.read(m.sym("CONMOD")), 1);
+  assert.deepEqual(m.violations, []);
+});

@@ -73,6 +73,9 @@ CONSEL:
 ; Changes AF/BC/DE/HL and driver state.
 
 CONSW:
+  push af
+  call CURHIDE   ; old vectors still live
+  pop af
   ld b,a
   rrca
   ld a,b

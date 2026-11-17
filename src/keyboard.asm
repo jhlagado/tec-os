@@ -146,6 +146,9 @@ KBNONE:
 ; The key is consumed.
 
 KBSWAP:
+  ld a,(CONOLD)
+  rlca
+  jr c,KBNONE    ; no recursive change
   ld a,(CONMOD)
   rrca
   jr nc,KBNONE   ; serial excluded

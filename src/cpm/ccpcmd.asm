@@ -53,10 +53,11 @@ CONBAD:
 ; for CONNO.
 
 CMDCON:
-  ld a,(CONMOD)  ; the console in use,
-  push af        ; for CONSHOW's test
-  call ARGSKIP   ; argument/error start
-  jp z,CONSHOW   ; no operand: report
+  call ARGSKIP
+  jp z,CONRPT    ; report alone: no change
+  push hl
+  call CONSAVE
+  pop hl
   ld de,CONNAMS  ; four-byte name table
   ld b,0         ; TTY index 0
 
@@ -200,11 +201,23 @@ CONNW:
 ; different width fails before effects.
 
 CONLCD:
+  ld a,(CONDEV)
+  rrca
+  jr nc,CONSHOW  ; no matrix: keep serial
   ld a,c
   or a
   jr z,CONLOK    ; retain the profile
+  cp 20
+  jr z,CONLPRO
+  cp 40
+  jr nz,CONLB
+
+CONLPRO:
   call LCDWID
   jr nc,CONLOK
+  ld hl,LCD40MSG
+  call PUTS
+  jp MAINLOOP
 
 CONLB:
   jp BADCMD      ; the later refusals
@@ -223,6 +236,17 @@ CONLOK:
 ; A failed load restores that field.
 
 CONFL:
+  ld a,b
+  cp CMCRT
+  jr nz,CONFL1
+  ld a,(PIVEC+1)
+  or a
+  jr z,CONLB
+  ld a,(VCLAIM)
+  or a
+  jr nz,CONLB
+
+CONFL1:
   call CONFLD
   jr CONSHOW
 
@@ -231,50 +255,190 @@ CONGLCD:
   call CONFLD
   ld c,0
   call GLCLD
-  jr c,CONSHOW
+  jr nc,CONGOK
+  call CONROLL
+  jr CONSHOW
+
+CONGOK:
   ld a,1
   call CONASEL
 
 CONSHOW:
-  call CONREP    ; output triggers route
-  pop bc         ; B = the console before
-  ld a,(CONMOD)
-  cp b
-  jr z,CONMAIN   ; the same: no question
-
-; A new console must be answered from
-; its own keyboard. Otherwise the CON
-; field goes back to the console the
-; command came from, which is reported
-; there. A program's IOBYTE write is
-; not asked about.
-
-  push bc
-  ld de,PRESSK   ; "Press a key"
-  call PUTSTR
-  ld hl,KWPOLL   ; about ten seconds
-  call KEYWT     ; NZ: a key came
-  push af
-  ld de,CRLFMSG  ; the question's line
-  call PUTSTR    ; ends either way
-  pop af
-  pop bc
-  jr nz,CONMAIN  ; kept
-  call CONFLD    ; the console before
-  call CONREP    ; reported there
-
-CONMAIN:
+  call CONREP    ; apply and report target
+  call CONASK
+  call CONTEND
   jp MAINLOOP
 
-; Print CON: and the effective console's
-; name, then CR LF. The first output
-; applies a route change.
+CONRPT:
+  call CONREP
+  jp MAINLOOP
+
+; Snapshot the effective console, not
+; just its two IOBYTE mode bits. The
+; registered driver remains in GLVEC.
+; Its saved address is an identity to
+; compare, never a pointer to install.
+; Changes AF, BC, DE and HL.
+
+CONSAVE:
+  call CONSEL
+  ld a,(CONOLD)
+  and $40        ; cold bypass latch
+  ld b,a
+  ld a,(CONMOD)
+  or b
+  or $80
+  ld (CONOLD),a
+  ld a,(CONAUX)
+  ld (CAXOLD),a
+  ld a,(PIWID)
+  ld (CPIOLD),a
+  ld a,(LCDPRF)
+  ld (CLDOLD),a
+  ld hl,(GLVEC)
+  ld (CGLDOLD),hl
+  ret
+
+; Z when physical device and geometry
+; match the snapshot. An auxiliary
+; driver must be the same live table.
+; Changes AF, B, DE and HL.
+
+CONDIFF:
+  ld a,(CONOLD)
+  and 3
+  ld b,a
+  ld a,(CONMOD)
+  xor b
+  ret nz
+  ld a,b
+  cp CMCRT
+  jr z,CONDPIC
+  cp CMUC1
+  jr nz,CONDYES
+  ld a,(CAXOLD)
+  ld hl,CONAUX
+  xor (hl)
+  ret nz
+  ld a,(CONAUX)
+  or a
+  jr nz,CONDGLC
+  ld a,(CLDOLD)
+  ld hl,LCDPRF
+  cp (hl)
+  ret
+
+CONDPIC:
+  ld a,(CPIOLD)
+  ld hl,PIWID
+  cp (hl)
+  ret
+
+CONDGLC:
+  ld hl,(CGLDOLD)
+  ld de,(GLVEC)
+  or a
+  sbc hl,de
+  ret
+
+CONDYES:
+  xor a
+  ret
+
+; Confirm only a changed device or
+; width. This uses ROM console calls
+; so cold startup can share it before
+; the card and BDOS are available.
+; KEYWT takes a fresh target key.
+
+CONASK:
+  call CONDIFF
+  ret z
+  ld hl,PRESSK
+  call PUTS
+  ld hl,KWPOLL
+  call KEYWT
+  push af
+  call PUTCRLF
+  pop af
+  ret nz
+  call CONROLL
+  jp CONREP
+
+; Restore the former profile and route.
+; A driver drop clears CGLDOLD, so even
+; a new installation at the same page
+; cannot pass the identity comparison.
+; GLVEC is never written here. Missing
+; devices fall back to the ROM LCD,
+; then serial when no matrix is fitted.
+; Changes AF, BC, DE and HL.
+
+CONROLL:
+  ld a,(CLDOLD)
+  or a
+  jr nz,CONR40
+  ld a,20
+  call LCDWID
+  jr CONRPIC
+
+CONR40:
+  call LCDWSET
+
+CONRPIC:
+  ld a,(CPIOLD)
+  ld hl,PIWID
+  cp (hl)
+  jr z,CONRAUX
+  or a
+  jr z,CONRAUX   ; no former PICO
+  call TMSWID
+  jr nc,CONRAUX
+  xor a
+  call CONASEL
+  ld a,CMUC1
+  jp CONSW       ; unavailable width
+
+CONRAUX:
+  ld a,(CONOLD)
+  and 3
+  ld b,a
+  ld a,(CAXOLD)
+  or a
+  jr z,CONRSET
+  ld hl,(CGLDOLD)
+  ld a,h
+  or l
+  jr z,CONRSET   ; old identity gone
+  ld de,(GLVEC)
+  or a
+  sbc hl,de
+  ld a,0
+  jr nz,CONRSET
+  inc a          ; the same live driver
+
+CONRSET:
+  call CONASEL
+  ld a,b
+  jp CONSW
+
+; End a transaction after success or
+; rollback. Error and warm-boot paths
+; clear the same flag independently.
+
+CONTEND:
+  ld hl,CONOLD
+  res 7,(hl)
+  ret
+
+; Report through ROM output, available
+; before BDOS initialisation as well.
 
 CONREP:
-  ld de,CONHDR
-  call PUTSTR
-  ld a,(CONMOD)  ; effective mode
-  add a,a        ; four bytes per name
+  ld hl,CONHDR
+  call PUTS
+  ld a,(CONMOD)
+  add a,a
   add a,a
   ld l,a
   ld h,0
@@ -283,49 +447,218 @@ CONREP:
   ld b,4
 
 CONSH1:
-  ld e,(hl)
-  call PUTCHAR   ; keeps BC/HL
+  push bc
+  push hl
+  ld a,(hl)
+  call PUTA
+  pop hl
+  pop bc
   inc hl
   djnz CONSH1
-  ld de,CRLFMSG
-  jp PUTSTR
+  jp PUTCRLF
 
-; Wait HL polls for a key from the
-; console in effect, through the BIOS,
-; which shows the cursor. KWPOLL polls
-; are about ten seconds. NZ: a key came
-; and is taken, in A. Z: none. A matrix
-; console's poll is padded to the length
-; of a serial one, so that the wait is
-; the same on each. Cold boot calls it
-; before the BDOS runs.
-; Changes AF/BC/DE/HL.
+; Wait a finite processor-work budget
+; for a fresh key on the selected
+; keyboard. Discard prior bytes and
+; arrow tails. Matrix input first needs
+; all keys released. Serial first needs
+; at least twelve idle bit periods.
+; No housekeeping or route change runs
+; inside this timed wait. Normal BIOS
+; input keeps its existing behaviour.
+; HL is the calibrated slot budget.
+; NZ: consumed key in A; Z: timeout.
+; Changes AF, BC, DE and HL.
 
 KEYWT:
-  push hl
-  call BCONSTC   ; routes, cursor shown
-  pop hl
-  or a
-  jr z,KEYW1
-  call BCONIN    ; a key: take it
-  or a           ; NZ: never a zero
-  ret
-
-KEYW1:
+  xor a
+  ld (RXFULL),a
+  ld (KBTN),a
   ld a,(CONMOD)
-  rrca           ; matrix consoles
-  jr nc,KEYW3
+  rrca
+  jr nc,KEYWS
+  push hl
+  call CURSHOW
+  pop hl
+  ld de,0        ; E: release observed
+
+KEYWM:
+  push hl
+  push de
+  call KEYUP
+  pop de
+  jr nz,KEYWM1
+  ld e,1
+
+KEYWM1:
+  push de
+  call KBPOLL
+  pop de
+  pop hl
+  jr z,KEYWM3
+  ld a,e
+  or a
+  jr z,KEYWM2
+  ld a,(RXCHAR)
+  jr KEYWTAKE
+
+KEYWM2:
+  xor a          ; held/pending input
+  ld (RXFULL),a
+  ld (KBTN),a
+
+KEYWM3:
   ld b,KWPAD
 
-KEYW2:
-  djnz KEYW2
-
-KEYW3:
+KEYWM4:
+  djnz KEYWM4
   dec hl
   ld a,h
   or l
-  jr nz,KEYWT
-  ret            ; Z: no key
+  jr nz,KEYWM
+  jr KEYWZERO
+
+KEYWS:
+  ld de,0        ; D: idle slots, E armed
+
+KEYWS1:
+  push hl
+  call KWSPOLL
+  pop hl
+  jr nz,KEYWTAKE
+  ld b,1
+  jr nc,KEYWS2
+  ld b,3         ; a received frame
+
+KEYWS2:
+  dec hl
+  ld a,h
+  or l
+  jr z,KEYWZERO
+  djnz KEYWS2
+  jr KEYWS1
+
+KEYWTAKE:
+  push af
+  xor a
+  ld (RXFULL),a
+  ld (KBTN),a
+  call CURHIDE
+  pop af
+  or a
+  ret
+
+KEYWZERO:
+  call CURHIDE
+  xor a
+  ret
+
+; Scan every matrix row at fixed cost.
+; Z means all keys are up. No key is
+; translated or published here.
+; Changes AF, BC and D.
+
+KEYUP:
+  ld bc,$FEFE
+  ld d,$FF
+
+KEYUP1:
+  in a,(c)
+  and d
+  ld d,a
+  rlc b
+  jr c,KEYUP1
+  inc d
+  ret
+
+; One bounded serial poll. Unarmed:
+; accumulate complete idle windows, so
+; a prior partial frame cannot confirm.
+; Armed: detect a start with the normal
+; tight poll, receive one byte and check
+; both stop bits. Any rejected frame
+; returns to idle qualification.
+; A=0/Z for none, key/NZ for a fresh
+; non-NUL frame. Carry charges a frame
+; as three slots instead of one.
+; Keeps HL. Changes AF, BC and DE.
+
+KWSPOLL:
+  in a,(KEYPORT)
+  ld a,e
+  or a
+  jr nz,KWSARM
+  ld c,$FF
+  ld b,97
+
+KWSIDLE:
+  in a,(STSPORT)
+  and c
+  ld c,a
+  djnz KWSIDLE
+  rlc c
+  jr nc,KWSLOW
+  inc d
+  ld a,d
+  cp 4           ; over twelve bit times
+  jr c,KWSNONE
+  ld e,1
+
+KWSNONE:
+  xor a
+  ret
+
+KWSLOW:
+  ld d,0
+  jr KWSNONE
+
+KWSARM:
+  ld b,RXPOLL
+
+KWSLOOK:
+  in a,(STSPORT)
+  rlca
+  jr nc,KWSSTART
+  djnz KWSLOOK
+  ld b,38
+
+KWSPAD:
+  djnz KWSPAD
+  xor a
+  ret
+
+KWSSTART:
+  call RXBITS
+  push af
+  in a,(STSPORT)
+  ld c,a         ; first stop sample
+  ld d,RXDLY
+
+KWSSTOP:
+  dec d
+  jr nz,KWSSTOP
+  in a,(STSPORT)
+  and c          ; both stops high
+  and $80
+  ld e,a
+  pop af
+  bit 7,e
+  jr z,KWSBAD
+  and $7F
+  jr z,KWSBAD
+
+KWSRX:
+  or a
+  scf
+  ret
+
+KWSBAD:
+  ld de,0
+  xor a
+  scf
+  ret
+
+KWSEND:
 
 ; Prepare transient page zero after a
 ; successful load. Input (ARGSTRT) is
