@@ -125,7 +125,7 @@ closes the file. `STLINE` extracts its command from the available 128 bytes.
 ## Taking the line
 
 The command is taken at the ordinary input boundary. Without a shell,
-`MLDRV` prints the prompt and first checks function 47 input. `STLINE`
+`MLBARE` prints the prompt and first checks function 47 input. `STLINE`
 then precedes keyboard input, returning carry clear for a line or set
 for none. Keyboard function 10 runs with `HFLAG` clear, so startup adds
 no history (`241b438:src/cpm/ccp.asm:184-204`). If the line installs the shell,

@@ -268,9 +268,9 @@ identity. Housekeeping source instead uses 16,016/free 368, ROM
 data C00Bh–C61Fh (1,557), code C620h–FE8Fh (14,448), free FE90h–FFFFh
 (368). These identities do not constitute fresh native-book captures or final
 integration qualification (`a40d482:docs/memory-map.md:24-32`). Without the
-SAVE and USER commands the source uses 15,713/free 671, ROM
-`e34788081c7565462d5bca52b50714cb30dbe491fa487f8327fb6a0b26de36a8`,
-data C00Bh–C608h (1,534), code C609h–FD60h (14,168), free FD61h–FFFFh (671).
+SAVE and USER commands the source uses 15,717/free 667, ROM
+`35893cab810bf6757e5992ec492ec37a113828674e33d10da2e48dfa706b0bc8`,
+data C00Bh–C608h (1,534), code C609h–FD64h (14,172), free FD65h–FFFFh (667).
 
 In the cited build, 15,312 of 16,384 bytes are used. The complete hash is
 `ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3`

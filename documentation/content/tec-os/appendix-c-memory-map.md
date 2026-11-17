@@ -35,7 +35,7 @@ addresses come from `build/tecos/tecos.d8.json`. Other builds need their own
 symbol files for build-dependent addresses.
 
 The TPA and resident workspace rows have since been restated for the source
-without the SAVE and USER commands, whose ROM SHA-256 begins `e3478808`.
+without the SAVE and USER commands, whose ROM SHA-256 begins `35893cab`.
 Removing SAVE took three bytes from the CCP's block; removing USER took
 none. The fields from `DSKCUR` to `DIRNUM`,
 the allocation vectors and the bare BDOS entry are therefore three bytes
@@ -129,10 +129,10 @@ housekeeping source uses 16,016 bytes/free 368, ROM
 `c95862634ee002bb9a5ef1d3d0ee8ea831e12fda4e96792b36454170aafabf7f`:
 data C00Bh–C61Fh (1,557), code C620h–FE8Fh (14,448), free FE90h–FFFFh
 (368). These source identities are not replacement capture receipts
-(`a40d482:docs/memory-map.md:24-32`). Without SAVE and USER the source uses 15,713
-bytes/free 671, ROM
-`e34788081c7565462d5bca52b50714cb30dbe491fa487f8327fb6a0b26de36a8`:
-data C00Bh–C608h (1,534), code C609h–FD60h (14,168), free FD61h–FFFFh (671).
+(`a40d482:docs/memory-map.md:24-32`). Without SAVE and USER the source uses 15,717
+bytes/free 667, ROM
+`35893cab810bf6757e5992ec492ec37a113828674e33d10da2e48dfa706b0bc8`:
+data C00Bh–C608h (1,534), code C609h–FD64h (14,172), free FD65h–FFFFh (667).
 
 The ROM occupies these ranges:
 

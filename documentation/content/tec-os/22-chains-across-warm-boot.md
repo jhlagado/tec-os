@@ -351,7 +351,7 @@ later piece. An empty replacement is valid because its first byte is zero.
 (`241b438:drivers/shell.asm:188-190`).
 
 Without a shell, replacement still works but splitting does not.
-`MLDRV` reads and clears `CHPOS`. With bit 0 set, `MLCHN` echoes
+`MLBARE` reads and clears `CHPOS`. With bit 0 set, `MLCHN` echoes
 `CMDTXT` to zero and executes the whole line. `TYPE X!TYPE Y` therefore
 runs TYPE with tail `X!TYPE Y` (`241b438:src/cpm/ccp.asm:184-228`,
 `241b438:docs/shell.md:42-43`).
