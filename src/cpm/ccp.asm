@@ -312,14 +312,18 @@ SHENT:
   ld l,a
   ret
 
-; Save the prompt's drive at 0004h:
-; query the default drive through BDOS
-; 25 and store it whole, so the byte's
-; user nibble is always zero. Return the
-; drive in A. BC/DE/HL/F may change
-; through BDOS.
+; Put the BDOS back in user area 0 and
+; save the prompt's drive at 0004h. A
+; service's INIT or REMOVE, or a shell
+; hook, returns here with no warm boot,
+; so the area is cleared directly. BDOS
+; 25 gives the drive, stored whole: the
+; user nibble is zero. Return the drive
+; in A. BC/DE/HL/F may change.
 
 SAVEDRV:
+  xor a
+  ld (USERNO),a  ; the prompt's area 0
   ld c,25        ; 25: logical default
   call BDOS
   ld (CURDSK),a  ; drive, user nibble 0
