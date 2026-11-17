@@ -2,8 +2,8 @@
 
 This document retains the pre-optimisation 39,680-byte baseline. The 38,272-byte
 build after it, from compact source-location emission, is in
-[compact emission](caverns-compact-emission.md). The current 33,280-byte build,
-compiled by Baza `5f6b58d`, is in [Caverns](caverns.md) and the
+[compact emission](caverns-compact-emission.md). The current 29,056-byte build,
+compiled by Baza `eee4ee6`, is in [Caverns](caverns.md) and the
 [book handover](caverns-book-handover.md).
 The audit tool measures its current checkout; use the historical baseline commit
 to reproduce the older numbers below.

@@ -124,7 +124,7 @@ node tools/tecvol.mjs verify card.img
 
 The verified copy has this layout and directory summary:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): host-tool output of the commands above. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): host-tool output of the commands above; starter payload sizes refreshed from the current recipe card, with TED project/session rows retained from the worked card. -->
 ```text
 container: format 1.1, 26624 blocks (13631488 bytes), 5 volume(s), 4 drive(s) wanted
   A: SYSTEM      id 1 G1M start 2048 rw 17 file(s), 905216 bytes free
@@ -145,9 +145,9 @@ node tools/tecvol.mjs dir card.img B
 A's complete listing contains the fifteen starter files plus TED's
 project and session files:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 3b70301a): host-tool output of the commands above. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 3b70301a): host-tool output of the commands above; starter payload sizes refreshed from the current recipe card, with TED project/session rows retained from the worked card. -->
 ```text
- 0 BAZA.COM        13312
+ 0 BAZA.COM        13440
  0 BAZA.RTL        13056
  0 BOUNCE.BAS       5376
  0 CAVBASIC.BAS    18816

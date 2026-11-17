@@ -15,7 +15,8 @@ nav_group: "Using the machine"
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
-     Baza is the qualified 5f6b58d payload. Source-derived excerpts are
+     Baza is the eee4ee6 payload; integration qualification is recorded
+     separately. Source-derived excerpts are
      labelled separately from console captures. -->
 
 The starter card contains programs you can use and source files you can
@@ -73,7 +74,7 @@ graphics LCD. In this session it leaves the PICO9918 selected as the
 after the prompt and press Return. The prompt is already on screen, so it
 is not part of the command you enter. The same session produced:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 3b70301a): node tools/capture.mjs --board pico --screen DIR. The PICO9918's 40-column screen from the DIR line; right-hand blanks and empty bottom rows omitted. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card bad3b437): node tools/capture.mjs --board pico --screen DIR. The PICO9918's 40-column screen from the DIR line; right-hand blanks and empty bottom rows omitted. -->
 ```text
 A:SYSTEM>DIR
 
@@ -84,7 +85,7 @@ TED.COM        12416
 SAMPLE.ASM      4608
 TIMES.BAS        640
 TAS.COM        11136
-BAZA.COM       13312
+BAZA.COM       13440
 BAZA.RTL       13056
 BOUNCE.BAS      5376
 CAVERNS.TXT     2688
@@ -92,7 +93,7 @@ DEMO.ASM       15360
 MON3.SVC        5248
 HELLO3.ASM      2176
 CAVBASIC.BAS   18816
-15 files, 110080 bytes
+15 files, 110208 bytes
 909312 free on A:SYSTEM
 A:SYSTEM>
 ```
@@ -153,7 +154,7 @@ A drive letter followed by a colon changes the current drive. `B:` selects
 WORK and `A:` returns to SYSTEM. This screen follows the listing above
 with both drive commands:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 3b70301a): node tools/capture.mjs --board pico --screen DIR B: A:. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card bad3b437): node tools/capture.mjs --board pico --screen DIR B: A:. Full screen; trailing empty rows omitted. -->
 ```text
 A:SYSTEM>GLCD.SVC
 
@@ -166,7 +167,7 @@ TED.COM        12416
 SAMPLE.ASM      4608
 TIMES.BAS        640
 TAS.COM        11136
-BAZA.COM       13312
+BAZA.COM       13440
 BAZA.RTL       13056
 BOUNCE.BAS      5376
 CAVERNS.TXT     2688
@@ -174,7 +175,7 @@ DEMO.ASM       15360
 MON3.SVC        5248
 HELLO3.ASM      2176
 CAVBASIC.BAS   18816
-15 files, 110080 bytes
+15 files, 110208 bytes
 909312 free on A:SYSTEM
 A:SYSTEM>B:
 B:WORK>A:

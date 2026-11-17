@@ -10,10 +10,10 @@ nav_group: "Using the machine"
 <!-- Source and test contracts checked at TEC-OS
      46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      programs/TIMES.BAS, test/times.test.mjs and test/ted-baza.test.mjs.
-     TED.COM is pinned at Thorium 20339b8 and Baza at 5f6b58d. The BAZA
+     TED.COM is pinned at Thorium 20339b8 and the compiler/runtime pair at Baza eee4ee6. The BAZA
      screen was retaken with the landed firmware; outputs taken from strict
      test assertions are labelled as source-derived excerpts, not captures.
-     Both full firmware strict passes include the BASIC and TED scenarios.
+     Current compiler/card qualification is retained in docs/evidence/caverns-baza-shared-publish; earlier source/test citations remain historical.
      Host-model evidence is retained in Origo's book-recovery-core and
      book-recovery-host evidence; explicitly historical source/test excerpts
      retain their stated revisions. -->
@@ -264,9 +264,10 @@ also include `XOR`, `WAIT port, mask` for waiting on a port bit and
 `SWAP a, b` for exchanging variables
 (`Baza 5f6b58d:docs/mbasic.md:10-12`, `:38-50`).
 
-`BAZA.COM` is a 13,312-byte packed file. Each invocation unpacks it into
-the 17,280-byte compiler, adding about a quarter of a second to a compile
-(`Baza 5f6b58d:docs/size-account.md:5-10`, `:29-32`).
+`BAZA.COM` is a 13,440-byte packed file. Each invocation unpacks it into
+the 17,408-byte compiler image. The compiler uses the same 20,679 bytes of
+memory as before (`Baza eee4ee6:dist/compiler-build.json`,
+`Baza eee4ee6:docs/size-account.md`).
 
 TIMES.BAS uses capital keywords, lower-case variable names and spaces
 between words. Its remarks are sentences and its quoted text is in
