@@ -15,7 +15,7 @@ nav_group: "Reference"
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
-     Baza is the qualified 5f6b58d payload. Source-derived excerpts are
+     Baza is the qualified eee4ee6 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 A card image is a file you can prepare, inspect and copy on a PC before
@@ -190,9 +190,9 @@ directory is:
 node tools/tecvol.mjs dir dist/starter.img A
 ```
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 3b70301a): host-tool output of the command above. -->
+<!-- TEC-OS with the sized DIR (ROM 35893cab, starter card 196578de): host-tool output of the command above. -->
 ```text
- 0 BAZA.COM        13312
+ 0 BAZA.COM        13440
  0 BAZA.RTL        13056
  0 BOUNCE.BAS       5376
  0 CAVBASIC.BAS    18816

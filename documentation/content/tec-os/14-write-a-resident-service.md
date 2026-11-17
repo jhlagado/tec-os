@@ -15,7 +15,7 @@ nav_group: "Writing programs"
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
-     Baza is the qualified 5f6b58d payload. Source-derived excerpts are
+     Baza is the qualified eee4ee6 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 Counting output across several program runs requires code that remains in

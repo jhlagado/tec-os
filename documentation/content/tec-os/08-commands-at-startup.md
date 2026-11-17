@@ -15,7 +15,7 @@ nav_group: "Using the machine"
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
-     Baza is the qualified 5f6b58d payload. Source-derived excerpts are
+     Baza is the qualified eee4ee6 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 Commands in `A:STARTUP.CMD` repeat your usual setup after reset.
@@ -213,7 +213,7 @@ node tools/tecvol.mjs put w32.img A startup.cmd --text
 The banner and volumes first appeared at 40 columns. Selecting 32
 cleared the screen before the reply. A later DIR produced this display:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 3b70301a): node tools/capture.mjs --card w32.img --board pico --screen DIR. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS with the sized DIR (ROM 35893cab, starter card 196578de): node tools/capture.mjs --card w32.img --board pico --screen DIR. Full screen; trailing empty rows omitted. -->
 ```text
 CON: CRT:
 A:SYSTEM>GLCD.SVC
@@ -227,7 +227,7 @@ TED.COM        12416
 SAMPLE.ASM      4608
 TIMES.BAS        640
 TAS.COM        11136
-BAZA.COM       13312
+BAZA.COM       13440
 BAZA.RTL       13056
 BOUNCE.BAS      5376
 CAVERNS.TXT     2688
@@ -235,7 +235,7 @@ DEMO.ASM       15360
 MON3.SVC        5248
 HELLO3.ASM      2176
 CAVBASIC.BAS   18816
-15 files, 110080 bytes
+15 files, 110208 bytes
 909312 free on A:SYSTEM
 A:SYSTEM>
 ```

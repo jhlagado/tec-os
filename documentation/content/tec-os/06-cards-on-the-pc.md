@@ -15,7 +15,7 @@ nav_group: "Using the machine"
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED 02b63d8;
-     Baza is the qualified 5f6b58d payload. Source-derived excerpts are
+     Baza is the qualified eee4ee6 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 A card image keeps a copy of your work on the PC. You can extract source
@@ -145,9 +145,9 @@ node tools/tecvol.mjs dir card.img B
 A's complete listing contains the fifteen starter files plus TED's
 project and session files:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 3b70301a): host-tool output of the commands above. -->
+<!-- TEC-OS with the sized DIR (ROM 35893cab, starter card 196578de): host-tool output of the commands above. -->
 ```text
- 0 BAZA.COM        13312
+ 0 BAZA.COM        13440
  0 BAZA.RTL        13056
  0 BOUNCE.BAS       5376
  0 CAVBASIC.BAS    18816
