@@ -116,7 +116,7 @@ export async function callSides({ svc } = {}) {
   logGlcd(r.m);
   const rom = mon3Rom();
   const ref = { kind: "reference", m: r.m, side: r, routine: (a) => rom[MON3_GTABLE - 0xc000 + 2 * a] | (rom[MON3_GTABLE - 0xc000 + 2 * a + 1] << 8) };
-  const { m, svc: built } = await inSession({ "DRV.BIN": DRV }, { svc });
+  const { m, svc: built } = await inSession({ "DRV.BIN": DRV }, { svc, gfx: true });
   line(m, "LOAD DRV.BIN");
   goTo(m, "GO", 0x4000, 20_000_000);
   logGlcd(m);
@@ -393,7 +393,7 @@ export function programReference(bytes, { ldar = [] } = {}) {
  * SVC: the service; MACHINE: the machine's options.
  */
 export async function programSession(bytes, { svc, ldar = [], machine } = {}) {
-  const { m } = await inSession({ "PROG.BIN": bytes }, { svc, machine });
+  const { m } = await inSession({ "PROG.BIN": bytes }, { svc, machine, gfx: true });
   const r = line(m, "LOAD PROG.BIN");
   if (!r.mon3 || /\?/.test(r.out.split("LOAD")[1] ?? "")) throw new Error(`LOAD PROG.BIN: ${r.out}`);
   const { volume } = await import("./fixtures.mjs");

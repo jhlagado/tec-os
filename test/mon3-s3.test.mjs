@@ -55,7 +55,7 @@ for (const [name, why] of [["glcd-3d", /undefined symbol Q033/], ["glcd-demo", /
 // refuses 34 and FFh by RST 18h, and those rows are compared with it too.
 
 let refusalSides;
-const theRefusalSides = async () => (refusalSides ??= { ref: await referenceSide(), ses: await sessionSide() });
+const theRefusalSides = async () => (refusalSides ??= { ref: await referenceSide(), ses: await sessionSide({ gfx: true }) });
 
 test("KG67 rst 18h refusals", async () => {
   const { ref, ses } = await theRefusalSides();
@@ -257,7 +257,7 @@ test("KG67 mutant: the range test 20, selector 20 refused", async () => {
 test("KG67 mutant: the range test 22, selector 21 runs the word after the table", async () => {
   const svc = await mon3Variant([["  cp 21          ; calls 0 to 20\n", "  cp 22          ; calls 0 to 20\n"]]);
   const { ref } = await theRefusalSides();
-  const ses = await sessionSide({ svc });
+  const ses = await sessionSide({ svc, gfx: true });
   // A refused RST 18h runs in page zero only at its slot and the latch
   // stub. The word after the table jumps elsewhere: the run stops there.
   const step = ses.m.step.bind(ses.m);
@@ -448,7 +448,7 @@ function unreadable(m, prompt) {
 
 /** BYTES run by GO AT on the GLCD-console board with SVC, to MON3>: the machine and the console's text from GO. */
 async function glcdGo(svc, bytes, at = 0x4000, matrix = true) {
-  const { m } = await inSession({ "PROG.BIN": bytes }, { svc, machine: { matrix } });
+  const { m } = await inSession({ "PROG.BIN": bytes }, { svc, machine: { matrix }, gfx: true });
   assert.ok(line(m, "LOAD PROG.BIN").mon3);
   goTo(m, `GO ${at.toString(16)}`, at, 20_000_000);
   m.mark = m.output.length;

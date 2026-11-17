@@ -73,7 +73,7 @@ export const state = (m, svc, name) => m.read((pageOf(m) << 8) + svc.symbols[nam
 export const runnable = (m, svc) => state(m, svc, "RUNOK");
 
 /** A session on a card with FILES and TEXT files, MON3.SVC (SVC, or the build) installed and entered. */
-export async function inSession(files = {}, { svc, machine: opts, text, gfx = true } = {}) {
+export async function inSession(files = {}, { svc, machine: opts, text, gfx = false } = {}) {
   svc ??= await mon3Build();
   const withGfx = gfx && svc.gfx;
   const m = boot({ "MON3.SVC": svc.file, ...(withGfx ? { "MON3GFX.SVC": svc.gfx.file } : {}), ...files }, opts, text);

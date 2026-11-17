@@ -748,7 +748,10 @@ const gaps = (x, port) => {
 };
 
 /** The restart handlers' first instruction after POP HL, in the session. */
-const HANDLERS = { 0x08: "R08", 0x10: "R10", 0x18: "R18", 0x20: "R20", 0x28: "R28", 0x30: "R30", 0x38: "R38" };
+// RST 18h's handler, without MON3GFX.SVC, is the hook's JP to R18N, whose POP
+// HL comes 10 T later than the others'.
+const HANDLERS = { 0x08: "R08", 0x10: "R10", 0x18: "R18N", 0x20: "R20", 0x28: "R28", 0x30: "R30", 0x38: "R38" };
+const TO_POP = { 0x18: 111 };
 
 async function timing(sides) {
   const { ref, ses } = sides ?? (await theKeypadSides());
@@ -781,7 +784,7 @@ async function timing(sides) {
     const S = ses.run({ name: `RST ${n}`, op: RST[n], regs: { bc: 0x1200 | 3 }, stopAt: ses.at(h) + 1 }, image);
     out.rst[n] = S.end - S.atRestart;
   }
-  for (const [n, t] of Object.entries(out.rst)) assert.equal(t, 101, `RST ${Number(n).toString(16)}h: ${t} T to the handler after POP HL`);
+  for (const [n, t] of Object.entries(out.rst)) assert.equal(t, TO_POP[n] ?? 101, `RST ${Number(n).toString(16)}h: ${t} T to the handler after POP HL`);
   const irq = (nmi, stop) => ({ name: nmi ? "the NMI" : "the interrupt", op: 0xfb, next: "WAIT", events: [{ at: 200, fire: (side) => side.interrupt(nmi) }], mem: [nmi ? 0x0894 : 0x0892, [ref.sym.INTH & 0xff, ref.sym.INTH >> 8]], stopAt: stop });
   const SI = ses.run(irq(false, ses.at("R38") + 1), image);
   out.irq = SI.end - SI.irqAt;

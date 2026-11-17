@@ -192,9 +192,9 @@ export async function referenceSide({ matrix = false } = {}) {
 }
 
 /** The session: TEC-OS with MON3.SVC (SVC) entered, the driver loaded as DRV.BIN and run by GO to START. */
-export async function sessionSide({ svc, matrix = false } = {}) {
+export async function sessionSide({ svc, matrix = false, gfx = false } = {}) {
   const { bytes, symbols } = await driver();
-  const { m, svc: s } = await inSession({ "DRV.BIN": bytes }, { svc, machine: { matrix } });
+  const { m, svc: s } = await inSession({ "DRV.BIN": bytes }, { svc, machine: { matrix }, gfx });
   assert.ok(line(m, "LOAD DRV.BIN").mon3);
   m.mark = m.output.length;
   m.type("GO\r");
