@@ -5,8 +5,8 @@
 ; joined by ! and &, .CMD scripts, the
 ; rest of STARTUP.CMD, COPY, DEL,
 ; SERVICES, CD and the volume in the
-; prompt, DIR with sizes, CLS, ECHO,
-; PAUSE, the pager and the history
+; prompt, DIR through A:DIR.COM, CLS,
+; ECHO, PAUSE, the pager and the history
 ; ring. Every other piece goes back to
 ; the ROM to run. The hook's contract,
 ; the .CMD rules and the separators are
@@ -521,12 +521,15 @@ HAND0:
   ld (PIECE),hl
 
 ; Give the piece to the ROM to run:
-; copy it to its buffer, restore the
-; CCP's stack and return its origin.
+; copy it to its buffer, at most 127
+; bytes, which the ROM ends with a zero,
+; restore the CCP's stack and return its
+; origin.
 
 HAND:
   ld hl,(PIECE)
   ld de,(OUTP)   ; DE = the ROM's
+  ld b,127       ; the buffer's room
 
 HC1:
   ld a,(hl)
@@ -534,7 +537,10 @@ HC1:
   inc hl
   inc de
   or a
-  jr nz,HC1      ; to the zero, copied
+  jr z,HC2       ; to the zero, copied
+  djnz HC1       ; or to the room's end
+
+HC2:
   ld a,(LORG)    ; the line's origin
   ld sp,(SAVSP)  ; the CCP's stack
   ret            ; to the ROM
@@ -643,6 +649,38 @@ CS1:
   ld (SORG),a    ; its lines are typed
   jr BDONE       ; its first line next
 
+; DIR /W is the ROM's wide listing; DIR
+; with any other tail, or none, runs
+; A:DIR.COM with the same tail. A: goes
+; in the two bytes before the word: the
+; last piece's, or LBUF's capacity and
+; count, which the line no longer needs.
+
+CMDDIR:
+  call SKIPSP    ; to the operand
+  ld a,(hl)
+  cp '/'         ; a switch?
+  jr nz,DRCOM    ; no switch
+  inc hl
+  ld a,(hl)      ; its letter
+  dec hl
+  and $DF        ; w or W
+  cp 'W'         ; another is a bad
+  jr nz,DRCOM    ; name, refused there
+  ld (hl),SPACE  ; /W blanked: the
+  inc hl         ; ROM's DIR runs
+  ld (hl),SPACE  ; the rest
+  jp HAND        ; to the ROM
+
+DRCOM:
+  ld hl,(PIECE)  ; DIR's word
+  dec hl
+  ld (hl),':'    ; the drive's colon
+  dec hl
+  ld (hl),'A'    ; A:DIR
+  ld (PIECE),hl
+  jp HAND        ; the ROM loads it
+
 ; The shell's keywords, each zero-ended
 ; with its handler.
 
@@ -668,7 +706,6 @@ SHTAB:
 %INCLUDE "shellcmd.asm"
 %INCLUDE "shellio.asm"
 %INCLUDE "shellcd.asm"
-%INCLUDE "shelldir.asm"
 
 IMGEND:
 
@@ -744,16 +781,7 @@ LTXT EQU LBUF+2
 ; walk sets CDIDX to the index found
 ; plus 1 and CDON to the drive it is
 ; on. VIDX is the walk's index, VLIST
-; set to list. DIR: DDRV its drive,
-; DSKIP the matches consumed, DNUM the
-; files shown, DTOT their bytes, DPASS
-; its pass, DRST set to begin the
-; search again, DFAST the table mode,
-; HMAP the marked names.
-; NUMV is a 24-bit number, DIGB its
-; digits. CD prints no number, so
-; CDNAME shares their bytes; a walk
-; only reads it.
+; set to list. CDNAME is 11 bytes.
 
 ; A volume's descriptor, which TNDESC
 ; puts in CFCB, has its drive (FFh for
@@ -762,29 +790,14 @@ LTXT EQU LBUF+2
 DSDRV     EQU   CFCB+14
 DSLBL     EQU   CFCB+16
 
-; DIR searches with CFCB, whose extent
-; byte is CFEX.
-
-CFEX      EQU   CFCB+12
-
 LBL       EQU   LBUF+130
 CDDRV     EQU   LBL+44
 CDIDX     EQU   CDDRV+1
 CDON      EQU   CDIDX+1
 VIDX      EQU   CDON+1
 VLIST     EQU   VIDX+1
-DDRV      EQU   VLIST+1
-DSKIP     EQU   DDRV+1
-DNUM      EQU   DSKIP+2
-DTOT      EQU   DNUM+2
-NUMV      EQU   DTOT+3
-DIGB      EQU   NUMV+3
-CDNAME    EQU   NUMV
-DPASS     EQU   DIGB+9
-DRST      EQU   DPASS+1
-DFAST     EQU   DRST+1
-HMAP      EQU   DFAST+1
-STKBOT    EQU   HMAP+16
+CDNAME    EQU   VLIST+1
+STKBOT    EQU   CDNAME+11
 STKTOP    EQU   STKBOT+48
 
 ; The ring is the last page, aligned so

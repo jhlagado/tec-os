@@ -53,7 +53,7 @@ const TAS_KEY = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8
  * another assembler or another TAS is not read.
  */
 export async function program(name, { base = 0x100 } = {}) {
-  const src = name === "demo" ? resolve(ROOT, "programs/DEMO.ASM") : resolve(ROOT, "test/programs", `${name}.asm`);
+  const src = name === "demo" ? resolve(ROOT, "programs/DEMO.ASM") : name === "dir" ? resolve(ROOT, "drivers/dir.asm") : resolve(ROOT, "test/programs", `${name}.asm`);
   const digest = sourceDigest(src);
   const cacheDir = resolve(ROOT, "build/test-programs");
   const out = resolve(cacheDir, `${name}-${digest}-${TAS_KEY}-${base.toString(16)}.bin`);
@@ -128,14 +128,18 @@ export const GLCD_SVC = (await makeSvc(resolve(ROOT, "drivers/glcd.asm"), { work
 /** SHELL.SVC, the resident shell, built from drivers/shell.asm. */
 export const SHELL_SVC = (await makeSvc(resolve(ROOT, "drivers/shell.asm"), { work: resolve(ROOT, "build/svc") })).file;
 
+/** DIR.COM, the sized DIR the shell runs for DIR, from drivers/dir.asm. */
+export const DIR_COM = (await program("dir")).bytes;
+
 /**
- * IMAGE with SHELL.SVC on A: and a STARTUP.CMD of SHELL.SVC, then LINES, so
+ * IMAGE with SHELL.SVC and DIR.COM on A: and a STARTUP.CMD of SHELL.SVC, then LINES, so
  * that it boots with the shell holding the prompt: the shell runs the lines
  * after its own, which the ROM alone would not.
  */
 export function withShell(image, ...lines) {
   const a = volume(image, "A");
   a.write("SHELL.SVC", SHELL_SVC);
+  a.write("DIR.COM", DIR_COM);
   a.write("STARTUP.CMD", startupFile("SHELL.SVC", ...lines));
   return image;
 }

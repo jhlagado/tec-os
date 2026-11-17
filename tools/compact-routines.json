@@ -897,7 +897,8 @@
     "CMDDEL",
     "BADW",
     "FAILED",
-    "CMDSCR"
+    "CMDSCR",
+    "CMDDIR"
   ],
   "drivers/shellcmd.asm": [
     "CMDSVC",
@@ -909,12 +910,9 @@
     "CPNAME",
     "CPPARSE",
     "ENDCHK",
+    "SETDMA",
     "DOSSEQ",
-    "PARSEFCB",
-    "PARFLD",
-    "UNAMBIG",
-    "VALIDCHR",
-    "FCBEND"
+    "UNAMBIG"
   ],
   "drivers/shellio.asm": [
     "STOPEN",
@@ -952,8 +950,27 @@
     "CMDECHO",
     "CMDPAU"
   ],
-  "drivers/shelldir.asm": [
-    "CMDDIR",
+  "src/cpm/ccpdir.asm": [
+    "RCMDCD",
+    "RPUTCDN",
+    "RVWALKQ",
+    "RLBLADR",
+    "RDRVLBL",
+    "RPUTDRV",
+    "RLSTNL",
+    "RPUTN",
+    "RPUTTRIM",
+    "RCRLF",
+    "RCFAILR"
+  ],
+  "drivers/fcbparse.asm": [
+    "PARSEFCB",
+    "PARFLD",
+    "VALIDCHR",
+    "FCBEND"
+  ],
+  "drivers/dirsize.asm": [
+    "DIRGO",
     "DSRCH",
     "DRENT",
     "HBIT",
@@ -976,17 +993,22 @@
     "DAGGET",
     "DAGWILD"
   ],
-  "src/cpm/ccpdir.asm": [
-    "RCMDCD",
-    "RPUTCDN",
-    "RVWALKQ",
-    "RLBLADR",
-    "RDRVLBL",
-    "RPUTDRV",
-    "RLSTNL",
-    "RPUTN",
-    "RPUTTRIM",
-    "RCRLF",
-    "RCFAILR"
+  "drivers/dir.asm": [
+    "START",
+    "PGFIND",
+    "LSTNL",
+    "DRVLBL",
+    "PUTTRIM",
+    "PUTDRV",
+    "PUTC",
+    "CRLF",
+    "PUTS",
+    "SKIPSP",
+    "ENDCHK",
+    "BADW",
+    "FAILED",
+    "BDONE",
+    "ERRMSG",
+    "DOSSEQ"
   ]
 }

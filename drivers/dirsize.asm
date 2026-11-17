@@ -1,10 +1,10 @@
-; SHELL.SVC's DIR, with each file's size
-; in bytes, and the numbers it prints.
-; Included by shell.asm, whose LINE
-; enters CMDDIR with HL after its word.
+; DIR.COM's listing, with each file's
+; size in bytes, and the numbers it
+; prints: the shell's sized DIR, now a
+; transient. Included by dir.asm, which
+; enters DIRGO with HL at the operand.
 
-; DIR /W is the ROM's wide listing. DIR
-; [d:][name] lists each match not
+; DIR [d:][name] lists each match not
 ; hidden, one a row: its name and its
 ; size, the maximum end record times
 ; 128. An extent prepass builds a
@@ -15,32 +15,12 @@
 ; Then the count and bytes, free space
 ; by BDOS 46, and the drive's volume.
 
-CMDDIR:
-  call SKIPSP    ; to the operand
-  ld a,(hl)
-  cp '/'         ; a switch?
-  jr nz,DR0      ; no switch
-  inc hl
-  ld a,(hl)      ; its letter
-  dec hl
-  and $DF        ; w or W
-  cp 'W'         ; another is a bad
-  jr nz,DR0      ; name, refused there
-  ld (hl),SPACE  ; /W blanked: the
-  inc hl         ; ROM's DIR runs
-  ld (hl),SPACE  ; the rest
-  jp HAND        ; to the ROM
-
 ; The pattern into CFCB: every name if
 ; none, on the drive named or the
 ; current one. The totals and the marks
 ; start clear.
 
-DR0:
-  push hl        ; the operand
-  call FOLD      ; folded
-  call CRLF      ; after the line
-  pop hl
+DIRGO:
   ld de,CFCB     ; the pattern
   call PARSEFCB
   jp c,BADW      ; not a name
@@ -571,23 +551,6 @@ DRPT1:
   inc hl
   djnz DRPT1     ; only trimmed prefix
   ret
-
-; Private transient header, bucket heads
-; and nodes. Each node has key[11],
-; max[3], next[2]. DNEXT is derived from
-; count at lookup, not retained between
-; commands.
-
-DCOUNT EQU $0100
-DNEXT  EQU $0102
-DKEY   EQU $0104
-DCAND  EQU DKEY+11
-DHASH  EQU DCAND+3
-DLINK  EQU DHASH+1
-DWHIT  EQU DLINK+2
-DHEAD  EQU $0140
-DNODE  EQU $0240
-DLIMIT EQU $2240
 
 ; Choose table mode only if word 0006h
 ; admits the whole workspace. Mode zero

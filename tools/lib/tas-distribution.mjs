@@ -6,6 +6,7 @@ import { checkInterfaces, DHLEN, FORMAT, fixupsOf, includedFiles, packSvc } from
 export const GLCD_SOURCE = 'drivers/glcd.asm';
 export const MON3_SOURCE = 'drivers/mon3.asm';
 export const SHELL_SOURCE = 'drivers/shell.asm';
+export const DIR_SOURCE = 'drivers/dir.asm';
 
 // Each symbol of an assembly at ORIGIN, page-relative: a label, and a
 // constant that moves with the origin, as an EQU naming an address in the
@@ -59,9 +60,11 @@ export const assembleMon3 = (root, run) => assembleService(root, run, MON3_SOURC
 export const assembleShell = (root, run) => assembleService(root, run, SHELL_SOURCE, 'SHELL.SVC');
 
 export async function assembleDistributionCom(root, run, name) {
-  assert.ok(name === 'MOUNT.COM' || name === 'DEMO.COM', 'unsupported TAS distribution program');
-  const entry = name === 'DEMO.COM' ? 'programs/DEMO.ASM' : 'test/programs/' + name.replace('.COM', '.asm').toLowerCase();
+  assert.ok(name === 'MOUNT.COM' || name === 'DEMO.COM' || name === 'DIR.COM', 'unsupported TAS distribution program');
+  const entry = name === 'DEMO.COM' ? 'programs/DEMO.ASM' : name === 'DIR.COM' ? DIR_SOURCE : 'test/programs/' + name.replace('.COM', '.asm').toLowerCase();
   const { image, globals } = await run({ root, entry, origin: 0x100, target: name, phase: 'final' });
+  // DIR.COM's RAM is past its image, by EQU: nothing to check in the file.
+  if (name === 'DIR.COM') return image;
   const reserves = name === 'MOUNT.COM' ? [['NAME', 11], ['DESC', 32], ['MNTL', 11]]
     : [['DIGBUF', 6, 30], ['LEDBUF', 24, 24]];
   for (const [label, size, fromEnd] of reserves) {

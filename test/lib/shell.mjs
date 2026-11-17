@@ -8,11 +8,13 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { makeSvc } from "../../tools/lib/svc.mjs";
+import { assembleProgram } from "../../tools/lib/assemble.mjs";
 import { Machine } from "./machine.mjs";
 import { ROOT, TEST_CLOCK, program, romFor, standardCard, startupFile, volume } from "./fixtures.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
-const SOURCES = ["shell.asm", "shellcmd.asm", "shellio.asm", "shellcd.asm", "shelldir.asm"];
+const SOURCES = ["shell.asm", "shellcmd.asm", "shellio.asm", "shellcd.asm", "fcbparse.asm"];
+const DIR_SOURCES = ["dir.asm", "dirsize.asm", "fcbparse.asm"];
 
 /** SHELL.SVC from drivers/shell.asm: { file, symbols (offsets from the header), image }. */
 export const shellSvc = () => makeSvc(resolve(ROOT, "drivers/shell.asm"), { work: resolve(ROOT, "build/svc") });
@@ -33,6 +35,29 @@ export async function shellVariant(edits) {
   mkdirSync(dir, { recursive: true });
   for (const [n, text] of Object.entries(files)) writeFileSync(resolve(dir, n), text.replace('%INCLUDE "../src/abi.inc"', `%INCLUDE "${resolve(ROOT, "src/abi.inc")}"`));
   return makeSvc(resolve(dir, "shell.asm"), { work: resolve(ROOT, "build/svc") });
+}
+
+/** Each of FILES' sources with EDITS, each [old, new] standing once in them together, written beside the build in DIR. */
+function edited(files, edits, dir) {
+  const text = Object.fromEntries(files.map((n) => [n, readFileSync(resolve(ROOT, "drivers", n), "utf8")]));
+  for (const [old, now] of edits) {
+    const hits = files.filter((n) => text[n].includes(old));
+    const count = hits.reduce((k, n) => k + text[n].split(old).length - 1, 0);
+    assert.equal(count, 1, `the edit's text stands once: ${old}`);
+    text[hits[0]] = text[hits[0]].replace(old, now);
+  }
+  mkdirSync(dir, { recursive: true });
+  for (const [n, t] of Object.entries(text)) writeFileSync(resolve(dir, n), t.replace('%INCLUDE "../src/abi.inc"', `%INCLUDE "${resolve(ROOT, "src/abi.inc")}"`));
+}
+
+/** DIR.COM from drivers/dir.asm: { bytes, symbols }, absolute, at 0100h. */
+export const DIRCOM = await assembleProgram(resolve(ROOT, "drivers/dir.asm"));
+
+/** DIR.COM with EDITS, each [old, new] standing once in its sources together: a mutant or a control. */
+export async function dirVariant(edits) {
+  const dir = resolve(ROOT, "build/dir-variants", sha(JSON.stringify(edits)).slice(0, 16));
+  edited(DIR_SOURCES, edits, dir);
+  return assembleProgram(resolve(dir, "dir.asm"));
 }
 
 /** HOOK.SVC, the probe shell, from test/programs/shhook.asm, with DEFS. */
@@ -57,13 +82,13 @@ export function chain(text) {
 export const HELLO = Buffer.from("hello\r\nthere\r\n\x1a", "latin1");
 
 /**
- * A card with SHELL.SVC (or SHELL's file), the code setters, SAY.COM and
- * HELLO.TXT on A:, FILES, and STARTUP.CMD of STARTUP's lines (none: no
- * file).
+ * A card with SHELL.SVC (or SHELL's file), DIR.COM, the code setters,
+ * SAY.COM and HELLO.TXT on A:, FILES (a name given null is left off), and
+ * STARTUP.CMD of STARTUP's lines (none: no file).
  */
 export function shellCard(files = {}, { startup = ["SHELL.SVC"], shell = SHELL.file, image = standardCard() } = {}) {
   const a = volume(image, "A");
-  for (const [n, b] of Object.entries({ "SHELL.SVC": shell, ...CODES, "SAY.COM": SAY, "HELLO.TXT": HELLO, ...files })) if (b) a.write(n, b);
+  for (const [n, b] of Object.entries({ "SHELL.SVC": shell, "DIR.COM": DIRCOM.bytes, ...CODES, "SAY.COM": SAY, "HELLO.TXT": HELLO, ...files })) if (b) a.write(n, b);
   if (startup?.length) a.write("STARTUP.CMD", startupFile(...startup));
   return image;
 }

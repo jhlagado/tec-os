@@ -26,9 +26,9 @@ const FILES = resolve(DIST, "files");
 const hex = (v, w = 4) => v.toString(16).toUpperCase().padStart(w, "0") + "h";
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 
-// Programs assembled from the tree onto the card: none, since SHELL.SVC's
-// CD puts a volume on a drive and lists them.
-const PROGRAMS = [];
+// Programs assembled from the tree onto the card: DIR.COM, which the
+// shell runs for DIR.
+const PROGRAMS = [{ name: "DIR.COM", description: "DIR with each file's size, which the shell runs for DIR; DIR /W is the ROM's" }];
 
 /** The pinned NAME's bytes, which the card holds: a file missing or not as pinned is refused. */
 function pinnedBytes(name) {
@@ -254,7 +254,7 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "17",
+    revision: "18",
     name: "TEC-OS starter",
     instruction: "Type BAZA CAVBASIC to compile the adventure, then CAVBASIC to play, or TYPE CAVERNS.TXT for instructions. At A:SYSTEM>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, first type TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A:SYSTEM>. The card has four drives: CD ? lists its volumes, CD NAME puts one on the drive you are on and CD D:NAME on another; B: (WORK) is an empty work disk. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. After CD A: to a volume without SHELL.SVC, a reset keeps it; at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC to restore the shell. Power off (Power cycle on the page) gives the card's own drives again.",
     profile: "tecos",
