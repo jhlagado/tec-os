@@ -18,7 +18,7 @@ import { PROFILES } from "./build.mjs";
 import { pageZeroDeclarations } from "./lib/media-source.mjs";
 import { tasAssembler, traceRom } from "./lib/tas-rom.mjs";
 
-import { assembleDistributionCom, assembleGlcd, assembleMon3, assembleShell } from "./lib/tas-distribution.mjs";
+import { assembleDistributionCom, assembleGlcd, assembleMon3, assembleMon3Gfx, assembleShell } from "./lib/tas-distribution.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = resolve(ROOT, "dist");
@@ -246,6 +246,8 @@ async function main() {
   // MON3.SVC loads it. The monitor itself remains ready to enter.
   const mon3 = await assembleMon3(ROOT, run);
   files.push({ name: "MON3.SVC", description: "MON-3 programs on TEC-OS: MON3.SVC gives MON3>, where LOAD, GO and EXIT work", bytes: mon3 });
+  const mon3gfx = await assembleMon3Gfx(ROOT, run);
+  files.push({ name: "MON3GFX.SVC", description: "MON-3's GLCD graphics, RST 18h, for MON3.SVC: load it after MON3.SVC", bytes: mon3gfx });
   files.push({ name: "HELLO3.ASM", description: "HELLO3's source: TAS HELLO3 HELLO3.BIN builds it, TED HELLO3.ASM reads it", bytes: textAt("test/programs/hello3.asm") });
 
   // A recipe's revision rises when its set of files changes, not when a
@@ -291,6 +293,7 @@ async function main() {
   for (const [ref, bytes] of buffers) writeFileSync(resolve(DIST, ref), bytes);
   writeFileSync(resolve(DIST, "DEMO.COM"), demo);
   writeFileSync(resolve(DIST, "MON3.SVC"), mon3);
+  writeFileSync(resolve(DIST, "MON3GFX.SVC"), mon3gfx);
   writeFileSync(resolve(DIST, "abi.inc"), abi);
   writeFileSync(resolve(DIST, "FONT-NOTICES.txt"), fontNotices);
   writeFileSync(resolve(DIST, "starter.recipe.json"), JSON.stringify(recipe, null, 2) + "\n");

@@ -5,6 +5,9 @@ import { checkInterfaces, DHLEN, FORMAT, fixupsOf, includedFiles, packSvc } from
 
 export const GLCD_SOURCE = 'drivers/glcd.asm';
 export const MON3_SOURCE = 'drivers/mon3.asm';
+export const MON3GFX_SOURCE = 'drivers/mon3gfx.asm';
+/** MON3GFX.SVC's one dependency: MON3.SVC's record. */
+export const MON3GFX_DEPS = [{ name: 'MON3', version: 1 }];
 export const SHELL_SOURCE = 'drivers/shell.asm';
 
 // Each symbol of an assembly at ORIGIN, page-relative: a label, and a
@@ -40,20 +43,23 @@ export function relocateGlcd(at1, at2) {
   return { at0, symbols, fixups };
 }
 
-async function assembleService(root, run, source, target) {
+async function assembleService(root, run, source, target, deps = []) {
   checkInterfaces(readFileSync(join(root, source), 'utf8'), target);
   for (const file of includedFiles(join(root, source))) checkInterfaces(readFileSync(file, 'utf8'), basename(file));
   const assemble = origin => run({ root, entry: source, origin, target, phase: 'flat' });
   const at1 = await assemble(0x100);
   const at2 = await assemble(0x200);
   const { at0, symbols, fixups } = relocateGlcd(at1, at2);
-  return packSvc(at0, symbols, fixups).file;
+  return packSvc(at0, symbols, fixups, { deps }).file;
 }
 
 export const assembleGlcd = (root, run) => assembleService(root, run, GLCD_SOURCE, 'GLCD.SVC');
 
 /** MON3.SVC, the MON-3 session service, by the same two flat assemblies. */
 export const assembleMon3 = (root, run) => assembleService(root, run, MON3_SOURCE, 'MON3.SVC');
+
+/** MON3GFX.SVC, MON-3's graphics, which depends on MON3.SVC. */
+export const assembleMon3Gfx = (root, run) => assembleService(root, run, MON3GFX_SOURCE, 'MON3GFX.SVC', MON3GFX_DEPS);
 
 /** SHELL.SVC, the resident shell, by the same two flat assemblies. */
 export const assembleShell = (root, run) => assembleService(root, run, SHELL_SOURCE, 'SHELL.SVC');
