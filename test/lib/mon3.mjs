@@ -36,7 +36,7 @@ export async function execFile(over = {}) {
 }
 
 /** MON3.SVC's SHA-256: the file the card holds, as media writes it. */
-export const MON3_SVC_SHA = "9cf63c798f29c6140f02ae59c6fba7bbcf04c66106da912210b69c0babd24cf4";
+export const MON3_SVC_SHA = "b7422c2cd0b9ae25ffe386024bfe7d5d5c01c8bdeb5d3348e947191cfb2fedbd";
 
 /** The card's MON3.SVC, by media's writer: the pinned file, and the same as SVC, the tests' own build. */
 export async function cardMon3(svc) {
@@ -49,6 +49,11 @@ export async function cardMon3(svc) {
 
 /** MON3.SVC from drivers/mon3.asm: { file, symbols (offsets from the header), image }. OPT as makeSvc's. */
 export const mon3Svc = (opt = {}) => makeSvc(resolve(ROOT, "drivers/mon3.asm"), { work: resolve(ROOT, "build/svc"), ...opt });
+
+/** MON3GFX.SVC's one dependency, MON3.SVC's record. */
+export const MON3GFX_DEPS = [{ name: "MON3", version: 1 }];
+/** MON3GFX.SVC from drivers/mon3gfx.asm, MON-3's graphics, which depends on MON3.SVC. */
+export const mon3GfxSvc = (opt = {}) => makeSvc(resolve(ROOT, "drivers/mon3gfx.asm"), { work: resolve(ROOT, "build/svc"), deps: MON3GFX_DEPS, ...opt });
 
 /**
  * MON3.SVC's ceiling on the two-volume reference card: image and pages,
@@ -64,7 +69,7 @@ export function figures(svc) {
   return { pages, top, entry: top + 41, tpa: top - 0x100, line: `MON3 ${pages}` };
 }
 
-/** MON3.SVC's source files, drivers/mon3.asm first and then those it includes: { name: text }. */
+/** MON3.SVC's source files, drivers/mon3.asm first and then those it includes, then MON3GFX.SVC's: { name: text }. */
 export const MON3_FILES = ["mon3.asm", "mon3api.asm", "mon3io.asm", "mon3hex.asm", "mon3gfx.asm"];
 export function mon3Sources() {
   const out = {};
@@ -96,7 +101,9 @@ export async function mon3Variant(edits, opt = {}) {
   const dir = resolve(ROOT, "build/mon3-variants", sha(JSON.stringify(edits)).slice(0, 16));
   mkdirSync(dir, { recursive: true });
   for (const [n, text] of Object.entries(files)) writeFileSync(resolve(dir, n), text.replace('%INCLUDE "../src/abi.inc"', `%INCLUDE "${resolve(ROOT, "src/abi.inc")}"`));
-  return makeSvc(resolve(dir, "mon3.asm"), { work: resolve(ROOT, "build/svc"), ...opt });
+  const svc = await makeSvc(resolve(dir, "mon3.asm"), { work: resolve(ROOT, "build/svc"), ...opt });
+  svc.gfx = await makeSvc(resolve(dir, "mon3gfx.asm"), { work: resolve(ROOT, "build/svc"), deps: MON3GFX_DEPS });
+  return svc;
 }
 
 // MON-3's addresses, from its listing: where the GO key's handler clears the

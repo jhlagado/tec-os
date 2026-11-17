@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { volume } from "./fixtures.mjs";
-import { MON3, PROMPT, bytesAt, card, line, machine, mon3Svc, word } from "./mon3.mjs";
+import { MON3, PROMPT, bytesAt, card, line, machine, mon3GfxSvc, mon3Svc, word } from "./mon3.mjs";
 
 export const sha = (b) => createHash("sha256").update(b).digest("hex");
 
@@ -20,7 +20,11 @@ export const memo = (f) => {
 };
 
 /** MON3.SVC's build, made once: { file, symbols, image, fixups }. */
-export const mon3Build = memo(() => mon3Svc());
+export const mon3Build = memo(async () => {
+  const svc = await mon3Svc();
+  svc.gfx = await mon3GfxSvc();
+  return svc;
+});
 
 /** Every BDOS 15 that M makes, by the name in its FCB: m.opens. */
 export function countOpens(m) {
@@ -69,10 +73,17 @@ export const state = (m, svc, name) => m.read((pageOf(m) << 8) + svc.symbols[nam
 export const runnable = (m, svc) => state(m, svc, "RUNOK");
 
 /** A session on a card with FILES and TEXT files, MON3.SVC (SVC, or the build) installed and entered. */
-export async function inSession(files = {}, { svc, machine: opts, text } = {}) {
+export async function inSession(files = {}, { svc, machine: opts, text, gfx = true } = {}) {
   svc ??= await mon3Build();
-  const m = boot({ "MON3.SVC": svc.file, ...files }, opts, text);
+  const withGfx = gfx && svc.gfx;
+  const m = boot({ "MON3.SVC": svc.file, ...(withGfx ? { "MON3GFX.SVC": svc.gfx.file } : {}), ...files }, opts, text);
   assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC gives MON3>");
+  if (withGfx) {
+    // MON3GFX.SVC depends on MON3.SVC: it loads at the prompt with MON3.SVC in.
+    assert.ok(!line(m, "EXIT").mon3, "EXIT");
+    assert.doesNotMatch(line(m, "MON3GFX.SVC").out, /\?/, "MON3GFX.SVC loads");
+    assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC gives MON3> with the graphics");
+  }
   return { m, svc };
 }
 

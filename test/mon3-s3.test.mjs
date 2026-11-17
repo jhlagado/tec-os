@@ -95,7 +95,7 @@ test("KG67 size and tpa", async () => {
   const routines = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-routines.json"), "utf8"));
   const exceptions = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-exceptions.json"), "utf8"));
   const files = mon3Sources();
-  assert.deepEqual(Object.keys(files), ["mon3.asm", "mon3api.asm", "mon3io.asm", "mon3hex.asm", "mon3gfx.asm"], "the five source files");
+  assert.deepEqual(Object.keys(files), ["mon3.asm", "mon3api.asm", "mon3io.asm", "mon3hex.asm", "mon3gfx.asm"], "MON3.SVC's four source files and MON3GFX.SVC's one");
   for (const [n, text] of Object.entries(files)) {
     const r = checkCompactSource(text, n, routines[`drivers/${n}`], exceptions[`drivers/${n}`]);
     assert.ok(r.bytes <= 24576, `${n}: ${r.bytes} bytes`);
@@ -128,9 +128,14 @@ function workspaceDiffers(m) {
 
 async function workspace(svc) {
   svc ??= await mon3Build();
-  // A program that writes 55h at 0A00h and returns.
-  const m = boot({ "MON3.SVC": svc.file, "PROG.BIN": Uint8Array.from([0x3e, 0x55, 0x32, 0x00, 0x0a, 0xc9]) });
+  // A program that writes 55h at 0A00h and returns. MON3GFX.SVC's hook sets
+  // the workspace, so the first entry with it in is (a).
+  const m = boot({ "MON3.SVC": svc.file, "MON3GFX.SVC": svc.gfx.file, "PROG.BIN": Uint8Array.from([0x3e, 0x55, 0x32, 0x00, 0x0a, 0xc9]) });
   assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC installs and enters");
+  assert.ok(!line(m, "EXIT").mon3);
+  for (let i = 0; i < REGION[1]; i += 1) m.write(REGION[0] + i, 0xff);
+  assert.doesNotMatch(line(m, "MON3GFX.SVC").out, /\?/, "MON3GFX.SVC loads");
+  assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC enters with the graphics");
   assert.deepEqual(workspaceDiffers(m).slice(0, 8), [], "install and enter: 0A00h-0E19h zero, VPORT 0A00h");
   assert.ok(!line(m, "EXIT").mon3);
   for (let i = 0; i < REGION[1]; i += 1) m.write(REGION[0] + i, 0xff);
@@ -152,7 +157,7 @@ for (const [name, edits, why] of [
   ["the workspace step removed", [[STEP, "  ld (RUNOK),a   ; nothing to run\n"]], /install and enter/],
   ["the workspace step clearing 0E00h-0E19h only", [["  ld hl,GBUF\n  ld de,GBUF+1\n  ld bc,GVEND-GBUF-1\n", "  ld hl,$0E00\n  ld de,$0E01\n  ld bc,GVEND-$0E01\n"]], /0A00h-0E19h zero/],
   ["VPORT left unset", [["  ld hl,GBUF\n  ld (VPORT),hl  ; drawing into GBUF\n", ""]], /VPORT 0A00h/],
-  ["the workspace step moved to INIT", [[STEP, "  ld (RUNOK),a   ; nothing to run\n"], ["  ld hl,EXRDY\n  set 0,(hl)     ; ready, bit 1 kept\n", "  xor a\n  call GWS       ; at install\n  ld hl,EXRDY\n  set 0,(hl)     ; ready, bit 1 kept\n"]], /re-entry over FFh/],
+  ["the workspace step moved to INIT", [[STEP, "  ld (RUNOK),a   ; nothing to run\n"], ["  ld hl,EXRDY\n  set 0,(hl)     ; ready, bit 1 kept\n", "  xor a\n  call GWS       ; at install\n  ld hl,EXRDY\n  set 0,(hl)     ; ready, bit 1 kept\n"]], /install and enter/],
 ]) {
   test(`KG67 mutant: ${name}`, async () => {
     const svc = await mon3Variant(edits);
@@ -168,10 +173,11 @@ for (const [name, edits, why] of [
 // after call 14, which leaves DE in MON-3's ROM), HL, IY and SP; equal bytes
 // in 0800h-3EF1h but 0892h-0895h; equal graphics RAM, DDRAM, RE, G and
 // display bit; and equal writes to ports 07h and 87h with equal cycles
-// between them. Each row is exactly 78 T longer in the session: the restart
-// path and the range test, against MON-3's jump and its own test.
+// between them. Each row is exactly 88 T longer in the session: the restart
+// path, MON3.SVC's hook's JP into MON3GFX.SVC and the range test, against
+// MON-3's jump and its own test.
 
-const K = 78;
+const K = 88;
 /** The selectors built: MON-3's routines, relocated. */
 const BUILT = Array.from({ length: 21 }, (_, i) => i);
 let callSidesMade;
@@ -201,7 +207,7 @@ test("KG67 rst 18h calls", { timeout: 600_000 }, async () => {
 
 test("KG67 rst 18h timing", async () => {
   const r = compareCalls(await theCallSides(), rowsOf());
-  for (const [sel, set] of Object.entries(r.entry)) assert.deepEqual([...set], ["253/175"], `call ${sel}: the session's T to the routine / MON-3's`);
+  for (const [sel, set] of Object.entries(r.entry)) assert.deepEqual([...set], ["263/175"], `call ${sel}: the session's T to the routine / MON-3's`);
   for (const [sel, set] of Object.entries(r.extra)) assert.deepEqual([...set], [K], `call ${sel}: ${K} T longer`);
 });
 
@@ -263,11 +269,11 @@ test("KG67 mutant: the range test 22, selector 21 runs the word after the table"
   assert.throws(() => compareRefusals(ref, ses, [21]), /the refusal ran at 21h/, "the refusal row for A 21");
 });
 
-test("KG67 mutant: one more instruction in the dispatch, 82 T", async () => {
-  const sides = await mutantSides(await mon3Variant([["  jp nc,DERR     ; the rest refused\n", "  jp nc,DERR     ; the rest refused\n  nop\n"]]));
+test("KG67 mutant: one more instruction in the dispatch, 92 T", async () => {
+  const sides = await mutantSides(await mon3Variant([["  jp nc,SAVEH    ; the rest refused\n", "  jp nc,SAVEH    ; the rest refused\n  nop\n"]]));
   const r = compareCalls(sides, rowsOf([1]));
-  assert.deepEqual([...r.extra[1]], [82], "82 T longer, not 78");
-  await assert.rejects(glcdText(sides.ses.svc), /418,666/, "and glcd-text's DONE 6 x 4 T later");
+  assert.deepEqual([...r.extra[1]], [92], "92 T longer, not 88");
+  await assert.rejects(glcdText(sides.ses.svc), /418,726/, "and glcd-text's DONE 6 x 4 T later");
 });
 
 test("KG67 mutant: a routine reading GBUF where MON-3 reads (VPORT)", async () => {
@@ -279,7 +285,7 @@ test("KG67 mutant: a routine reading GBUF where MON-3 reads (VPORT)", async () =
 // The programs, each loaded by LOAD PROG.BIN and run by GO on the serial
 // console, against the same binary under MON-3's GO. A program's return is
 // the fetch at its RET's target: 0049h in a session, MON-3's softBoot. The
-// session's cycles are the reference's and 78 T for each RST 18h.
+// session's cycles are the reference's and 88 T for each RST 18h.
 
 /** NAME on both sides to END ("return", or a symbol), R pinned for glcd-maze: { R, S, ref, ses }. */
 async function bothRuns(name, { svc, window } = {}) {
@@ -327,7 +333,7 @@ async function glcdText(svc) {
   assert.equal(R.cycles, 418_198, "DONE at 418,198 cycles under MON-3");
   assert.equal(R.rst18, 6, "after 6 RST 18h");
   assert.equal(S.rst18, 6, "6 RST 18h in the session");
-  assert.equal(S.cycles, 418_198 + 6 * K, "DONE at 418,666 in the session");
+  assert.equal(S.cycles, 418_198 + 6 * K, "DONE at 418,726 in the session");
   assert.deepEqual({ ...panelOf(S), gdram: 0 }, { ...panelOf(R), gdram: 0 }, "DDRAM, the mode, GBUF and 0E00h-0E19h at DONE");
   assert.equal(S.end.mode.re || S.end.mode.graphics, false, "text mode: RE and G clear");
   return run;
@@ -460,7 +466,7 @@ async function consoleAfterGo(svc) {
   svc ??= await mon3Build();
   // The session's mode bytes are GLCD.SVC's GLCMOD.
   const glcmod = /^GLCMOD: DB (.*)$/m.exec(readFileSync(resolve(ROOT, "drivers/glcd.asm"), "utf8"))[1].split(",").map((x) => parseInt(x.trim().replace("$", ""), 16));
-  assert.deepEqual([...svc.file.subarray(svc.symbols.GMODE, svc.symbols.GMODE + 5)], glcmod, "the restore's bytes are GLCD.SVC's GLCMOD");
+  assert.deepEqual([...svc.gfx.file.subarray(svc.gfx.symbols.GMODE, svc.gfx.symbols.GMODE + 5)], glcmod, "the restore's bytes are GLCD.SVC's GLCMOD");
   const { bytes: ret, symbols } = await glcdret();
   for (const [name, bytes, at] of [["glcd-mad", await realProgram("glcd-mad"), 0x4000], ["TXT", ret, symbols.TXT], ["GRT", ret, symbols.GRT]]) {
     const { m } = await glcdGo(svc, bytes, at);

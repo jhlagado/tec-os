@@ -120,8 +120,10 @@ export async function callSides({ svc } = {}) {
   line(m, "LOAD DRV.BIN");
   goTo(m, "GO", 0x4000, 20_000_000);
   logGlcd(m);
+  // The graphics are MON3GFX.SVC's: their names in its pages, the rest in MON3.SVC's.
   const page = pageOf(m) << 8;
-  const ses = { kind: "session", m, svc: built, at: (n) => page + built.symbols[n] };
+  const gpage = built.gfx ? pageOf(m, "MON3GFX") << 8 : page;
+  const ses = { kind: "session", m, svc: built, at: (n) => (built.gfx && built.gfx.symbols[n] !== undefined ? gpage + built.gfx.symbols[n] : page + built.symbols[n]) };
   ses.routine = (a) => m.read(ses.at("GAPI") + 2 * a) | (m.read(ses.at("GAPI") + 2 * a + 1) << 8);
   return { ref, ses };
 }
