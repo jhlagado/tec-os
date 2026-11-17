@@ -9,7 +9,7 @@
   "stackBytes": 768,
   "dynamicBeforeInitialAllocations": 4039,
   "proseBytesBefore": 3856,
-  "proseBytesAfter": 10706,
+  "proseBytesAfter": 10629,
   "descriptionLinesMax": 79,
   "sourceSha256": "b9bb843da998b757297831e46fbacd7e4de405d995807ee462351332e5c5e880",
   "comSha256": "d2ad7340741da02f5f5553875128b14f23bfb9f9db6d9c55e8be5d033f152301",

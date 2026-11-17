@@ -27,7 +27,7 @@ Physical TEC-1G testing and final human gameplay review remain outstanding.
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Restored source and rendering change | jhlagado/tec-os, 5af4bf7447771cbb109e97a030e3bd5d4f3e0f6e |
+| Restored source and rendering change | jhlagado/tec-os, 9b25a0cf72585bd6f0fedd290a2e4a45f45f3b53 |
 | Current firmware integration | jhlagado/tec-os, ae61d294; current main merged for qualification |
 | Source on SYSTEM | programs/CAVERNS.BAS |
 | Verification executable, excluded from starter | programs/CAVERNS.COM; 37,248 bytes |
@@ -40,8 +40,8 @@ Physical TEC-1G testing and final human gameplay review remain outstanding.
 | Development checkpoints | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 | Assembly comparison, development only | programs/CAVASM.COM |
 
-Source SHA-256: b2e62b3bb501f657948f001ad4335eed9be9549ec81d8a6d98db3ce6d46c0c53.
-Executable SHA-256: 27f61ac267dee17c696f502bf5d9400448fede330211246d8f7ebaea5e8553a2.
+Source SHA-256: b9bb843da998b757297831e46fbacd7e4de405d995807ee462351332e5c5e880.
+Executable SHA-256: d2ad7340741da02f5f5553875128b14f23bfb9f9db6d9c55e8be5d033f152301.
 Compiler SHA-256: f8d4b8944be95451faa7aa0bc99e611f6793b7d4a8e413344e951e26ede07498.
 Runtime SHA-256: 29c07740630069921f93581c8527d5db057c63a073a95b37c7a020df92ae5e38.
 
