@@ -1,0 +1,424 @@
+diff -ruN a/src/boot.asm b/src/boot.asm
+--- a/src/boot.asm
++++ b/src/boot.asm
+@@ -103,6 +103,7 @@
+ COLDRT:
+   ld sp,STKTOP
+   call LCDINIT
++  ld b,0         ; row 0
+   ld hl,LCDBAN
+   call LCDROW
+   call SDINIT
+diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
+--- a/src/cpm/ccpcmd.asm
++++ b/src/cpm/ccpcmd.asm
+@@ -200,23 +200,25 @@
+   ld hl,(GLVEC)
+   ld a,h
+   or l
+-  jr nz,CONLT    ; a loaded driver's
+-  ld hl,LCVTAB   ; none: the ROM's
+-
+-CONLT:
+-  ld de,14       ; columns, then rows
+-  add hl,de
+-  ld a,c
+-  or a
+-  jr z,CONLR     ; no width asked
+-  cp (hl)
+-  jr nz,CONLB    ; not this panel's
+-
+-CONLR:
+-  inc hl
++  jr z,CONLR     ; none: the ROM's panel
++  ld de,15
++  add hl,de      ; the driver's rows
+   ld a,(hl)
+   cp 4
+-  jr z,CONLOK    ; UC1 is an LCD
++  jr nz,CONLB    ; UC1 is not an LCD
++  dec hl
++  ld a,(hl)      ; its columns
++  jr CONLW
++
++CONLR:
++  call LCDCOL    ; the ROM's: 20 or 40
++
++CONLW:
++  inc c
++  dec c
++  jr z,CONLOK    ; no width asked
++  cp c
++  jr z,CONLOK    ; this panel's
+ 
+ CONLB:
+   jp BADCMD      ; the later refusals
+diff -ruN a/src/layout.asm b/src/layout.asm
+--- a/src/layout.asm
++++ b/src/layout.asm
+@@ -47,6 +47,11 @@
+ ; user area 0.
+ 
+ IOBYTE EQU $0003
++
++; A 40 x 4 LCD's second controller, rows
++; 2 and 3. The ports wait for the board.
++
++LCD2CMD EQU $0C
+ PZDU EQU $0004
+ 
+ ; Page-zero JP. Target at 0006h is
+diff -ruN a/src/lcd.asm b/src/lcd.asm
+--- a/src/lcd.asm
++++ b/src/lcd.asm
+@@ -16,32 +16,74 @@
+   cp 4
+   ret
+ 
+-; Console restore: the mode commands and
+-; home again, without the clear, so the
+-; screen stays over a warm boot and a
+-; program's display shift does not.
++; Console restore: the panel's width,
++; then the mode commands and home on
++; each controller, without the clear.
+ 
+ LCVRST:
++  call LCDCOL
++  ld (VWID),a
+   ld b,4
+   jr LCDI0
+ 
+-; Attempt LCDSEQ's five commands:
+-; 8-bit, two-line, display on, cursor
+-; off, incrementing writes, home, clear.
+-; Nothing while the LCD is the console:
+-; a retry after a card error leaves its
+-; screen alone.
+-; Changes AF, B, HL; returns B=0 for
+-; cold boot's row-zero write.
++; The ROM panel's columns: 20, or 40 on
++; two controllers. Changes AF.
++
++LCDCOL:
++  ld a,(LCDPRF)
++  or a
++  ld a,20
++  ret z
++  add a,a
++  ret
++
++; Attempt LCDSEQ's five commands on the
++; first controller, then look for a
++; second: given addresses 2Ah and 15h,
++; each reads its own back, which one
++; controller seen at both ports cannot.
++; Found, the panel is 40 x 4 and the
++; second is set up too. Nothing while
++; the LCD is the console.
++; Changes AF, BC, HL.
+ 
+ LCDINIT:
+   call LCDCON
+   ret z
+   ld b,5
++  ld c,LCDCMD
++  call LCDI1
++  ld c,LCD2CMD
++  ld a,$AA
++  call LCDC
++  ld c,LCDCMD
++  ld a,$95
++  call LCDC
++  ld c,LCD2CMD
++  ld b,$2A
++  call LCDPRB
++  ret nz
++  ld c,LCDCMD
++  ld b,$15
++  call LCDPRB
++  ret nz
++  ld a,8
++  ld (LCDPRF),a
++  ld b,5
+ 
+-; B commands from LCDSEQ's start.
++; B commands on each controller.
+ 
+ LCDI0:
++  ld c,LCDCMD
++  push bc
++  call LCDI1
++  pop bc
++  ld a,(LCDPRF)
++  or a
++  ret z
++  ld c,LCD2CMD
++
++LCDI1:
+   ld hl,LCDSEQ
+ 
+ LCDI:
+@@ -51,16 +93,28 @@
+   djnz LCDI
+   ret
+ 
+-; Return after ready or 256 polls.
+-; Carry is the last busy bit (bit 7).
++; Z if the controller at port C is ready
++; with address counter B.
++
++LCDPRB:
++  call LCDWAIT
++  ret c
++  in a,(c)
++  cp b
++  ret
++
++; Wait for the controller whose command
++; or data port is C: ready or 256 polls.
++; Carry is the last busy bit.
+ ; Changes AF; keeps BC, DE and HL.
+ 
+ LCDWAIT:
+   push bc
+-  ld b,0
++  res 7,c        ; busy is on the
++  ld b,0         ; command port
+ 
+ LCDW:
+-  in a,(LCDCMD)
++  in a,(c)
+   rlca
+   jr nc,LCDWX
+   djnz LCDW
+@@ -69,70 +123,70 @@
+   pop bc
+   ret
+ 
+-; Console put: A at row B, column C.
+-; The panel has no reverse video, so
+-; bit 7 is dropped. 80h alone is the
+-; terminal's cursor flip, since the
+-; console's get returns 0: nothing is
+-; written, the hardware cursor goes on
+-; while the terminal shows its cursor
+-; (VCURV) and off otherwise, and the
+-; address returns to the cell, where
+-; that cursor stands.
++; Console put: A at row B, column C. As
++; before; 80h is the cursor flip, sent
++; to the cell's own controller. The
++; terminal keeps its column in C.
+ ; Changes AF, E and HL.
+ 
+ LCVPUT:
++  push bc
+   cp $80
+   jr z,LCVP1     ; a cursor flip
+   and $7F
+   ld e,a
+   call LCSEL
+   ld a,e
+-  jr LCDD
++
++LCVPX:
++  call LCDC
++  pop bc
++  ret
+ 
+ LCVP1:
++  call LCSEL
++  res 7,c        ; its command port
+   ld a,(VCURV)
+   add a,a        ; 0Ch, or 0Eh shown
+   or $0C
+-  call LCDC
++  jr LCVPX
+ 
+-; Address row B, column C: B=0..3,
+-; C below 20. LCDROWS lies in one page.
+-; Keeps BC and DE. Changes AF and HL.
++; Address row B, column C on the row's
++; controller. Returns C = its data port.
++; LCDROWS lies in one page.
++; Keeps B and DE. Changes AF and HL.
+ 
+ LCSEL:
+-  ld hl,LCDROWS
+-  ld a,b
+-  add a,l
++  ld a,(LCDPRF)
++  add a,b
++  add a,b        ; two bytes a row
++  add a,LOW(LCDROWS)
+   ld l,a
+-  ld a,(hl)
+-  add a,c        ; the cell's address
+-
+-; Output command A after the bounded
+-; wait, even if still busy. Keeps AF,
+-; BC, DE and HL.
+-
+-LCDC:
+-  push af
+-  call LCDWAIT
+-  pop af
+-  out (LCDCMD),a
++  ld h,HIGH(LCDROWS)
++  ld a,(hl)      ; the row's controller
++  inc hl
++  ld h,(hl)      ; its first address
++  ld l,c
++  ld c,a
++  ld a,h
++  add a,l
++  call LCDC
++  set 7,c        ; data follows
+   ret
+ 
+-; Output data A the same way. The
+-; display steps to the next column.
++; Output A to port C, a command or data,
++; after the bounded wait, even if still
++; busy. Keeps AF, BC, DE and HL.
+ 
+-LCDD:
++LCDC:
+   push af
+   call LCDWAIT
+   pop af
+-  out (LCDDAT),a
++  out (c),a
+   ret
+ 
+ ; Console clear: row B from column C to
+-; its end. C at or past the width, a
+-; pending wrap, clears nothing.
+-; Changes AF, E and HL.
++; its end. Changes AF, E and HL.
+ 
+ LCVCLR:
+   ld a,(VWID)
+@@ -140,18 +194,20 @@
+   ret c
+   ret z
+   ld e,a         ; cells to blank
++  push bc
+   call LCSEL
+ 
+ LCVC1:
+   ld a,' '
+-  call LCDD
++  call LCDC
+   dec e
+   jr nz,LCVC1
++  pop bc
+   ret
+ 
+-; Console row read: row B into LINEBUF,
+-; from the panel's own display memory,
+-; which is the only copy of the screen.
++; Console row read and write between
++; LINEBUF and row B, the panel's width
++; after one address command.
+ ; Changes AF, BC and HL.
+ 
+ LCVRD:
+@@ -163,9 +219,6 @@
+   jr nz,LCVR1
+   ret
+ 
+-; Console row write: LINEBUF to row B.
+-; Changes AF, BC and HL.
+-
+ LCVWR:
+   call LCVROW
+ 
+@@ -175,14 +228,12 @@
+   jr nz,LCVW1
+   ret
+ 
+-; Address row B's first cell. Returns
+-; HL=LINEBUF, B=20 cells, C=data port.
+-
+ LCVROW:
+   ld c,0
+   call LCSEL
+   ld hl,LINEBUF
+-  ld bc,20*256+LCDDAT
++  ld a,(VWID)
++  ld b,a
+   ret
+ 
+ ; Mark row 3 ROM-owned (CDWRD), then
+@@ -226,7 +277,7 @@
+   ld a,(hl)
+   cp 1           ; zero: carry, NZ
+   ret c
+-  call LCDD
++  call LCDC
+   inc hl
+   jr LCDS
+ 
+diff -ruN a/src/ram.asm b/src/ram.asm
+--- a/src/ram.asm
++++ b/src/ram.asm
+@@ -89,7 +89,8 @@
+                  ; entries
+ PIREC: DS 13     ; 13-byte registry tail
+ PITIE: DS 1      ; tracked supported IE
+-  DS 1           ; remaining LBUF pad:
++LCDPRF: DS 1     ; LCD rows: 0, or 8
++                 ; for two controllers;
+                  ; keeps shown at 42
+ PITPD: DS 1      ; drawn: 0 or PITPG
+ PITPS: DS 1      ; shown: 0 or PITPG
+diff -ruN a/src/services.asm b/src/services.asm
+--- a/src/services.asm
++++ b/src/services.asm
+@@ -159,16 +159,17 @@
+ HWSL1:
+   push bc
+   ld c,0
+-  call LCSEL     ; the row's address
+-  pop bc
++  call LCSEL     ; C = the row's port
++  pop de         ; E = the caller's C
+   pop hl
+   ld b,20
+ 
+ HWSLC:
+   ld a,(hl)
+-  call LCDD
++  call LCDC
+   inc hl
+   djnz HWSLC
++  ld c,e
+   xor a
+   ret
+ 
+diff -ruN a/src/tables.asm b/src/tables.asm
+--- a/src/tables.asm
++++ b/src/tables.asm
+@@ -51,7 +51,8 @@
+ LCDSEQ: DB $38,$0C,$06,$02,$01
+ 
+ LCDROWS:
+-  DB $80,$C0,$94,$D4
++  DB LCDCMD,$80,LCDCMD,$C0,LCDCMD,$94,LCDCMD,$D4
++  DB LCDCMD,$80,LCDCMD,$C0,LCD2CMD,$80,LCD2CMD,$C0
+ 
+ ; The LCD console's table, as CONSWV
+ ; copies one: six terminal words, no
+--- a/tools/build.mjs
++++ b/tools/build.mjs
+@@ -251,7 +251,7 @@
+   // while block 0 has 15 descriptors after the header.
+   check(at("DSCBLK0") === 15, `DESCIX needs DSCBLK0 15, the format gives ${at("DSCBLK0")}`);
+   // LCSEL adds the row to the table's low byte with no carry into the high.
+-  check(at("LCDROWS") >> 8 === (at("LCDROWS") + 3) >> 8, `LCDROWS must lie in one page, not at ${hex(at("LCDROWS"))}`);
++  check(at("LCDROWS") >> 8 === (at("LCDROWS") + 15) >> 8, `LCDROWS must lie in one page, not at ${hex(at("LCDROWS"))}`);
+   // RAM the ROM reads or writes as a word, or steps through by INC/DEC HL,
+   // so each name must follow the first at its offset.
+   const runs = [
