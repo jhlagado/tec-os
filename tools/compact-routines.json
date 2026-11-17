@@ -873,6 +873,11 @@
     "SPACES",
     "NUM"
   ],
+  "test/programs/area3.asm": [
+    "INIT",
+    "REMOVE",
+    "AREA3"
+  ],
   "test/programs/put.asm": [
     "START",
     "FILE",

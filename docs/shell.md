@@ -310,6 +310,8 @@ empty line.
   origin, FFh for a line of `STARTUP.CMD` so that its quiet paths hold, and 0
   otherwise. The ROM writes a zero at the buffer's last byte, then runs the line
   as a typed one. An empty line brings the next prompt. `LINE` must return.
+  It must return with the user area as it found it: the ROM runs the line in
+  that area, and only the next prompt puts it back to area 0.
 - The first BDOS 10 after a `LINE` call offers ^W and ^N through `HREC` and
   stores the finished line through `HSTORE`. A program's BDOS 10 does neither.
 

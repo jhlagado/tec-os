@@ -126,10 +126,13 @@ test("a service whose INIT or REMOVE sets area 3 leaves the prompt in area 0: th
   const bytes = Uint8Array.from(rom), at = symbols.get("SAVEDRV") - 0xc000;
   assert.deepEqual([...bytes.subarray(at, at + 2)], [0xaf, 0x32], "XOR A, LD (nn),A");
   bytes.fill(0, at, at + 4);
+  // ONLY3's exit is a warm boot, which clears the area, so REMOVE's is seen alone.
   for (const shell of [false, true]) {
     const m = bootOn({ rom: bytes, symbols }, withSvc(shell));
-    m.command("AREA3.SVC");
-    assert.match(m.command("ONLY3"), /\r\n3/, "without them the area-3 program runs: the checks above fail there");
+    for (const [line, by] of [["AREA3.SVC", "INIT"], ["UNLOAD", "REMOVE"]]) {
+      m.command(line);
+      assert.match(m.command("ONLY3"), /\r\n3/, `without them, after ${by}, the area-3 program runs: the checks above fail there`);
+    }
   }
 });
 

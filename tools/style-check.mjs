@@ -2,7 +2,8 @@
 // Compact assembly checks (tools/lib/style-compact.mjs) on the ROM sources, the
 // drivers and the diagnostics: src/ and its subfolders, drivers/, diag/ (the
 // gen/ folders excluded), SAMPLE.ASM, DEMO.ASM, the diagnostics' MON3 stub and the
-// tests' AREA.COM and PUT.COM. Prints each file's figures and, with --faults, each fault.
+// tests' AREA.COM, AREA3.SVC and PUT.COM. Prints each file's figures and, with
+// --faults, each fault.
 //
 //   node tools/style-check.mjs [--json FILE] [--faults] [--strict] [FILE...]
 //
