@@ -93,13 +93,21 @@ async function diagnosticLowerOrigin() {
     const config = readFileSync(join(dir, "CONFIG.ASM"), "latin1");
     const origin = parseInt(config.match(/WSBASE\s+EQU\s+\$([\dA-F]+)/)[1], 16);
     const { globals } = decodeImage(Buffer.from(result.dbg), Buffer.from(result.bytes), origin);
+    const adjacencyChecks = {};
+    for (const [first, next] of [["CONMOD", "CONAUX"], ["CONOLD", "CAXOLD"]]) {
+      assert.equal(globals.get(first)?.kind, "label");
+      assert.equal(globals.get(next)?.kind, "label");
+      const delta = globals.get(next).value - globals.get(first).value;
+      assert.equal(delta, 1, next + " must follow " + first);
+      adjacencyChecks[next + "-" + first] = delta;
+    }
     const start = globals.get("RESET").value;
     const end = globals.get("CODEEND").value;
     assert.equal(start, 0xA000);
     const hash = createHash("sha256");
     for (const [file, source] of [...visited].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) hash.update(file + "\0").update(source);
     console.log(JSON.stringify({ diagnosticOnly: true, sourceSha256: hash.digest("hex"), romBytes: end - start,
-      normalOriginEnd: end + 0x2000, freeAtNormalOrigin: 0x10000 - end - 0x2000, tstates: result.tstates }));
+      normalOriginEnd: end + 0x2000, freeAtNormalOrigin: 0x10000 - end - 0x2000, adjacencyChecks, tstates: result.tstates }));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

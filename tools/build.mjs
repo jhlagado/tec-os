@@ -255,6 +255,8 @@ async function buildProfile(name, assemble) {
   // RAM the ROM reads or writes as a word, or steps through by INC/DEC HL,
   // so each name must follow the first at its offset.
   const runs = [
+    ["CONMOD", "CONAUX"], // CONSAVE route word
+    ["CONOLD", "CAXOLD"], // CONSAVE snapshot word
     ["PENDING", "PENDCHR"], // GETCHAR
     ["KBE", "KBD"], // KBSBIT's word store
     ["KBTN", "KBT1", "KBT2"], // the arrow queue, written down from KBT2

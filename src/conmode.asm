@@ -11,15 +11,14 @@
 
 CONSAVE:
   call CONSEL    ; apply direct IOBYTE
+  ld hl,(CONMOD) ; adjacent route/aux
   ld a,(CONOLD)
   and $40        ; cold bypass latch
-  ld b,a         ; retain bypass flag
-  ld a,(CONMOD)  ; effective old route
-  or b
+  or l           ; effective old route
   or $80         ; block nested hotkeys
-  ld (CONOLD),a
-  ld a,(CONAUX)  ; old physical UC1
-  ld (CAXOLD),a
+  ld l,a
+  ld (CONOLD),hl ; publish mode and aux
+                 ; together
   ld a,(PIWID)   ; include PICO geometry
   ld (CPIOLD),a
   ld a,(LCDPRF)  ; include LCD geometry
@@ -53,7 +52,7 @@ CONDIFF:
                  ; driver
   ret nz         ; same UC1 is not
                  ; enough
-  ld a,(CONAUX)
+  ld a,(hl)      ; HL still names CONAUX
   or a
   jr nz,CONDGLC  ; compare live
                  ; ownership
@@ -230,16 +229,12 @@ CONCRLF:
   ld a,10        ; fall into feedback
 
 CONPUT:
-  push af        ; retain feedback byte
+  ld c,a         ; feedback may change BC
   ld a,(CONMOD)
   cp CMBAT       ; BAT still needs a
                  ; query
-  jr nz,CONPUT1  ; other physical route
-  pop af
-  jp TXBYTE      ; IOBYTE stays BAT
-
-CONPUT1:
-  pop af
+  ld a,c         ; keep route-test flags
+  jp z,TXBYTE    ; IOBYTE stays BAT
   jp PUTA        ; normal ROM dispatch
 
 ; Wait a finite processor-work budget
