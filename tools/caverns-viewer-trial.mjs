@@ -24,13 +24,13 @@ await a.page.waitForFunction(()=>document.querySelector('#filelist').textContent
 const builtDownload=a.page.waitForEvent('download');await a.page.locator('#filelist tr').filter({hasText:'CAVERNS.COM'}).getByRole('button',{name:'Download'}).click();
 await (await builtDownload).saveAs(out+'/CAVERNS.COM');assert.deepEqual(readFileSync(out+'/CAVERNS.COM'),readFileSync(root+'/programs/CAVERNS.COM'));
 const publicOpening=await cmd(a.page,'caverns');assert.ok(publicOpening.join(' ').includes('bark hut'));
-const publicTaken=await cmd(a.page,'take compass');assert.ok(publicTaken.join(' ').includes('Taken:'));
+const publicTaken=await cmd(a.page,'take compass');assert.ok(publicTaken.join(' ').includes('You take'));
 const publicInventory=await cmd(a.page,'inventory');assert.ok(publicInventory.join(' ').includes('compass'));
-const publicClearing=await cmd(a.page,'north');assert.ok(publicClearing.join(' ').replace(/\s+/g,' ').includes('a field of clovers opens to the east'));
+const publicClearing=await cmd(a.page,'north');assert.ok(publicClearing.join(' ').replace(/\s+/g,' ').includes('a field of clovers opens east'));
 await a.page.locator('#tms').screenshot({path:out+'/public-build-play.png'});
 await cmd(a.page,'quit');await cmd(a.page,'n',false);
 await a.page.locator('#openimg').setInputFiles(root+'/build/caverns/scenarios.img');await a.page.waitForFunction(()=>document.querySelector('#filelist').textContent.includes('CAVLOAD.COM'));await ready(a.page);
-const rope=await cmd(a.page,'cavload rope');assert.ok(rope.some(l=>l.includes('southern bank')));
+const rope=await cmd(a.page,'cavload rope');assert.ok(rope.some(l=>l.includes('southern riverbank')));
 const inventory=await cmd(a.page,'list');assert.ok(/tatty\s+rope/.test(inventory.join(' ')));await a.page.locator('#tms').screenshot({path:out+'/rope.png'});
 const download=a.page.waitForEvent('download');await a.page.locator('#filelist tr').filter({hasText:'CAVE.CAV'}).getByRole('button',{name:'Download'}).click();const d=await download;await d.saveAs(out+'/CAVE.CAV');assert.deepEqual(readFileSync(out+'/CAVE.CAV'),readFileSync(root+'/programs/caverns/CAVE.CAV'));await a.context.close();
 // Independent browser storage and a fresh starter card, importing only the
