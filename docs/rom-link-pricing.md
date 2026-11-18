@@ -9,7 +9,7 @@ The helper compiles the frozen LCD/font target sources with the actual
 reviewed prompt-history source patch. It emits the proposed RAM body first,
 then workspace reservations, then retained ROM. This respects TAS's
 forward-only origins. Genuine HEX and the debug file must agree; packet
-coverage, reservation boundaries, ROM console policy and placement
+coverage, reservation boundaries, ROM console policy and complete retained-ROM coverage and placement
 convergence are checked before a subtotal can be reported.
 
 Prepare the normal pinned TAS and host as in README.md. Place the exact
@@ -34,6 +34,8 @@ cannot qualify native timing, stacks, callbacks, reset, NMI or a board.
 A retained-ROM-plus-packed-payload subtotal excludes the decoder, bounds,
 checksum, metadata, cold installation and failure path. The report lists
 those costs as unpriced. It cannot clear the 128-byte reserve. Resident
+layout is proposed arithmetic only: the staged ALVINIT still allocates from
+WSBASE; its required changes are unpriced and it is never executed. Resident
 combinations falling below `8000h` are reported as coexistence failures;
 the proposed smaller shell is a separate unqualified dependency.
 

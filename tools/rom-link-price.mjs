@@ -149,7 +149,7 @@ export async function priceLink({codecPath=join(ROOT,'.inputs/pack-com.mjs')}={}
           codecPin:'eee4ee6846add13c0ea120fbf2de8be0ec08c0b1',codecSHA256:CODEC,historyPatchSHA256:sha(patch),
           transformedBranches:transformed.changes,passes,retainedRomBytes:retained.length,retainedRomSHA256:sha(retained),packedBytes:packed.length,
           subtotalBytes:retained.length+packed.length,unpriced:['native decoder','bounds and checksum validation','header and metadata','cold installation','ROM-safe failure path'],
-          layout,allResidentCasesCoexist:layout.cases.every(c=>c.coexists),qualification:'Size/coexistence experiment only; no normal bootable artifact, reserve pass, runtime, timing, stack or board clearance.'};
+          layoutProposal:layout,layoutBasis:'Proposed starter-card arithmetic only. Staged ALVINIT is unchanged; cold installation and allocation changes are unpriced.',allProposedResidentCasesCoexist:layout.cases.every(c=>c.coexists),qualification:'Size/coexistence experiment only; no normal bootable artifact, reserve pass, runtime, timing, stack or board clearance.'};
       }
       workspace=0xbf00-workspaceSpan;origin=workspace-packet.length;
       assert.ok(origin>=0x8000&&origin<workspace,'packet placement outside protected classic region');

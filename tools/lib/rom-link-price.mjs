@@ -35,10 +35,12 @@ export function parsePriceHex(raw) {
 export function validatePriceRanges(map,{ramStart,ramEnd,workspace,romStart,romEnd}) {
   assert.ok(Number.isInteger(ramStart)&&ramStart>=0x8000&&ramStart<ramEnd&&ramEnd<=workspace,'RAM range');
   assert.ok(workspace<romStart&&romStart===0xc000&&romEnd>romStart&&romEnd<=0x10000,'ROM/workspace range');
+  assert.equal(map.keys().next().value,ramStart,'first emitted address');
   for (let a=ramStart;a<ramEnd;a++) assert.ok(map.has(a),'packet coverage');
   for (const a of map.keys()) {
     assert.ok((a>=ramStart&&a<ramEnd)||(a>=romStart&&a<romEnd),'data outside declared packet/ROM, including workspace reservations');
   }
+  for (let a=romStart;a<romEnd;a++) assert.ok(map.has(a),'ROM coverage');
 }
 
 export function servicePrices(workspace,packetBytes) {

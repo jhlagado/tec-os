@@ -25,6 +25,14 @@ test('range validation refuses missing packet bytes and workspace data',()=>{
  assert.throws(()=>validatePriceRanges(parse(row(0xa000,[1])+row(0xc000,[1])+eof),r),/coverage/);
  assert.throws(()=>validatePriceRanges(parse(row(0xa000,[1,2])+row(0xb000,[0])+eof),r),/workspace/);
 });
+test('range validation refuses a missing retained-ROM byte',()=>{
+ const r={ramStart:0xa000,ramEnd:0xa002,workspace:0xb000,romStart:0xc000,romEnd:0xc002};
+ assert.throws(()=>validatePriceRanges(parse(row(0xa000,[1,2])+row(0xc000,[1])+eof),r),/ROM coverage/);
+});
+test('range validation requires the RAM origin to be emitted first',()=>{
+ const r={ramStart:0xa000,ramEnd:0xa002,workspace:0xb000,romStart:0xc000,romEnd:0xc001};
+ assert.throws(()=>validatePriceRanges(parse(row(0xc000,[1])+row(0xa000,[1,2])+eof),r),/first emitted/);
+});
 test('service floor distinguishes current shell failure and proposed shell limit',()=>{
  const p=servicePrices(0xbacb,5797);
  assert.equal(p.codeBase,0xa426);assert.equal(p.stub,0xa023);assert.equal(p.bareTpa,40739);
