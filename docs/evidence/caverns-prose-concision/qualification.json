@@ -93,7 +93,8 @@
       "skipped": 0,
       "logSHA256": "55cf6b8dedabe4019fa6c7f632b48944dce370cf02056c69f761b9e41da7f4cb",
       "codePin": "7cea9d0b52bb4a9d3e8c3dd83d2dcc3155278b20",
-      "secondRun": "still active, not yet qualified"
+      "secondRun": "still active, not yet qualified",
+      "commandExitCode": 0
     }
   ]
 }
