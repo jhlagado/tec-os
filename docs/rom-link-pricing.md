@@ -8,7 +8,10 @@ Origo, `studies/p3-tec-os/stages/rom-resident-link-price-model.md`.
 The helper compiles the frozen LCD/font target sources with the actual
 reviewed prompt-history source patch. It emits the proposed RAM body first,
 then workspace reservations, then retained ROM. This respects TAS's
-forward-only origins. Genuine HEX and the debug file must agree; packet
+forward-only origins. Workspace-derived EQU aliases are deferred until
+after their native workspace labels are declared; instruction operands
+retain ordinary forward references. Transitive aliases are ordered and
+cycles or duplicate declarations are refused. Genuine HEX and the debug file must agree; packet
 coverage, reservation boundaries, ROM console policy and complete retained-ROM coverage and placement
 convergence are checked before a subtotal can be reported.
 

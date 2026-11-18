@@ -51,3 +51,21 @@ test('placement requires an adjacent stable state and refuses cycles and excess 
  const bound=[];for(let i=0;i<8;i++)placementDecision(bound,{origin:i});
  assert.throws(()=>placementDecision(bound,{origin:9}),/bound/);
 });
+
+test('workspace aliases are deferred transitively without moving emitted code',async()=>{
+ const {deferWorkspaceEquates}=await import('../tools/lib/rom-link-price.mjs');
+ const source=new Map([['body.asm','X EQU Y+1\nY EQU LOADBUF+2\nN EQU 3\nENTRY: LD HL,X\n']]);
+ const plan=deferWorkspaceEquates(source,new Set(['LOADBUF']));
+ assert.deepEqual(plan.declarations.map(d=>d.name),['Y','X']);
+ assert.equal(plan.text,'Y EQU LOADBUF+2\nX EQU Y+1\n');
+ assert.match(plan.rewritten.get('body.asm'),/N EQU 3\nENTRY: LD HL,X/);
+ assert.equal(source.get('body.asm').startsWith('X EQU Y'),true);
+});
+test('workspace alias cycles are refused',async()=>{
+ const {deferWorkspaceEquates}=await import('../tools/lib/rom-link-price.mjs');
+ assert.throws(()=>deferWorkspaceEquates(new Map([['a.asm','X EQU LOADBUF+Y\nY EQU X\n']]),new Set(['LOADBUF'])),/cyclic/);
+});
+test('duplicate deferred workspace declarations are refused',async()=>{
+ const {deferWorkspaceEquates}=await import('../tools/lib/rom-link-price.mjs');
+ assert.throws(()=>deferWorkspaceEquates(new Map([['a.asm','X EQU LOADBUF\nX EQU LOADBUF+1\n']]),new Set(['LOADBUF'])),/duplicate/);
+});

@@ -64,3 +64,36 @@ export function placementDecision(prior,state) {
   prior.push(key);
   return 'continue';
 }
+
+// EQU needs a known value in TAS even where instruction operands can use
+// forward references. Defer only workspace-derived aliases, in dependency
+// order; leave every emitting statement and unrelated constant in place.
+export function deferWorkspaceEquates(sources, workspaceNames) {
+  const definitions=[];
+  for (const [file,text] of sources) for (const [line,source] of text.split('\n').entries()) {
+    const m=source.match(/^([A-Z_][A-Z0-9_]*)\s+EQU\s+(.+)$/i);
+    if (!m) continue;
+    const expression=m[2].split(';')[0].replace(/'[^']*'|"[^"]*"|\$[0-9A-F]+/gi,'');
+    const dependencies=(expression.match(/\b[A-Z_][A-Z0-9_]*\b/gi)??[]).map(x=>x.toUpperCase());
+    definitions.push({file,line:line+1,name:m[1].toUpperCase(),source,dependencies});
+  }
+  const late=new Set(workspaceNames);
+  for(let round=0;round<definitions.length;round++) {
+    let changed=false;
+    for(const d of definitions) if(!late.has(d.name)&&d.dependencies.some(n=>late.has(n))){late.add(d.name);changed=true;}
+    if(!changed)break;
+  }
+  const selected=definitions.filter(d=>late.has(d.name));
+  assert.equal(new Set(selected.map(d=>d.name)).size,selected.length,'duplicate deferred alias');
+  const selectedNames=new Set(selected.map(d=>d.name)),resolved=new Set(workspaceNames),ordered=[];
+  let pending=[...selected];
+  while(pending.length) {
+    const ready=pending.filter(d=>d.dependencies.every(n=>!selectedNames.has(n)||resolved.has(n)));
+    assert.ok(ready.length,'cyclic deferred workspace aliases');
+    for(const d of ready){ordered.push(d);resolved.add(d.name);}
+    const names=new Set(ready.map(d=>d.name));pending=pending.filter(d=>!names.has(d.name));
+  }
+  const moved=new Set(selected.map(d=>d.file+':'+d.line));
+  const rewritten=new Map([...sources].map(([file,text])=>[file,text.split('\n').map((line,i)=>moved.has(file+':'+(i+1))?'; Deferred workspace alias':line).join('\n')]));
+  return {rewritten,declarations:ordered,text:ordered.map(d=>d.source).join('\n')+'\n'};
+}

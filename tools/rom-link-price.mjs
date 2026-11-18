@@ -12,7 +12,7 @@ import {writeGenerated} from './build.mjs';
 import {tasAssembler} from './lib/tas-rom.mjs';
 import {decodeImage} from './lib/tas-d8.mjs';
 import {inputsDir,pinnedBytes} from './lib/pins.mjs';
-import {parsePriceHex,validatePriceRanges,servicePrices,placementDecision} from './lib/rom-link-price.mjs';
+import {parsePriceHex,validatePriceRanges,servicePrices,placementDecision,deferWorkspaceEquates} from './lib/rom-link-price.mjs';
 
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const BASE='96bf06bef12847631b68d95f5881ba0945893ca6';
@@ -32,6 +32,11 @@ function transformSource(src) {
   const packet=text.slice(body+1);
   writeFileSync(join(src,'ccpequ.asm'),equ,'latin1');
   writeFileSync(join(src,'ccpbody.asm'),packet,'latin1');
+  const workspaceSource=readFileSync(join(src,'ram.asm'),'latin1');
+  const workspaceNames=new Set([...labels(workspaceSource),...[...workspaceSource.matchAll(/^([A-Z_][A-Z0-9_]*)\s+EQU\b/gmi)].map(m=>m[1].toUpperCase())]);
+  const deferred=deferWorkspaceEquates(new Map(bodyFiles.map(f=>[f,readFileSync(join(src,f),'latin1')])),workspaceNames);
+  for(const [file,text] of deferred.rewritten)writeFileSync(join(src,file),text,'latin1');
+  writeFileSync(join(src,'lateequ.asm'),deferred.text,'latin1');
   const ramLabels=new Set(bodyFiles.flatMap(f=>[...labels(readFileSync(join(src,f),'latin1'))]));
   const changes=[];
   const changeBranches=(file,source,targets)=>source.split('\n').map((line,i)=>{
@@ -56,10 +61,10 @@ function transformSource(src) {
   let entry=readFileSync(join(src,'rom.asm'),'latin1');
   entry=once(entry,'%INCLUDE "cpm/ccp.asm"','%INCLUDE "ccpboot.asm"');
   for(const file of bodyFiles.slice(1)) entry=once(entry,'%INCLUDE "'+file+'"','');
-  const before=[ '%INCLUDE "ccpequ.asm"','  ORG RAMORG','RAMBEG:',...bodyFiles.map(f=>'%INCLUDE "'+f+'"'),'RAMEND:','%INCLUDE "ram.asm"'].join('\n');
+  const before=[ '%INCLUDE "ccpequ.asm"','  ORG RAMORG','RAMBEG:',...bodyFiles.map(f=>'%INCLUDE "'+f+'"'),'RAMEND:','%INCLUDE "ram.asm"','%INCLUDE "lateequ.asm"'].join('\n');
   entry=once(entry,'%INCLUDE "ram.asm"',before);
   writeFileSync(join(src,'rom.asm'),entry,'latin1');
-  return {changes,consoleLabels:[...labels(readFileSync(join(src,'conmode.asm'),'latin1'))]};
+  return {changes,deferredEquates:deferred.declarations,consoleLabels:[...labels(readFileSync(join(src,'conmode.asm'),'latin1'))]};
 }
 
 // Flatten only declared local includes into unique CP/M names. Absolute paths
@@ -147,7 +152,7 @@ export async function priceLink({codecPath=join(ROOT,'.inputs/pack-com.mjs')}={}
         return {schema:'tecos-protected-code-price-v1',diagnosticOnly:true,targetExecuted:false,sourcePin:git('rev-parse','HEAD'),frozenTargetPin:BASE,
           compilerPin:'7a217f96c76f11641af3fa0b22d0b34be6e2a467',compilerSHA256:sha(pinnedBytes(ROOT,'TAS.COM')),
           codecPin:'eee4ee6846add13c0ea120fbf2de8be0ec08c0b1',codecSHA256:CODEC,historyPatchSHA256:sha(patch),
-          transformedBranches:transformed.changes,passes,retainedRomBytes:retained.length,retainedRomSHA256:sha(retained),packedBytes:packed.length,
+          transformedBranches:transformed.changes,deferredEquates:transformed.deferredEquates,passes,retainedRomBytes:retained.length,retainedRomSHA256:sha(retained),packedBytes:packed.length,
           subtotalBytes:retained.length+packed.length,unpriced:['native decoder','bounds and checksum validation','header and metadata','cold installation','ROM-safe failure path'],
           layoutProposal:layout,layoutBasis:'Proposed starter-card arithmetic only. Staged ALVINIT is unchanged; cold installation and allocation changes are unpriced.',allProposedResidentCasesCoexist:layout.cases.every(c=>c.coexists),qualification:'Size/coexistence experiment only; no normal bootable artifact, reserve pass, runtime, timing, stack or board clearance.'};
       }
