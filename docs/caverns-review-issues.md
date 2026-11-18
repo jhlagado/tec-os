@@ -1501,3 +1501,22 @@ implement game edits yet.
   followed by the generic nearby-creature listing. Consider a non-repeating
   awakening or less repetitive live-dragon wording. Source inspection verified
   this behavior; no new live combat test or game change was performed here.
+
+
+## Author walkthrough: candle lighting and creature-specific combat — 18 November 2026
+
+Notes only, deferred until after the ongoing playthrough:
+
+- Reaffirm the earlier proposal for an unlit candle and a box of matches with
+  an explicit lighting action. The current candle at the daylight entrance is
+  already lit; matches and a lighting mechanic are not implemented. Preserve
+  fair access to light before bat transport or deeper exploration, and assess
+  inventory, candle-clock, checkpoint and size implications before a change.
+- Reduce duplicated live-dragon introductions. Review generic combat messages
+  such as a blow to the head for creature-appropriate wording (dragon fire or
+  claws, for example), without silently changing combat probabilities.
+- Eastern entrance passage currently contains the earlier explorer's Sacred
+  Key of Thialfi clue and the giant bat. On the next ordinary action the bat
+  transports the player to the bat colony and disappears. LOOK/inventory and
+  free clarification paths do not themselves trigger that transport. This is
+  a shortcut/alternate route, not a prerequisite for the southern route.
