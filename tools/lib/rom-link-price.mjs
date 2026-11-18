@@ -44,12 +44,13 @@ export function validatePriceRanges(map,{ramStart,ramEnd,workspace,romStart,romE
 export function servicePrices(workspace,packetBytes) {
   assert.ok(Number.isInteger(workspace)&&Number.isInteger(packetBytes)&&packetBytes>0,'layout inputs');
   const codeBase=workspace-packetBytes,stub=codeBase-1024-3;
-  const ceiling=Math.floor(stub/256)*256;
+  const ceiling=Math.floor(stub/256)*256,baselineStub=workspace-1024-3;
+  const baselineCeiling=Math.floor(baselineStub/256)*256;
   assert.ok(codeBase>=0x8000&&workspace<0xc000,'protected placement');
   const cases=[['shell17',17],['shell17+GLCD3+MON319',39],['shell10',10],['shell10+GLCD3+MON319',32]];
-  return {codeBase,stub,bareTpa:stub-0x100,cases:cases.map(([name,pages])=>{
+  return {codeBase,stub,bareTpa:stub-0x100,baselineBareTpa:baselineStub-0x100,bareTpaLoss:packetBytes,cases:cases.map(([name,pages])=>{
     const top=ceiling-pages*256;
-    return {name,pages,top,tpa:top-0x100,coexists:top>=0x8000};
+    return {name,pages,top,tpa:top-0x100,baselineTpa:baselineCeiling-pages*256-0x100,tpaLoss:baselineCeiling-ceiling,coexists:top>=0x8000};
   })};
 }
 

@@ -28,6 +28,8 @@ test('range validation refuses missing packet bytes and workspace data',()=>{
 test('service floor distinguishes current shell failure and proposed shell limit',()=>{
  const p=servicePrices(0xbacb,5797);
  assert.equal(p.codeBase,0xa426);assert.equal(p.stub,0xa023);assert.equal(p.bareTpa,40739);
+ assert.equal(p.baselineBareTpa,46536);assert.equal(p.bareTpaLoss,5797);
+ assert.equal(p.cases[0].baselineTpa,41984);assert.equal(p.cases[0].tpaLoss,5632);
  assert.equal(p.cases[1].coexists,false);assert.equal(p.cases[3].top,0x8000);
  assert.equal(servicePrices(0xbacb,5832).cases[3].coexists,true);
  assert.equal(servicePrices(0xbacb,5833).cases[3].coexists,false);

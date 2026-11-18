@@ -90,7 +90,7 @@ function stage(src,dir,workspace,origin) {
   }
   visit('rom.asm');
   const digest=createHash('sha256');
-  for(const [file,text] of [...sources].sort(([a],[b])=>a.localeCompare(b)))digest.update(file+'\0').update(text);
+  for(const [file,text] of [...sources].sort(([a],[b])=>a<b?-1:a>b?1:0))digest.update(file+'\0').update(text);
   return digest.digest('hex');
 }
 
