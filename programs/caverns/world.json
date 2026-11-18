@@ -15,7 +15,7 @@
     {
       "id": 2,
       "key": "HUT_CLEARING",
-      "description": "You stand before a small windowless bark hut. The door to the south locked when you closed it. A forest lies west and a field of clovers opens east.",
+      "description": "You are in a forest clearing before a small windowless bark hut. The door to the south is locked. A forest lies west and a field of clovers opens east.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -26,7 +26,7 @@
     {
       "id": 3,
       "key": "DARK_FOREST",
-      "description": "You are deep in a dark forest. A mighty river glints through the trees. A path leads east to a hut clearing and west towards a river cliff.",
+      "description": "You are deep in a dark forest. In the distance a mighty river glints through the trees. A path leads east to the clearing by the hut and west towards a river cliff.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -37,7 +37,7 @@
     {
       "id": 4,
       "key": "CLOVER_FIELD",
-      "description": "You stand in a field of four-leafed clovers. A hut clearing lies west and the slopes of Mount Ymir rise to the east.",
+      "description": "You stand in a field of four-leafed clovers. The clearing by the hut lies west and the slopes of Mount Ymir rise to the east.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -59,7 +59,7 @@
     {
       "id": 6,
       "key": "RIVERBANK",
-      "description": "You stand at the rocky edge of the mighty river Gioll. A path forks east and west. Another climbs north to a cliff.",
+      "description": "You stand at the rocky edge of the mighty river Gioll. A path forks east and west while another climbs north to a cliff.",
       "exits": {
         "north": 5,
         "south": 0,
@@ -70,7 +70,7 @@
     {
       "id": 7,
       "key": "CRATER",
-      "description": "You stand on the slippery rim of an enormous crater. Clouds of water vapour rise as the Gioll pours into it. West is a fatal drop. A safe path leads east.",
+      "description": "You stand on the slippery rim of an enormous crater. Clouds of water vapour rise high into the air as the Gioll pours into it. West is a fatal drop. A safe path leads east.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -81,7 +81,7 @@
     {
       "id": 8,
       "key": "OUTCROP",
-      "description": "You are on a rocky outcrop fifteen feet above the river. A tiny string bridge spans the water to the south-east. To reach it you must go west and detour through the forest.",
+      "description": "The path ends here. You are on a rocky outcrop fifteen feet above the river. A tiny string bridge spans the water to the south-east.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -92,7 +92,7 @@
     {
       "id": 9,
       "key": "YMIR_SLOPES",
-      "description": "You are on the lower slopes of Mount Ymir. Arctic winds blow fiercely. It is very cold! A path leads west through clovers towards the forest and south towards a bridge.",
+      "description": "You are on the lower slopes of Mount Ymir. The forest stretches far away to the west. Arctic winds blow fiercely. It is very cold! A path leads west to a field of clovers and another descends south towards the bridge.",
       "exits": {
         "north": 0,
         "south": 10,

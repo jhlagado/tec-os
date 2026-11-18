@@ -1,5 +1,11 @@
 # Caverns prose recovery and light editing
 
+The author’s review of rooms 1–10 added a subsequent prose pass. It restores
+the clearing, distant river, high vapour and view from Mount Ymir. The outcrop
+still shows the bridge but leaves the route to the player. The current COM
+(`5b943251`) still occupies 35,968 bytes. The figures and release receipts
+below describe the earlier editorial pass.
+
 Native qualification is complete. Two full platform runs pass 1,433 tests
 each. Final literal-only corrections then pass all 41 affected
 native checks and 16 conditional-prose observations. No compiler, runtime,
