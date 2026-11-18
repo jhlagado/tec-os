@@ -1556,3 +1556,15 @@ public instructions were inspected. Findings distinguish mechanical corrections,
 ambiguous meaning and output-format issues from optional stylistic changes.
 Preserve the author's original prose and UK spelling. Findings are notes only;
 no game edits or rebuilt artifacts are part of this sweep.
+
+
+## Author walkthrough: corridor's ambiguous cavern — 18 November 2026
+
+At room 22 the author reasonably reads "the western passage returns to the
+cavern" as returning to the entrance cavern reached before the torture chamber.
+Source tracing: entrance cavern18 WEST torture23 NORTH corridor22 WEST northern
+cavern21. These are two different caverns; corridor22 EAST is blocked. Thus do
+not reverse west to east. Correct the misleading definite article/return claim:
+"The western passage leads into another cavern; a doorway to the south leads
+back to the torture chamber." Keep the northern cavern's distinctive long-tunnel
+landmark. Wording proposal recorded only; no route or game artifact changed.
