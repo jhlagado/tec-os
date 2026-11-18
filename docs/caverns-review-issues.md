@@ -1680,3 +1680,15 @@ it consumes one carried-item slot but adds no points, even at the hut. The
 author has chosen to take it in this live playthrough; do not assume it is a
 quest requirement. This note is source inspection, not an externally controlled
 inventory change.
+
+
+## Author prose rule: restrained commas — 18 November 2026
+
+Remove the AI-added sealed from the tunnel crack wording. In all description
+corrections minimise commas without damaging grammar. No Oxford commas; avoid
+unnecessary commas before or after and. Preserve the author's style rather
+than imposing more formal punctuation. Use full stops where genuinely needed,
+not comma-heavy connective sentences. Apply by reading each sentence, never
+blindly deleting punctuation. This preference supersedes punctuation in earlier
+proposed replacement passages. The proofreading review now records this rule.
+Notes only; no running-game or media changes during this walkthrough.

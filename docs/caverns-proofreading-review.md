@@ -10,6 +10,21 @@ Scope inspected: all 54 room descriptions and all 24 object descriptions in
 This is a manual first pass, not proof that every possible prose issue has
 been found. No exits, rules, BASIC source, binaries or card have changed.
 
+## Author punctuation and voice rule
+
+The author explicitly requests minimal commas in descriptive prose, no Oxford
+commas and no unnecessary comma immediately before or after and. Retain a comma
+only where grammar or clarity needs it. Prefer a full stop for an overloaded
+sentence rather than inserting more punctuation. This is a careful sentence
+review, not a global comma-deletion operation. Preserve the original voice and
+complete sentences. Earlier suggested quotations elsewhere are subordinate to
+this preference and must be checked before application.
+
+Remove the modern added word sealed from the tunnel's crack description. The
+original narrow crack is the reference; do not invent physical explanations or
+new clues to justify the blocked route. These decisions remain queued prose
+changes during the live walkthrough, not edits to current game artifacts.
+
 ## Clear mechanical corrections
 
 | Location | Current wording or formatting | Minimal correction |
