@@ -59,7 +59,7 @@ export function serialTiming() {
   };
 }
 
-function writeGenerated(profile, wsbase) {
+export function writeGenerated(profile, wsbase) {
   mkdirSync(GEN, { recursive: true });
   const s = serialTiming();
   writeFileSync(

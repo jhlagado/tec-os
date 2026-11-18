@@ -1,0 +1,91 @@
+diff --git a/src/cpm/bdos.asm b/src/cpm/bdos.asm
+index 74e5d17..39ad312 100644
+--- a/src/cpm/bdos.asm
++++ b/src/cpm/bdos.asm
+@@ -399,8 +399,11 @@ PRLOOP:
+ ; storing it even at maximum 0.
+ ; BS/DEL, ^C/^E/^R/^U/^X/^P and
+ ; prompt-only ^W/^N use the handlers
+-; below. Return zero. Any register may
+-; change.
++; below. Escape sequences for terminal
++; keys are consumed without echo or
++; storage. Raw character input remains
++; unchanged. Return zero. Any register
++; may change.
+ 
+ FNLINE:
+   call CKEY      ; write every line
+@@ -417,6 +420,10 @@ FNLINE:
+ 
+ LINLOOP:
+   call GETCHAR   ; next unechoed key
++
++LINKEY:
++  cp $1B         ; terminal key prefix
++  jp z,LINESC
+   ld c,a         ; C: key/echo argument
+   cp CR          ; CR/LF completes
+   jr z,TOLINDON
+@@ -699,6 +706,61 @@ LINHC:
+   inc hl         ; the shell's next byte
+   jr LINHC
+ 
++; Consume a terminal key without
++; inserting its escape bytes. Plain up
++; and down use shell prompt history.
++; Other navigation is ignored.
++; CSI and SS3 share the
++; final-byte range. A control key ends
++; an incomplete sequence through its
++; normal line-editing handler.
++; A lone Escape has no effect. Its next
++; ordinary byte is processed normally,
++; except [ or O begins a sequence.
++; No extra call frame or saved state.
++
++LINESC:
++  call GETCHAR
++  cp '['
++  jr z,LINCSI
++  cp 'O'
++  jp nz,LINKEY
++
++LINCSI:
++  call GETCHAR
++  cp 'A'         ; plain up: older
++  jr z,LINUP
++  cp 'B'         ; plain down: newer
++  jr z,LINDOWN
++  jr LINCSCK
++
++LINCSIN:
++  call GETCHAR   ; no history modifiers
++
++LINCSCK:
++  cp $1B         ; restart the prefix
++  jr z,LINESC
++  cp SPACE       ; control: normal edit
++  jp c,LINKEY
++  cp $40         ; parameters/intermediates
++  jr c,LINCSIN
++  cp $7F         ; DEL/high byte: normal
++  jp nc,LINKEY
++  jp LINLOOP     ; final consumed
++
++LINUP:
++  ld c,CTRLW     ; existing older action
++  jr LINARH
++
++LINDOWN:
++  ld c,CTRLN     ; existing newer action
++
++LINARH:
++  ld a,(HFLAG)   ; shell prompt only
++  or a
++  jp z,LINLOOP   ; program or bare CCP
++  jp LINHIST     ; no additional frame
++
+ ; Function 11: return 1 for pending or
+ ; BIOS-ready input, otherwise 0. An
+ ; existing pending byte is not consumed.
