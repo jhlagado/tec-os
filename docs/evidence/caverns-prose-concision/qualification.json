@@ -1,18 +1,18 @@
 {
-  "status": "Native qualification complete. Two full platform runs plus final literal-only scoped checks pass. Viewer final pin/publication pending.",
+  "status": "Core increment qualified and on main; final small narrative deduplication scoped checks in progress.",
   "fullProseCharacters": 10387,
-  "editedRoomCharacters": 8158,
-  "roomReductionPercent": 21.46,
+  "editedRoomCharacters": 8131,
+  "roomReductionPercent": 21.72,
   "previousShippedRoomCharacters": 10629,
   "comBytes": 35968,
-  "logicalBytes": 35941,
+  "logicalBytes": 35876,
   "previousComBytes": 37248,
   "comBytesSaved": 1280,
   "shellTPA": 41984,
   "stackBytes": 768,
-  "headroomBeforeDynamicAllocations": 5275,
-  "gameSha256": "a686342fae8869418b7824501659e946c6fdbbf5ed058a480834bb34e60eb21d",
-  "sourceSha256": "fc1cfc1e5dcfd9df264555fc8afa5a6b0c8ca3a91d918a6615bb4cea9ec017f0",
+  "headroomBeforeDynamicAllocations": 5340,
+  "gameSha256": "d563736861387ebf9152e730d28b0d5513ceba1c1b0f7666ddc4c5942bab956d",
+  "sourceSha256": "2f65e0a2a89045ec87b6c7291654b9a8612bfc1747c3c241f5da4b826768b7bd",
   "compilerSha256": "f8d4b8944be95451faa7aa0bc99e611f6793b7d4a8e413344e951e26ede07498",
   "librarySha256": "29c07740630069921f93581c8527d5db057c63a073a95b37c7a020df92ae5e38",
   "unchanged": [
@@ -71,10 +71,10 @@
   },
   "fullRoomControl": {
     "fileBytes": 38272,
-    "logicalBytes": 38272,
+    "logicalBytes": 38234,
     "sameFinalEngine": true,
     "fileBytesSavedByRoomEditing": 2304,
-    "logicalBytesSavedByRoomEditing": 2331,
+    "logicalBytesSavedByRoomEditing": 2358,
     "scope": "Same final engine and object/rule DATA, full recovered room prose versus edited room prose. Unshipped full-room control; compilation only, no gameplay qualification claim."
   },
   "bookChecks": {
@@ -148,5 +148,15 @@
     "rooms": 54,
     "gameSHA256": "a686342fae8869418b7824501659e946c6fdbbf5ed058a480834bb34e60eb21d"
   },
-  "temporaryIndependentCheckoutRemoved": true
+  "temporaryIndependentCheckoutRemoved": true,
+  "finalNarrativeDeduplication": {
+    "referenceMain": "382a18ea715e94f5813354a74ad62bec4251628a",
+    "changes": [
+      "Crypt state adds only the stone letters, without repeating that they spell a name.",
+      "Castle view names the eastward castle once; raised/lowered drawbridge state no longer repeats that bearing or implies a raised bridge can be crossed.",
+      "Completion uses a full sentence."
+    ],
+    "gameLogicChanged": false,
+    "affectedChecks": "in progress"
+  }
 }

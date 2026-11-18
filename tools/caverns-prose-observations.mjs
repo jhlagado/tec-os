@@ -24,8 +24,8 @@ observe('closed treasure door',20,{},['oak door bound with iron','locked from th
 observe('blasted treasure door',20,{'T%':19},['blast has opened a passage east'],['locked from the inside','oak door bound with iron']);
 observe('secured balcony rope',28,{'R0%':1},['rope hangs securely','End Of All Things'],['Use UP or DOWN','pagan']);
 observe('secured temple rope',35,{'R0%':1},['rope hangs securely','living rock'],['Use UP or DOWN']);
-observe('closed crypt seal',37,{},['Four stones bear the letters V, A, R and D'],['East seal open.']);
-observe('open crypt seal',37,{'E%':38},['stone seal in the eastern wall stands open'],['Four stones bear']);
+observe('closed crypt seal',37,{},['The stones are marked V, A, R and D'],['East seal open.']);
+observe('open crypt seal',37,{'E%':38},['stone seal in the eastern wall stands open'],['The stones are marked']);
 observe('covered shaft',38,{},['rusty grille covers','too large to carry'],['DROP GRILLE']);
 observe('open shaft',38,{'G%':39},['open ventilation shaft leads east'],['rusty grille covers']);
 observe('raised drawbridge',48,{},['raised drawbridge keeps you from crossing'],['East drawbridge']);

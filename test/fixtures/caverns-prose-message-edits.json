@@ -9,11 +9,11 @@
     "North gate open.": "To the north is an open gate.",
     "North gate locked.": "To the north is a locked gate.",
     "East seal open.": "The stone seal in the eastern wall stands open.",
-    "Stones read V, A, R, D. Speak the name.": "Four stones bear the letters V, A, R and D. They seem to spell a name.",
+    "Stones read V, A, R, D. Speak the name.": "The stones are marked V, A, R and D.",
     "East shaft open.": "An open ventilation shaft leads east.",
     "Remove the grille; leave it here. It cannot fit through.": "A rusty grille covers the ventilation shaft. It is too large to carry through.",
     "East drawbridge raised; seek another entrance.": "A raised drawbridge keeps you from crossing to the castle.",
-    "East drawbridge lowered.": "A mighty golden drawbridge spans the waters to the east.",
+    "East drawbridge lowered.": "A mighty golden drawbridge spans the waters.",
     "An evil wizard bars the way. He cries: Thou shalt not pass!": "Before you in a swirling mist stands an evil wizard with his hand held outwards. 'Thou shalt not pass!' he cries.",
     "A sleeping dragon wakes and breathes jets of fire.": "An enormous green dragon guards the cave entrance. Its eyes flicker as it leaps up breathing jets of fire.",
     "An old dwarf guards the steps, raising his dagger.": "From around the corner trots an old and gnarled dwarf carrying a lantern. 'My job is to protect these stone steps!' he says and lunges at you with his dagger.",
@@ -39,7 +39,8 @@
     "TIE ROPE TO RAIL at the balcony, then DOWN; UP returns.": "Tie the rope to the stone rail before climbing down. Once it is secured you can climb back up to the balcony.",
     "Ranking:": "This gives you an adventurer's ranking of:",
     "Excellent...but you've left something behind!": "Excellent... but you've left something behind!",
-    "You lift the latch. The hatch opens both ways.": "You lift the latch and open the service hatch."
+    "You lift the latch. The hatch opens both ways.": "You lift the latch and open the service hatch.",
+    "All treasure home. Your quest is complete!": "All your treasure is home. Your quest is complete!"
   },
   "objects": [
     {

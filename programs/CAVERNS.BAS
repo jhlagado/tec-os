@@ -66,9 +66,9 @@
 660 IF rm%=20 THEN IF td%=0 THEN PRINT "A formidable oak door bound with iron is locked from the inside. Perhaps explosives would open it." ELSE PRINT "The blast has opened a passage east into the treasure room."
 670 IF rm%=28 OR rm%=35 THEN IF rp%=1 THEN PRINT "The rope hangs securely from the rail to the temple floor."
 680 IF rm%=35 THEN IF gt% THEN PRINT "To the north is an open gate." ELSE PRINT "To the north is a locked gate."
-690 IF rm%=37 THEN IF cr% THEN PRINT "The stone seal in the eastern wall stands open." ELSE PRINT "Four stones bear the letters V, A, R and D. They seem to spell a name."
+690 IF rm%=37 THEN IF cr% THEN PRINT "The stone seal in the eastern wall stands open." ELSE PRINT "The stones are marked V, A, R and D."
 700 IF rm%=38 THEN IF sh% THEN PRINT "An open ventilation shaft leads east." ELSE PRINT "A rusty grille covers the ventilation shaft. It is too large to carry through."
-710 IF rm%=48 THEN IF db%=128 THEN PRINT "A raised drawbridge keeps you from crossing to the castle." ELSE PRINT "A mighty golden drawbridge spans the waters to the east."
+710 IF rm%=48 THEN IF db%=128 THEN PRINT "A raised drawbridge keeps you from crossing to the castle." ELSE PRINT "A mighty golden drawbridge spans the waters."
 720 IF rm%=14 THEN IF ob%(4)=0 THEN PRINT "You can also see the bloody corpse of an enormous dragon."
 730 IF ce%=1 THEN PRINT "Your candle is growing dim."
 740 IF ce%=2 THEN PRINT "Your candle has gone out."
@@ -235,7 +235,7 @@
 2350 PRINT "Welcome home! Your treasures are safe."
 2360 FOR ix%=7 TO 17:IF ix%<>8 THEN IF ix%<>9 THEN IF ob%(ix%)=-1 THEN ob%(ix%)=1
 2370 NEXT ix%:GOSUB 2240:PRINT "Your score is";sc%;" out of 126.":GOSUB 2280
-2380 IF sc%=126 THEN PRINT "All treasure home. Your quest is complete!"
+2380 IF sc%=126 THEN PRINT "All your treasure is home. Your quest is complete!"
 2390 PRINT "QUIT to finish, or leave to seek more treasure.":RETURN
 2400 END
 2410 DATA 2,"You are in a darkened room inside a small bark hut. A door leads north to a"
@@ -335,7 +335,7 @@
 3350 DATA 2,"You stand atop a stone staircase. Steps descend south towards a roaring"
 3360 DATA "waterfall. A pearl-white chamber lies east."
 3370 DATA 3,"You stand on a crumbling river ledge. Across the water to the east is a magic"
-3380 DATA "castle. Don't ask me why it is magic... I just know it is! A drawbridge crosses","east. A path leads north to another ledge. There is no path south."
+3380 DATA "castle. Don't ask me why it is magic... I just know it is! A path leads north","to another ledge. There is no path south."
 3390 DATA 2,"You stand on a mighty golden drawbridge above the river. Beyond it is a magic"
 3400 DATA "castle! A river ledge lies west and the courtyard lies east."
 3410 DATA 4,"You are in the courtyard of a magic castle. WOW! This castle is really"
