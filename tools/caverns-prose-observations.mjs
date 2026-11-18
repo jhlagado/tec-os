@@ -16,7 +16,7 @@ function observe(name,room,flags,expected,absent=[],dead=0){
  const word=p=>m.read(p)|m.read(p+1)<<8;
  for(const n of scalarNames)assert.equal(word(f.symbols[f.stateSymbols[n]].address)<<16>>16,s.variables[n],name+': '+n);
  const base=word(f.symbols['OB%()'].address)+6;assert.deepEqual(objects,objects.map((_,i)=>word(base+2*i)<<16>>16));assert.equal(Buffer.from(Array.from({length:4},(_,i)=>m.read(l.rng+i))).reverse().toString('hex'),s.rng);
- assert.deepEqual(m.violations,[]);records.push({name,room,flags,expected,absent,output:text});
+ assert.deepEqual(m.violations,[]);records.push({name,room,flags,expected,absent,output:text,screen:m.screen()});
 }
 observe('closed temple gate',35,{},['To the north is a locked gate.','living rock'],['North gate locked.','from which you descended']);
 observe('open temple gate',35,{'K0%':1},['To the north is an open gate.'],['locked gate']);

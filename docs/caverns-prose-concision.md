@@ -58,3 +58,36 @@ this text-only increment. These remain separate review items.
   passage rather than continuing to claim an intact door.
 - Wizard, dragon and dwarf scenes include recovered imagery but no longer
   repeat a generic nearby-creature listing immediately afterwards.
+
+
+## Representative edited passages
+
+**Crater:**
+
+> You stand on the slippery rim of an enormous crater. Clouds of water vapour
+> rise as the Gioll pours into it. West is a fatal drop. A safe path leads east.
+
+**Bat colony:**
+
+> You are in the heart of a giant bat colony. Hundreds hang overhead above
+> centuries of bat droppings. Careful where you step! The smell is
+> indescribable. A junction lies north and a passage leads west to another chamber.
+
+**Wizard:**
+
+> Before you in a swirling mist stands an evil wizard with his hand held
+> outwards. 'Thou shalt not pass!' he cries.
+
+**Dwarf:**
+
+> From around the corner trots an old and gnarled dwarf carrying a lantern.
+> 'My job is to protect these stone steps!' he says and lunges at you with his dagger.
+
+**Temple gate, depending on state:**
+
+> To the north is a locked gate.
+
+> To the north is an open gate.
+
+The statue remains in the temple paragraph. These sentences replace the
+additional clipped status, not the original statue imagery.

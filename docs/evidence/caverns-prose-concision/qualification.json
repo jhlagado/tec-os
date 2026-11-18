@@ -33,6 +33,28 @@
   "focusedInitial": {
     "pass": 19,
     "fail": 1,
-    "reason": "Old cannot-fit wording assertion; corrected to the approved too-large-to-fit wording. Quest rerun pending."
+    "reason": "Old cannot-fit wording assertion; corrected to the approved too-large-to-fit wording. Quest rerun pending.",
+    "questRerun": {
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "score": 126,
+      "rooms": 54
+    }
+  },
+  "viewerSuite": {
+    "tests": 202,
+    "pass": 202,
+    "fail": 0,
+    "skipped": 0,
+    "limitsChanged": false,
+    "environment": "Installed Chromium; two CPUs for browser tests, native strict runner isolated on a third CPU.",
+    "evidence": "jhlagado/tec-os-viewer docs/evidence/caverns-prose-concision/ (receiving record pending)"
+  },
+  "bookStarter": {
+    "sourceAllocatedBytes": 25344,
+    "files": 15,
+    "fileBytes": 116736,
+    "freeBytes": 903168
   }
 }
