@@ -1610,3 +1610,29 @@ corridor". This preference supersedes the preceding proposed opening; keep
 the breeze, westward dark-cavern exit and southern torture-chamber doorway.
 Do not insist on an orientation label or invent an eastern passage.
 These are accumulated review decisions, not changes to the running game.
+
+
+## Author walkthrough: treasure-door status prose — 18 November 2026
+
+Confirmed source provenance: the original protected MicroWorld BASIC line28
+reads "You can see a small oak door to the east. It has been locked from the
+inside." The current separate engine line "East: iron-bound door, barred
+within. Try explosives." is modern abbreviated status text, not original
+prose. The restoration did not eliminate this fragment. Record as a remaining
+restoration defect, alongside other terse dynamic gate/shaft/bridge statuses.
+
+The author requests natural full sentences and a direction-neutral opening
+("You stand before an oak doorway ...") rather than an emphasis on the wall's
+bearing. Do not silently move the doorway north: north from cavern21 reaches
+the door approach20; the actual treasure passage then goes east to room19,
+and south returns to21. This eastward doorway also exists in the original.
+Explain the turn if needed, without suggesting direction of arrival determines
+which wall holds the door.
+
+Later wording must distinguish intact and blasted states. Suggested closed
+state: "The iron-bound oak door to the east is barred from the inside. It
+looks too strong to force, but perhaps explosives would open it." Suggested
+open state: "The blast has opened a passage east into the treasure room."
+Keep the agreed explosives clue and all current exits/puzzle rules. Reconcile
+static doorway wording so it never describes intact timber after destruction.
+Notes only; current game remains unchanged during the author's walkthrough.
