@@ -1,5 +1,5 @@
 {
-  "status": "Both full platform runs pass1433/1433; final literal-only polish affected checks finishing. Main integration pending.",
+  "status": "Native qualification complete. Two full platform runs plus final literal-only scoped checks pass. Viewer final pin/publication pending.",
   "fullProseCharacters": 10387,
   "editedRoomCharacters": 8158,
   "roomReductionPercent": 21.46,
@@ -27,7 +27,8 @@
     "cases": 36,
     "commands": 480,
     "stateAndRNG": "identical",
-    "outputExceptions": "exact recorded room and message edits only"
+    "outputExceptions": "exact recorded room and message edits only",
+    "gameSHA256": "a686342fae8869418b7824501659e946c6fdbbf5ed058a480834bb34e60eb21d"
   },
   "stateDependentProseObservations": 16,
   "focusedInitial": {
@@ -93,7 +94,8 @@
       "skipped": 0,
       "logSHA256": "55cf6b8dedabe4019fa6c7f632b48944dce370cf02056c69f761b9e41da7f4cb",
       "codePin": "7cea9d0b52bb4a9d3e8c3dd83d2dcc3155278b20",
-      "commandExitCode": 0
+      "commandExitCode": 0,
+      "gameSHA256": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a"
     },
     {
       "index": 2,
@@ -104,7 +106,8 @@
       "commandExitCode": 0,
       "logSHA256": "3548470ec2e5c32a3087d9656e4f2e1235159c4f91bbeea62e1b86de984b59c9",
       "sourcePin": "195935dae0d5d9e471688caf2b6da25f3c1652e7",
-      "independentCheckout": true
+      "independentCheckout": true,
+      "gameSHA256": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a"
     }
   ],
   "postPlatformLiteralPolish": {
@@ -113,9 +116,25 @@
     "reason": "Remove an arrival assumption and duplicate open-passage explanation.",
     "logicChanges": false,
     "platformRunsArtifact": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a",
-    "finalAffectedChecks": "pending",
+    "finalAffectedChecks": {
+      "tests": 41,
+      "pass": 41,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "includes": [
+        "gameplay and all54rooms/126points",
+        "36scenarios/480commands and exact state/RNG",
+        "checkpoint loading",
+        "TED edit/save/build/run/reopen",
+        "starter card",
+        "service-loaded compiler/game Ctrl-C vectors"
+      ]
+    },
     "finalGameSHA256": "a686342fae8869418b7824501659e946c6fdbbf5ed058a480834bb34e60eb21d",
-    "logicalLiteralBytesRemoved": 35
+    "logicalLiteralBytesRemoved": 35,
+    "stateDependentObservations": 16,
+    "codePin": "319eee3782e9dfb14a67eace1a688caf2b6da25f3c1652e7"
   },
   "platformReferenceGameSHA256": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a",
   "platformReferenceArtifacts": {
@@ -123,5 +142,11 @@
     "programs/CAVERNS.COM": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a",
     "dist/tecos.rom": "35893cab810bf6757e5992ec492ec37a113828674e33d10da2e48dfa706b0bc8",
     "dist/tecos.d8.json": "5ddb64f51eaa8c54ce22fd87edeb01a7c673679ce77ef43eb411088e30beca92"
-  }
+  },
+  "finalQuest": {
+    "score": 126,
+    "rooms": 54,
+    "gameSHA256": "a686342fae8869418b7824501659e946c6fdbbf5ed058a480834bb34e60eb21d"
+  },
+  "temporaryIndependentCheckoutRemoved": true
 }

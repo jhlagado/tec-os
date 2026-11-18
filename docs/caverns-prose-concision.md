@@ -1,8 +1,10 @@
 # Caverns prose recovery and light editing
 
-Work in progress. The public main build is unchanged while this candidate is
-qualified. No compiler, runtime, world topology or puzzle-state changes are
-part of this increment.
+Native qualification is complete. Two full platform runs pass 1,433 tests
+each. A final one-sentence literal correction then passes all 41 affected
+native checks and 16 conditional-prose observations. No compiler, runtime,
+world topology or puzzle-state change is part of this increment. Viewer final
+pin/publication status is recorded separately in the qualification receipt.
 
 The full-prose candidate is retained in
 [full-prose-candidate.json](evidence/caverns-prose-concision/full-prose-candidate.json).
@@ -14,8 +16,8 @@ rather than replacing descriptions with labels.
 Current room text: 8,158 characters versus 10,387 in the recorded full-prose
 candidate (21.46% less). This is not a 30% reduction in executable size. The
 rough 30% editorial aspiration is not enforced at the expense of imagery.
-The native candidate is 36,096 file bytes (35,976 logical), saving 1,152 file
-bytes versus the previous build. It leaves 5,240 bytes before dynamic allocation
+The native candidate is 35,968 file bytes (35,941 logical), saving 1,280 file
+bytes versus the previous build. It leaves 5,275 bytes before dynamic allocation
 after the 768-byte stack reservation. Qualification is still pending.
 
 Recovered scenes include the wizard's swirling mist and hand, the green dragon
@@ -96,8 +98,8 @@ additional clipped status, not the original statue imagery.
 ## Controlled native size comparison
 
 The same final engine and object/rule DATA were compiled with the untrimmed
-recovered room paragraphs as a separate, unshipped control. It is 38,400 file
-bytes (38,307 logical). The edited build is 36,096 file bytes (35,976 logical),
+recovered room paragraphs as a separate, unshipped control. It is 38,272 file
+bytes (38,272 logical). The edited build is 35,968 file bytes (35,941 logical),
 saving 2,304 file bytes or 2,331 logical bytes from room editing alone. The
 control is a successful compilation measurement, not a full-play qualification.
 [Exact evidence](evidence/caverns-prose-concision/budget.json) includes both
@@ -109,5 +111,22 @@ A fresh browser compiled the exact edited COM from the source-only starter,
 played the opening, displayed the temple and restored an exported checkpoint
 in independent browser storage. Its [result](evidence/caverns-prose-concision/browser-result.json)
 and temple screenshot are retained. A stale article assertion was corrected;
-no source/runtime change was needed. Full strict platform qualification remains
-pending while these game/browser checks pass.
+no source/runtime change was needed. The full platform reference runs are complete. The final literal-only
+polish and its scoped evidence are distinguished below.
+
+
+## Final literal-only polish and evidence scope
+
+After the platform reference runs, the crypt sentence was shortened from
+"The eastern wall of the crypt slides open. The passage stays open behind you."
+to "The eastern wall of the crypt slides open." This removes an arrival
+assumption and repeated information. Only 35 literal bytes changed; executable
+record rounding saves another 128 file bytes. No game logic changed.
+
+The platform reference COM is 594b1e39 (36,096 bytes). The final COM is a686342f
+(35,968 bytes). Both full 1,433-check logs identify the reference version.
+The final artifact separately passes all 41 affected game/card/editor/vector
+checks, the 480-command state/RNG comparison and 16 state-dependent prose
+observations. All unaffected OS/compiler/Viewer implementation bytes remain
+unchanged. Final compilation and browser receipts identify the exact final COM;
+do not treat the older browser screenshots as final-artifact compilation proof.

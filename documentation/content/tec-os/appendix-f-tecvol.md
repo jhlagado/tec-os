@@ -190,7 +190,7 @@ directory is:
 node tools/tecvol.mjs dir dist/starter.img A
 ```
 
-<!-- TEC-OS with the sized DIR (ROM 35893cab, starter card e1e9199c): host-tool output of the command above. -->
+<!-- TEC-OS with the sized DIR (ROM 35893cab, starter card 67ecdfee): host-tool output of the command above. -->
 ```text
  0 BAZA.COM        13440
  0 BAZA.RTL        13056
