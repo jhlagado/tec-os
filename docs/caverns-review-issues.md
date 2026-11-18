@@ -1465,3 +1465,19 @@ packs all matching developer scenarios; their regenerated JSON identities are
 committed alongside the ready CAV files. The final evidence and updated book
 handover distinguish all these checks from physical TEC-1G testing, which is
 still outstanding. No public site deployment or main-branch merge is claimed.
+
+
+## Author walkthrough: bridge prose — 18 November 2026
+
+Approved wording-only refinement, pending the next game text build: in the
+string-bridge midpoint description, replace the final sentence with:
+
+> Hold tight and follow it either north or south.
+
+Remove the redundant clause about there being no footing east or west. Keep
+the preceding creaking/swaying description. East and west remain blocked;
+no exit or combat rules change. The current running game and published card
+have not been changed by this review note.
+
+The author also explicitly reaffirmed retaining the clearly warned fatal
+western crater drop as a rare deliberate hazard.
