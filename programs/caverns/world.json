@@ -136,7 +136,7 @@
     {
       "id": 13,
       "key": "MUSHROOM_ROCK",
-      "description": "You stand on a rock in a mighty oak forest surrounded by thousands of poisonous mushrooms. A path leads east to a bridge landing and south to a clearing.",
+      "description": "You stand on a rock in a mighty oak forest. Thousands of poisonous mushrooms surround you. A path leads east to a bridge landing and south to a clearing.",
       "exits": {
         "north": 0,
         "south": 14,
@@ -147,7 +147,7 @@
     {
       "id": 14,
       "key": "BASALT_CLEARING",
-      "description": "You are in a forest clearing beneath an ancient basalt rock formation. A VERY interesting cave opens to the south... A path leads north into the oak forest.",
+      "description": "You are in a forest clearing. An ancient basalt rock formation towers above you. A VERY interesting cave opens to the south... A path leads north into the oak forest.",
       "exits": {
         "north": 13,
         "south": 16,
@@ -158,7 +158,7 @@
     {
       "id": 15,
       "key": "ROPE_CLIFF",
-      "description": "You are on a shelf against a cliff face above the southern riverbank. A path leads west to a string bridge landing.",
+      "description": "You are on a shelf against a cliff face overlooking the river. A path leads west to a string bridge landing.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -169,7 +169,7 @@
     {
       "id": 16,
       "key": "ENTRANCE",
-      "description": "You are just inside a cave. Sunlight lights paths east and south. I don't mind saying I'm a bit scared! North leads outside. You will need a light to venture deeper.",
+      "description": "You are just inside a cave. Sunlight pours in, lighting paths east and south. I don't mind saying I'm a bit scared! North leads outside. You will need a light to venture deeper.",
       "exits": {
         "north": 14,
         "south": 18,
@@ -180,7 +180,7 @@
     {
       "id": 17,
       "key": "EXPLORER_PASSAGE",
-      "description": "This passage appears to be a dead end. An earlier explorer scratched a message on the wall: 'Find the Sacred Key of Thialfi'. A passage leads west to the cave entrance.",
+      "description": "This passage appears to be a dead end. An earlier explorer scratched a message on the wall: 'Find the Sacred Key of Thialfi'. The cave entrance lies west.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -191,7 +191,7 @@
     {
       "id": 18,
       "key": "ENTRANCE_CAVERN",
-      "description": "You are in a dark cavern. Daylight filters in from a cave entrance to the north. A passage leads west towards an old torture chamber.",
+      "description": "You are in a dark cavern. Daylight filters in from a cave entrance to the north. A passage leads west into what appears to be an old torture chamber.",
       "exits": {
         "north": 16,
         "south": 0,
@@ -213,7 +213,7 @@
     {
       "id": 20,
       "key": "TREASURE_DOOR",
-      "description": "You stand before an entrance to a treasure room. A passage leads south to a cavern.",
+      "description": "You stand before a doorway. A passage leads south to a cavern.",
       "exits": {
         "north": 0,
         "south": 21,

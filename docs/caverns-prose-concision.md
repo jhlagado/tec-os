@@ -1,9 +1,11 @@
 # Caverns prose recovery and light editing
 
-The author’s review of rooms 1–10 added a subsequent prose pass. It restores
+The author’s review added two subsequent prose passes. Rooms 1–10 restore
 the clearing, distant river, high vapour and view from Mount Ymir. The outcrop
-still shows the bridge but leaves the route to the player. The current COM
-(`5b943251`) still occupies 35,968 bytes. The figures and release receipts
+shows the bridge and leaves the route to the player. Rooms 11–20 restore the
+basalt towering above the clearing and sunlight pouring into the cave. The
+treasure doorway describes what lies beyond it only after it opens. The
+current COM (`588c4999`) occupies 35,968 bytes. The figures and release receipts
 below describe the earlier editorial pass.
 
 Native qualification is complete. Two full platform runs pass 1,433 tests
