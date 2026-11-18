@@ -6,31 +6,27 @@ and [map audit](caverns-map-audit.md), outside the practical manual.
 
 ## Readiness
 
-Qualified against the combined current firmware: **two independent full
-strict runs, 1,433 passes each, zero failures or skips**. This includes native
-compilation, the 126-point first-discovery quest, all 54 rooms and their
-printed descriptions, homecoming, complete checkpoint restoration and the
-TED copy/edit/save/build/run/exit/reopen-after-power-cycle exercise.
+The current prose increment is under final qualification. Native compilation,
+the 126-point quest through all 54 rooms, 480-command complete-state/RNG
+comparison, checkpoint restoration and the TED edit/build/run exercise pass.
+Sixteen separate native observations check both gate/door/shaft/bridge states
+and live/defeated creatures. The full strict platform run and refreshed Viewer
+checks are in progress; final receipts are in
+[the current record](evidence/caverns-prose-concision/qualification.json).
 
-The 480-command comparison in 36 scenarios retains exact non-prose output and
-all persisted state/RNG. Only the recorded descriptions, paragraph wrapping,
-copyright and diagnostic source-line coordinates are normalised. The full
-Viewer suite passes 202 checks, including unchanged timing/copy gates. A fresh
-Chromium Viewer compiles the exact executable from a source-only starter,
-plays the opening and restores an exported checkpoint in independent storage.
-These are native-emulator and browser observations, not physical-board tests.
-Physical TEC-1G testing and the author's final prose/gameplay read-through
-remain outstanding. Final receiving pins and publication receipts are recorded below; no new
-public version or release tag is assigned here.
+The earlier restored-prose version passed two 1,433-test strict runs and 202
+Viewer checks. Those are historical evidence for that earlier version, not a
+substitute for the current increment's final results. Physical TEC-1G testing
+and the author's final prose/gameplay read-through remain outstanding.
 
 ## Exact artifacts
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Qualified source and artifacts | jhlagado/tec-os, 1dd75f5bc97672d71a885010ba3aff9c2f598d6c |
+| Current source and artifacts | jhlagado/tec-os, 7cea9d0b52bb4a9d3e8c3dd83d2dcc3155278b20 |
 | Firmware code pin | jhlagado/tec-os, 1dd75f5bc97672d71a885010ba3aff9c2f598d6c; runtime source unchanged from tested 9b25a0cf |
 | Source on SYSTEM | programs/CAVERNS.BAS |
-| Verification executable, excluded from starter | programs/CAVERNS.COM; 37,248 bytes |
+| Verification executable, excluded from starter | programs/CAVERNS.COM; 36,096 bytes |
 | Exact source, compiler, RTL, executable identities | test/caverns-basic.json |
 | Player instructions on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume recipe and image | dist/starter.recipe.json, revision 17; dist/starter.img |
@@ -42,14 +38,13 @@ public version or release tag is assigned here.
 | Development checkpoints | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 | Assembly comparison, development only | programs/CAVASM.COM |
 
-Source SHA-256: b9bb843da998b757297831e46fbacd7e4de405d995807ee462351332e5c5e880.
-Executable SHA-256: d2ad7340741da02f5f5553875128b14f23bfb9f9db6d9c55e8be5d033f152301.
+Source SHA-256: 5cb573c8a67f8e94619509bfee85b3b65e26727f2c0e9b4b6600436ec1a32abc.
+Executable SHA-256: 594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a.
 Compiler SHA-256: f8d4b8944be95451faa7aa0bc99e611f6793b7d4a8e413344e951e26ede07498.
 Runtime SHA-256: 29c07740630069921f93581c8527d5db057c63a073a95b37c7a020df92ae5e38.
 
-The displayed copyright is 1982-83, with the GNU Public License notice retaining
-2019. The archival MicroWorld BASIC program is unchanged. Prose reconciliation
-is recorded [room by room](evidence/caverns-prose-restoration/rooms.json).
+The displayed copyright is 1982-83, with the GNU General Public License notice retaining
+2019. The archival MicroWorld BASIC program is unchanged. The current editorial record preserves [every before/recovered/edited room](evidence/caverns-prose-concision/room-edits.json).
 The source uses ten-step line numbering, uppercase keywords and lowercase
 variables. End users need no generator. RTL is linked selectively into the
 executable; its 13,056-byte file is needed for compilation, not alongside the
@@ -87,8 +82,8 @@ input. Descriptions are word-wrapped into lines of at most 79 characters.
 Counted DATA lines preserve paragraphs longer than BASIC's 255-byte single
 string limit. Forty-column prose layout is not the current qualification target.
 
-The shell-resident TPA is 41,984 bytes. The executable occupies 37,248 file bytes
-and 37,177 logical bytes; reserving a 768-byte CPU stack leaves 4,039 bytes for
+The shell-resident TPA is 41,984 bytes. The executable occupies 36,096 file bytes
+and 35,976 logical bytes; reserving a 768-byte CPU stack leaves 5,240 bytes for
 dynamic allocations before initialisation. Arrays, strings and control frames
 consume that space during play. Bare-ROM TPA is 46,536 bytes, but the example
 runs with the shell resident. Large source experiments can still exceed memory.
@@ -102,6 +97,8 @@ The compiler's existing RST 6 exception is unchanged and is tracked separately.
 
 ## Evidence and release scope
 
+- [Current prose recovery and concision](caverns-prose-concision.md).
+- [Current qualification](evidence/caverns-prose-concision/qualification.json).
 - [Restoration and reconciliation](caverns-prose-restoration.md).
 - [Restoration qualification status](evidence/caverns-prose-restoration/qualification.json).
 - [Pre-merge native game/editor/starter checks](evidence/caverns-prose-restoration/pre-merge/game-starter-tests.log.gz).

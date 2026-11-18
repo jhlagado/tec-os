@@ -1842,3 +1842,17 @@ imagery, humour, sensory detail, clues and actual directions. Remove repetition
 and weak modern additions before original atmosphere. Record text byte counts,
 logical/padded executable size and headroom separately. No game artifact has
 been edited by this audit; implementation and author prose approval are pending.
+
+
+## Prose recovery/concision implementation candidate
+
+The later authorised implementation supersedes the earlier notes-only status.
+See caverns-prose-concision.md and its before/recovered/edited records. The
+candidate restores shortened creature scenes, replaces terse puzzle statuses,
+removes duplicated enemy introductions, applies the agreed article/comma/bearing
+edits and preserves all216 exits plus complete semantic state/RNG. Room prose
+is21.46% shorter than the recorded full-prose candidate. Native COM is36,096
+bytes versus37,248. Native quest, differential, TED and checkpoint checks pass;
+full platform and Viewer qualification are still running. The ambiguous Norse
+folk/them meaning is deliberately preserved for author review. In-game HELP,
+matches and save/load remain future work. No BAZA code change is required.

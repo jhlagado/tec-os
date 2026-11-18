@@ -3,7 +3,7 @@
 This document retains the pre-optimisation 39,680-byte baseline. The 38,272-byte
 build after it, from compact source-location emission, is in
 [compact emission](caverns-compact-emission.md). The compiler-only build reached 29,056 bytes with Baza `eee4ee6`.
-The restored-prose build is 37,248 bytes; its current measurements are in
+The restored and lightly edited prose build is 36,096 bytes; its current measurements are in
 [prose restoration](caverns-prose-restoration.md) and the
 [book handover](caverns-book-handover.md).
 The audit tool measures its current checkout; use the historical baseline commit
