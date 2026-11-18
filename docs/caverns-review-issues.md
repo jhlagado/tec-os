@@ -1709,3 +1709,19 @@ the is recorded in caverns-proofreading-review.md with room-specific candidates.
 Do not globally replace the: already introduced and uniquely identifiable
 features can retain it. The author also permits removing or improving the
 entire unhelpful glowing-crack sentence. No game implementation during review.
+
+
+## Original/current complete text inventory and balcony follow-up — 18 November 2026
+
+See caverns-text-recovery-plan.md and caverns-text-comparison.md. Fetched the
+archival repository and pinned the original protected listing from remote
+master. Inventory covers every PRINT source line, all54 room descriptions and
+all24 creature/item descriptions. This exposes shortened wizard/dragon/dwarf
+scenes and separate abbreviated status messages missed by the room-only pass.
+Editorial disposition and recovery remain queued, not claimed complete.
+
+The author also requests removing pagan from balcony room28. Its Loki/exile
+story is original, while the stone rail and final route sentences are modern
+additions. Preserve the explicit rope rail and modern navigation but compare
+these additions openly rather than attributing them to the original.
+No game code, source BAS, COM, checkpoints or starter media changed here.
