@@ -1799,3 +1799,27 @@ On temple floor35 the rope object's location remains28, so TAKE ROPE fails
 presence validation there; it cannot be pulled free from below by that command.
 This is source-inspected behavior, not an action entered in the author's game.
 No game edits have been applied during this review.
+
+
+## Author walkthrough: temple gate status versus original prose — 18 November 2026
+
+The author explicitly flags "North gate locked." as another unacceptable
+abbreviated addition and requests comparison with the original BASIC.
+Archival protected line40 already says:
+
+> You are in the temple. To the north is a locked gate and on the wall is a
+> giant statue of Loki, carved out of the living rock itself!
+
+Current static room35 changes locked gate to great gate and appends the balcony;
+the engine separately adds "North gate locked." or "North gate open.".
+Restore the original full-sentence gate/statue description with a conditional
+locked/open phrase so it remains truthful after unlocking. For example retain
+"To the north is a locked gate" while closed and "To the north is an open gate"
+when open. Do not print a second terse status line or repeat the same bearing.
+Keep the original statue imagery and low-comma style. Balcony/rope narration
+must not assume every entry was a descent or include automatic UP/DOWN coaching.
+
+This specific example is included in the already committed complete
+original/current PRINT inventory and the gate-status recovery action item.
+The requested action is queued for the later text batch; current game and
+starter-card artifacts remain unchanged under the ongoing notes-only review.
