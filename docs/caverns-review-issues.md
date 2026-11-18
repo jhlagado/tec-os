@@ -1520,3 +1520,17 @@ Notes only, deferred until after the ongoing playthrough:
   transports the player to the bat colony and disappears. LOOK/inventory and
   free clarification paths do not themselves trigger that transport. This is
   a shortcut/alternate route, not a prerequisite for the southern route.
+
+
+## Author walkthrough: in-game HELP — 18 November 2026
+
+Requested review addition, not implemented during the playthrough: provide HELP
+(and consider ? as an alias) with a compact spoiler-free command reference.
+Cover movement abbreviations, LOOK, inventory aliases, SCORE, QUIT and restart,
+TAKE/GET, DROP/PUT, object use, explicit sword attacks and basic command syntax.
+Separate context-specific puzzle examples from general help; do not expose
+magic words, solutions or undiscovered objects merely by listing vocabulary.
+HELP should cost no turn or candle time and allow no enemy retaliation or bat
+transport. Advertise it in the opening banner and keep CAVERNS.TXT consistent.
+The current public game has no HELP handler; the external CAVERNS.TXT is the
+existing command reference. Preserve all existing memory/size gates.
