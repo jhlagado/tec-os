@@ -1725,3 +1725,19 @@ story is original, while the stone rail and final route sentences are modern
 additions. Preserve the explicit rope rail and modern navigation but compare
 these additions openly rather than attributing them to the original.
 No game code, source BAS, COM, checkpoints or starter media changed here.
+
+
+## Author prose rule: navigation additions must add information — 18 November 2026
+
+Retain modern navigation guidance when it helps the player find real exits,
+but remove duplication of bearings or landmarks already stated in the same
+room description. Integrate genuinely new information into natural sentences
+rather than appending a repeated exit inventory. Review each addition against
+the original/current comparison. The author does not request removal of all
+modern guidance or new map changes. Apply the restrained-comma and arrival-
+neutral article rules already recorded. No running-game changes yet.
+
+Walkthrough advice from round chamber26: eastern side cave25 is empty. The
+important key is in34, reachable by WEST29, SOUTH33, WEST34. Return EAST33,
+NORTH29, EAST26. This is source-checked route guidance, not commands executed
+on the author's live game. Recommend obtaining the key before rope descent.
