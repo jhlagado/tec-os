@@ -1772,3 +1772,30 @@ without suggesting USE ROPE silently attaches or descends. The explicit tying
 and two-way climb are approved mechanics and remain unchanged. Review the
 related secured/untied confirmation fragments as part of the same full-message
 inventory. No rope action or game artifact has been changed by this note.
+
+
+## Author walkthrough: rope confirmations and inappropriate UP/DOWN coaching — 18 November 2026
+
+Author explicitly requests deleting "Use UP or DOWN." from the secured-rope
+room message. It gives an inappropriate direction at each end of the rope:
+only DOWN from the balcony and UP from the temple floor are valid rope moves.
+Describe the secured rope naturally without automatic capitalised gameplay
+instructions. This overrides earlier proposals to keep such coaching in the
+room description. Separate requested HELP or a genuinely incomplete-command
+clarification from the ordinary narrative. Expand "Rope secured to rail; it
+reaches the floor." into a natural sentence. Review "Rope untied on balcony."
+and the other rope fragments likewise.
+
+The author also questions the repetitive upper-river-ledge west sentence on
+the balcony. Review whether it adds useful route information before retaining
+it; keep the temple floor below and visible rail. Remove pagan as already
+approved. Preserve actual exits and the two-way secured rope mechanic.
+
+Source answer to TAKE ROPE while tied: on balcony28 the rope object is present,
+so successful pickup moves it to inventory and clears rp to0, effectively
+untying it automatically. It prints the generic pickup confirmation. The
+normal carry limit still applies. DOWN then asks for the rope to be tied again.
+On temple floor35 the rope object's location remains28, so TAKE ROPE fails
+presence validation there; it cannot be pulled free from below by that command.
+This is source-inspected behavior, not an action entered in the author's game.
+No game edits have been applied during this review.
