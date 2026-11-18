@@ -1860,12 +1860,16 @@ matches and save/load remain future work. No BAZA code change is required.
 
 ## Final native prose recovery and light editing
 
-Superseding the candidate figures above: all54 room paragraphs and the
-state-dependent messages are restored and lightly edited. Room text is8,131
-characters versus10,387 in the full recovery candidate (21.72% less). The
-final native COM is35,968 bytes. All41 affected checks,480-command exact
-state/RNG comparison,126-point/all54-room quest and16 conditional-prose
-observations pass. The two full1,433-check platform runs identify the prior
+Superseding the candidate figures above: all 54 room paragraphs and the
+state-dependent messages are restored and lightly edited. Room text is 8,131
+characters versus 10,387 in the full recovery candidate (21.72% less). The
+final native COM is 35,968 bytes. All 41 affected checks, 480-command exact
+state/RNG comparison, 126-point/all 54-room quest and 16 conditional-prose
+observations pass. The two full 1,433-check platform runs identify the prior
 reference artifact separately. No map or puzzle rules changed.
 See [the editorial record](caverns-prose-concision.md) for every
 before/recovered/edited passage and exact qualification scope.
+
+Final Viewer receiving passes 202 checks and the exact tested standalone is
+pushed to gh-pages. Full final browser compilation and checkpoint restore
+pass. See the current qualification receipt for pins and publication scope.

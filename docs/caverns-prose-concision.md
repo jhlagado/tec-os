@@ -140,3 +140,19 @@ These text-only changes separately pass all 41 affected native checks,
 16 conditional-prose observations. No world connections or puzzle rules change.
 The final scene/size records use final-* filenames to distinguish them from
 intermediate polished-* and original reference receipts.
+
+
+## Completed receiving and publication
+
+The final Viewer receiving run passes all 202 checks with unchanged gates.
+The exact main-built standalone is 418,779 bytes and its SHA-256 begins
+c61a1ec1. A fresh Chromium session compiles the matching 35,968-byte COM from
+the source-only starter, displays the recovered temple prose and restores an
+exported checkpoint in fresh browser storage. See
+[the final browser result](evidence/caverns-prose-concision/final-browser-result.json).
+
+The exact tested HTML is pushed to Viewer gh-pages at 3b8dce07. The remote
+branch and HTML hash are verified. This environment's CONNECT proxy refuses
+the live HTTPS request with 403, so no live-site response is claimed.
+Task-owned temporary development branches and publishing worktrees are removed.
+Physical testing and the author's final prose read-through remain outstanding.

@@ -8,15 +8,17 @@ and [map audit](caverns-map-audit.md), outside the practical manual.
 
 Two independent full platform runs pass **1,433 tests each, zero failures or
 skips** on the prose-engine reference. Final text-only corrections
-then passes **41 affected native checks**, including the 126-point quest through
+then pass **41 affected native checks**, including the 126-point quest through
 all 54 rooms, 480-command complete-state/RNG comparison, checkpoint restoration,
 TED editing and compiler/game interrupt vectors. Sixteen conditional-prose
 observations also pass. No game logic, OS or compiler/runtime changed in that
 last correction. [Exact artifact scopes and receipts](evidence/caverns-prose-concision/qualification.json)
 distinguish the full-run reference from the final executable.
 
-The full Viewer suite passes 202 checks on unchanged runtime/observer code.
-Final source/card receiving and publication pins are being refreshed. Physical
+The final Viewer suite passes all 202 checks on unchanged runtime/observer code.
+The final standalone compiles the exact COM from its source-only starter and
+restores an exported checkpoint in fresh storage. The tested bytes are pushed
+to gh-pages; the environment CONNECT proxy prevents direct live HTTP verification. Physical
 TEC-1G testing and the author's final prose/gameplay read-through remain
 outstanding. No public version or release tag is created by this increment.
 
@@ -33,9 +35,9 @@ outstanding. No public version or release tag is created by this increment.
 | Main-volume recipe and image | dist/starter.recipe.json, revision 17; dist/starter.img |
 | Compiler/runtime pair | jhlagado/baza, eee4ee6846add13c0ea120fbf2de8be0ec08c0b1; dist/BAZA.COM and dist/BAZA.RTL |
 | Editor and dependency pins | TED.COM and compiler/runtime in test/inputs.json |
-| Published Viewer source | jhlagado/tec-os-viewer, d90925012de391a6b7e1c5dbddd011820dcd44e8 |
-| Viewer qualification/publication receipts | jhlagado/tec-os-viewer, e2248c9bb5886d22c31ec669ff0c3d6ef691b79f; docs/evidence/caverns-prose-restoration/ |
-| Hosting branch | gh-pages, 0a02a27d8ce1a16332562e9766595e0d530d82f8; exact tested standalone bytes |
+| Published Viewer source | jhlagado/tec-os-viewer, 9ca6aa093fe68a9fa115289b3fbf876da9660600 |
+| Viewer qualification/publication receipts | jhlagado/tec-os-viewer, 9ca6aa093fe68a9fa115289b3fbf876da9660600; docs/evidence/caverns-prose-concision/final-receiving.json |
+| Hosting branch | gh-pages, 3b8dce07c489f382ee5184a8fe156d4cd904c1f9; exact tested standalone bytes |
 | Development checkpoints | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 | Assembly comparison, development only | programs/CAVASM.COM |
 

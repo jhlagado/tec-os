@@ -1,5 +1,5 @@
 {
-  "status": "Native final artifact qualified: two full platform reference runs plus41 final affected checks,480-command state/RNG comparison and16 conditional-prose observations. Viewer final receiving/publication pending.",
+  "status": "Complete automated prose qualification and main integration. Exact tested standalone pushed to gh-pages; live HTTP verification blocked by environment CONNECT proxy. Physical hardware and final author read-through remain pending.",
   "fullProseCharacters": 10387,
   "editedRoomCharacters": 8131,
   "roomReductionPercent": 21.72,
@@ -49,25 +49,18 @@
     "fail": 0,
     "skipped": 0,
     "limitsChanged": false,
-    "environment": "Installed Chromium; two CPUs for browser tests, native strict runner isolated on a third CPU.",
-    "evidence": "jhlagado/tec-os-viewer docs/evidence/caverns-prose-concision/ (receiving record pending)"
+    "environment": "System Chromium on taskset CPUs0,1 matching the container two-CPU quota. Both earlier timing failures are retained.",
+    "viewerTestedSource": "2242bb7b110ab04b58e6366083217be56b82f99e",
+    "viewerReceivingMain": "9ca6aa093fe68a9fa115289b3fbf876da9660600",
+    "firmwareSource": "f4b0423bb249fe381081ec44babb1acbd5f2f6a0",
+    "gameSHA256": "d563736861387ebf9152e730d28b0d5513ceba1c1b0f7666ddc4c5942bab956d",
+    "evidence": "jhlagado/tec-os-viewer docs/evidence/caverns-prose-concision/final-receiving.json"
   },
   "bookStarter": {
     "sourceAllocatedBytes": 25216,
     "files": 15,
     "fileBytes": 116608,
     "freeBytes": 903168
-  },
-  "freshBrowserTrial": {
-    "passed": true,
-    "sourceOnlyCompileMatchesCOM": true,
-    "profile": 80,
-    "openingPlay": true,
-    "templeProse": true,
-    "exportAndFreshContextRestore": true,
-    "viewerSourceCommit": "adb09fd5076ca6f233ccca6929fee45c47020967",
-    "standaloneSha256": "3f360b1734a420973a877bb44119309bb85472a5e5fd4cfee6cc2785cf4bdc0b",
-    "note": "One stale the-cave assertion was updated for the approved a-cave text; all commands/state checks retained."
   },
   "fullRoomControl": {
     "fileBytes": 38272,
@@ -135,7 +128,7 @@
     "finalGameSHA256": "a686342fae8869418b7824501659e946c6fdbbf5ed058a480834bb34e60eb21d",
     "logicalLiteralBytesRemoved": 35,
     "stateDependentObservations": 16,
-    "codePin": "319eee3782e9dfb14a67eace1a688caf2b6da25f3c1652e7"
+    "codePin": "319eee3782e9dfb14a67eace1a6880b1b4289631"
   },
   "platformReferenceGameSHA256": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a",
   "platformReferenceArtifacts": {
@@ -167,5 +160,40 @@
     },
     "codePin": "67efb1b0951ce30bf01d0ad892e24bfed6b421fd",
     "stateDependentObservations": 16
+  },
+  "nativeIntegrationMain": "f4b0423bb249fe381081ec44babb1acbd5f2f6a0",
+  "referenceFreshBrowserTrial": {
+    "passed": true,
+    "sourceOnlyCompileMatchesCOM": true,
+    "profile": 80,
+    "openingPlay": true,
+    "templeProse": true,
+    "exportAndFreshContextRestore": true,
+    "viewerSourceCommit": "adb09fd5076ca6f233ccca6929fee45c47020967",
+    "standaloneSha256": "3f360b1734a420973a877bb44119309bb85472a5e5fd4cfee6cc2785cf4bdc0b",
+    "note": "One stale the-cave assertion was updated for the approved a-cave text; all commands/state checks retained."
+  },
+  "freshBrowserTrial": {
+    "passed": true,
+    "sourceOnlyCompileMatchesCOM": true,
+    "profile": 80,
+    "openingPlay": true,
+    "templeProse": true,
+    "exportAndFreshContextRestore": true,
+    "viewerSourceCommit": "9ca6aa093fe68a9fa115289b3fbf876da9660600",
+    "firmwareSourceCommit": "f4b0423bb249fe381081ec44babb1acbd5f2f6a0",
+    "gameSha256": "d563736861387ebf9152e730d28b0d5513ceba1c1b0f7666ddc4c5942bab956d",
+    "standaloneSha256": "c61a1ec136c5d722b6faa2cdc6a3fbdf33b23c6e63e8d22bcc54e9b71343eed6",
+    "standaloneBytes": 418779,
+    "evidence": "final-browser-result.json"
+  },
+  "publication": {
+    "branch": "gh-pages",
+    "commit": "3b8dce07c489f382ee5184a8fe156d4cd904c1f9",
+    "remoteVerified": true,
+    "testedAndPublishedHtmlIdentical": true,
+    "httpVerification": "Environment CONNECT proxy returned403; no claim that live site response was observed.",
+    "temporaryPublishingWorktreeRemoved": true,
+    "temporaryDevelopmentBranchesRemoved": true
   }
 }
