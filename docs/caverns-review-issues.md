@@ -1755,3 +1755,20 @@ At29 the forked stone pillar identifies the alternative western loop; it is a
 navigation landmark, not a puzzle, collectible or required interaction. SOUTH33
 then WEST34 is the shorter key route. The western alternative also reaches34
 via30,32,31. No map changes requested; wording notes only, current game unchanged.
+
+
+## Author walkthrough: USE ROPE shorthand — 18 November 2026
+
+After collecting key19 via the western bat-cave loop and returning to balcony28,
+the author entered USE ROPE. The current reply "TIE ROPE TO RAIL at the balcony,
+then DOWN; UP returns." is modern abbreviated instructional text. Replace it
+in the later text batch with complete sentences, for example:
+
+> Tie the rope to the stone rail before climbing down. Once it is secured,
+> you can climb down to the temple floor and climb back up to the balcony.
+
+Keep the exact supported commands discoverable (TIE ROPE TO RAIL, DOWN and UP),
+without suggesting USE ROPE silently attaches or descends. The explicit tying
+and two-way climb are approved mechanics and remain unchanged. Review the
+related secured/untied confirmation fragments as part of the same full-message
+inventory. No rope action or game artifact has been changed by this note.
