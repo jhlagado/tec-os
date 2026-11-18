@@ -1741,3 +1741,17 @@ Walkthrough advice from round chamber26: eastern side cave25 is empty. The
 important key is in34, reachable by WEST29, SOUTH33, WEST34. Return EAST33,
 NORTH29, EAST26. This is source-checked route guidance, not commands executed
 on the author's live game. Recommend obtaining the key before rope descent.
+
+
+## Author walkthrough: bat-cave destination versus next room — 18 November 2026
+
+Room26's "bat caves west" misleadingly suggests the next room is the colony.
+WEST actually enters junction29; SOUTH from there reaches colony33. Prefer
+"A passage leads west towards the bat caves" or simply a westward passage.
+Distinguish an immediate destination from the region a route eventually reaches.
+Use this distinction in the wider direction-description review.
+
+At29 the forked stone pillar identifies the alternative western loop; it is a
+navigation landmark, not a puzzle, collectible or required interaction. SOUTH33
+then WEST34 is the shorter key route. The western alternative also reaches34
+via30,32,31. No map changes requested; wording notes only, current game unchanged.
