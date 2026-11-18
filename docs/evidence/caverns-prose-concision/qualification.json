@@ -22,5 +22,17 @@
     "command vocabulary",
     "CVB2 semantic fields"
   ],
-  "physicalTested": false
+  "physicalTested": false,
+  "differential": {
+    "cases": 36,
+    "commands": 480,
+    "stateAndRNG": "identical",
+    "outputExceptions": "exact recorded room and message edits only"
+  },
+  "stateDependentProseObservations": 16,
+  "focusedInitial": {
+    "pass": 19,
+    "fail": 1,
+    "reason": "Old cannot-fit wording assertion; corrected to the approved too-large-to-fit wording. Quest rerun pending."
+  }
 }

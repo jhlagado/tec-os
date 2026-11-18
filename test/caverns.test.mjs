@@ -100,7 +100,7 @@ test('revised BASIC first-discovery quest banks all treasures, walks back from c
  assert.match(command('north'),/locked/);assert.equal(room(),35);
  walk('up','down','unlock gate with key');assert.equal(room(),37);assert.equal(obj(19),-1);
  walk('vard','east','west','east','take grille');
- assert.match(command('east'),/cannot fit/);assert.equal(room(),38);
+ assert.match(command('east'),/too large to fit/);assert.equal(room(),38);
  walk('drop grill','east','south');fight(1);assert.equal(obj(20),-1,'wizard does not confiscate sword');
  walk('east','north','take ruby','north');fight(6);
  walk('east','take pearl','south');assert.equal(room(),43);
