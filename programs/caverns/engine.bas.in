@@ -221,7 +221,7 @@ IF fo%>0 THEN @CREATURE_KILLS
 ft%=0:PRINT "Suddenly a magic wind carries you to another place...":rm%={ROOM_ENTRANCE}:RETURN
 @CRYPT_WORD:
 IF rm%<>{ROOM_CRYPT} THEN PRINT "Nothing happens here.":RETURN
-PRINT "The eastern wall of the crypt slides open. The passage stays open behind you.":cr%={ROOM_CELL}:RETURN
+PRINT "The eastern wall of the crypt slides open.":cr%={ROOM_CELL}:RETURN
 @BAT_TRANSPORT:
 PRINT "The giant bat carries you to its colony.":rm%={ROOM_BAT_COLONY}:ft%=0:ob%({ITEM_BAT})=0:RETURN
 @CREATURE_KILLS:

@@ -174,7 +174,7 @@
 1740 IF fo%>0 THEN 1790
 1750 ft%=0:PRINT "Suddenly a magic wind carries you to another place...":rm%=16:RETURN
 1760 IF rm%<>37 THEN PRINT "Nothing happens here.":RETURN
-1770 PRINT "The eastern wall of the crypt slides open. The passage stays open behind you.":cr%=38:RETURN
+1770 PRINT "The eastern wall of the crypt slides open.":cr%=38:RETURN
 1780 PRINT "The giant bat carries you to its colony.":rm%=33:ft%=0:ob%(5)=0:RETURN
 1790 PRINT "The creature strikes before you can defend yourself. You have been killed!":rs%=3:RETURN
 1800 IF ac%<>0 THEN 1830
