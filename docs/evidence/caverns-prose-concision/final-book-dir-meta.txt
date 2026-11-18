@@ -1,0 +1,1 @@
+card /workspace/jhlagado/tec-os/dist/starter.img: SHA-256 c0138daf965c77d31450e98a1f1201c304a623baff89c67770f8763382605380

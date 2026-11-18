@@ -1,5 +1,7 @@
 # Caverns original/current editorial audit and reform register
 
+Historical audit snapshot. The subsequent implementation and current checks are recorded in [prose recovery and light editing](caverns-prose-concision.md).
+
 Author-review spoilers. Source inspection, not an implemented text revision.
 
 This audit judges the differences in the [complete text inventory](caverns-text-comparison.md)

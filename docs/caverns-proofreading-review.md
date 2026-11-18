@@ -1,5 +1,7 @@
 # Caverns proofreading review — 18 November 2026
 
+Historical audit snapshot. The subsequent implementation and current checks are recorded in [prose recovery and light editing](caverns-prose-concision.md).
+
 Status: source-inspection review, not applied to the game. The author asked
 for spelling, grammar and missing-word corrections while preserving original
 sentences, atmosphere and voice. Accumulate during the live walkthrough.

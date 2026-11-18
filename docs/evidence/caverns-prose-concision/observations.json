@@ -1,0 +1,645 @@
+{
+  "gameSha256": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a",
+  "cases": 16,
+  "records": [
+    {
+      "name": "closed temple gate",
+      "room": 35,
+      "flags": {},
+      "expected": [
+        "To the north is a locked gate.",
+        "living rock"
+      ],
+      "absent": [
+        "North gate locked.",
+        "from which you descended"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou are in the temple. A giant statue of Loki is carved out of the living rock\r\nof the wall itself! A balcony stands high overhead.\r\nTo the north is a locked gate.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You are in the temple. A giant statue of",
+        " Loki is carved out of the living rock",
+        "of the wall itself! A balcony stands hig",
+        "h overhead.",
+        "To the north is a locked gate.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "open temple gate",
+      "room": 35,
+      "flags": {
+        "K0%": 1
+      },
+      "expected": [
+        "To the north is an open gate."
+      ],
+      "absent": [
+        "locked gate"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou are in the temple. A giant statue of Loki is carved out of the living rock\r\nof the wall itself! A balcony stands high overhead.\r\nTo the north is an open gate.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You are in the temple. A giant statue of",
+        " Loki is carved out of the living rock",
+        "of the wall itself! A balcony stands hig",
+        "h overhead.",
+        "To the north is an open gate.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "closed treasure door",
+      "room": 20,
+      "flags": {},
+      "expected": [
+        "oak door bound with iron",
+        "locked from the inside",
+        "Perhaps explosives"
+      ],
+      "absent": [
+        "East:",
+        "passage east into the treasure room"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou stand before an entrance to a treasure room. A passage leads south to a\r\ncavern.\r\nA formidable oak door bound with iron is locked from the inside. Perhaps explosi\r\nves would open it.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You stand before an entrance to a treasu",
+        "re room. A passage leads south to a",
+        "cavern.",
+        "A formidable oak door bound with iron is",
+        " locked from the inside. Perhaps explosi",
+        "ves would open it.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "blasted treasure door",
+      "room": 20,
+      "flags": {
+        "T%": 19
+      },
+      "expected": [
+        "blast has opened a passage east"
+      ],
+      "absent": [
+        "locked from the inside",
+        "oak door bound with iron"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou stand before an entrance to a treasure room. A passage leads south to a\r\ncavern.\r\nThe blast has opened a passage east into the treasure room.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You stand before an entrance to a treasu",
+        "re room. A passage leads south to a",
+        "cavern.",
+        "The blast has opened a passage east into",
+        " the treasure room.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "secured balcony rope",
+      "room": 28,
+      "flags": {
+        "R0%": 1
+      },
+      "expected": [
+        "rope hangs securely",
+        "End Of All Things"
+      ],
+      "absent": [
+        "Use UP or DOWN",
+        "pagan"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou are on a balcony above a cavern converted into a temple to Loki. Odin\r\nbanished the god of fire to Svartalfheim. Here he waits for the 'End Of All\r\nThings'. A sturdy stone rail borders the balcony above the temple floor. A\r\npassage leads west to a river ledge.\r\nThe rope hangs securely from the rail to the temple floor.\r\nYou can also see...\r\na thin and tatty rope.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You are on a balcony above a cavern conv",
+        "erted into a temple to Loki. Odin",
+        "banished the god of fire to Svartalfheim",
+        ". Here he waits for the 'End Of All",
+        "Things'. A sturdy stone rail borders the",
+        " balcony above the temple floor. A",
+        "passage leads west to a river ledge.",
+        "The rope hangs securely from the rail to",
+        " the temple floor.",
+        "You can also see...",
+        "a thin and tatty rope.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "secured temple rope",
+      "room": 35,
+      "flags": {
+        "R0%": 1
+      },
+      "expected": [
+        "rope hangs securely",
+        "living rock"
+      ],
+      "absent": [
+        "Use UP or DOWN"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou are in the temple. A giant statue of Loki is carved out of the living rock\r\nof the wall itself! A balcony stands high overhead.\r\nThe rope hangs securely from the rail to the temple floor.\r\nTo the north is a locked gate.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You are in the temple. A giant statue of",
+        " Loki is carved out of the living rock",
+        "of the wall itself! A balcony stands hig",
+        "h overhead.",
+        "The rope hangs securely from the rail to",
+        " the temple floor.",
+        "To the north is a locked gate.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "closed crypt seal",
+      "room": 37,
+      "flags": {},
+      "expected": [
+        "Four stones bear the letters V, A, R and D"
+      ],
+      "absent": [
+        "East seal open."
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou stand in a musty crypt where hundreds of Loki's devotees lie in\r\nputrefaction and decay. Four stones in the eastern wall name its keeper. A gate\r\nleads south to a temple.\r\nFour stones bear the letters V, A, R and D. They seem to spell a name.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You stand in a musty crypt where hundred",
+        "s of Loki's devotees lie in",
+        "putrefaction and decay. Four stones in t",
+        "he eastern wall name its keeper. A gate",
+        "leads south to a temple.",
+        "Four stones bear the letters V, A, R and",
+        " D. They seem to spell a name.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "open crypt seal",
+      "room": 37,
+      "flags": {
+        "E%": 38
+      },
+      "expected": [
+        "stone seal in the eastern wall stands open"
+      ],
+      "absent": [
+        "Four stones bear"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou stand in a musty crypt where hundreds of Loki's devotees lie in\r\nputrefaction and decay. Four stones in the eastern wall name its keeper. A gate\r\nleads south to a temple.\r\nThe stone seal in the eastern wall stands open.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You stand in a musty crypt where hundred",
+        "s of Loki's devotees lie in",
+        "putrefaction and decay. Four stones in t",
+        "he eastern wall name its keeper. A gate",
+        "leads south to a temple.",
+        "The stone seal in the eastern wall stand",
+        "s open.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "covered shaft",
+      "room": 38,
+      "flags": {},
+      "expected": [
+        "rusty grille covers",
+        "too large to carry"
+      ],
+      "absent": [
+        "DROP GRILLE"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou are in a tiny cell. A passage leads west to a crypt. A ventilation shaft\r\npierces the eastern wall. A service hatch lies north but its latch is on the\r\ndrain side.\r\nA rusty grille covers the ventilation shaft. It is too large to carry through.\r\nYou can also see...\r\na rusty ventilation grille.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You are in a tiny cell. A passage leads",
+        "west to a crypt. A ventilation shaft",
+        "pierces the eastern wall. A service hatc",
+        "h lies north but its latch is on the",
+        "drain side.",
+        "A rusty grille covers the ventilation sh",
+        "aft. It is too large to carry through.",
+        "You can also see...",
+        "a rusty ventilation grille.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "open shaft",
+      "room": 38,
+      "flags": {
+        "G%": 39
+      },
+      "expected": [
+        "open ventilation shaft leads east"
+      ],
+      "absent": [
+        "rusty grille covers"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou are in a tiny cell. A passage leads west to a crypt. A ventilation shaft\r\npierces the eastern wall. A service hatch lies north but its latch is on the\r\ndrain side.\r\nAn open ventilation shaft leads east.\r\nYou can also see...\r\na rusty ventilation grille.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You are in a tiny cell. A passage leads",
+        "west to a crypt. A ventilation shaft",
+        "pierces the eastern wall. A service hatc",
+        "h lies north but its latch is on the",
+        "drain side.",
+        "An open ventilation shaft leads east.",
+        "You can also see...",
+        "a rusty ventilation grille.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "raised drawbridge",
+      "room": 48,
+      "flags": {},
+      "expected": [
+        "raised drawbridge keeps you from crossing"
+      ],
+      "absent": [
+        "East drawbridge"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou stand on a crumbling river ledge. Across the water to the east is a magic\r\ncastle. Don't ask me why it is magic... I just know it is! A drawbridge crosses\r\neast. A path leads north to another ledge. There is no path south.\r\nA raised drawbridge keeps you from crossing to the castle.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You stand on a crumbling river ledge. Ac",
+        "ross the water to the east is a magic",
+        "castle. Don't ask me why it is magic...",
+        "I just know it is! A drawbridge crosses",
+        "east. A path leads north to another ledg",
+        "e. There is no path south.",
+        "A raised drawbridge keeps you from cross",
+        "ing to the castle.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "lowered drawbridge",
+      "room": 48,
+      "flags": {
+        "D%": 49
+      },
+      "expected": [
+        "mighty golden drawbridge spans the waters"
+      ],
+      "absent": [
+        "East drawbridge"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou stand on a crumbling river ledge. Across the water to the east is a magic\r\ncastle. Don't ask me why it is magic... I just know it is! A drawbridge crosses\r\neast. A path leads north to another ledge. There is no path south.\r\nA mighty golden drawbridge spans the waters to the east.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You stand on a crumbling river ledge. Ac",
+        "ross the water to the east is a magic",
+        "castle. Don't ask me why it is magic...",
+        "I just know it is! A drawbridge crosses",
+        "east. A path leads north to another ledg",
+        "e. There is no path south.",
+        "A mighty golden drawbridge spans the wat",
+        "ers to the east.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "wizard imagery",
+      "room": 36,
+      "flags": {},
+      "expected": [
+        "swirling mist",
+        "hand held outwards",
+        "Thou shalt not pass"
+      ],
+      "absent": [
+        "Nearby there lurks"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou are in a dark cavern below a temple. A shaft opens north. A passage east\r\nleads towards the sound of an underground river.\r\nBefore you in a swirling mist stands an evil wizard with his hand held outwards.\r\n 'Thou shalt not pass!' he cries.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You are in a dark cavern below a temple.",
+        " A shaft opens north. A passage east",
+        "leads towards the sound of an undergroun",
+        "d river.",
+        "Before you in a swirling mist stands an",
+        "evil wizard with his hand held outwards.",
+        " 'Thou shalt not pass!' he cries.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "dragon imagery",
+      "room": 14,
+      "flags": {},
+      "expected": [
+        "enormous green dragon",
+        "jets of fire"
+      ],
+      "absent": [
+        "Nearby there lurks",
+        "sleeping dragon wakes"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou are in a forest clearing beneath an ancient basalt rock formation. A VERY\r\ninteresting cave opens to the south... A path leads north into the oak forest.\r\nAn enormous green dragon guards the cave entrance. Its eyes flicker as it leaps \r\nup breathing jets of fire.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You are in a forest clearing beneath an",
+        "ancient basalt rock formation. A VERY",
+        "interesting cave opens to the south... A",
+        " path leads north into the oak forest.",
+        "An enormous green dragon guards the cave",
+        " entrance. Its eyes flicker as it leaps",
+        "up breathing jets of fire.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "dragon defeated",
+      "room": 14,
+      "flags": {},
+      "expected": [
+        "bloody corpse"
+      ],
+      "absent": [
+        "enormous green dragon",
+        "jets of fire"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou are in a forest clearing beneath an ancient basalt rock formation. A VERY\r\ninteresting cave opens to the south... A path leads north into the oak forest.\r\nYou can also see the bloody corpse of an enormous dragon.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You are in a forest clearing beneath an",
+        "ancient basalt rock formation. A VERY",
+        "interesting cave opens to the south... A",
+        " path leads north into the oak forest.",
+        "You can also see the bloody corpse of an",
+        " enormous dragon.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "dwarf imagery",
+      "room": 47,
+      "flags": {},
+      "expected": [
+        "carrying a lantern",
+        "My job is to protect these stone steps",
+        "lunges"
+      ],
+      "absent": [
+        "Nearby there lurks"
+      ],
+      "output": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>cavload text\r\r\n\u001b[2J\u001b[H\r\nYou stand atop a stone staircase. Steps descend south towards a roaring\r\nwaterfall. A pearl-white chamber lies east.\r\nFrom around the corner trots an old and gnarled dwarf carrying a lantern. 'My jo\r\nb is to protect these stone steps!' he says and lunges at you with his dagger.\r\n\r\n? ",
+      "screen": [
+        "",
+        "You stand atop a stone staircase. Steps",
+        "descend south towards a roaring",
+        "waterfall. A pearl-white chamber lies ea",
+        "st.",
+        "From around the corner trots an old and",
+        "gnarled dwarf carrying a lantern. 'My jo",
+        "b is to protect these stone steps!' he s",
+        "ays and lunges at you with his dagger.",
+        "",
+        "?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 # Caverns complete text comparison
 
+Historical audit snapshot. The subsequent implementation and current checks are recorded in [prose recovery and light editing](caverns-prose-concision.md).
+
 Spoilers: author/editor review, separate from the user manual.
 
 Generated from archived MicroWorld BASIC at d60481500140c79da0e6e06719a518c4231c4588 and the checked

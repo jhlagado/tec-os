@@ -13,7 +13,7 @@
 130 CLS
 140 GOSUB 450
 150 PRINT "DREAMCARDS presents..."
-160 PRINT "CAVERNS by John Hardy (c) 1982-83":PRINT "GNU Public License, 2019":ft%=0:tu%=0
+160 PRINT "CAVERNS by John Hardy (c) 1982-83":PRINT "GNU General Public License, 2019":ft%=0:tu%=0
 170 PRINT "Bring treasure home for double points. Take the compass!":PRINT "LOOK describes, INVENTORY lists, SCORE totals, QUIT finishes."
 180 REM Apply view-time candle events before rendering; rendering changes no world state.
 190 GOSUB 540
@@ -60,15 +60,15 @@
 600 IF cl%=0 OR tu%<230 THEN RETURN
 610 cl%=0:ce%=2:RETURN
 620 PRINT
-630 IF vs%=0 THEN PRINT "It's very dark, too dark to see anything...I'm scared!":GOTO 810
+630 IF vs%=0 THEN PRINT "It's very dark, too dark to see anything... I'm scared!":GOTO 810
 640 RESTORE:FOR ix%=1 TO rm%:READ dc%:FOR iy%=1 TO dc%:READ ds$:IF ix%=rm% THEN PRINT ds$
 650 NEXT iy%:NEXT ix%
-660 IF rm%=20 THEN IF td%=0 THEN PRINT "East: iron-bound door, barred within. Try explosives." ELSE PRINT "East doorway blasted open."
-670 IF rm%=28 OR rm%=35 THEN IF rp%=1 THEN PRINT "The secured rope reaches the floor. Use UP or DOWN."
-680 IF rm%=35 THEN IF gt% THEN PRINT "North gate open." ELSE PRINT "North gate locked."
-690 IF rm%=37 THEN IF cr% THEN PRINT "East seal open." ELSE PRINT "Stones read V, A, R, D. Speak the name."
-700 IF rm%=38 THEN IF sh% THEN PRINT "East shaft open." ELSE PRINT "Remove the grille; leave it here. It cannot fit through."
-710 IF rm%=48 THEN IF db%=128 THEN PRINT "East drawbridge raised; seek another entrance." ELSE PRINT "East drawbridge lowered."
+660 IF rm%=20 THEN IF td%=0 THEN PRINT "A formidable oak door bound with iron is locked from the inside. Perhaps explosives would open it." ELSE PRINT "The blast has opened a passage east into the treasure room."
+670 IF rm%=28 OR rm%=35 THEN IF rp%=1 THEN PRINT "The rope hangs securely from the rail to the temple floor."
+680 IF rm%=35 THEN IF gt% THEN PRINT "To the north is an open gate." ELSE PRINT "To the north is a locked gate."
+690 IF rm%=37 THEN IF cr% THEN PRINT "The stone seal in the eastern wall stands open." ELSE PRINT "The stones are marked V, A, R and D."
+700 IF rm%=38 THEN IF sh% THEN PRINT "An open ventilation shaft leads east." ELSE PRINT "A rusty grille covers the ventilation shaft. It is too large to carry through."
+710 IF rm%=48 THEN IF db%=128 THEN PRINT "A raised drawbridge keeps you from crossing to the castle." ELSE PRINT "A mighty golden drawbridge spans the waters."
 720 IF rm%=14 THEN IF ob%(4)=0 THEN PRINT "You can also see the bloody corpse of an enormous dragon."
 730 IF ce%=1 THEN PRINT "Your candle is growing dim."
 740 IF ce%=2 THEN PRINT "Your candle has gone out."
@@ -78,16 +78,16 @@
 780 IF qt%=0 THEN PRINT "You can also see..."
 790 qt%=1:GOSUB 870
 800 NEXT li%
-810 qt%=0:FOR li%=1 TO 6:IF ob%(li%)=rm% THEN qt%=qt%+1:GOSUB 880
+810 qt%=0:FOR li%=1 TO 6:IF ob%(li%)=rm% THEN GOSUB 880:IF li%<>1 AND li%<>4 AND li%<>6 THEN qt%=qt%+1
 820 NEXT li%:IF qt%=0 THEN 860
 830 PRINT "Nearby there lurks..."
-840 FOR li%=1 TO 6:IF ob%(li%)=rm% THEN GOSUB 870
+840 FOR li%=1 TO 6:IF ob%(li%)=rm% THEN IF li%<>1 AND li%<>4 AND li%<>6 THEN GOSUB 870
 850 NEXT li%
 860 PRINT:RETURN
-870 PRINT "a";ad$(li%);no$(li%);", ";:RETURN
-880 IF li%=1 THEN PRINT "An evil wizard bars the way. He cries: Thou shalt not pass!":RETURN
-890 IF li%=4 THEN PRINT "A sleeping dragon wakes and breathes jets of fire.":RETURN
-900 IF li%=6 THEN PRINT "An old dwarf guards the steps, raising his dagger."
+870 PRINT "a";ad$(li%);LEFT$(no$(li%),LEN(no$(li%))-1);".":RETURN
+880 IF li%=1 THEN PRINT "Before you in a swirling mist stands an evil wizard with his hand held outwards. 'Thou shalt not pass!' he cries.":RETURN
+890 IF li%=4 THEN PRINT "An enormous green dragon guards the cave entrance. Its eyes flicker as it leaps up breathing jets of fire.":RETURN
+900 IF li%=6 THEN PRINT "From around the corner trots an old and gnarled dwarf carrying a lantern. 'My job is to protect these stone steps!' he says and lunges at you with his dagger."
 910 RETURN
 920 PRINT "You are carrying ";:qt%=0
 930 FOR li%=7 TO 24
@@ -124,20 +124,20 @@
 1240 IF rm%=35 THEN IF vb%=13 THEN 1380
 1250 IF vb%=8 AND rm%=43 THEN wd$=" hatch ":GOSUB 1170:IF mp%>0 THEN 1400
 1260 IF ob%(24)=-1 THEN IF rm%=38 OR rm%=39 THEN rs%=1:wd$=" east ":IF rm%=39 THEN wd$=" west "
-1270 IF rs%=1 THEN GOSUB 1170:IF mp%>0 THEN PRINT "The grille cannot fit. DROP GRILLE first.":RETURN ELSE rs%=0
+1270 IF rs%=1 THEN GOSUB 1170:IF mp%>0 THEN PRINT "The grille is too large to fit through the shaft. You must leave it here.":RETURN ELSE rs%=0
 1280 RETURN
 1290 rs%=1:IF rm%<>28 THEN PRINT "There is no suitable rail here.":RETURN
 1300 IF it%<>22 THEN PRINT "Tie what?":RETURN
 1310 wd$=" rail ":GOSUB 1170:IF mp%=0 THEN PRINT "Tie it to what? Try the rail.":RETURN
 1320 IF ob%(22)<>-1 THEN PRINT "You must be carrying the rope.":RETURN
-1330 ob%(22)=28:rp%=1:PRINT "Rope secured to rail; it reaches the floor.":GOTO 1410
-1340 rs%=1:IF rm%<>28 OR rp%=0 THEN PRINT "No secured rope here.":RETURN
-1350 rp%=0:PRINT "Rope untied on balcony.":GOTO 1410
-1360 rs%=1:IF rp%=0 THEN PRINT "TIE ROPE TO RAIL first.":RETURN
+1330 ob%(22)=28:rp%=1:PRINT "You tie the rope securely to the stone rail. It reaches the temple floor.":GOTO 1410
+1340 rs%=1:IF rm%<>28 OR rp%=0 THEN PRINT "There is no secured rope here.":RETURN
+1350 rp%=0:PRINT "You untie the rope from the stone rail.":GOTO 1410
+1360 rs%=1:IF rp%=0 THEN PRINT "You must tie the rope to the rail before climbing down.":RETURN
 1370 rm%=35:ft%=0:PRINT "You climb down to the temple floor.":GOTO 1410
 1380 rs%=1:IF rp%=0 THEN PRINT "There is no secured rope above you.":RETURN
 1390 rm%=28:ft%=0:PRINT "You climb up to the balcony.":GOTO 1410
-1400 ht%=43:PRINT "You lift the latch. The hatch opens both ways."
+1400 ht%=43:PRINT "You lift the latch and open the service hatch."
 1410 tc%=1:rs%=2:RETURN
 1420 REM Dispatch has no jumps into the input loop; every action returns one result.
 1430 IF vb%>18 THEN 1530 ELSE IF vb%=0 THEN 1510
@@ -157,11 +157,11 @@
 1570 IF ob%(8)=-1 THEN 1590 ELSE IF ob%(8)=rm% THEN 1590
 1580 PRINT "Without the compass, I lose my bearings!":cn%=INT(RND(1)*4)
 1590 ei%=rm%*4+cn%-3:nx%=ex%(ei%):GOSUB 1670
-1600 IF rm%=35 THEN IF nx%=37 AND gt%=0 THEN PRINT "The gate is locked. Use the key.":rs%=1:RETURN
-1610 IF rm%=43 THEN IF nx%=38 AND ht%=0 THEN PRINT "The hatch is latched. OPEN HATCH.":rs%=1:RETURN
+1600 IF rm%=35 THEN IF nx%=37 AND gt%=0 THEN PRINT "The gate is locked.":rs%=1:RETURN
+1610 IF rm%=43 THEN IF nx%=38 AND ht%=0 THEN PRINT "The service hatch is latched shut.":rs%=1:RETURN
 1620 IF rm%=49 THEN IF nx%=50 OR nx%=48 THEN db%=49
-1630 IF nx%=0 THEN PRINT "You can't go that way"
-1640 IF nx%=128 THEN PRINT "You fall into the chasm and die.":rs%=3:RETURN
+1630 IF nx%=0 THEN PRINT "You can't go that way."
+1640 IF nx%=128 THEN PRINT "You stumble and fall into the chasm. You smash into the rocks below.":rs%=3:RETURN
 1650 IF nx%>0 THEN rm%=nx%:ft%=0
 1660 RETURN
 1670 IF nx%=-1 THEN nx%=hb%:RETURN
@@ -172,11 +172,11 @@
 1720 IF nx%=-6 THEN IF db%=128 THEN nx%=0:RETURN ELSE nx%=db%:RETURN
 1730 RETURN
 1740 IF fo%>0 THEN 1790
-1750 ft%=0:PRINT "Suddenly a magic wind carried you to another place...":rm%=16:RETURN
+1750 ft%=0:PRINT "Suddenly a magic wind carries you to another place...":rm%=16:RETURN
 1760 IF rm%<>37 THEN PRINT "Nothing happens here.":RETURN
-1770 PRINT "The seal slides open both ways.":cr%=38:RETURN
+1770 PRINT "The eastern wall of the crypt slides open.":cr%=38:RETURN
 1780 PRINT "The giant bat carries you to its colony.":rm%=33:ft%=0:ob%(5)=0:RETURN
-1790 PRINT "The creature kills you.":rs%=3:RETURN
+1790 PRINT "The creature strikes before you can defend yourself. You have been killed!":rs%=3:RETURN
 1800 IF ac%<>0 THEN 1830
 1810 ac%=3:wd$=" get ":GOSUB 1170:IF mp%>0 THEN ac%=1:GOTO 1830
 1820 wd$=" drop ":GOSUB 1170:IF mp%>0 THEN ac%=2
@@ -191,8 +191,8 @@
 1910 NEXT ix%:IF cn%>10 THEN PRINT "You cannot carry more.":RETURN
 1920 ob%(it%)=-1:IF it%=24 THEN sh%=39
 1930 IF it%=22 THEN rp%=0
-1940 PRINT "Taken: ";:li%=it%:GOSUB 870:PRINT:RETURN
-1950 ob%(it%)=rm%:PRINT "Dropped: ";:li%=it%:GOSUB 870:PRINT:RETURN
+1940 PRINT "You take ";:li%=it%:GOSUB 870:PRINT:RETURN
+1950 ob%(it%)=rm%:PRINT "You drop ";:li%=it%:GOSUB 870:PRINT:RETURN
 1960 IF it%=9 THEN wd$=" candle ":GOSUB 1170:IF mp%>0 THEN it%=21
 1970 IF it%<19 THEN 2000 ELSE IF it%>22 THEN 2000
 1980 IF ob%(it%)<>-1 THEN IF ob%(it%)<>rm% THEN PRINT "Where? I can't see it.":RETURN
@@ -208,169 +208,163 @@
 2080 li%=INT(RND(1)*4):IF fo%=5 THEN 1780
 2090 IF li%=0 THEN PRINT "You attack but the creature moves aside."
 2100 IF li%=1 THEN PRINT "The creature deflects your blow."
-2110 IF li%=2 THEN PRINT "The foe is stunned but quickly regains his balance."
-2120 IF li%=3 THEN PRINT "You missed and he deals a blow to your head."
+2110 IF li%=2 THEN PRINT "The foe is stunned but quickly regains its balance."
+2120 IF li%=3 THEN PRINT "You miss and the creature strikes back."
 2130 RETURN
 2140 PRINT "The sword strikes home and your foe dies.":ob%(fo%)=0
-2150 IF fo%<>4 THEN PRINT "A black cloud descends and the corpse vaporises."
+2150 IF fo%<>4 THEN PRINT "Suddenly a black cloud descends and the corpse vaporises into nothing."
 2160 fo%=0:ft%=0:RETURN
 2170 IF ob%(9)=-1 THEN 2190 ELSE IF ob%(9)=rm% THEN 2190
 2180 PRINT "Nothing to ignite here. Keep your candle safe.":RETURN
 2190 IF cl%<>1 THEN PRINT "The candle is out; you need a flame.":RETURN
-2200 IF rm%<>20 THEN PRINT "BOOM! Smoke clears: nothing has changed.":RETURN
+2200 IF rm%<>20 THEN PRINT "BOOM! You are thrown aside. When the smoke clears nothing has changed.":RETURN
 2210 IF td%=19 THEN PRINT "The passage is already open. Save your bomb.":RETURN
-2220 PRINT "BOOM! The door is torn from its hinges. The passage east is open.":td%=19:ob%(9)=0:RETURN
-2230 PRINT "TIE ROPE TO RAIL at the balcony, then DOWN; UP returns.":rs%=1:RETURN
+2220 PRINT "The fuse burns away and... BOOM! The door is torn from its hinges. A passage opens to the east.":td%=19:ob%(9)=0:RETURN
+2230 PRINT "Tie the rope to the stone rail before climbing down. Once it is secured you can climb back up to the balcony.":rs%=1:RETURN
 2240 sc%=0:FOR ix%=7 TO 17
 2250 qt%=il%(ix%+24):IF ob%(ix%)=-1 THEN IF rm%=1 THEN sc%=sc%+qt%*2 ELSE sc%=sc%+qt%
 2260 IF ob%(ix%)=1 THEN sc%=sc%+qt%*2
 2270 NEXT ix%:RETURN
-2280 PRINT "Ranking:"
+2280 PRINT "This gives you an adventurer's ranking of:"
 2290 IF sc%<20 THEN PRINT "Hopeless beginner":RETURN
 2300 IF sc%<50 THEN PRINT "Experienced loser":RETURN
 2310 IF sc%<100 THEN PRINT "Average Viking":RETURN
-2320 IF sc%<126 THEN PRINT "Excellent...but you've left something behind!":RETURN
+2320 IF sc%<126 THEN PRINT "Excellent... but you've left something behind!":RETURN
 2330 IF sc%=126 THEN PRINT "Perfectionist and genius!!"
 2340 RETURN
 2350 PRINT "Welcome home! Your treasures are safe."
 2360 FOR ix%=7 TO 17:IF ix%<>8 THEN IF ix%<>9 THEN IF ob%(ix%)=-1 THEN ob%(ix%)=1
 2370 NEXT ix%:GOSUB 2240:PRINT "Your score is";sc%;" out of 126.":GOSUB 2280
-2380 IF sc%=126 THEN PRINT "All treasure home. Your quest is complete!"
+2380 IF sc%=126 THEN PRINT "All your treasure is home. Your quest is complete!"
 2390 PRINT "QUIT to finish, or leave to seek more treasure.":RETURN
 2400 END
-2410 DATA 2,"You are standing in a darkened room inside a small bark hut. There is a door to"
-2420 DATA "the north, leading out into a forest clearing."
-2430 DATA 3,"You are in a forest clearing before a small bark hut. There are no windows, and"
-2440 DATA "the door to the south is locked. The latch engaged when you closed the door.","The forest lies to the west, and a field of clovers opens to the east."
-2450 DATA 3,"You are deep in a dark forest. In the distance you can see a mighty river, its"
-2460 DATA "waters glinting through the trees. The path leads east to the hut clearing and","west towards a cliff above the river."
-2470 DATA 2,"You are standing in a field of four-leafed clovers. The hut clearing is to the"
-2480 DATA "west, and the lower slopes of Mount Ymir rise to the east."
-2490 DATA 3,"The forest has opened up at this point. You are standing on a cliff overlooking"
-2500 DATA "a wide glacial river. A small foot-beaten path leads south to the riverbank.","The forest path returns east."
-2510 DATA 2,"You are standing at the rocky edge of the mighty river Gioll. The path forks"
-2520 DATA "east and west, while a small path climbs north to the cliff."
-2530 DATA 3,"You are on the edge of an enormous crater. The rim is extremely slippery."
-2540 DATA "Clouds of water vapour rise high in the air as the Gioll pours into it. To the","west is a fatal drop; the safe path returns east."
-2550 DATA 4,"The path stops here. You are on a rocky outcrop, projecting about fifteen feet"
-2560 DATA "above the river. In the distance, a tiny string bridge spans the water to the","south-east. To reach it, you must return west and take the detour through the"
-2570 DATA "forest."
-2580 DATA 3,"You are on the lower slopes of Mount Ymir. The forest stretches far away to the"
-2590 DATA "west. Arctic winds blow fiercely; it is very cold! A path leads west to the","clover field, and another descends south towards the bridge."
-2600 DATA 3,"You stand on a rocky precipice high above the river Gioll. Mount Ymir stands to"
-2610 DATA "the north. A flimsy string bridge spans the mighty river to the south; the path","north returns to the mountain slopes."
-2620 DATA 3,"You have made your way halfway across the creaking bridge. It sways violently"
-2630 DATA "from side to side above the river! Hold tight and follow it north or south;","there is no footing to the east or west."
-2640 DATA 3,"You are on the southern edge of the mighty river, before the string bridge. The"
-2650 DATA "bridge leads north, an oak forest lies to the west, and a path follows the bank","east to a cliff face."
-2660 DATA 3,"You are standing on a rock in the middle of a mighty oak forest. Surrounding"
-2670 DATA "you are thousands of poisonous mushrooms. A path leads east to the bridge","landing, and another continues south to a clearing."
-2680 DATA 3,"You are in a clearing in the forest. An ancient basalt rock formation towers"
-2690 DATA "above you. To your south is the entrance of a VERY interesting cave... The path","north returns to the oak forest."
-2700 DATA 2,"You are on a shelf against a cliff face, overlooking the river from its"
-2710 DATA "southern bank. The path west returns to the string bridge landing."
-2720 DATA 3,"You are just inside the cave. Sunlight pours into the entrance, lighting a path"
-2730 DATA "to the east and another to the south. I don't mind saying I'm a bit scared! The","way north leads outside. You will need a light before venturing deeper."
-2740 DATA 3,"This passage appears to be a dead end. An earlier explorer has scratched a"
-2750 DATA "message on the wall before you: 'Find the Sacred Key of Thialfi'. The passage","returns west to the cave entrance."
-2760 DATA 2,"You are deep in a dark cavern. Daylight filters in from the cave entrance to"
-2770 DATA "the north. A passage leads west into what appears to be an old torture chamber."
-2780 DATA 3,"You are in the legendary treasure room of the black elves of Svartalfheim."
-2790 DATA "Every red-blooded Viking has dreamed of entering this sacred room! The only way","out leads west through the doorway."
-2800 DATA 3,"You stand before an oak doorway in the eastern wall, its heavy timber bound"
-2810 DATA "with iron. The entrance looks formidable. The passage south returns to the","cavern."
-2820 DATA 3,"You are deep in a dark cavern north of the long tunnel. A passage leads north"
-2830 DATA "to an oak doorway, and a draught comes from the corridor to the east. The long","tunnel stretches south into the darkness."
-2840 DATA 3,"You are standing in an east-west corridor. You can feel a faint breeze stirring"
-2850 DATA "the stale air. The western passage returns to the cavern; a doorway to the","south leads into an old torture chamber."
-2860 DATA 5,"You are standing in what appears to have once been a torture chamber. Apart"
-2870 DATA "from the rather comprehensive range of instruments of absolutely inhuman agony,","coagulated blood stains on the walls and mangled bits of bone on the floor make"
-2880 DATA "me think that a number of would-be adventurers croaked it here! A corridor","leads north, and the entrance cavern lies to the east."
-2890 DATA 3,"You stand in a long tunnel which has been bored out of the rock. It runs from"
-2900 DATA "north to south, between a cavern and a large round chamber. A faint glow comes","from a narrow, sealed crack in the eastern wall."
-2910 DATA 2,"You are deep in a dark cavern. This small side cave is empty and very quiet."
-2920 DATA "Its only passage leads west, back to the large round chamber."
-2930 DATA 5,"You are in a large round room with a number of exits. The walls have been"
-2940 DATA "painted a mystical dark purple, and a big chalk star is drawn in the centre of","the floor. This is one of the hidden chambers of the infamous pagan sect, the"
-2950 DATA "monks of Loki. Norse folk believe them to be gods. The long tunnel is north, a","river ledge south, the bat caves west, and a small side cave east."
-2960 DATA 3,"You are standing on a narrow ledge, high above a subterranean river. To the"
-2970 DATA "east is a balcony overlooking a huge cavern. The passage north returns to the","round chamber."
-2980 DATA 5,"You are on a balcony overlooking a huge cavern which has been converted into a"
-2990 DATA "pagan temple. It is dedicated to Loki, the god of fire, who came to live in","Svartalfheim after Odin banished him to exile. Since then he has been waiting"
-3000 DATA "for the 'End Of All Things'. A sturdy stone rail borders the balcony. The upper","river ledge lies to the west; the temple floor is below."
-3010 DATA 3,"You are deep in a dark cavern where the passages meet. A draught stirs the air."
-3020 DATA "The round chamber lies to the east, a bat colony to the south, and a forked","stone pillar marks the passage west."
-3030 DATA 2,"You are deep in a dark cavern beside a forked stone pillar. The junction lies"
-3040 DATA "to the east, and a passage continues west into a pale limestone chamber."
-3050 DATA 2,"You are deep in a dark cavern. Water drips from the roof of this low passage."
-3060 DATA "It leads north to a pale limestone chamber and east to another chamber beyond."
-3070 DATA 3,"You are deep in a dark cavern whose pale limestone walls catch the light. The"
-3080 DATA "passage east leads to a forked stone pillar, while a low, dripping passage","turns south."
-3090 DATA 4,"You are in the central cave of a giant bat colony. Above you, hundreds of giant"
-3100 DATA "bats hang from the ceiling, and the floor is covered in centuries of giant bat","droppings. Careful where you step! Incidentally, the smell is indescribable. A"
-3110 DATA "junction lies north, and a passage leads west to another chamber."
-3120 DATA 2,"You are deep in a dark cavern beyond the bat colony. Passages lead east towards"
-3130 DATA "the roosting bats and west into a low, dripping passage."
-3140 DATA 3,"You are in the temple. To the north is a great gate, and on the wall is a giant"
-3150 DATA "statue of Loki, carved out of the living rock itself! High overhead is the","balcony from which you descended."
-3160 DATA 2,"You are deep in a dark cavern below the temple. A narrow shaft opens to the"
-3170 DATA "north, while a passage east leads towards the sound of an underground river."
-3180 DATA 3,"You stand in an old and musty crypt, the final resting place of hundreds of"
-3190 DATA "Loki's devotees. Putrefaction and decay fill the air here. Four stones on the","eastern wall name its keeper; the temple gate lies to the south."
-3200 DATA 3,"You are in a tiny cell. The passage west returns to the crypt, while a"
-3210 DATA "ventilation shaft pierces the eastern wall. There is a service hatch to the","north, but its latch is on the drain side."
-3220 DATA 2,"You are deep in a dark cavern just beyond the ventilation shaft. The shaft"
-3230 DATA "leads west into the cell, and a passage continues south into a lower cavern."
-3240 DATA 4,"You are on another ledge high above a subterranean river. Water pours into the"
-3250 DATA "cavern through a hole in the roof to the north. The path north leads to the","waterfall; south, it follows the ledge to a river bend. The cavern lies west."
-3260 DATA "There is only a sheer drop to the east."
-3270 DATA 3,"Somehow you have found your way into the complex drainage system of this entire"
-3280 DATA "cavern network! This straight drain leads west to a freezing conduit and east","along the passage towards a junction."
-3290 DATA 2,"You are in the complex drainage system of the cavern network. The straight"
-3300 DATA "passage runs between the conduit to the west and a junction to the east."
-3310 DATA 4,"You are at a junction in the complex drainage system of the cavern network. A"
-3320 DATA "winding passage leads north towards a pearl-white chamber. A branch leads east,","and the drain west returns to the conduit. To the south is the cell's service"
-3330 DATA "hatch; you can OPEN HATCH here."
-3340 DATA 2,"You are in a blind branch of the cavern's complex drainage system. There is no"
-3350 DATA "way onwards; the drain west returns to the junction."
-3360 DATA 3,"You are standing near an enormous waterfall which brings water down from the"
-3370 DATA "surface, from the river Gioll. Stone steps climb north beside the falling","water. The lower ledge lies south; there is no safe footing to the east."
-3380 DATA 3,"You are deep in a dark cavern whose walls shine pearl-white in your light."
-3390 DATA "Stone steps lie to the west. A winding passage leads south, changing height as","it makes its way to a junction in the drains."
-3400 DATA 2,"You are standing at the top of a stone staircase. The steps lead south towards"
-3410 DATA "the roar of the waterfall. To the east is a pearl-white chamber."
-3420 DATA 4,"You are on a narrow and crumbling ledge at a bend in the river. Across the"
-3430 DATA "water to the east you can see a magic castle. Don't ask me why it is magic... I","just know it is! The path north returns to the lower ledge; there is no path"
-3440 DATA "south. The drawbridge crossing lies east."
-3450 DATA 3,"You are on the mighty golden drawbridge, with the river below you and the magic"
-3460 DATA "castle ahead. The river ledge lies west and the courtyard east. Crossing","secures the bridge in its lowered position."
-3470 DATA 4,"You are in the courtyard of the magic castle. WOW! This castle is really"
-3480 DATA "something! On the wall is inscribed 'hzb tzozi'. The drawbridge lies west, and","a doorway east leads to the powder magazine. A secret escape tunnel leads south"
-3490 DATA "to the riverbank."
-3500 DATA 2,"You are in the powder magazine of this really super castle. The doorway west"
-3510 DATA "leads back into the courtyard."
-3520 DATA 3,"You are on the eastern side of the underground river. A small tunnel leads"
-3530 DATA "north through the cliff face into the castle. To the west, a wooden bridge","crosses the water."
-3540 DATA 2,"You stand before a small wooden bridge which crosses the underground river to"
-3550 DATA "the east. A narrow service path leads north towards the conduit."
-3560 DATA 3,"You are in a conduit draining into the river. The water comes up to your knees"
-3570 DATA "and is freezing cold. A narrow service path leads south to the wooden bridge,","while the drains continue east into the cavern network."
-3580 DATA 2,0,0,0,0,0,3,4,0,0,5,2,0,0,2,9,0,6,0,3,5,0,7,8,0,0,128
-3590 DATA 6,0,0,6,0,0,10,4,0,9,11,0,0,10,12,0,0,11,0,13,15,0,14,0,12,13,16
-3600 DATA 0,0,0,0,12,0,14,18,0,17,0,0,16,0,16,0,23,0,0,0,20,0,0,21,0,-2,20
-3610 DATA 24,0,22,0,23,21,0,22,0,0,18,21,26,0,0,0,0,26,0,24,27,29,25,26,0,0,28
-3620 DATA 0,0,27,0,0,33,30,26,0,0,32,29,32,0,0,34,0,31,0,30,29,0,34,0,0,0,31
-3630 DATA 33,37,0,0,0,39,0,0,40,0,35,0,-3,-4,0,37,-5,0,36,38,0,45,48,36,0,0,0
-3640 DATA 54,42,0,0,41,43,46,38,42,44,0,0,43,0,47,40,0,0,0,43,47,0,0,45,0,46,40
-3650 DATA 0,0,-6,0,0,48,50,0,52,49,51,0,0,50,0,50,0,53,0,54,0,0,52,0,53,0,41
-3660 DATA "n evil"," wizard "," fiery"," demon ","n axe wielding"," troll "," fire breathing"," dragon "," giant"," bat "
-3670 DATA "n old and gnarled"," dwarf "," gold"," coin "," useful looking"," compass "," home made"," bomb "," blood red"," ruby "
-3680 DATA " sparkling"," diamond "," moon-like"," pearl ","n interesting"," stone "," diamond studded"," ring "," magic"," pendant "
-3690 DATA " most holy"," grail "," mirror like"," shield "," nondescript black"," box ","n old and rusty"," key "," double-bladed"," sword "
-3700 DATA " small lit"," candle "," thin and tatty"," rope "," red house"," brick "," rusty ventilation"," grille "
-3710 DATA 36,19,10,14,17,47,8,1,51,45,22,46,54,19,19,19,19,0,34,7,16,15,24,38
-3720 DATA 0,0,0,0,0,0,1,2,3,4,5,6,7,8,9,10,11,0,0,0,0,0,0,0
-3730 DATA " north "," south "," west "," east "
-3740 DATA " take "," put "," using "," with "," cut "," break "," unlock "," open "," kill "," attack "
-3750 DATA " light "," burn "," up "," down "," jump "," swim "," tie "," untie "," vard "," galar "
-3760 DATA " look "," list "," score "," quit "," inventory "," invent "
+2410 DATA 2,"You are in a darkened room inside a small bark hut. A door leads north to a"
+2420 DATA "forest clearing."
+2430 DATA 2,"You stand before a small windowless bark hut. The door to the south locked when"
+2440 DATA "you closed it. A forest lies west and a field of clovers opens east."
+2450 DATA 2,"You are deep in a dark forest. A mighty river glints through the trees. A path"
+2460 DATA "leads east to a hut clearing and west towards a river cliff."
+2470 DATA 2,"You stand in a field of four-leafed clovers. A hut clearing lies west and the"
+2480 DATA "slopes of Mount Ymir rise to the east."
+2490 DATA 2,"The forest opens onto a cliff above a wide glacial river. A foot-beaten path"
+2500 DATA "leads south to the riverbank. A forest path leads east."
+2510 DATA 2,"You stand at the rocky edge of the mighty river Gioll. A path forks east and"
+2520 DATA "west. Another climbs north to a cliff."
+2530 DATA 2,"You stand on the slippery rim of an enormous crater. Clouds of water vapour"
+2540 DATA "rise as the Gioll pours into it. West is a fatal drop. A safe path leads east."
+2550 DATA 3,"You are on a rocky outcrop fifteen feet above the river. A tiny string bridge"
+2560 DATA "spans the water to the south-east. To reach it you must go west and detour","through the forest."
+2570 DATA 3,"You are on the lower slopes of Mount Ymir. Arctic winds blow fiercely. It is"
+2580 DATA "very cold! A path leads west through clovers towards the forest and south","towards a bridge."
+2590 DATA 2,"You stand on a rocky precipice high above the Gioll. Mount Ymir rises to the"
+2600 DATA "north. A flimsy string bridge spans the river to the south."
+2610 DATA 2,"You are halfway across a creaking bridge. It sways violently above the river!"
+2620 DATA "Hold tight and follow it either north or south."
+2630 DATA 3,"You stand on the southern bank of the mighty river. A string bridge leads"
+2640 DATA "north. An oak forest lies west and a path follows the bank east to a cliff","face."
+2650 DATA 2,"You stand on a rock in a mighty oak forest surrounded by thousands of poisonous"
+2660 DATA "mushrooms. A path leads east to a bridge landing and south to a clearing."
+2670 DATA 2,"You are in a forest clearing beneath an ancient basalt rock formation. A VERY"
+2680 DATA "interesting cave opens to the south... A path leads north into the oak forest."
+2690 DATA 2,"You are on a shelf against a cliff face above the southern riverbank. A path"
+2700 DATA "leads west to a string bridge landing."
+2710 DATA 3,"You are just inside a cave. Sunlight lights paths east and south. I don't mind"
+2720 DATA "saying I'm a bit scared! North leads outside. You will need a light to venture","deeper."
+2730 DATA 3,"This passage appears to be a dead end. An earlier explorer scratched a message"
+2740 DATA "on the wall: 'Find the Sacred Key of Thialfi'. A passage leads west to the cave","entrance."
+2750 DATA 2,"You are in a dark cavern. Daylight filters in from a cave entrance to the"
+2760 DATA "north. A passage leads west towards an old torture chamber."
+2770 DATA 3,"You are in the legendary treasure room of the black elves of Svartalfheim."
+2780 DATA "Every red-blooded Viking dreams of entering this sacred room! A doorway leads","west."
+2790 DATA 2,"You stand before an entrance to a treasure room. A passage leads south to a"
+2800 DATA "cavern."
+2810 DATA 2,"You are in a dark cavern. A passage leads north to an oak doorway. A draught"
+2820 DATA "comes from a corridor east. A long tunnel stretches south into darkness."
+2830 DATA 2,"You are in a corridor. A faint breeze stirs the stale air. West leads to a dark"
+2840 DATA "cavern and a doorway south leads to a torture chamber."
+2850 DATA 3,"This was once a torture chamber. Instruments of inhuman agony, coagulated blood"
+2860 DATA "on the walls and mangled bones on the floor suggest many adventurers croaked it","here! A corridor leads north. A cavern near the cave entrance lies east."
+2870 DATA 2,"You stand in a long tunnel bored through the rock. It runs north to a cavern"
+2880 DATA "and south to a large round chamber."
+2890 DATA 2,"You are in a small silent side cave. Its only passage leads west to a large"
+2900 DATA "round chamber."
+2910 DATA 5,"You are in a large round room with mystical dark purple walls. A big chalk star"
+2920 DATA "marks the centre of the floor. This is a hidden chamber of the infamous monks","of Loki. Norse folk believe them to be gods. A long tunnel leads north and a"
+2930 DATA "river ledge lies south. A passage west leads towards bat caves. A small side","cave opens east."
+2940 DATA 2,"You stand on a narrow ledge high above a subterranean river. A balcony"
+2950 DATA "overlooks a huge cavern to the east. A passage leads north to a round chamber."
+2960 DATA 4,"You are on a balcony above a cavern converted into a temple to Loki. Odin"
+2970 DATA "banished the god of fire to Svartalfheim. Here he waits for the 'End Of All","Things'. A sturdy stone rail borders the balcony above the temple floor. A"
+2980 DATA "passage leads west to a river ledge."
+2990 DATA 3,"You are in a dark cavern where passages meet. A draught stirs the air. A round"
+3000 DATA "chamber lies east and a bat colony lies south. A forked stone pillar marks a","passage west."
+3010 DATA 2,"You are beside a forked stone pillar in a dark cavern. A junction lies east and"
+3020 DATA "a passage leads west to a pale limestone chamber."
+3030 DATA 2,"Water drips from the roof of a low dark passage. It leads north to a pale"
+3040 DATA "limestone chamber and east to another chamber."
+3050 DATA 2,"Pale limestone walls catch the light in this dark cavern. A passage leads east"
+3060 DATA "to a forked stone pillar and a low dripping passage leads south."
+3070 DATA 3,"You are in the heart of a giant bat colony. Hundreds hang overhead above"
+3080 DATA "centuries of bat droppings. Careful where you step! The smell is indescribable.","A junction lies north and a passage leads west to another chamber."
+3090 DATA 2,"You are in a dark cavern. Passages lead east towards roosting bats and west"
+3100 DATA "into a low dripping passage."
+3110 DATA 2,"You are in the temple. A giant statue of Loki is carved out of the living rock"
+3120 DATA "of the wall itself! A balcony stands high overhead."
+3130 DATA 2,"You are in a dark cavern below a temple. A shaft opens north. A passage east"
+3140 DATA "leads towards the sound of an underground river."
+3150 DATA 3,"You stand in a musty crypt where hundreds of Loki's devotees lie in"
+3160 DATA "putrefaction and decay. Four stones in the eastern wall name its keeper. A gate","leads south to a temple."
+3170 DATA 3,"You are in a tiny cell. A passage leads west to a crypt. A ventilation shaft"
+3180 DATA "pierces the eastern wall. A service hatch lies north but its latch is on the","drain side."
+3190 DATA 2,"You are in a dark cavern beside a ventilation shaft. The shaft leads west to a"
+3200 DATA "cell. A passage leads south into a lower cavern."
+3210 DATA 3,"You stand on a ledge high above a subterranean river. Water pours through a"
+3220 DATA "hole in the roof to the north. A path leads north to the waterfall and south to","a river bend. A cavern lies west. East is a sheer drop."
+3230 DATA 2,"Somehow you have found the drains of this entire cavern network! This drain"
+3240 DATA "leads west to a freezing conduit and east towards a junction."
+3250 DATA 2,"You are in the drains of a cavern network. A straight passage leads west"
+3260 DATA "towards a conduit and east to a junction."
+3270 DATA 3,"You stand at a drain junction. A winding passage leads north towards a"
+3280 DATA "pearl-white chamber. A branch runs east. A drain leads west towards a conduit.","The cell's service hatch lies south with its latch on this side."
+3290 DATA 2,"You are in a blind branch of the cavern drains. There is no way onwards. A"
+3300 DATA "drain leads west to a junction."
+3310 DATA 2,"An enormous waterfall brings water down from the surface river Gioll. Stone"
+3320 DATA "steps climb north beside it. A ledge lies south. There is no safe footing east."
+3330 DATA 2,"Your light catches pearl-white walls in a dark cavern. Stone steps lie west. A"
+3340 DATA "winding passage leads south to a drain junction below."
+3350 DATA 2,"You stand atop a stone staircase. Steps descend south towards a roaring"
+3360 DATA "waterfall. A pearl-white chamber lies east."
+3370 DATA 3,"You stand on a crumbling river ledge. Across the water to the east is a magic"
+3380 DATA "castle. Don't ask me why it is magic... I just know it is! A path leads north","to another ledge. There is no path south."
+3390 DATA 2,"You stand on a mighty golden drawbridge above the river. Beyond it is a magic"
+3400 DATA "castle! A river ledge lies west and the courtyard lies east."
+3410 DATA 4,"You are in the courtyard of a magic castle. WOW! This castle is really"
+3420 DATA "something! The wall reads 'hzb tzozi'. A drawbridge lies west and a doorway","leads east to a powder magazine. A secret escape tunnel leads south to a"
+3430 DATA "riverbank."
+3440 DATA 2,"You are in the powder magazine of this really super castle. A doorway leads"
+3450 DATA "west to a courtyard."
+3460 DATA 2,"You are on the eastern bank of an underground river. A tunnel leads north"
+3470 DATA "through the cliff face into a castle. A wooden bridge crosses the water west."
+3480 DATA 2,"A small wooden bridge crosses an underground river to the east. A narrow"
+3490 DATA "service path leads north towards a conduit."
+3500 DATA 3,"You are in a conduit draining into a river. Freezing water reaches your knees."
+3510 DATA "A narrow service path leads south to a wooden bridge. Drains continue east into","the cavern network."
+3520 DATA 2,0,0,0,0,0,3,4,0,0,5,2,0,0,2,9,0,6,0,3,5,0,7,8,0,0,128
+3530 DATA 6,0,0,6,0,0,10,4,0,9,11,0,0,10,12,0,0,11,0,13,15,0,14,0,12,13,16
+3540 DATA 0,0,0,0,12,0,14,18,0,17,0,0,16,0,16,0,23,0,0,0,20,0,0,21,0,-2,20
+3550 DATA 24,0,22,0,23,21,0,22,0,0,18,21,26,0,0,0,0,26,0,24,27,29,25,26,0,0,28
+3560 DATA 0,0,27,0,0,33,30,26,0,0,32,29,32,0,0,34,0,31,0,30,29,0,34,0,0,0,31
+3570 DATA 33,37,0,0,0,39,0,0,40,0,35,0,-3,-4,0,37,-5,0,36,38,0,45,48,36,0,0,0
+3580 DATA 54,42,0,0,41,43,46,38,42,44,0,0,43,0,47,40,0,0,0,43,47,0,0,45,0,46,40
+3590 DATA 0,0,-6,0,0,48,50,0,52,49,51,0,0,50,0,50,0,53,0,54,0,0,52,0,53,0,41
+3600 DATA "n evil"," wizard "," fiery"," demon ","n axe-wielding"," troll "," fire-breathing"," dragon "," giant"," bat "
+3610 DATA "n old and gnarled"," dwarf "," gold"," coin "," useful-looking"," compass "," home-made"," bomb "," blood-red"," ruby "
+3620 DATA " sparkling"," diamond "," moon-like"," pearl ","n interesting"," stone "," diamond-studded"," ring "," magic"," pendant "
+3630 DATA " most holy"," grail "," mirror-like"," shield "," nondescript black"," box ","n old and rusty"," key "," double-bladed"," sword "
+3640 DATA " small lit"," candle "," thin and tatty"," rope "," red house"," brick "," rusty ventilation"," grille "
+3650 DATA 36,19,10,14,17,47,8,1,51,45,22,46,54,19,19,19,19,0,34,7,16,15,24,38
+3660 DATA 0,0,0,0,0,0,1,2,3,4,5,6,7,8,9,10,11,0,0,0,0,0,0,0
+3670 DATA " north "," south "," west "," east "
+3680 DATA " take "," put "," using "," with "," cut "," break "," unlock "," open "," kill "," attack "
+3690 DATA " light "," burn "," up "," down "," jump "," swim "," tie "," untie "," vard "," galar "
+3700 DATA " look "," list "," score "," quit "," inventory "," invent "

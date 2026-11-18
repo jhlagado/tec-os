@@ -1,0 +1,6 @@
+container: format 1.1, 26624 blocks (13631488 bytes), 5 volume(s), 4 drive(s) wanted
+  A: SYSTEM      id 1 G1M start 2048 rw 15 file(s), 903168 bytes free
+  B: WORK        id 2 G8M start 4096 rw 0 file(s), 8372224 bytes free
+  C: PROJECTS    id 3 G1M start 20480 rw 0 file(s), 1040384 bytes free
+  -: GAMES       id 4 G1M start 22528 rw 0 file(s), 1040384 bytes free
+  -: SPARE       id 5 G1M start 24576 rw 0 file(s), 1040384 bytes free

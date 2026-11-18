@@ -1,0 +1,228 @@
+{
+  "scope": "Exact permitted prose differences for native differential comparisons; no state changes authorised.",
+  "literalChanges": {
+    "GNU Public License, 2019": "GNU General Public License, 2019",
+    "It's very dark, too dark to see anything...I'm scared!": "It's very dark, too dark to see anything... I'm scared!",
+    "East: iron-bound door, barred within. Try explosives.": "A formidable oak door bound with iron is locked from the inside. Perhaps explosives would open it.",
+    "East doorway blasted open.": "The blast has opened a passage east into the treasure room.",
+    "The secured rope reaches the floor. Use UP or DOWN.": "The rope hangs securely from the rail to the temple floor.",
+    "North gate open.": "To the north is an open gate.",
+    "North gate locked.": "To the north is a locked gate.",
+    "East seal open.": "The stone seal in the eastern wall stands open.",
+    "Stones read V, A, R, D. Speak the name.": "The stones are marked V, A, R and D.",
+    "East shaft open.": "An open ventilation shaft leads east.",
+    "Remove the grille; leave it here. It cannot fit through.": "A rusty grille covers the ventilation shaft. It is too large to carry through.",
+    "East drawbridge raised; seek another entrance.": "A raised drawbridge keeps you from crossing to the castle.",
+    "East drawbridge lowered.": "A mighty golden drawbridge spans the waters.",
+    "An evil wizard bars the way. He cries: Thou shalt not pass!": "Before you in a swirling mist stands an evil wizard with his hand held outwards. 'Thou shalt not pass!' he cries.",
+    "A sleeping dragon wakes and breathes jets of fire.": "An enormous green dragon guards the cave entrance. Its eyes flicker as it leaps up breathing jets of fire.",
+    "An old dwarf guards the steps, raising his dagger.": "From around the corner trots an old and gnarled dwarf carrying a lantern. 'My job is to protect these stone steps!' he says and lunges at you with his dagger.",
+    "Rope secured to rail; it reaches the floor.": "You tie the rope securely to the stone rail. It reaches the temple floor.",
+    "No secured rope here.": "There is no secured rope here.",
+    "Rope untied on balcony.": "You untie the rope from the stone rail.",
+    "TIE ROPE TO RAIL first.": "You must tie the rope to the rail before climbing down.",
+    "The grille cannot fit. DROP GRILLE first.": "The grille is too large to fit through the shaft. You must leave it here.",
+    "The hatch is latched. OPEN HATCH.": "The service hatch is latched shut.",
+    "The gate is locked. Use the key.": "The gate is locked.",
+    "You can't go that way": "You can't go that way.",
+    "Suddenly a magic wind carried you to another place...": "Suddenly a magic wind carries you to another place...",
+    "The seal slides open both ways.": "The eastern wall of the crypt slides open.",
+    "The creature kills you.": "The creature strikes before you can defend yourself. You have been killed!",
+    "You fall into the chasm and die.": "You stumble and fall into the chasm. You smash into the rocks below.",
+    "Taken: ": "You take ",
+    "Dropped: ": "You drop ",
+    "The foe is stunned but quickly regains his balance.": "The foe is stunned but quickly regains its balance.",
+    "You missed and he deals a blow to your head.": "You miss and the creature strikes back.",
+    "A black cloud descends and the corpse vaporises.": "Suddenly a black cloud descends and the corpse vaporises into nothing.",
+    "BOOM! Smoke clears: nothing has changed.": "BOOM! You are thrown aside. When the smoke clears nothing has changed.",
+    "BOOM! The door is torn from its hinges. The passage east is open.": "The fuse burns away and... BOOM! The door is torn from its hinges. A passage opens to the east.",
+    "TIE ROPE TO RAIL at the balcony, then DOWN; UP returns.": "Tie the rope to the stone rail before climbing down. Once it is secured you can climb back up to the balcony.",
+    "Ranking:": "This gives you an adventurer's ranking of:",
+    "Excellent...but you've left something behind!": "Excellent... but you've left something behind!",
+    "You lift the latch. The hatch opens both ways.": "You lift the latch and open the service hatch.",
+    "All treasure home. Your quest is complete!": "All your treasure is home. Your quest is complete!"
+  },
+  "objects": [
+    {
+      "id": 1,
+      "old": "an evil wizard ",
+      "new": "an evil wizard "
+    },
+    {
+      "id": 2,
+      "old": "a fiery demon ",
+      "new": "a fiery demon "
+    },
+    {
+      "id": 3,
+      "old": "an axe wielding troll ",
+      "new": "an axe-wielding troll "
+    },
+    {
+      "id": 4,
+      "old": "a fire breathing dragon ",
+      "new": "a fire-breathing dragon "
+    },
+    {
+      "id": 5,
+      "old": "a giant bat ",
+      "new": "a giant bat "
+    },
+    {
+      "id": 6,
+      "old": "an old and gnarled dwarf ",
+      "new": "an old and gnarled dwarf "
+    },
+    {
+      "id": 7,
+      "old": "a gold coin ",
+      "new": "a gold coin "
+    },
+    {
+      "id": 8,
+      "old": "a useful looking compass ",
+      "new": "a useful-looking compass "
+    },
+    {
+      "id": 9,
+      "old": "a home made bomb ",
+      "new": "a home-made bomb "
+    },
+    {
+      "id": 10,
+      "old": "a blood red ruby ",
+      "new": "a blood-red ruby "
+    },
+    {
+      "id": 11,
+      "old": "a sparkling diamond ",
+      "new": "a sparkling diamond "
+    },
+    {
+      "id": 12,
+      "old": "a moon-like pearl ",
+      "new": "a moon-like pearl "
+    },
+    {
+      "id": 13,
+      "old": "an interesting stone ",
+      "new": "an interesting stone "
+    },
+    {
+      "id": 14,
+      "old": "a diamond studded ring ",
+      "new": "a diamond-studded ring "
+    },
+    {
+      "id": 15,
+      "old": "a magic pendant ",
+      "new": "a magic pendant "
+    },
+    {
+      "id": 16,
+      "old": "a most holy grail ",
+      "new": "a most holy grail "
+    },
+    {
+      "id": 17,
+      "old": "a mirror like shield ",
+      "new": "a mirror-like shield "
+    },
+    {
+      "id": 18,
+      "old": "a nondescript black box ",
+      "new": "a nondescript black box "
+    },
+    {
+      "id": 19,
+      "old": "an old and rusty key ",
+      "new": "an old and rusty key "
+    },
+    {
+      "id": 20,
+      "old": "a double-bladed sword ",
+      "new": "a double-bladed sword "
+    },
+    {
+      "id": 21,
+      "old": "a small lit candle ",
+      "new": "a small lit candle "
+    },
+    {
+      "id": 22,
+      "old": "a thin and tatty rope ",
+      "new": "a thin and tatty rope "
+    },
+    {
+      "id": 23,
+      "old": "a red house brick ",
+      "new": "a red house brick "
+    },
+    {
+      "id": 24,
+      "old": "a rusty ventilation grille ",
+      "new": "a rusty ventilation grille "
+    }
+  ],
+  "previousRooms": {
+    "1": "You are standing in a darkened room inside a small bark hut. There is a door to the north, leading out into a forest clearing.",
+    "2": "You are in a forest clearing before a small bark hut. There are no windows, and the door to the south is locked. The latch engaged when you closed the door. The forest lies to the west, and a field of clovers opens to the east.",
+    "3": "You are deep in a dark forest. In the distance you can see a mighty river, its waters glinting through the trees. The path leads east to the hut clearing and west towards a cliff above the river.",
+    "4": "You are standing in a field of four-leafed clovers. The hut clearing is to the west, and the lower slopes of Mount Ymir rise to the east.",
+    "5": "The forest has opened up at this point. You are standing on a cliff overlooking a wide glacial river. A small foot-beaten path leads south to the riverbank. The forest path returns east.",
+    "6": "You are standing at the rocky edge of the mighty river Gioll. The path forks east and west, while a small path climbs north to the cliff.",
+    "7": "You are on the edge of an enormous crater. The rim is extremely slippery. Clouds of water vapour rise high in the air as the Gioll pours into it. To the west is a fatal drop; the safe path returns east.",
+    "8": "The path stops here. You are on a rocky outcrop, projecting about fifteen feet above the river. In the distance, a tiny string bridge spans the water to the south-east. To reach it, you must return west and take the detour through the forest.",
+    "9": "You are on the lower slopes of Mount Ymir. The forest stretches far away to the west. Arctic winds blow fiercely; it is very cold! A path leads west to the clover field, and another descends south towards the bridge.",
+    "10": "You stand on a rocky precipice high above the river Gioll. Mount Ymir stands to the north. A flimsy string bridge spans the mighty river to the south; the path north returns to the mountain slopes.",
+    "11": "You have made your way halfway across the creaking bridge. It sways violently from side to side above the river! Hold tight and follow it north or south; there is no footing to the east or west.",
+    "12": "You are on the southern edge of the mighty river, before the string bridge. The bridge leads north, an oak forest lies to the west, and a path follows the bank east to a cliff face.",
+    "13": "You are standing on a rock in the middle of a mighty oak forest. Surrounding you are thousands of poisonous mushrooms. A path leads east to the bridge landing, and another continues south to a clearing.",
+    "14": "You are in a clearing in the forest. An ancient basalt rock formation towers above you. To your south is the entrance of a VERY interesting cave... The path north returns to the oak forest.",
+    "15": "You are on a shelf against a cliff face, overlooking the river from its southern bank. The path west returns to the string bridge landing.",
+    "16": "You are just inside the cave. Sunlight pours into the entrance, lighting a path to the east and another to the south. I don't mind saying I'm a bit scared! The way north leads outside. You will need a light before venturing deeper.",
+    "17": "This passage appears to be a dead end. An earlier explorer has scratched a message on the wall before you: 'Find the Sacred Key of Thialfi'. The passage returns west to the cave entrance.",
+    "18": "You are deep in a dark cavern. Daylight filters in from the cave entrance to the north. A passage leads west into what appears to be an old torture chamber.",
+    "19": "You are in the legendary treasure room of the black elves of Svartalfheim. Every red-blooded Viking has dreamed of entering this sacred room! The only way out leads west through the doorway.",
+    "20": "You stand before an oak doorway in the eastern wall, its heavy timber bound with iron. The entrance looks formidable. The passage south returns to the cavern.",
+    "21": "You are deep in a dark cavern north of the long tunnel. A passage leads north to an oak doorway, and a draught comes from the corridor to the east. The long tunnel stretches south into the darkness.",
+    "22": "You are standing in an east-west corridor. You can feel a faint breeze stirring the stale air. The western passage returns to the cavern; a doorway to the south leads into an old torture chamber.",
+    "23": "You are standing in what appears to have once been a torture chamber. Apart from the rather comprehensive range of instruments of absolutely inhuman agony, coagulated blood stains on the walls and mangled bits of bone on the floor make me think that a number of would-be adventurers croaked it here! A corridor leads north, and the entrance cavern lies to the east.",
+    "24": "You stand in a long tunnel which has been bored out of the rock. It runs from north to south, between a cavern and a large round chamber. A faint glow comes from a narrow, sealed crack in the eastern wall.",
+    "25": "You are deep in a dark cavern. This small side cave is empty and very quiet. Its only passage leads west, back to the large round chamber.",
+    "26": "You are in a large round room with a number of exits. The walls have been painted a mystical dark purple, and a big chalk star is drawn in the centre of the floor. This is one of the hidden chambers of the infamous pagan sect, the monks of Loki. Norse folk believe them to be gods. The long tunnel is north, a river ledge south, the bat caves west, and a small side cave east.",
+    "27": "You are standing on a narrow ledge, high above a subterranean river. To the east is a balcony overlooking a huge cavern. The passage north returns to the round chamber.",
+    "28": "You are on a balcony overlooking a huge cavern which has been converted into a pagan temple. It is dedicated to Loki, the god of fire, who came to live in Svartalfheim after Odin banished him to exile. Since then he has been waiting for the 'End Of All Things'. A sturdy stone rail borders the balcony. The upper river ledge lies to the west; the temple floor is below.",
+    "29": "You are deep in a dark cavern where the passages meet. A draught stirs the air. The round chamber lies to the east, a bat colony to the south, and a forked stone pillar marks the passage west.",
+    "30": "You are deep in a dark cavern beside a forked stone pillar. The junction lies to the east, and a passage continues west into a pale limestone chamber.",
+    "31": "You are deep in a dark cavern. Water drips from the roof of this low passage. It leads north to a pale limestone chamber and east to another chamber beyond.",
+    "32": "You are deep in a dark cavern whose pale limestone walls catch the light. The passage east leads to a forked stone pillar, while a low, dripping passage turns south.",
+    "33": "You are in the central cave of a giant bat colony. Above you, hundreds of giant bats hang from the ceiling, and the floor is covered in centuries of giant bat droppings. Careful where you step! Incidentally, the smell is indescribable. A junction lies north, and a passage leads west to another chamber.",
+    "34": "You are deep in a dark cavern beyond the bat colony. Passages lead east towards the roosting bats and west into a low, dripping passage.",
+    "35": "You are in the temple. To the north is a great gate, and on the wall is a giant statue of Loki, carved out of the living rock itself! High overhead is the balcony from which you descended.",
+    "36": "You are deep in a dark cavern below the temple. A narrow shaft opens to the north, while a passage east leads towards the sound of an underground river.",
+    "37": "You stand in an old and musty crypt, the final resting place of hundreds of Loki's devotees. Putrefaction and decay fill the air here. Four stones on the eastern wall name its keeper; the temple gate lies to the south.",
+    "38": "You are in a tiny cell. The passage west returns to the crypt, while a ventilation shaft pierces the eastern wall. There is a service hatch to the north, but its latch is on the drain side.",
+    "39": "You are deep in a dark cavern just beyond the ventilation shaft. The shaft leads west into the cell, and a passage continues south into a lower cavern.",
+    "40": "You are on another ledge high above a subterranean river. Water pours into the cavern through a hole in the roof to the north. The path north leads to the waterfall; south, it follows the ledge to a river bend. The cavern lies west. There is only a sheer drop to the east.",
+    "41": "Somehow you have found your way into the complex drainage system of this entire cavern network! This straight drain leads west to a freezing conduit and east along the passage towards a junction.",
+    "42": "You are in the complex drainage system of the cavern network. The straight passage runs between the conduit to the west and a junction to the east.",
+    "43": "You are at a junction in the complex drainage system of the cavern network. A winding passage leads north towards a pearl-white chamber. A branch leads east, and the drain west returns to the conduit. To the south is the cell's service hatch; you can OPEN HATCH here.",
+    "44": "You are in a blind branch of the cavern's complex drainage system. There is no way onwards; the drain west returns to the junction.",
+    "45": "You are standing near an enormous waterfall which brings water down from the surface, from the river Gioll. Stone steps climb north beside the falling water. The lower ledge lies south; there is no safe footing to the east.",
+    "46": "You are deep in a dark cavern whose walls shine pearl-white in your light. Stone steps lie to the west. A winding passage leads south, changing height as it makes its way to a junction in the drains.",
+    "47": "You are standing at the top of a stone staircase. The steps lead south towards the roar of the waterfall. To the east is a pearl-white chamber.",
+    "48": "You are on a narrow and crumbling ledge at a bend in the river. Across the water to the east you can see a magic castle. Don't ask me why it is magic... I just know it is! The path north returns to the lower ledge; there is no path south. The drawbridge crossing lies east.",
+    "49": "You are on the mighty golden drawbridge, with the river below you and the magic castle ahead. The river ledge lies west and the courtyard east. Crossing secures the bridge in its lowered position.",
+    "50": "You are in the courtyard of the magic castle. WOW! This castle is really something! On the wall is inscribed 'hzb tzozi'. The drawbridge lies west, and a doorway east leads to the powder magazine. A secret escape tunnel leads south to the riverbank.",
+    "51": "You are in the powder magazine of this really super castle. The doorway west leads back into the courtyard.",
+    "52": "You are on the eastern side of the underground river. A small tunnel leads north through the cliff face into the castle. To the west, a wooden bridge crosses the water.",
+    "53": "You stand before a small wooden bridge which crosses the underground river to the east. A narrow service path leads north towards the conduit.",
+    "54": "You are in a conduit draining into the river. The water comes up to your knees and is freezing cold. A narrow service path leads south to the wooden bridge, while the drains continue east into the cavern network."
+  },
+  "newSceneOnlyObjects": [
+    1,
+    4,
+    6
+  ]
+}

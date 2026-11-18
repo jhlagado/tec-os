@@ -1,0 +1,9 @@
+{
+  "command": "STRICT=1 npm test",
+  "exitCode": 0,
+  "tests": 1433,
+  "pass": 1433,
+  "fail": 0,
+  "skipped": 0,
+  "independentCheckout": true
+}

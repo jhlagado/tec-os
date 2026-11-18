@@ -124,7 +124,7 @@ node tools/tecvol.mjs verify card.img
 
 The verified copy has this layout and directory summary:
 
-<!-- Source-derived worked-card summary: starter payload from ROM 35893cab, card 160a424a; TED project/session rows retained from the historical worked card. -->
+<!-- Source-derived worked-card summary: starter payload from ROM 35893cab, card c0138daf; TED project/session rows retained from the historical worked card. -->
 ```text
 container: format 1.1, 26624 blocks (13631488 bytes), 5 volume(s), 4 drive(s) wanted
   A: SYSTEM      id 1 G1M start 2048 rw 17 file(s), 897024 bytes free
@@ -145,12 +145,12 @@ node tools/tecvol.mjs dir card.img B
 A's complete listing contains the fifteen starter files plus TED's
 project and session files:
 
-<!-- Source-derived worked-card summary: starter payload from ROM 35893cab, card 160a424a; TED project/session rows retained from the historical worked card. -->
+<!-- Source-derived worked-card summary: starter payload from ROM 35893cab, card c0138daf; TED project/session rows retained from the historical worked card. -->
 ```text
  0 BAZA.COM        13440
  0 BAZA.RTL        13056
  0 BOUNCE.BAS       5376
- 0 CAVERNS.BAS     26880
+ 0 CAVERNS.BAS     25216
  0 CAVERNS.TXT      2688
  0 DEMO.ASM        15360
  0 GLCD.SVC          896
@@ -272,10 +272,10 @@ prepared starter image this command produces:
 node tools/tecvol.mjs info dist/starter.img
 ```
 
-<!-- TEC-OS with the sized DIR (ROM 35893cab, starter card 160a424a): host-tool output of the command above. -->
+<!-- TEC-OS with the sized DIR (ROM 35893cab, starter card c0138daf): host-tool output of the command above. -->
 ```text
 container: format 1.1, 26624 blocks (13631488 bytes), 5 volume(s), 4 drive(s) wanted
-  A: SYSTEM      id 1 G1M start 2048 rw 15 file(s), 901120 bytes free
+  A: SYSTEM      id 1 G1M start 2048 rw 15 file(s), 903168 bytes free
   B: WORK        id 2 G8M start 4096 rw 0 file(s), 8372224 bytes free
   C: PROJECTS    id 3 G1M start 20480 rw 0 file(s), 1040384 bytes free
   -: GAMES       id 4 G1M start 22528 rw 0 file(s), 1040384 bytes free

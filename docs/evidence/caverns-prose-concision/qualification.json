@@ -1,0 +1,171 @@
+{
+  "status": "Native final artifact qualified: two full platform reference runs plus41 final affected checks,480-command state/RNG comparison and16 conditional-prose observations. Viewer final receiving/publication pending.",
+  "fullProseCharacters": 10387,
+  "editedRoomCharacters": 8131,
+  "roomReductionPercent": 21.72,
+  "previousShippedRoomCharacters": 10629,
+  "comBytes": 35968,
+  "logicalBytes": 35876,
+  "previousComBytes": 37248,
+  "comBytesSaved": 1280,
+  "shellTPA": 41984,
+  "stackBytes": 768,
+  "headroomBeforeDynamicAllocations": 5340,
+  "gameSha256": "d563736861387ebf9152e730d28b0d5513ceba1c1b0f7666ddc4c5942bab956d",
+  "sourceSha256": "2f65e0a2a89045ec87b6c7291654b9a8612bfc1747c3c241f5da4b826768b7bd",
+  "compilerSha256": "f8d4b8944be95451faa7aa0bc99e611f6793b7d4a8e413344e951e26ede07498",
+  "librarySha256": "29c07740630069921f93581c8527d5db057c63a073a95b37c7a020df92ae5e38",
+  "unchanged": [
+    "216 exits",
+    "54 room IDs and keys",
+    "all object IDs/nouns/initial positions/values",
+    "command vocabulary",
+    "CVB2 semantic fields"
+  ],
+  "physicalTested": false,
+  "differential": {
+    "cases": 36,
+    "commands": 480,
+    "stateAndRNG": "identical",
+    "outputExceptions": "exact recorded room and message edits only",
+    "gameSHA256": "d563736861387ebf9152e730d28b0d5513ceba1c1b0f7666ddc4c5942bab956d"
+  },
+  "stateDependentProseObservations": 16,
+  "focusedInitial": {
+    "pass": 19,
+    "fail": 1,
+    "reason": "Old cannot-fit wording assertion; corrected to the approved too-large-to-fit wording. Quest rerun pending.",
+    "questRerun": {
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "score": 126,
+      "rooms": 54
+    }
+  },
+  "viewerSuite": {
+    "tests": 202,
+    "pass": 202,
+    "fail": 0,
+    "skipped": 0,
+    "limitsChanged": false,
+    "environment": "Installed Chromium; two CPUs for browser tests, native strict runner isolated on a third CPU.",
+    "evidence": "jhlagado/tec-os-viewer docs/evidence/caverns-prose-concision/ (receiving record pending)"
+  },
+  "bookStarter": {
+    "sourceAllocatedBytes": 25216,
+    "files": 15,
+    "fileBytes": 116608,
+    "freeBytes": 903168
+  },
+  "freshBrowserTrial": {
+    "passed": true,
+    "sourceOnlyCompileMatchesCOM": true,
+    "profile": 80,
+    "openingPlay": true,
+    "templeProse": true,
+    "exportAndFreshContextRestore": true,
+    "viewerSourceCommit": "adb09fd5076ca6f233ccca6929fee45c47020967",
+    "standaloneSha256": "3f360b1734a420973a877bb44119309bb85472a5e5fd4cfee6cc2785cf4bdc0b",
+    "note": "One stale the-cave assertion was updated for the approved a-cave text; all commands/state checks retained."
+  },
+  "fullRoomControl": {
+    "fileBytes": 38272,
+    "logicalBytes": 38234,
+    "sameFinalEngine": true,
+    "fileBytesSavedByRoomEditing": 2304,
+    "logicalBytesSavedByRoomEditing": 2358,
+    "scope": "Same final engine and object/rule DATA, full recovered room prose versus edited room prose. Unshipped full-room control; compilation only, no gameplay qualification claim."
+  },
+  "bookChecks": {
+    "sourceCheck": "passed",
+    "publishingTests": 3,
+    "publishingPass": 3,
+    "buildHTMLPages": 43,
+    "internalLinksAssetsFragments": 2981,
+    "errors": 0,
+    "scope": "Final source-only starter allocation and card capture; source check, publishing tests and complete site build repeated after final narrative edits."
+  },
+  "strictRuns": [
+    {
+      "index": 1,
+      "tests": 1433,
+      "pass": 1433,
+      "fail": 0,
+      "skipped": 0,
+      "logSHA256": "55cf6b8dedabe4019fa6c7f632b48944dce370cf02056c69f761b9e41da7f4cb",
+      "codePin": "7cea9d0b52bb4a9d3e8c3dd83d2dcc3155278b20",
+      "commandExitCode": 0,
+      "gameSHA256": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a"
+    },
+    {
+      "index": 2,
+      "tests": 1433,
+      "pass": 1433,
+      "fail": 0,
+      "skipped": 0,
+      "commandExitCode": 0,
+      "logSHA256": "3548470ec2e5c32a3087d9656e4f2e1235159c4f91bbeea62e1b86de984b59c9",
+      "sourcePin": "195935dae0d5d9e471688caf2b6da25f3c1652e7",
+      "independentCheckout": true,
+      "gameSHA256": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a"
+    }
+  ],
+  "postPlatformLiteralPolish": {
+    "before": "The eastern wall of the crypt slides open. The passage stays open behind you.",
+    "after": "The eastern wall of the crypt slides open.",
+    "reason": "Remove an arrival assumption and duplicate open-passage explanation.",
+    "logicChanges": false,
+    "platformRunsArtifact": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a",
+    "finalAffectedChecks": {
+      "tests": 41,
+      "pass": 41,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "includes": [
+        "gameplay and all54rooms/126points",
+        "36scenarios/480commands and exact state/RNG",
+        "checkpoint loading",
+        "TED edit/save/build/run/reopen",
+        "starter card",
+        "service-loaded compiler/game Ctrl-C vectors"
+      ]
+    },
+    "finalGameSHA256": "a686342fae8869418b7824501659e946c6fdbbf5ed058a480834bb34e60eb21d",
+    "logicalLiteralBytesRemoved": 35,
+    "stateDependentObservations": 16,
+    "codePin": "319eee3782e9dfb14a67eace1a688caf2b6da25f3c1652e7"
+  },
+  "platformReferenceGameSHA256": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a",
+  "platformReferenceArtifacts": {
+    "programs/CAVERNS.BAS": "5cb573c8a67f8e94619509bfee85b3b65e26727f2c0e9b4b6600436ec1a32abc",
+    "programs/CAVERNS.COM": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a",
+    "dist/tecos.rom": "35893cab810bf6757e5992ec492ec37a113828674e33d10da2e48dfa706b0bc8",
+    "dist/tecos.d8.json": "5ddb64f51eaa8c54ce22fd87edeb01a7c673679ce77ef43eb411088e30beca92"
+  },
+  "finalQuest": {
+    "score": 126,
+    "rooms": 54,
+    "gameSHA256": "d563736861387ebf9152e730d28b0d5513ceba1c1b0f7666ddc4c5942bab956d"
+  },
+  "temporaryIndependentCheckoutRemoved": true,
+  "finalNarrativeDeduplication": {
+    "referenceMain": "382a18ea715e94f5813354a74ad62bec4251628a",
+    "changes": [
+      "Crypt state adds only the stone letters, without repeating that they spell a name.",
+      "Castle view names the eastward castle once; raised/lowered drawbridge state no longer repeats that bearing or implies a raised bridge can be crossed.",
+      "Completion uses a full sentence."
+    ],
+    "gameLogicChanged": false,
+    "affectedChecks": {
+      "tests": 41,
+      "pass": 41,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "codePin": "67efb1b0951ce30bf01d0ad892e24bfed6b421fd",
+    "stateDependentObservations": 16
+  }
+}

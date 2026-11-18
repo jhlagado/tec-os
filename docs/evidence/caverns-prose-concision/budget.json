@@ -1,0 +1,15 @@
+{
+  "scope": "Same final engine and object/rule DATA, full recovered room prose versus edited room prose. Unshipped full-room control; compilation only, no gameplay qualification claim.",
+  "compilerSha256": "f8d4b8944be95451faa7aa0bc99e611f6793b7d4a8e413344e951e26ede07498",
+  "librarySha256": "29c07740630069921f93581c8527d5db057c63a073a95b37c7a020df92ae5e38",
+  "fullRoomSourceSha256": "8ea318c5ded6d68bac8615825d0dc3660f24b260614853360c694a085663b3c1",
+  "fullRoomCOMSha256": "5b3d4a3ebc5f3ded0a2565d1006edfe9ff8cb12325564b915302839389d75626",
+  "fullRoomFileBytes": 38400,
+  "fullRoomLogicalBytes": 38307,
+  "editedCOMSha256": "594b1e393681a4a3f3e3cd87b077979e56e3ab13d43ba69ff1498d068b28cf3a",
+  "editedFileBytes": 36096,
+  "editedLogicalBytes": 35976,
+  "fileBytesSaved": 2304,
+  "logicalBytesSaved": 2331,
+  "console": "\r\nTEC-OS 0.1 for TEC-1G\r\nA: SYSTEM     \r\nB: WORK       \r\nC: PROJECTS   \r\n\r\nA>SHELL.SVC\r\r\n\r\nA:SYSTEM>GLCD.SVC\r\r\n\r\nA:SYSTEM>baza cavfull\r\r\n|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\b-\b\\\b|\b/\bCOM written\r\n\r\nA:SYSTEM>"
+}
