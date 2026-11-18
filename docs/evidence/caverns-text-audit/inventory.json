@@ -1,0 +1,3789 @@
+{
+  "scope": "Inventory only; no changes applied. Room and message correspondence is not proof of semantic equivalence.",
+  "original": {
+    "repository": "https://github.com/jhlagado/caverns",
+    "ref": "d60481500140c79da0e6e06719a518c4231c4588",
+    "commit": "d60481500140c79da0e6e06719a518c4231c4588",
+    "file": "src/protected/caverns.basic",
+    "sha256": "2ba8f0c0b893e6a7eeaecde210148b78b98cad8137f26cc9cabe76d291693219"
+  },
+  "current": {
+    "worldSha256": "d0ee51ac062096f65ed9974393b5378ecd3301abb72f180035b2b144bdf2be8a",
+    "engineSha256": "b5cd7346e379c99d612bc566e6a97073eb006c0147093c22035bbe09f8dd86a7"
+  },
+  "coverage": {
+    "rooms": 54,
+    "objects": 24,
+    "archivalPrintStatements": 102,
+    "currentPrintSourceLines": 89,
+    "archivalPrintLiterals": 104,
+    "currentPrintLiterals": 98
+  },
+  "rooms": [
+    {
+      "room": 1,
+      "key": "HUT",
+      "originalSources": [
+        {
+          "line": 10,
+          "source": "IF A=1 THEN  PRINT \"You are standing in a darkened room. There is a door to the     north.\"",
+          "literals": [
+            "You are standing in a darkened room. There is a door to the     north."
+          ]
+        }
+      ],
+      "original": "You are standing in a darkened room. There is a door to the north.",
+      "current": "You are standing in a darkened room inside a small bark hut. There is a door to the north, leading out into a forest clearing."
+    },
+    {
+      "room": 2,
+      "key": "HUT_CLEARING",
+      "originalSources": [
+        {
+          "line": 11,
+          "source": "IF A=2 THEN  PRINT \"You are in a forest clearing before a small bark hut. There are no windows, and locked door to the south. The latch was engaged when you closed the door.\"",
+          "literals": [
+            "You are in a forest clearing before a small bark hut. There are no windows, and locked door to the south. The latch was engaged when you closed the door."
+          ]
+        }
+      ],
+      "original": "You are in a forest clearing before a small bark hut. There are no windows, and locked door to the south. The latch was engaged when you closed the door.",
+      "current": "You are in a forest clearing before a small bark hut. There are no windows, and the door to the south is locked. The latch engaged when you closed the door. The forest lies to the west, and a field of clovers opens to the east."
+    },
+    {
+      "room": 3,
+      "key": "DARK_FOREST",
+      "originalSources": [
+        {
+          "line": 12,
+          "source": "IF A=3 THEN  PRINT \"You are deep in a dark forest. In the distance you can see a    mighty river.\"",
+          "literals": [
+            "You are deep in a dark forest. In the distance you can see a    mighty river."
+          ]
+        }
+      ],
+      "original": "You are deep in a dark forest. In the distance you can see a mighty river.",
+      "current": "You are deep in a dark forest. In the distance you can see a mighty river, its waters glinting through the trees. The path leads east to the hut clearing and west towards a cliff above the river."
+    },
+    {
+      "room": 4,
+      "key": "CLOVER_FIELD",
+      "originalSources": [
+        {
+          "line": 13,
+          "source": "IF A=4 THEN  PRINT \"You are standing in a field of four-leafed clovers. There is a  small hut to the north.\"",
+          "literals": [
+            "You are standing in a field of four-leafed clovers. There is a  small hut to the north."
+          ]
+        }
+      ],
+      "original": "You are standing in a field of four-leafed clovers. There is a small hut to the north.",
+      "current": "You are standing in a field of four-leafed clovers. The hut clearing is to the west, and the lower slopes of Mount Ymir rise to the east."
+    },
+    {
+      "room": 5,
+      "key": "RIVER_CLIFF",
+      "originalSources": [
+        {
+          "line": 16,
+          "source": "IF A=5 THEN  PRINT \"The forest has opened up at this point. You are standing on a   cliff overlooking a wide glacial river. A small foot-beaten pathleads south.\" ",
+          "literals": [
+            "The forest has opened up at this point. You are standing on a   cliff overlooking a wide glacial river. A small foot-beaten pathleads south."
+          ]
+        }
+      ],
+      "original": "The forest has opened up at this point. You are standing on a cliff overlooking a wide glacial river. A small foot-beaten pathleads south.",
+      "current": "The forest has opened up at this point. You are standing on a cliff overlooking a wide glacial river. A small foot-beaten path leads south to the riverbank. The forest path returns east."
+    },
+    {
+      "room": 6,
+      "key": "RIVERBANK",
+      "originalSources": [
+        {
+          "line": 17,
+          "source": "IF A=6 THEN  PRINT \"You are standing at the rocky edge of the mighty river Gioll.   The path forks east and west.\" ",
+          "literals": [
+            "You are standing at the rocky edge of the mighty river Gioll.   The path forks east and west."
+          ]
+        }
+      ],
+      "original": "You are standing at the rocky edge of the mighty river Gioll. The path forks east and west.",
+      "current": "You are standing at the rocky edge of the mighty river Gioll. The path forks east and west, while a small path climbs north to the cliff."
+    },
+    {
+      "room": 7,
+      "key": "CRATER",
+      "originalSources": [
+        {
+          "line": 18,
+          "source": "IF A=7 THEN  PRINT \"You are on the edge of an enormous crater. The rim is extremely slippery. Clouds of water vapour rise high in the air as the    Gioll pours into it.\" ",
+          "literals": [
+            "You are on the edge of an enormous crater. The rim is extremely slippery. Clouds of water vapour rise high in the air as the    Gioll pours into it."
+          ]
+        }
+      ],
+      "original": "You are on the edge of an enormous crater. The rim is extremely slippery. Clouds of water vapour rise high in the air as the Gioll pours into it.",
+      "current": "You are on the edge of an enormous crater. The rim is extremely slippery. Clouds of water vapour rise high in the air as the Gioll pours into it. To the west is a fatal drop; the safe path returns east."
+    },
+    {
+      "room": 8,
+      "key": "OUTCROP",
+      "originalSources": [
+        {
+          "line": 19,
+          "source": "IF A=8 THEN  PRINT \"The path to the east stops here. You are on a rocky outcrop,    projected about 15 feet above the river. In the distance,       a tiny bridge spans the river.\"  ",
+          "literals": [
+            "The path to the east stops here. You are on a rocky outcrop,    projected about 15 feet above the river. In the distance,       a tiny bridge spans the river."
+          ]
+        }
+      ],
+      "original": "The path to the east stops here. You are on a rocky outcrop, projected about 15 feet above the river. In the distance, a tiny bridge spans the river.",
+      "current": "The path stops here. You are on a rocky outcrop, projecting about fifteen feet above the river. In the distance, a tiny string bridge spans the water to the south-east. To reach it, you must return west and take the detour through the forest."
+    },
+    {
+      "room": 9,
+      "key": "YMIR_SLOPES",
+      "originalSources": [
+        {
+          "line": 20,
+          "source": "IF A=9 THEN  PRINT \"You are on the lower slopes of Mt. Ymir. The forest stretches   far away and to the west. Arctic winds blow fiercely, it's very cold!\"",
+          "literals": [
+            "You are on the lower slopes of Mt. Ymir. The forest stretches   far away and to the west. Arctic winds blow fiercely, it's very cold!"
+          ]
+        }
+      ],
+      "original": "You are on the lower slopes of Mt. Ymir. The forest stretches far away and to the west. Arctic winds blow fiercely, it's very cold!",
+      "current": "You are on the lower slopes of Mount Ymir. The forest stretches far away to the west. Arctic winds blow fiercely; it is very cold! A path leads west to the clover field, and another descends south towards the bridge."
+    },
+    {
+      "room": 10,
+      "key": "BRIDGE_APPROACH",
+      "originalSources": [
+        {
+          "line": 21,
+          "source": "IF A=10 THEN  PRINT \"You stand on a rocky precipice high above the river, Gioll;     Mt. Ymir stands to the north. A flimsy string bridge spans the  mighty river.\"",
+          "literals": [
+            "You stand on a rocky precipice high above the river, Gioll;     Mt. Ymir stands to the north. A flimsy string bridge spans the  mighty river."
+          ]
+        }
+      ],
+      "original": "You stand on a rocky precipice high above the river, Gioll; Mt. Ymir stands to the north. A flimsy string bridge spans the mighty river.",
+      "current": "You stand on a rocky precipice high above the river Gioll. Mount Ymir stands to the north. A flimsy string bridge spans the mighty river to the south; the path north returns to the mountain slopes."
+    },
+    {
+      "room": 11,
+      "key": "STRING_BRIDGE",
+      "originalSources": [
+        {
+          "line": 22,
+          "source": "IF A=11 THEN  PRINT \"You have made your way half way across the creaking bridge.     It sways violently from side to side. It's going to collapse anysecond!!\"",
+          "literals": [
+            "You have made your way half way across the creaking bridge.     It sways violently from side to side. It's going to collapse anysecond!!"
+          ]
+        }
+      ],
+      "original": "You have made your way half way across the creaking bridge. It sways violently from side to side. It's going to collapse anysecond!!",
+      "current": "You have made your way halfway across the creaking bridge. It sways violently from side to side above the river! Hold tight and follow it north or south; there is no footing to the east or west."
+    },
+    {
+      "room": 12,
+      "key": "SOUTH_LANDING",
+      "originalSources": [
+        {
+          "line": 23,
+          "source": "IF A=12 THEN  PRINT \"You are on the southern edge of the mighty river, before        the string bridge.\"",
+          "literals": [
+            "You are on the southern edge of the mighty river, before        the string bridge."
+          ]
+        }
+      ],
+      "original": "You are on the southern edge of the mighty river, before the string bridge.",
+      "current": "You are on the southern edge of the mighty river, before the string bridge. The bridge leads north, an oak forest lies to the west, and a path follows the bank east to a cliff face."
+    },
+    {
+      "room": 13,
+      "key": "MUSHROOM_ROCK",
+      "originalSources": [
+        {
+          "line": 14,
+          "source": "IF A=13 THEN  PRINT \"You are standing on a rock in the middle of a mighty oak forest.Surrounding you are thousands of poisonous mushrooms.\"",
+          "literals": [
+            "You are standing on a rock in the middle of a mighty oak forest.Surrounding you are thousands of poisonous mushrooms."
+          ]
+        }
+      ],
+      "original": "You are standing on a rock in the middle of a mighty oak forest.Surrounding you are thousands of poisonous mushrooms.",
+      "current": "You are standing on a rock in the middle of a mighty oak forest. Surrounding you are thousands of poisonous mushrooms. A path leads east to the bridge landing, and another continues south to a clearing."
+    },
+    {
+      "room": 14,
+      "key": "BASALT_CLEARING",
+      "originalSources": [
+        {
+          "line": 24,
+          "source": "IF A=14 THEN  PRINT \"You are in a clearing in the forest. An ancient basalt rock      formation towers above you. To your south is the entrance of a  VERY interesting cave...\"",
+          "literals": [
+            "You are in a clearing in the forest. An ancient basalt rock      formation towers above you. To your south is the entrance of a  VERY interesting cave..."
+          ]
+        }
+      ],
+      "original": "You are in a clearing in the forest. An ancient basalt rock formation towers above you. To your south is the entrance of a VERY interesting cave...",
+      "current": "You are in a clearing in the forest. An ancient basalt rock formation towers above you. To your south is the entrance of a VERY interesting cave... The path north returns to the oak forest."
+    },
+    {
+      "room": 15,
+      "key": "ROPE_CLIFF",
+      "originalSources": [
+        {
+          "line": 15,
+          "source": "IF A=15 THEN  PRINT \"You are on a cliff face over looking the river.\"",
+          "literals": [
+            "You are on a cliff face over looking the river."
+          ]
+        }
+      ],
+      "original": "You are on a cliff face over looking the river.",
+      "current": "You are on a shelf against a cliff face, overlooking the river from its southern bank. The path west returns to the string bridge landing."
+    },
+    {
+      "room": 16,
+      "key": "ENTRANCE",
+      "originalSources": [
+        {
+          "line": 25,
+          "source": "IF A=16 THEN  PRINT \"You are just inside the cave. Sunlight pours into the cave      lighting a path to the east and another to the south. I don't   mind saying I'm a bit scared!\" ",
+          "literals": [
+            "You are just inside the cave. Sunlight pours into the cave      lighting a path to the east and another to the south. I don't   mind saying I'm a bit scared!"
+          ]
+        }
+      ],
+      "original": "You are just inside the cave. Sunlight pours into the cave lighting a path to the east and another to the south. I don't mind saying I'm a bit scared!",
+      "current": "You are just inside the cave. Sunlight pours into the entrance, lighting a path to the east and another to the south. I don't mind saying I'm a bit scared! The way north leads outside. You will need a light before venturing deeper."
+    },
+    {
+      "room": 17,
+      "key": "EXPLORER_PASSAGE",
+      "originalSources": [
+        {
+          "line": 26,
+          "source": "IF A=17 THEN  PRINT \"This passage appears to be a dead end. On a wall before you is  carved `Find the Sacred Key of Thialfi'.\"",
+          "literals": [
+            "This passage appears to be a dead end. On a wall before you is  carved `Find the Sacred Key of Thialfi'."
+          ]
+        }
+      ],
+      "original": "This passage appears to be a dead end. On a wall before you is carved `Find the Sacred Key of Thialfi'.",
+      "current": "This passage appears to be a dead end. An earlier explorer has scratched a message on the wall before you: 'Find the Sacred Key of Thialfi'. The passage returns west to the cave entrance."
+    },
+    {
+      "room": 18,
+      "key": "ENTRANCE_CAVERN",
+      "originalSources": [
+        {
+          "line": 55,
+          "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+          "literals": [
+            "You are deep in a dark cavern."
+          ]
+        }
+      ],
+      "original": "You are deep in a dark cavern.",
+      "current": "You are deep in a dark cavern. Daylight filters in from the cave entrance to the north. A passage leads west into what appears to be an old torture chamber."
+    },
+    {
+      "room": 19,
+      "key": "TREASURE_ROOM",
+      "originalSources": [
+        {
+          "line": 27,
+          "source": "IF A=19 THEN  PRINT \"You are in the legendary treasure room of the black elves of    Svartalfheim. Every red-blooded Viking has dreamed of entering  this sacred room.\"",
+          "literals": [
+            "You are in the legendary treasure room of the black elves of    Svartalfheim. Every red-blooded Viking has dreamed of entering  this sacred room."
+          ]
+        }
+      ],
+      "original": "You are in the legendary treasure room of the black elves of Svartalfheim. Every red-blooded Viking has dreamed of entering this sacred room.",
+      "current": "You are in the legendary treasure room of the black elves of Svartalfheim. Every red-blooded Viking has dreamed of entering this sacred room! The only way out leads west through the doorway."
+    },
+    {
+      "room": 20,
+      "key": "TREASURE_DOOR",
+      "originalSources": [
+        {
+          "line": 28,
+          "source": "IF A=20 THEN  PRINT \"You can see a small oak door to the east. It has been locked    from the inside.\"",
+          "literals": [
+            "You can see a small oak door to the east. It has been locked    from the inside."
+          ]
+        }
+      ],
+      "original": "You can see a small oak door to the east. It has been locked from the inside.",
+      "current": "You stand before an oak doorway in the eastern wall, its heavy timber bound with iron. The entrance looks formidable. The passage south returns to the cavern."
+    },
+    {
+      "room": 21,
+      "key": "NORTH_CAVERN",
+      "originalSources": [
+        {
+          "line": 55,
+          "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+          "literals": [
+            "You are deep in a dark cavern."
+          ]
+        }
+      ],
+      "original": "You are deep in a dark cavern.",
+      "current": "You are deep in a dark cavern north of the long tunnel. A passage leads north to an oak doorway, and a draught comes from the corridor to the east. The long tunnel stretches south into the darkness."
+    },
+    {
+      "room": 22,
+      "key": "CORRIDOR",
+      "originalSources": [
+        {
+          "line": 29,
+          "source": "IF A=22 THEN  PRINT  \"You are standing in an east-west corridor. You can feel a faint breeze coming from the east.\"",
+          "literals": [
+            "You are standing in an east-west corridor. You can feel a faint breeze coming from the east."
+          ]
+        }
+      ],
+      "original": "You are standing in an east-west corridor. You can feel a faint breeze coming from the east.",
+      "current": "You are standing in an east-west corridor. You can feel a faint breeze stirring the stale air. The western passage returns to the cavern; a doorway to the south leads into an old torture chamber."
+    },
+    {
+      "room": 23,
+      "key": "TORTURE_CHAMBER",
+      "originalSources": [
+        {
+          "line": 30,
+          "source": "IF A=23 THEN  PRINT \"You are standing in what appears to have once been a torture    chamber. Apart from the rather comprehensive range of instumentsof absolutely inhuman agony,\"",
+          "literals": [
+            "You are standing in what appears to have once been a torture    chamber. Apart from the rather comprehensive range of instumentsof absolutely inhuman agony,"
+          ]
+        },
+        {
+          "line": 31,
+          "source": "IF A=23 THEN  PRINT \"coagulated blood stains on the walls and mangled bits of bone onthe floor make me think that a number of would be adventurers   croaked it here!\"",
+          "literals": [
+            "coagulated blood stains on the walls and mangled bits of bone onthe floor make me think that a number of would be adventurers   croaked it here!"
+          ]
+        }
+      ],
+      "original": "You are standing in what appears to have once been a torture chamber. Apart from the rather comprehensive range of instumentsof absolutely inhuman agony, coagulated blood stains on the walls and mangled bits of bone onthe floor make me think that a number of would be adventurers croaked it here!",
+      "current": "You are standing in what appears to have once been a torture chamber. Apart from the rather comprehensive range of instruments of absolutely inhuman agony, coagulated blood stains on the walls and mangled bits of bone on the floor make me think that a number of would-be adventurers croaked it here! A corridor leads north, and the entrance cavern lies to the east."
+    },
+    {
+      "room": 24,
+      "key": "LONG_TUNNEL",
+      "originalSources": [
+        {
+          "line": 32,
+          "source": "IF A=24 THEN  PRINT \"You stand in a long tunnel which has been bored out of the rock.It runs from north to south. A faint glow comes from a narrow   crack in the eastern wall.\"",
+          "literals": [
+            "You stand in a long tunnel which has been bored out of the rock.It runs from north to south. A faint glow comes from a narrow   crack in the eastern wall."
+          ]
+        }
+      ],
+      "original": "You stand in a long tunnel which has been bored out of the rock.It runs from north to south. A faint glow comes from a narrow crack in the eastern wall.",
+      "current": "You stand in a long tunnel which has been bored out of the rock. It runs from north to south, between a cavern and a large round chamber. A faint glow comes from a narrow, sealed crack in the eastern wall."
+    },
+    {
+      "room": 25,
+      "key": "SIDE_CAVE",
+      "originalSources": [
+        {
+          "line": 55,
+          "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+          "literals": [
+            "You are deep in a dark cavern."
+          ]
+        }
+      ],
+      "original": "You are deep in a dark cavern.",
+      "current": "You are deep in a dark cavern. This small side cave is empty and very quiet. Its only passage leads west, back to the large round chamber."
+    },
+    {
+      "room": 26,
+      "key": "ROUND_CHAMBER",
+      "originalSources": [
+        {
+          "line": 33,
+          "source": "IF A=26 THEN  PRINT \"You are in a large round room with a number of exits. The walls have been painted in a mystical dark purple and a big chalk staris drawn in the centre of \"",
+          "literals": [
+            "You are in a large round room with a number of exits. The walls have been painted in a mystical dark purple and a big chalk staris drawn in the centre of "
+          ]
+        },
+        {
+          "line": 34,
+          "source": "IF A=26 THEN  PRINT \"the floor. Note: This is one of the hidden chambers of the      infamous pagan sect, the monks of Loki. Norse folk believe them to be gods.\"",
+          "literals": [
+            "the floor. Note: This is one of the hidden chambers of the      infamous pagan sect, the monks of Loki. Norse folk believe them to be gods."
+          ]
+        }
+      ],
+      "original": "You are in a large round room with a number of exits. The walls have been painted in a mystical dark purple and a big chalk staris drawn in the centre of the floor. Note: This is one of the hidden chambers of the infamous pagan sect, the monks of Loki. Norse folk believe them to be gods.",
+      "current": "You are in a large round room with a number of exits. The walls have been painted a mystical dark purple, and a big chalk star is drawn in the centre of the floor. This is one of the hidden chambers of the infamous pagan sect, the monks of Loki. Norse folk believe them to be gods. The long tunnel is north, a river ledge south, the bat caves west, and a small side cave east."
+    },
+    {
+      "room": 27,
+      "key": "UPPER_LEDGE",
+      "originalSources": [
+        {
+          "line": 35,
+          "source": "IF A=27 THEN  PRINT \"You are standing on a narrow ledge, high above a subterranean   river. There is an exit to the east. \" ",
+          "literals": [
+            "You are standing on a narrow ledge, high above a subterranean   river. There is an exit to the east. "
+          ]
+        }
+      ],
+      "original": "You are standing on a narrow ledge, high above a subterranean river. There is an exit to the east.",
+      "current": "You are standing on a narrow ledge, high above a subterranean river. To the east is a balcony overlooking a huge cavern. The passage north returns to the round chamber."
+    },
+    {
+      "room": 28,
+      "key": "BALCONY",
+      "originalSources": [
+        {
+          "line": 36,
+          "source": "IF A=28 THEN  PRINT \"You are on a balcony, overlooking a huge cavern which has been  converted into a pagan temple. Note: this temple has been       dedicated to Loki, the god of\"  ",
+          "literals": [
+            "You are on a balcony, overlooking a huge cavern which has been  converted into a pagan temple. Note: this temple has been       dedicated to Loki, the god of"
+          ]
+        },
+        {
+          "line": 37,
+          "source": "IF A=28 THEN  PRINT \"fire, who came to live in Svartalfheim after he had been        banished to exile by Odin. Since then he has been waiting       for the `End Of All Things'.\" ",
+          "literals": [
+            "fire, who came to live in Svartalfheim after he had been        banished to exile by Odin. Since then he has been waiting       for the `End Of All Things'."
+          ]
+        }
+      ],
+      "original": "You are on a balcony, overlooking a huge cavern which has been converted into a pagan temple. Note: this temple has been dedicated to Loki, the god of fire, who came to live in Svartalfheim after he had been banished to exile by Odin. Since then he has been waiting for the `End Of All Things'.",
+      "current": "You are on a balcony overlooking a huge cavern which has been converted into a pagan temple. It is dedicated to Loki, the god of fire, who came to live in Svartalfheim after Odin banished him to exile. Since then he has been waiting for the 'End Of All Things'. A sturdy stone rail borders the balcony. The upper river ledge lies to the west; the temple floor is below."
+    },
+    {
+      "room": 29,
+      "key": "BAT_JUNCTION",
+      "originalSources": [
+        {
+          "line": 55,
+          "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+          "literals": [
+            "You are deep in a dark cavern."
+          ]
+        }
+      ],
+      "original": "You are deep in a dark cavern.",
+      "current": "You are deep in a dark cavern where the passages meet. A draught stirs the air. The round chamber lies to the east, a bat colony to the south, and a forked stone pillar marks the passage west."
+    },
+    {
+      "room": 30,
+      "key": "FORKED_PILLAR",
+      "originalSources": [
+        {
+          "line": 55,
+          "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+          "literals": [
+            "You are deep in a dark cavern."
+          ]
+        }
+      ],
+      "original": "You are deep in a dark cavern.",
+      "current": "You are deep in a dark cavern beside a forked stone pillar. The junction lies to the east, and a passage continues west into a pale limestone chamber."
+    },
+    {
+      "room": 31,
+      "key": "LOW_PASSAGE",
+      "originalSources": [
+        {
+          "line": 55,
+          "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+          "literals": [
+            "You are deep in a dark cavern."
+          ]
+        }
+      ],
+      "original": "You are deep in a dark cavern.",
+      "current": "You are deep in a dark cavern. Water drips from the roof of this low passage. It leads north to a pale limestone chamber and east to another chamber beyond."
+    },
+    {
+      "room": 32,
+      "key": "PALE_CHAMBER",
+      "originalSources": [],
+      "original": "",
+      "current": "You are deep in a dark cavern whose pale limestone walls catch the light. The passage east leads to a forked stone pillar, while a low, dripping passage turns south."
+    },
+    {
+      "room": 33,
+      "key": "BAT_COLONY",
+      "originalSources": [
+        {
+          "line": 38,
+          "source": "IF A=33 THEN  PRINT \"You are in the central cave of a giant bat colony. Above you    hundreds of giant bats hang from the ceiling and the floor is   covered in centuries of \"",
+          "literals": [
+            "You are in the central cave of a giant bat colony. Above you    hundreds of giant bats hang from the ceiling and the floor is   covered in centuries of "
+          ]
+        },
+        {
+          "line": 39,
+          "source": "IF A=33 THEN  PRINT \"giant bat droppings. Careful where you step! Incidentally, the  smell is indescribable.\"",
+          "literals": [
+            "giant bat droppings. Careful where you step! Incidentally, the  smell is indescribable."
+          ]
+        }
+      ],
+      "original": "You are in the central cave of a giant bat colony. Above you hundreds of giant bats hang from the ceiling and the floor is covered in centuries of giant bat droppings. Careful where you step! Incidentally, the smell is indescribable.",
+      "current": "You are in the central cave of a giant bat colony. Above you, hundreds of giant bats hang from the ceiling, and the floor is covered in centuries of giant bat droppings. Careful where you step! Incidentally, the smell is indescribable. A junction lies north, and a passage leads west to another chamber."
+    },
+    {
+      "room": 34,
+      "key": "KEY_CHAMBER",
+      "originalSources": [
+        {
+          "line": 55,
+          "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+          "literals": [
+            "You are deep in a dark cavern."
+          ]
+        }
+      ],
+      "original": "You are deep in a dark cavern.",
+      "current": "You are deep in a dark cavern beyond the bat colony. Passages lead east towards the roosting bats and west into a low, dripping passage."
+    },
+    {
+      "room": 35,
+      "key": "TEMPLE",
+      "originalSources": [
+        {
+          "line": 40,
+          "source": "IF A=35 THEN  PRINT \"You are in the temple. To the north is a locked gate and on the wall is a giant statue of Loki, carved out of the living rock   itself!\"",
+          "literals": [
+            "You are in the temple. To the north is a locked gate and on the wall is a giant statue of Loki, carved out of the living rock   itself!"
+          ]
+        }
+      ],
+      "original": "You are in the temple. To the north is a locked gate and on the wall is a giant statue of Loki, carved out of the living rock itself!",
+      "current": "You are in the temple. To the north is a great gate, and on the wall is a giant statue of Loki, carved out of the living rock itself! High overhead is the balcony from which you descended."
+    },
+    {
+      "room": 36,
+      "key": "WIZARD_CAVERN",
+      "originalSources": [
+        {
+          "line": 55,
+          "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+          "literals": [
+            "You are deep in a dark cavern."
+          ]
+        }
+      ],
+      "original": "You are deep in a dark cavern.",
+      "current": "You are deep in a dark cavern below the temple. A narrow shaft opens to the north, while a passage east leads towards the sound of an underground river."
+    },
+    {
+      "room": 37,
+      "key": "CRYPT",
+      "originalSources": [
+        {
+          "line": 41,
+          "source": "IF A=37 THEN  PRINT \"You stand in an old and musty crypt, the final resting place of hundreds of Loki devotees. On the wall is carved:``What 3 letter word completes a word \"",
+          "literals": [
+            "You stand in an old and musty crypt, the final resting place of hundreds of Loki devotees. On the wall is carved:``What 3 letter word completes a word "
+          ]
+        },
+        {
+          "line": 42,
+          "source": "IF A=37 THEN  PRINT \"starting with 'G---' and another ending with '---X'' Note: The   monks of Loki must have liked silly puzzles.  Putrefaction and decay fills the air here.\"",
+          "literals": [
+            "starting with 'G---' and another ending with '---X'' Note: The   monks of Loki must have liked silly puzzles.  Putrefaction and decay fills the air here."
+          ]
+        }
+      ],
+      "original": "You stand in an old and musty crypt, the final resting place of hundreds of Loki devotees. On the wall is carved:``What 3 letter word completes a word starting with 'G---' and another ending with '---X'' Note: The monks of Loki must have liked silly puzzles. Putrefaction and decay fills the air here.",
+      "current": "You stand in an old and musty crypt, the final resting place of hundreds of Loki's devotees. Putrefaction and decay fill the air here. Four stones on the eastern wall name its keeper; the temple gate lies to the south."
+    },
+    {
+      "room": 38,
+      "key": "CELL",
+      "originalSources": [
+        {
+          "line": 43,
+          "source": "IF A=38 THEN  PRINT \"You are in a tiny cell. The western wall has now firmly closed  again. There is a ventilator shaft on the eastern wall.\" ",
+          "literals": [
+            "You are in a tiny cell. The western wall has now firmly closed  again. There is a ventilator shaft on the eastern wall."
+          ]
+        }
+      ],
+      "original": "You are in a tiny cell. The western wall has now firmly closed again. There is a ventilator shaft on the eastern wall.",
+      "current": "You are in a tiny cell. The passage west returns to the crypt, while a ventilation shaft pierces the eastern wall. There is a service hatch to the north, but its latch is on the drain side."
+    },
+    {
+      "room": 39,
+      "key": "SHAFT",
+      "originalSources": [
+        {
+          "line": 55,
+          "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+          "literals": [
+            "You are deep in a dark cavern."
+          ]
+        }
+      ],
+      "original": "You are deep in a dark cavern.",
+      "current": "You are deep in a dark cavern just beyond the ventilation shaft. The shaft leads west into the cell, and a passage continues south into a lower cavern."
+    },
+    {
+      "room": 40,
+      "key": "LOWER_LEDGE",
+      "originalSources": [
+        {
+          "line": 44,
+          "source": "IF A=40 THEN  PRINT \"You are on another ledge high above a subterranean river. The   water flows in through a hole in the cavern roof, to the north.\"",
+          "literals": [
+            "You are on another ledge high above a subterranean river. The   water flows in through a hole in the cavern roof, to the north."
+          ]
+        }
+      ],
+      "original": "You are on another ledge high above a subterranean river. The water flows in through a hole in the cavern roof, to the north.",
+      "current": "You are on another ledge high above a subterranean river. Water pours into the cavern through a hole in the roof to the north. The path north leads to the waterfall; south, it follows the ledge to a river bend. The cavern lies west. There is only a sheer drop to the east."
+    },
+    {
+      "room": 41,
+      "key": "WEST_DRAIN",
+      "originalSources": [
+        {
+          "line": 45,
+          "source": "IF A>40  AND  A<45 THEN  PRINT \"Somehow you have gotten into the complex drainage system of thisentire cavern network!!\"",
+          "literals": [
+            "Somehow you have gotten into the complex drainage system of thisentire cavern network!!"
+          ]
+        }
+      ],
+      "original": "Somehow you have gotten into the complex drainage system of thisentire cavern network!!",
+      "current": "Somehow you have found your way into the complex drainage system of this entire cavern network! This straight drain leads west to a freezing conduit and east along the passage towards a junction."
+    },
+    {
+      "room": 42,
+      "key": "MIDDLE_DRAIN",
+      "originalSources": [
+        {
+          "line": 45,
+          "source": "IF A>40  AND  A<45 THEN  PRINT \"Somehow you have gotten into the complex drainage system of thisentire cavern network!!\"",
+          "literals": [
+            "Somehow you have gotten into the complex drainage system of thisentire cavern network!!"
+          ]
+        }
+      ],
+      "original": "Somehow you have gotten into the complex drainage system of thisentire cavern network!!",
+      "current": "You are in the complex drainage system of the cavern network. The straight passage runs between the conduit to the west and a junction to the east."
+    },
+    {
+      "room": 43,
+      "key": "DRAIN_JUNCTION",
+      "originalSources": [
+        {
+          "line": 45,
+          "source": "IF A>40  AND  A<45 THEN  PRINT \"Somehow you have gotten into the complex drainage system of thisentire cavern network!!\"",
+          "literals": [
+            "Somehow you have gotten into the complex drainage system of thisentire cavern network!!"
+          ]
+        }
+      ],
+      "original": "Somehow you have gotten into the complex drainage system of thisentire cavern network!!",
+      "current": "You are at a junction in the complex drainage system of the cavern network. A winding passage leads north towards a pearl-white chamber. A branch leads east, and the drain west returns to the conduit. To the south is the cell's service hatch; you can OPEN HATCH here."
+    },
+    {
+      "room": 44,
+      "key": "BLIND_DRAIN",
+      "originalSources": [
+        {
+          "line": 45,
+          "source": "IF A>40  AND  A<45 THEN  PRINT \"Somehow you have gotten into the complex drainage system of thisentire cavern network!!\"",
+          "literals": [
+            "Somehow you have gotten into the complex drainage system of thisentire cavern network!!"
+          ]
+        }
+      ],
+      "original": "Somehow you have gotten into the complex drainage system of thisentire cavern network!!",
+      "current": "You are in a blind branch of the cavern's complex drainage system. There is no way onwards; the drain west returns to the junction."
+    },
+    {
+      "room": 45,
+      "key": "WATERFALL",
+      "originalSources": [
+        {
+          "line": 46,
+          "source": "IF A=45 THEN  PRINT \"You are standing near an enormous waterfall which brings water  down from the surface, from the river Gioll.\" ",
+          "literals": [
+            "You are standing near an enormous waterfall which brings water  down from the surface, from the river Gioll."
+          ]
+        }
+      ],
+      "original": "You are standing near an enormous waterfall which brings water down from the surface, from the river Gioll.",
+      "current": "You are standing near an enormous waterfall which brings water down from the surface, from the river Gioll. Stone steps climb north beside the falling water. The lower ledge lies south; there is no safe footing to the east."
+    },
+    {
+      "room": 46,
+      "key": "PEARL_CHAMBER",
+      "originalSources": [
+        {
+          "line": 55,
+          "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+          "literals": [
+            "You are deep in a dark cavern."
+          ]
+        }
+      ],
+      "original": "You are deep in a dark cavern.",
+      "current": "You are deep in a dark cavern whose walls shine pearl-white in your light. Stone steps lie to the west. A winding passage leads south, changing height as it makes its way to a junction in the drains."
+    },
+    {
+      "room": 47,
+      "key": "STONE_STEPS",
+      "originalSources": [
+        {
+          "line": 47,
+          "source": "IF A=47 THEN  PRINT \"You are standing before a stone staircase which leads           southwards.\"",
+          "literals": [
+            "You are standing before a stone staircase which leads           southwards."
+          ]
+        }
+      ],
+      "original": "You are standing before a stone staircase which leads southwards.",
+      "current": "You are standing at the top of a stone staircase. The steps lead south towards the roar of the waterfall. To the east is a pearl-white chamber."
+    },
+    {
+      "room": 48,
+      "key": "CASTLE_VIEW",
+      "originalSources": [
+        {
+          "line": 48,
+          "source": "IF A=48 THEN  PRINT \"You are on a narrow and crumbling ledge. On the other side of   the river you can see a magic castle. (Don't ask me why it's    magic...I just know it is)\" ",
+          "literals": [
+            "You are on a narrow and crumbling ledge. On the other side of   the river you can see a magic castle. (Don't ask me why it's    magic...I just know it is)"
+          ]
+        }
+      ],
+      "original": "You are on a narrow and crumbling ledge. On the other side of the river you can see a magic castle. (Don't ask me why it's magic...I just know it is)",
+      "current": "You are on a narrow and crumbling ledge at a bend in the river. Across the water to the east you can see a magic castle. Don't ask me why it is magic... I just know it is! The path north returns to the lower ledge; there is no path south. The drawbridge crossing lies east."
+    },
+    {
+      "room": 49,
+      "key": "DRAWBRIDGE",
+      "originalSources": [
+        {
+          "line": 49,
+          "source": "IF A=49 THEN  PRINT \"You are by the drawbridge which has just lowered itself....by   magic!!\"",
+          "literals": [
+            "You are by the drawbridge which has just lowered itself....by   magic!!"
+          ]
+        }
+      ],
+      "original": "You are by the drawbridge which has just lowered itself....by magic!!",
+      "current": "You are on the mighty golden drawbridge, with the river below you and the magic castle ahead. The river ledge lies west and the courtyard east. Crossing secures the bridge in its lowered position."
+    },
+    {
+      "room": 50,
+      "key": "COURTYARD",
+      "originalSources": [
+        {
+          "line": 50,
+          "source": "IF A=50 THEN  PRINT \"You are in the courtyard of the magic castle. WOW! This castle  is really something! On the wall is inscribed 'hzb tzozi'.      A secret escape tunnel leads south\"",
+          "literals": [
+            "You are in the courtyard of the magic castle. WOW! This castle  is really something! On the wall is inscribed 'hzb tzozi'.      A secret escape tunnel leads south"
+          ]
+        }
+      ],
+      "original": "You are in the courtyard of the magic castle. WOW! This castle is really something! On the wall is inscribed 'hzb tzozi'. A secret escape tunnel leads south",
+      "current": "You are in the courtyard of the magic castle. WOW! This castle is really something! On the wall is inscribed 'hzb tzozi'. The drawbridge lies west, and a doorway east leads to the powder magazine. A secret escape tunnel leads south to the riverbank."
+    },
+    {
+      "room": 51,
+      "key": "MAGAZINE",
+      "originalSources": [
+        {
+          "line": 51,
+          "source": "IF A=51 THEN  PRINT \"You are in the powder magazine of this really super castle.\"",
+          "literals": [
+            "You are in the powder magazine of this really super castle."
+          ]
+        }
+      ],
+      "original": "You are in the powder magazine of this really super castle.",
+      "current": "You are in the powder magazine of this really super castle. The doorway west leads back into the courtyard."
+    },
+    {
+      "room": 52,
+      "key": "EAST_BANK",
+      "originalSources": [
+        {
+          "line": 53,
+          "source": "IF A=52 THEN  PRINT \"You are on the eastern side of the river. A small tunnel leads  east into the cliff face.\"",
+          "literals": [
+            "You are on the eastern side of the river. A small tunnel leads  east into the cliff face."
+          ]
+        }
+      ],
+      "original": "You are on the eastern side of the river. A small tunnel leads east into the cliff face.",
+      "current": "You are on the eastern side of the underground river. A small tunnel leads north through the cliff face into the castle. To the west, a wooden bridge crosses the water."
+    },
+    {
+      "room": 53,
+      "key": "WOODEN_BRIDGE",
+      "originalSources": [
+        {
+          "line": 52,
+          "source": "IF A=53 THEN  PRINT \"You stand before a small wooden bridge which crosses the river.\"",
+          "literals": [
+            "You stand before a small wooden bridge which crosses the river."
+          ]
+        },
+        {
+          "line": 55,
+          "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+          "literals": [
+            "You are deep in a dark cavern."
+          ]
+        }
+      ],
+      "original": "You stand before a small wooden bridge which crosses the river. You are deep in a dark cavern.",
+      "current": "You stand before a small wooden bridge which crosses the underground river to the east. A narrow service path leads north towards the conduit."
+    },
+    {
+      "room": 54,
+      "key": "CONDUIT",
+      "originalSources": [
+        {
+          "line": 54,
+          "source": "IF A=54 THEN  PRINT \"You are in a conduit draining into the river. The water comes upto your knees and is freezing cold. A narrow service path leads south.\"",
+          "literals": [
+            "You are in a conduit draining into the river. The water comes upto your knees and is freezing cold. A narrow service path leads south."
+          ]
+        }
+      ],
+      "original": "You are in a conduit draining into the river. The water comes upto your knees and is freezing cold. A narrow service path leads south.",
+      "current": "You are in a conduit draining into the river. The water comes up to your knees and is freezing cold. A narrow service path leads south to the wooden bridge, while the drains continue east into the cavern network."
+    }
+  ],
+  "objects": [
+    {
+      "object": 1,
+      "key": "WIZARD",
+      "originalAdjective": "n evil",
+      "originalNoun": " wizard ",
+      "currentAdjective": "n evil",
+      "currentNoun": " wizard "
+    },
+    {
+      "object": 2,
+      "key": "DEMON",
+      "originalAdjective": " fiery",
+      "originalNoun": " demon ",
+      "currentAdjective": " fiery",
+      "currentNoun": " demon "
+    },
+    {
+      "object": 3,
+      "key": "TROLL",
+      "originalAdjective": "n axe wielding",
+      "originalNoun": " troll ",
+      "currentAdjective": "n axe wielding",
+      "currentNoun": " troll "
+    },
+    {
+      "object": 4,
+      "key": "DRAGON",
+      "originalAdjective": " fire breathing",
+      "originalNoun": " dragon ",
+      "currentAdjective": " fire breathing",
+      "currentNoun": " dragon "
+    },
+    {
+      "object": 5,
+      "key": "BAT",
+      "originalAdjective": " giant",
+      "originalNoun": " bat ",
+      "currentAdjective": " giant",
+      "currentNoun": " bat "
+    },
+    {
+      "object": 6,
+      "key": "DWARF",
+      "originalAdjective": "n old and gnarled",
+      "originalNoun": " dwarf ",
+      "currentAdjective": "n old and gnarled",
+      "currentNoun": " dwarf "
+    },
+    {
+      "object": 7,
+      "key": "COIN",
+      "originalAdjective": " gold",
+      "originalNoun": " coin ",
+      "currentAdjective": " gold",
+      "currentNoun": " coin "
+    },
+    {
+      "object": 8,
+      "key": "COMPASS",
+      "originalAdjective": " useful looking",
+      "originalNoun": " compass ",
+      "currentAdjective": " useful looking",
+      "currentNoun": " compass "
+    },
+    {
+      "object": 9,
+      "key": "BOMB",
+      "originalAdjective": " home made",
+      "originalNoun": " bomb ",
+      "currentAdjective": " home made",
+      "currentNoun": " bomb "
+    },
+    {
+      "object": 10,
+      "key": "RUBY",
+      "originalAdjective": " blood red",
+      "originalNoun": " ruby ",
+      "currentAdjective": " blood red",
+      "currentNoun": " ruby "
+    },
+    {
+      "object": 11,
+      "key": "DIAMOND",
+      "originalAdjective": " sparkling",
+      "originalNoun": " diamond ",
+      "currentAdjective": " sparkling",
+      "currentNoun": " diamond "
+    },
+    {
+      "object": 12,
+      "key": "PEARL",
+      "originalAdjective": " moon-like",
+      "originalNoun": " pearl ",
+      "currentAdjective": " moon-like",
+      "currentNoun": " pearl "
+    },
+    {
+      "object": 13,
+      "key": "STONE",
+      "originalAdjective": "n interesting",
+      "originalNoun": " stone ",
+      "currentAdjective": "n interesting",
+      "currentNoun": " stone "
+    },
+    {
+      "object": 14,
+      "key": "RING",
+      "originalAdjective": " diamond studded",
+      "originalNoun": " ring ",
+      "currentAdjective": " diamond studded",
+      "currentNoun": " ring "
+    },
+    {
+      "object": 15,
+      "key": "PENDANT",
+      "originalAdjective": " magic",
+      "originalNoun": " pendant ",
+      "currentAdjective": " magic",
+      "currentNoun": " pendant "
+    },
+    {
+      "object": 16,
+      "key": "GRAIL",
+      "originalAdjective": " most holy",
+      "originalNoun": " grail ",
+      "currentAdjective": " most holy",
+      "currentNoun": " grail "
+    },
+    {
+      "object": 17,
+      "key": "SHIELD",
+      "originalAdjective": " mirror like",
+      "originalNoun": " shield ",
+      "currentAdjective": " mirror like",
+      "currentNoun": " shield "
+    },
+    {
+      "object": 18,
+      "key": "BOX",
+      "originalAdjective": " nondescript black",
+      "originalNoun": " box ",
+      "currentAdjective": " nondescript black",
+      "currentNoun": " box "
+    },
+    {
+      "object": 19,
+      "key": "KEY",
+      "originalAdjective": "n old an rusty",
+      "originalNoun": " key ",
+      "currentAdjective": "n old and rusty",
+      "currentNoun": " key "
+    },
+    {
+      "object": 20,
+      "key": "SWORD",
+      "originalAdjective": " double bladed",
+      "originalNoun": " sword ",
+      "currentAdjective": " double-bladed",
+      "currentNoun": " sword "
+    },
+    {
+      "object": 21,
+      "key": "CANDLE",
+      "originalAdjective": " small",
+      "originalNoun": " candle ",
+      "currentAdjective": " small lit",
+      "currentNoun": " candle "
+    },
+    {
+      "object": 22,
+      "key": "ROPE",
+      "originalAdjective": " thin and tatty",
+      "originalNoun": " rope ",
+      "currentAdjective": " thin and tatty",
+      "currentNoun": " rope "
+    },
+    {
+      "object": 23,
+      "key": "BRICK",
+      "originalAdjective": " red house",
+      "originalNoun": " brick ",
+      "currentAdjective": " red house",
+      "currentNoun": " brick "
+    },
+    {
+      "object": 24,
+      "key": "GRILLE",
+      "originalAdjective": " rusty ventilation",
+      "originalNoun": " grill ",
+      "currentAdjective": " rusty ventilation",
+      "currentNoun": " grille "
+    }
+  ],
+  "messageGroups": [
+    {
+      "name": "Opening and darkness",
+      "original": [
+        {
+          "line": 3,
+          "source": "CURS 1,4: SPEED 255: PRINT \"  DREAMCARDS presents...  \": SPEED 0",
+          "literals": [
+            "  DREAMCARDS presents...  "
+          ]
+        },
+        {
+          "line": 4,
+          "source": "CURS 20,6: PRINT \"C A V E R N S    by John Hardy (1983)\": CURS 0: PLAY 0,40: CLS :F=0:U=0",
+          "literals": [
+            "C A V E R N S    by John Hardy (1983)"
+          ]
+        },
+        {
+          "line": 8,
+          "source": "PRINT \"It's very dark, too dark to see anything...I'm scared!\"",
+          "literals": [
+            "It's very dark, too dark to see anything...I'm scared!"
+          ]
+        }
+      ],
+      "current": [
+        {
+          "line": 19,
+          "source": "PRINT \"DREAMCARDS presents...\"",
+          "literals": [
+            "DREAMCARDS presents..."
+          ]
+        },
+        {
+          "line": 20,
+          "source": "PRINT \"CAVERNS by John Hardy (c) 1982-83\":PRINT \"GNU Public License, 2019\":ft%=0:tu%=0",
+          "literals": [
+            "CAVERNS by John Hardy (c) 1982-83",
+            "GNU Public License, 2019"
+          ]
+        },
+        {
+          "line": 21,
+          "source": "PRINT \"Bring treasure home for double points. Take the compass!\":PRINT \"LOOK describes, INVENTORY lists, SCORE totals, QUIT finishes.\"",
+          "literals": [
+            "Bring treasure home for double points. Take the compass!",
+            "LOOK describes, INVENTORY lists, SCORE totals, QUIT finishes."
+          ]
+        },
+        {
+          "line": 79,
+          "source": "PRINT",
+          "literals": []
+        },
+        {
+          "line": 80,
+          "source": "IF vs%=0 THEN PRINT \"It's very dark, too dark to see anything...I'm scared!\":GOTO @DESCRIBE_FOES",
+          "literals": [
+            "It's very dark, too dark to see anything...I'm scared!"
+          ]
+        },
+        {
+          "line": 81,
+          "source": "RESTORE:FOR ix%=1 TO rm%:READ dc%:FOR iy%=1 TO dc%:READ ds$:IF ix%=rm% THEN PRINT ds$",
+          "literals": []
+        },
+        {
+          "line": 83,
+          "source": "IF rm%={ROOM_TREASURE_DOOR} THEN IF td%=0 THEN PRINT \"East: iron-bound door, barred within. Try explosives.\" ELSE PRINT \"East doorway blasted open.\"",
+          "literals": [
+            "East: iron-bound door, barred within. Try explosives.",
+            "East doorway blasted open."
+          ]
+        },
+        {
+          "line": 84,
+          "source": "IF rm%={ROOM_BALCONY} OR rm%={ROOM_TEMPLE} THEN IF rp%=1 THEN PRINT \"The secured rope reaches the floor. Use UP or DOWN.\"",
+          "literals": [
+            "The secured rope reaches the floor. Use UP or DOWN."
+          ]
+        },
+        {
+          "line": 85,
+          "source": "IF rm%={ROOM_TEMPLE} THEN IF gt% THEN PRINT \"North gate open.\" ELSE PRINT \"North gate locked.\"",
+          "literals": [
+            "North gate open.",
+            "North gate locked."
+          ]
+        },
+        {
+          "line": 86,
+          "source": "IF rm%={ROOM_CRYPT} THEN IF cr% THEN PRINT \"East seal open.\" ELSE PRINT \"Stones read V, A, R, D. Speak the name.\"",
+          "literals": [
+            "East seal open.",
+            "Stones read V, A, R, D. Speak the name."
+          ]
+        },
+        {
+          "line": 87,
+          "source": "IF rm%={ROOM_CELL} THEN IF sh% THEN PRINT \"East shaft open.\" ELSE PRINT \"Remove the grille; leave it here. It cannot fit through.\"",
+          "literals": [
+            "East shaft open.",
+            "Remove the grille; leave it here. It cannot fit through."
+          ]
+        },
+        {
+          "line": 88,
+          "source": "IF rm%={ROOM_CASTLE_VIEW} THEN IF db%={FATAL} THEN PRINT \"East drawbridge raised; seek another entrance.\" ELSE PRINT \"East drawbridge lowered.\"",
+          "literals": [
+            "East drawbridge raised; seek another entrance.",
+            "East drawbridge lowered."
+          ]
+        },
+        {
+          "line": 89,
+          "source": "IF rm%={ROOM_BASALT_CLEARING} THEN IF ob%({ITEM_DRAGON})={ABSENT} THEN PRINT \"You can also see the bloody corpse of an enormous dragon.\"",
+          "literals": [
+            "You can also see the bloody corpse of an enormous dragon."
+          ]
+        },
+        {
+          "line": 90,
+          "source": "IF ce%=1 THEN PRINT \"Your candle is growing dim.\"",
+          "literals": [
+            "Your candle is growing dim."
+          ]
+        },
+        {
+          "line": 91,
+          "source": "IF ce%=2 THEN PRINT \"Your candle has gone out.\"",
+          "literals": [
+            "Your candle has gone out."
+          ]
+        },
+        {
+          "line": 95,
+          "source": "IF qt%=0 THEN PRINT \"You can also see...\"",
+          "literals": [
+            "You can also see..."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Creature entrance scenes",
+      "original": [
+        {
+          "line": 200,
+          "source": "PRINT \"There, before you in a swirling mist stands an evil wizard with his hand held outwards...`Thou shall not pass' he cries.\"",
+          "literals": [
+            "There, before you in a swirling mist stands an evil wizard with his hand held outwards...`Thou shall not pass' he cries."
+          ]
+        },
+        {
+          "line": 202,
+          "source": "PRINT \"Before the entrance of the cave lies an enormous, green,        sleeping dragon. Realizing your presence, its eyes flicker open\"",
+          "literals": [
+            "Before the entrance of the cave lies an enormous, green,        sleeping dragon. Realizing your presence, its eyes flicker open"
+          ]
+        },
+        {
+          "line": 203,
+          "source": "PRINT \"and it leaps up, breathing jets fire at you.\"",
+          "literals": [
+            "and it leaps up, breathing jets fire at you."
+          ]
+        },
+        {
+          "line": 205,
+          "source": "PRINT \"From around the corner trots an old and gnarled drawf carrying  a lantern. `My job is to protect these stone steps!' he says andlunges at you with his dagger.\"",
+          "literals": [
+            "From around the corner trots an old and gnarled drawf carrying  a lantern. `My job is to protect these stone steps!' he says andlunges at you with his dagger."
+          ]
+        }
+      ],
+      "current": [
+        {
+          "line": 110,
+          "source": "IF li%={ITEM_WIZARD} THEN PRINT \"An evil wizard bars the way. He cries: Thou shalt not pass!\":RETURN",
+          "literals": [
+            "An evil wizard bars the way. He cries: Thou shalt not pass!"
+          ]
+        },
+        {
+          "line": 111,
+          "source": "IF li%={ITEM_DRAGON} THEN PRINT \"A sleeping dragon wakes and breathes jets of fire.\":RETURN",
+          "literals": [
+            "A sleeping dragon wakes and breathes jets of fire."
+          ]
+        },
+        {
+          "line": 112,
+          "source": "IF li%={ITEM_DWARF} THEN PRINT \"An old dwarf guards the steps, raising his dagger.\"",
+          "literals": [
+            "An old dwarf guards the steps, raising his dagger."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Inventory and object formatting",
+      "original": [
+        {
+          "line": 68,
+          "source": "PRINT \"You can also see...\"",
+          "literals": [
+            "You can also see..."
+          ]
+        },
+        {
+          "line": 74,
+          "source": "PRINT \"Nearby there lurks...\"",
+          "literals": [
+            "Nearby there lurks..."
+          ]
+        },
+        {
+          "line": 94,
+          "source": "PRINT \"You are carrying \";:V=0",
+          "literals": [
+            "You are carrying "
+          ]
+        },
+        {
+          "line": 98,
+          "source": "IF V=0 THEN  PRINT \"nothing.\": GOTO 5",
+          "literals": [
+            "nothing."
+          ]
+        },
+        {
+          "line": 165,
+          "source": "RESTORE 182: FOR K=1 TO L: READ H0$,H1$: NEXT K: PRINT \"a\";H0$;H1$;\", \";: RETURN ",
+          "literals": [
+            "a",
+            ", "
+          ]
+        }
+      ],
+      "current": [
+        {
+          "line": 108,
+          "source": "PRINT \"a\";ad$(li%);no$(li%);\", \";:RETURN",
+          "literals": [
+            "a",
+            ", "
+          ]
+        },
+        {
+          "line": 110,
+          "source": "IF li%={ITEM_WIZARD} THEN PRINT \"An evil wizard bars the way. He cries: Thou shalt not pass!\":RETURN",
+          "literals": [
+            "An evil wizard bars the way. He cries: Thou shalt not pass!"
+          ]
+        },
+        {
+          "line": 111,
+          "source": "IF li%={ITEM_DRAGON} THEN PRINT \"A sleeping dragon wakes and breathes jets of fire.\":RETURN",
+          "literals": [
+            "A sleeping dragon wakes and breathes jets of fire."
+          ]
+        },
+        {
+          "line": 112,
+          "source": "IF li%={ITEM_DWARF} THEN PRINT \"An old dwarf guards the steps, raising his dagger.\"",
+          "literals": [
+            "An old dwarf guards the steps, raising his dagger."
+          ]
+        },
+        {
+          "line": 115,
+          "source": "PRINT \"You are carrying \";:qt%=0",
+          "literals": [
+            "You are carrying "
+          ]
+        },
+        {
+          "line": 118,
+          "source": "IF qt%=0 THEN PRINT",
+          "literals": []
+        },
+        {
+          "line": 122,
+          "source": "IF qt%=0 THEN PRINT \"nothing.\"",
+          "literals": [
+            "nothing."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Score, ranking and restart",
+      "original": [
+        {
+          "line": 105,
+          "source": "PRINT \\\\\"You have a score of\";S;\" out of a possible 126 points in\";U;\" moves.\": GOSUB 192: PRINT \"Another adventure? \";:Y0$= KEY $",
+          "literals": [
+            "You have a score of",
+            " out of a possible 126 points in",
+            " moves.",
+            "Another adventure? "
+          ]
+        },
+        {
+          "line": 192,
+          "source": "PRINT \"This gives you an adventurer's ranking of:\"",
+          "literals": [
+            "This gives you an adventurer's ranking of:"
+          ]
+        },
+        {
+          "line": 193,
+          "source": "IF S<20 THEN  PRINT \"Hopeless beginner\"",
+          "literals": [
+            "Hopeless beginner"
+          ]
+        },
+        {
+          "line": 194,
+          "source": "IF S<50 AND S>19 THEN  PRINT \"Experienced loser\"",
+          "literals": [
+            "Experienced loser"
+          ]
+        },
+        {
+          "line": 195,
+          "source": "IF S<100 AND S>49 THEN  PRINT \"Average Viking\"",
+          "literals": [
+            "Average Viking"
+          ]
+        },
+        {
+          "line": 196,
+          "source": "IF S<126 AND S>99 THEN  PRINT \"Excellent...but you've left something behind!\"",
+          "literals": [
+            "Excellent...but you've left something behind!"
+          ]
+        },
+        {
+          "line": 197,
+          "source": "IF S=126 THEN  PRINT \"Perfectionist and genius!!\"",
+          "literals": [
+            "Perfectionist and genius!!"
+          ]
+        }
+      ],
+      "current": [
+        {
+          "line": 42,
+          "source": "PRINT:PRINT \"Score:\";sc%;\" out of a possible 126 points in\";tu%;\" moves.\":GOSUB @RANKING:PRINT \"Another adventure?\"",
+          "literals": [
+            "Score:",
+            " out of a possible 126 points in",
+            " moves.",
+            "Another adventure?"
+          ]
+        },
+        {
+          "line": 42,
+          "source": "PRINT:PRINT \"Score:\";sc%;\" out of a possible 126 points in\";tu%;\" moves.\":GOSUB @RANKING:PRINT \"Another adventure?\"",
+          "literals": [
+            "Score:",
+            " out of a possible 126 points in",
+            " moves.",
+            "Another adventure?"
+          ]
+        },
+        {
+          "line": 79,
+          "source": "PRINT",
+          "literals": []
+        },
+        {
+          "line": 80,
+          "source": "IF vs%=0 THEN PRINT \"It's very dark, too dark to see anything...I'm scared!\":GOTO @DESCRIBE_FOES",
+          "literals": [
+            "It's very dark, too dark to see anything...I'm scared!"
+          ]
+        },
+        {
+          "line": 81,
+          "source": "RESTORE:FOR ix%=1 TO rm%:READ dc%:FOR iy%=1 TO dc%:READ ds$:IF ix%=rm% THEN PRINT ds$",
+          "literals": []
+        },
+        {
+          "line": 83,
+          "source": "IF rm%={ROOM_TREASURE_DOOR} THEN IF td%=0 THEN PRINT \"East: iron-bound door, barred within. Try explosives.\" ELSE PRINT \"East doorway blasted open.\"",
+          "literals": [
+            "East: iron-bound door, barred within. Try explosives.",
+            "East doorway blasted open."
+          ]
+        },
+        {
+          "line": 84,
+          "source": "IF rm%={ROOM_BALCONY} OR rm%={ROOM_TEMPLE} THEN IF rp%=1 THEN PRINT \"The secured rope reaches the floor. Use UP or DOWN.\"",
+          "literals": [
+            "The secured rope reaches the floor. Use UP or DOWN."
+          ]
+        },
+        {
+          "line": 85,
+          "source": "IF rm%={ROOM_TEMPLE} THEN IF gt% THEN PRINT \"North gate open.\" ELSE PRINT \"North gate locked.\"",
+          "literals": [
+            "North gate open.",
+            "North gate locked."
+          ]
+        },
+        {
+          "line": 86,
+          "source": "IF rm%={ROOM_CRYPT} THEN IF cr% THEN PRINT \"East seal open.\" ELSE PRINT \"Stones read V, A, R, D. Speak the name.\"",
+          "literals": [
+            "East seal open.",
+            "Stones read V, A, R, D. Speak the name."
+          ]
+        },
+        {
+          "line": 87,
+          "source": "IF rm%={ROOM_CELL} THEN IF sh% THEN PRINT \"East shaft open.\" ELSE PRINT \"Remove the grille; leave it here. It cannot fit through.\"",
+          "literals": [
+            "East shaft open.",
+            "Remove the grille; leave it here. It cannot fit through."
+          ]
+        },
+        {
+          "line": 88,
+          "source": "IF rm%={ROOM_CASTLE_VIEW} THEN IF db%={FATAL} THEN PRINT \"East drawbridge raised; seek another entrance.\" ELSE PRINT \"East drawbridge lowered.\"",
+          "literals": [
+            "East drawbridge raised; seek another entrance.",
+            "East drawbridge lowered."
+          ]
+        },
+        {
+          "line": 89,
+          "source": "IF rm%={ROOM_BASALT_CLEARING} THEN IF ob%({ITEM_DRAGON})={ABSENT} THEN PRINT \"You can also see the bloody corpse of an enormous dragon.\"",
+          "literals": [
+            "You can also see the bloody corpse of an enormous dragon."
+          ]
+        },
+        {
+          "line": 90,
+          "source": "IF ce%=1 THEN PRINT \"Your candle is growing dim.\"",
+          "literals": [
+            "Your candle is growing dim."
+          ]
+        },
+        {
+          "line": 91,
+          "source": "IF ce%=2 THEN PRINT \"Your candle has gone out.\"",
+          "literals": [
+            "Your candle has gone out."
+          ]
+        },
+        {
+          "line": 95,
+          "source": "IF qt%=0 THEN PRINT \"You can also see...\"",
+          "literals": [
+            "You can also see..."
+          ]
+        },
+        {
+          "line": 102,
+          "source": "PRINT \"Nearby there lurks...\"",
+          "literals": [
+            "Nearby there lurks..."
+          ]
+        },
+        {
+          "line": 106,
+          "source": "PRINT:RETURN",
+          "literals": []
+        },
+        {
+          "line": 108,
+          "source": "PRINT \"a\";ad$(li%);no$(li%);\", \";:RETURN",
+          "literals": [
+            "a",
+            ", "
+          ]
+        },
+        {
+          "line": 110,
+          "source": "IF li%={ITEM_WIZARD} THEN PRINT \"An evil wizard bars the way. He cries: Thou shalt not pass!\":RETURN",
+          "literals": [
+            "An evil wizard bars the way. He cries: Thou shalt not pass!"
+          ]
+        },
+        {
+          "line": 111,
+          "source": "IF li%={ITEM_DRAGON} THEN PRINT \"A sleeping dragon wakes and breathes jets of fire.\":RETURN",
+          "literals": [
+            "A sleeping dragon wakes and breathes jets of fire."
+          ]
+        },
+        {
+          "line": 112,
+          "source": "IF li%={ITEM_DWARF} THEN PRINT \"An old dwarf guards the steps, raising his dagger.\"",
+          "literals": [
+            "An old dwarf guards the steps, raising his dagger."
+          ]
+        },
+        {
+          "line": 115,
+          "source": "PRINT \"You are carrying \";:qt%=0",
+          "literals": [
+            "You are carrying "
+          ]
+        },
+        {
+          "line": 118,
+          "source": "IF qt%=0 THEN PRINT",
+          "literals": []
+        },
+        {
+          "line": 122,
+          "source": "IF qt%=0 THEN PRINT \"nothing.\"",
+          "literals": [
+            "nothing."
+          ]
+        },
+        {
+          "line": 153,
+          "source": "IF vb%={VERB_KILL} THEN IF it%<>{ITEM_SWORD} THEN PRINT \"With what weapon?\":rs%={PROMPT}:RETURN",
+          "literals": [
+            "With what weapon?"
+          ]
+        },
+        {
+          "line": 159,
+          "source": "IF rs%={PROMPT} THEN GOSUB @FIND_WORD:IF mp%>0 THEN PRINT \"The grille cannot fit. DROP GRILLE first.\":RETURN ELSE rs%=0",
+          "literals": [
+            "The grille cannot fit. DROP GRILLE first."
+          ]
+        },
+        {
+          "line": 162,
+          "source": "rs%={PROMPT}:IF rm%<>{ROOM_BALCONY} THEN PRINT \"There is no suitable rail here.\":RETURN",
+          "literals": [
+            "There is no suitable rail here."
+          ]
+        },
+        {
+          "line": 163,
+          "source": "IF it%<>{ITEM_ROPE} THEN PRINT \"Tie what?\":RETURN",
+          "literals": [
+            "Tie what?"
+          ]
+        },
+        {
+          "line": 164,
+          "source": "wd$=\" rail \":GOSUB @FIND_WORD:IF mp%=0 THEN PRINT \"Tie it to what? Try the rail.\":RETURN",
+          "literals": [
+            " rail ",
+            "Tie it to what? Try the rail."
+          ]
+        },
+        {
+          "line": 165,
+          "source": "IF ob%({ITEM_ROPE})<>{CARRIED} THEN PRINT \"You must be carrying the rope.\":RETURN",
+          "literals": [
+            "You must be carrying the rope."
+          ]
+        },
+        {
+          "line": 166,
+          "source": "ob%({ITEM_ROPE})={ROOM_BALCONY}:rp%=1:PRINT \"Rope secured to rail; it reaches the floor.\":GOTO @SPECIAL_DONE",
+          "literals": [
+            "Rope secured to rail; it reaches the floor."
+          ]
+        },
+        {
+          "line": 168,
+          "source": "rs%={PROMPT}:IF rm%<>{ROOM_BALCONY} OR rp%=0 THEN PRINT \"No secured rope here.\":RETURN",
+          "literals": [
+            "No secured rope here."
+          ]
+        },
+        {
+          "line": 169,
+          "source": "rp%=0:PRINT \"Rope untied on balcony.\":GOTO @SPECIAL_DONE",
+          "literals": [
+            "Rope untied on balcony."
+          ]
+        },
+        {
+          "line": 171,
+          "source": "rs%={PROMPT}:IF rp%=0 THEN PRINT \"TIE ROPE TO RAIL first.\":RETURN",
+          "literals": [
+            "TIE ROPE TO RAIL first."
+          ]
+        },
+        {
+          "line": 172,
+          "source": "rm%={ROOM_TEMPLE}:ft%=0:PRINT \"You climb down to the temple floor.\":GOTO @SPECIAL_DONE",
+          "literals": [
+            "You climb down to the temple floor."
+          ]
+        },
+        {
+          "line": 174,
+          "source": "rs%={PROMPT}:IF rp%=0 THEN PRINT \"There is no secured rope above you.\":RETURN",
+          "literals": [
+            "There is no secured rope above you."
+          ]
+        },
+        {
+          "line": 175,
+          "source": "rm%={ROOM_BALCONY}:ft%=0:PRINT \"You climb up to the balcony.\":GOTO @SPECIAL_DONE",
+          "literals": [
+            "You climb up to the balcony."
+          ]
+        },
+        {
+          "line": 177,
+          "source": "ht%={ROOM_DRAIN_JUNCTION}:PRINT \"You lift the latch. The hatch opens both ways.\"",
+          "literals": [
+            "You lift the latch. The hatch opens both ways."
+          ]
+        },
+        {
+          "line": 187,
+          "source": "IF vb%<7 THEN PRINT \"Nothing happens!\"",
+          "literals": [
+            "Nothing happens!"
+          ]
+        },
+        {
+          "line": 188,
+          "source": "IF vb%>6 THEN IF vb%<13 THEN PRINT \"Please tell me how.\"",
+          "literals": [
+            "Please tell me how."
+          ]
+        },
+        {
+          "line": 189,
+          "source": "IF vb%>12 THEN PRINT \"I can't!\"",
+          "literals": [
+            "I can't!"
+          ]
+        },
+        {
+          "line": 190,
+          "source": "PRINT:rs%={PROMPT}:RETURN",
+          "literals": []
+        },
+        {
+          "line": 201,
+          "source": "PRINT \"Without the compass, I lose my bearings!\":cn%=INT(RND(1)*4)",
+          "literals": [
+            "Without the compass, I lose my bearings!"
+          ]
+        },
+        {
+          "line": 204,
+          "source": "IF rm%={ROOM_TEMPLE} THEN IF nx%={ROOM_CRYPT} AND gt%=0 THEN PRINT \"The gate is locked. Use the key.\":rs%={PROMPT}:RETURN",
+          "literals": [
+            "The gate is locked. Use the key."
+          ]
+        },
+        {
+          "line": 205,
+          "source": "IF rm%={ROOM_DRAIN_JUNCTION} THEN IF nx%={ROOM_CELL} AND ht%=0 THEN PRINT \"The hatch is latched. OPEN HATCH.\":rs%={PROMPT}:RETURN",
+          "literals": [
+            "The hatch is latched. OPEN HATCH."
+          ]
+        },
+        {
+          "line": 207,
+          "source": "IF nx%=0 THEN PRINT \"You can't go that way\"",
+          "literals": [
+            "You can't go that way"
+          ]
+        },
+        {
+          "line": 208,
+          "source": "IF nx%={FATAL} THEN PRINT \"You fall into the chasm and die.\":rs%={FINISH}:RETURN",
+          "literals": [
+            "You fall into the chasm and die."
+          ]
+        },
+        {
+          "line": 221,
+          "source": "ft%=0:PRINT \"Suddenly a magic wind carried you to another place...\":rm%={ROOM_ENTRANCE}:RETURN",
+          "literals": [
+            "Suddenly a magic wind carried you to another place..."
+          ]
+        },
+        {
+          "line": 223,
+          "source": "IF rm%<>{ROOM_CRYPT} THEN PRINT \"Nothing happens here.\":RETURN",
+          "literals": [
+            "Nothing happens here."
+          ]
+        },
+        {
+          "line": 224,
+          "source": "PRINT \"The seal slides open both ways.\":cr%={ROOM_CELL}:RETURN",
+          "literals": [
+            "The seal slides open both ways."
+          ]
+        },
+        {
+          "line": 226,
+          "source": "PRINT \"The giant bat carries you to its colony.\":rm%={ROOM_BAT_COLONY}:ft%=0:ob%({ITEM_BAT})=0:RETURN",
+          "literals": [
+            "The giant bat carries you to its colony."
+          ]
+        },
+        {
+          "line": 228,
+          "source": "PRINT \"The creature kills you.\":rs%={FINISH}:RETURN",
+          "literals": [
+            "The creature kills you."
+          ]
+        },
+        {
+          "line": 235,
+          "source": "IF it%<1 THEN IF fo%>0 THEN @CREATURE_KILLS ELSE PRINT \"eh?\":RETURN",
+          "literals": [
+            "eh?"
+          ]
+        },
+        {
+          "line": 237,
+          "source": "IF ob%(it%)=rm% THEN @OBJECT_PRESENT ELSE IF fo%>0 THEN @CREATURE_KILLS ELSE PRINT \"Not here.\":RETURN",
+          "literals": [
+            "Not here."
+          ]
+        },
+        {
+          "line": 246,
+          "source": "NEXT ix%:IF cn%>10 THEN PRINT \"You cannot carry more.\":RETURN",
+          "literals": [
+            "You cannot carry more."
+          ]
+        },
+        {
+          "line": 249,
+          "source": "PRINT \"Taken: \";:li%=it%:GOSUB @PRINT_OBJECT:PRINT:RETURN",
+          "literals": [
+            "Taken: "
+          ]
+        },
+        {
+          "line": 251,
+          "source": "ob%(it%)=rm%:PRINT \"Dropped: \";:li%=it%:GOSUB @PRINT_OBJECT:PRINT:RETURN",
+          "literals": [
+            "Dropped: "
+          ]
+        },
+        {
+          "line": 255,
+          "source": "IF ob%(it%)<>{CARRIED} THEN IF ob%(it%)<>rm% THEN PRINT \"Where? I can't see it.\":RETURN",
+          "literals": [
+            "Where? I can't see it."
+          ]
+        },
+        {
+          "line": 258,
+          "source": "PRINT \"How am I supposed to use it?\":RETURN",
+          "literals": [
+            "How am I supposed to use it?"
+          ]
+        },
+        {
+          "line": 260,
+          "source": "IF rm%<>{ROOM_HUT_CLEARING} THEN IF rm%<>{ROOM_TEMPLE} THEN PRINT \"It won't open!\":RETURN",
+          "literals": [
+            "It won't open!"
+          ]
+        },
+        {
+          "line": 261,
+          "source": "PRINT \"You opened the door.\":IF rm%={ROOM_HUT_CLEARING} THEN rm%={ROOM_HUT}:GOSUB @HOMECOMING:RETURN ELSE gt%=1:rm%={ROOM_CRYPT}:RETURN",
+          "literals": [
+            "You opened the door."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bat transport and death",
+      "original": [
+        {
+          "line": 109,
+          "source": "IF Z=5 THEN  PRINT \"The giant bat picked you up and carried you to another place.\":A=33:R=0:P(5)=P(5)+7: GOTO 5",
+          "literals": [
+            "The giant bat picked you up and carried you to another place."
+          ]
+        },
+        {
+          "line": 112,
+          "source": "PRINT \"AUUUUUGH...you've just been killed by a\";K0$;K1$;\"!!\": GOTO 102",
+          "literals": [
+            "AUUUUUGH...you've just been killed by a",
+            "!!"
+          ]
+        },
+        {
+          "line": 121,
+          "source": "IF B=128 THEN  PRINT \"You stumble and fall into the chasm and smash yourself to a pulp on the rocks below.\": GOTO 102",
+          "literals": [
+            "You stumble and fall into the chasm and smash yourself to a pulp on the rocks below."
+          ]
+        }
+      ],
+      "current": [
+        {
+          "line": 226,
+          "source": "PRINT \"The giant bat carries you to its colony.\":rm%={ROOM_BAT_COLONY}:ft%=0:ob%({ITEM_BAT})=0:RETURN",
+          "literals": [
+            "The giant bat carries you to its colony."
+          ]
+        },
+        {
+          "line": 228,
+          "source": "PRINT \"The creature kills you.\":rs%={FINISH}:RETURN",
+          "literals": [
+            "The creature kills you."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Movement and magic",
+      "original": [
+        {
+          "line": 120,
+          "source": "IF B=0 THEN  PRINT \"You can't go that way\"",
+          "literals": [
+            "You can't go that way"
+          ]
+        },
+        {
+          "line": 125,
+          "source": "R=0: PRINT \"Suddenly a magic wind carried you to another place...\":A=16: GOTO 5",
+          "literals": [
+            "Suddenly a magic wind carried you to another place..."
+          ]
+        },
+        {
+          "line": 127,
+          "source": "PRINT \"Hey! the eastern wall of the crypt slid open...\":E=38: GOTO 5",
+          "literals": [
+            "Hey! the eastern wall of the crypt slid open..."
+          ]
+        }
+      ],
+      "current": [
+        {
+          "line": 201,
+          "source": "PRINT \"Without the compass, I lose my bearings!\":cn%=INT(RND(1)*4)",
+          "literals": [
+            "Without the compass, I lose my bearings!"
+          ]
+        },
+        {
+          "line": 204,
+          "source": "IF rm%={ROOM_TEMPLE} THEN IF nx%={ROOM_CRYPT} AND gt%=0 THEN PRINT \"The gate is locked. Use the key.\":rs%={PROMPT}:RETURN",
+          "literals": [
+            "The gate is locked. Use the key."
+          ]
+        },
+        {
+          "line": 205,
+          "source": "IF rm%={ROOM_DRAIN_JUNCTION} THEN IF nx%={ROOM_CELL} AND ht%=0 THEN PRINT \"The hatch is latched. OPEN HATCH.\":rs%={PROMPT}:RETURN",
+          "literals": [
+            "The hatch is latched. OPEN HATCH."
+          ]
+        },
+        {
+          "line": 207,
+          "source": "IF nx%=0 THEN PRINT \"You can't go that way\"",
+          "literals": [
+            "You can't go that way"
+          ]
+        },
+        {
+          "line": 208,
+          "source": "IF nx%={FATAL} THEN PRINT \"You fall into the chasm and die.\":rs%={FINISH}:RETURN",
+          "literals": [
+            "You fall into the chasm and die."
+          ]
+        },
+        {
+          "line": 221,
+          "source": "ft%=0:PRINT \"Suddenly a magic wind carried you to another place...\":rm%={ROOM_ENTRANCE}:RETURN",
+          "literals": [
+            "Suddenly a magic wind carried you to another place..."
+          ]
+        },
+        {
+          "line": 223,
+          "source": "IF rm%<>{ROOM_CRYPT} THEN PRINT \"Nothing happens here.\":RETURN",
+          "literals": [
+            "Nothing happens here."
+          ]
+        },
+        {
+          "line": 224,
+          "source": "PRINT \"The seal slides open both ways.\":cr%={ROOM_CELL}:RETURN",
+          "literals": [
+            "The seal slides open both ways."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Object errors and carrying",
+      "original": [
+        {
+          "line": 128,
+          "source": "IF M<1 THEN  PRINT \"eh?\": GOTO 5",
+          "literals": [
+            "eh?"
+          ]
+        },
+        {
+          "line": 129,
+          "source": "IF P(M)=-1 OR P(M)=A THEN 130 ELSE  PRINT \"Where? I can't see it.\": GOTO 5",
+          "literals": [
+            "Where? I can't see it."
+          ]
+        },
+        {
+          "line": 135,
+          "source": "IF Q>10 THEN  PRINT \"You are carrying too many objects.\": GOTO 5",
+          "literals": [
+            "You are carrying too many objects."
+          ]
+        },
+        {
+          "line": 140,
+          "source": "PRINT \"How am I supposed to use it?\": GOTO 5",
+          "literals": [
+            "How am I supposed to use it?"
+          ]
+        },
+        {
+          "line": 141,
+          "source": "IF A<>2 AND A<>35 THEN  PRINT \"It won't open!\": GOTO 5",
+          "literals": [
+            "It won't open!"
+          ]
+        },
+        {
+          "line": 142,
+          "source": "PRINT \"You opened the door.\":P(19)=A:R=0: IF A=2 THEN  LET A=1: GOTO 5 ELSE  LET A=37: GOTO 5",
+          "literals": [
+            "You opened the door."
+          ]
+        },
+        {
+          "line": 143,
+          "source": "IF Z=0 THEN  PRINT \"But there's nothing to kill...\": GOTO 5",
+          "literals": [
+            "But there's nothing to kill..."
+          ]
+        }
+      ],
+      "current": [
+        {
+          "line": 235,
+          "source": "IF it%<1 THEN IF fo%>0 THEN @CREATURE_KILLS ELSE PRINT \"eh?\":RETURN",
+          "literals": [
+            "eh?"
+          ]
+        },
+        {
+          "line": 237,
+          "source": "IF ob%(it%)=rm% THEN @OBJECT_PRESENT ELSE IF fo%>0 THEN @CREATURE_KILLS ELSE PRINT \"Not here.\":RETURN",
+          "literals": [
+            "Not here."
+          ]
+        },
+        {
+          "line": 246,
+          "source": "NEXT ix%:IF cn%>10 THEN PRINT \"You cannot carry more.\":RETURN",
+          "literals": [
+            "You cannot carry more."
+          ]
+        },
+        {
+          "line": 249,
+          "source": "PRINT \"Taken: \";:li%=it%:GOSUB @PRINT_OBJECT:PRINT:RETURN",
+          "literals": [
+            "Taken: "
+          ]
+        },
+        {
+          "line": 251,
+          "source": "ob%(it%)=rm%:PRINT \"Dropped: \";:li%=it%:GOSUB @PRINT_OBJECT:PRINT:RETURN",
+          "literals": [
+            "Dropped: "
+          ]
+        },
+        {
+          "line": 255,
+          "source": "IF ob%(it%)<>{CARRIED} THEN IF ob%(it%)<>rm% THEN PRINT \"Where? I can't see it.\":RETURN",
+          "literals": [
+            "Where? I can't see it."
+          ]
+        },
+        {
+          "line": 258,
+          "source": "PRINT \"How am I supposed to use it?\":RETURN",
+          "literals": [
+            "How am I supposed to use it?"
+          ]
+        },
+        {
+          "line": 260,
+          "source": "IF rm%<>{ROOM_HUT_CLEARING} THEN IF rm%<>{ROOM_TEMPLE} THEN PRINT \"It won't open!\":RETURN",
+          "literals": [
+            "It won't open!"
+          ]
+        },
+        {
+          "line": 261,
+          "source": "PRINT \"You opened the door.\":IF rm%={ROOM_HUT_CLEARING} THEN rm%={ROOM_HUT}:GOSUB @HOMECOMING:RETURN ELSE gt%=1:rm%={ROOM_CRYPT}:RETURN",
+          "literals": [
+            "You opened the door."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sword combat",
+      "original": [
+        {
+          "line": 145,
+          "source": "PRINT  \"You swing with your sword but miss and the creature smashes your skull.\": GOTO 102",
+          "literals": [
+            "You swing with your sword but miss and the creature smashes your skull."
+          ]
+        },
+        {
+          "line": 148,
+          "source": "IF L=0 THEN  PRINT \"You attack but the creature moves aside.\"",
+          "literals": [
+            "You attack but the creature moves aside."
+          ]
+        },
+        {
+          "line": 149,
+          "source": "IF L=1 THEN  PRINT \"The creature deflects your blow.\"",
+          "literals": [
+            "The creature deflects your blow."
+          ]
+        },
+        {
+          "line": 150,
+          "source": "IF L=2 THEN  PRINT \"The foe is stunned but quickly regains his balance.\"",
+          "literals": [
+            "The foe is stunned but quickly regains his balance."
+          ]
+        },
+        {
+          "line": 151,
+          "source": "IF L=3 THEN  PRINT \"You missed and he deals a blow to your head.\"",
+          "literals": [
+            "You missed and he deals a blow to your head."
+          ]
+        },
+        {
+          "line": 153,
+          "source": "PRINT \"The sword strikes home and your foe dies...\":P(M)=-1: IF Z=3  OR  Z=5 THEN  LET P(Z)=P(Z)+10 ELSE  LET P(Z)=0: IF Z=1 THEN  PRINT \"Hey! Your sword has just crumbled into dust!!\":P(20)=35",
+          "literals": [
+            "The sword strikes home and your foe dies...",
+            "Hey! Your sword has just crumbled into dust!!"
+          ]
+        },
+        {
+          "line": 154,
+          "source": "IF Z<>4 THEN  PRINT \\\"Suddenly a black cloud descends and the corpse vaporizes into   nothing.\"",
+          "literals": [
+            "Suddenly a black cloud descends and the corpse vaporizes into   nothing."
+          ]
+        }
+      ],
+      "current": [
+        {
+          "line": 263,
+          "source": "IF fo%=0 THEN PRINT \"But there's nothing to kill...\":RETURN",
+          "literals": [
+            "But there's nothing to kill..."
+          ]
+        },
+        {
+          "line": 264,
+          "source": "IF ob%({ITEM_SWORD})<>{CARRIED} THEN PRINT \"You aren't carrying that.\":RETURN",
+          "literals": [
+            "You aren't carrying that."
+          ]
+        },
+        {
+          "line": 266,
+          "source": "PRINT \"You swing with your sword but miss and the creature smashes your skull.\":rs%={FINISH}:RETURN",
+          "literals": [
+            "You swing with your sword but miss and the creature smashes your skull."
+          ]
+        },
+        {
+          "line": 270,
+          "source": "IF li%=0 THEN PRINT \"You attack but the creature moves aside.\"",
+          "literals": [
+            "You attack but the creature moves aside."
+          ]
+        },
+        {
+          "line": 271,
+          "source": "IF li%=1 THEN PRINT \"The creature deflects your blow.\"",
+          "literals": [
+            "The creature deflects your blow."
+          ]
+        },
+        {
+          "line": 272,
+          "source": "IF li%=2 THEN PRINT \"The foe is stunned but quickly regains his balance.\"",
+          "literals": [
+            "The foe is stunned but quickly regains his balance."
+          ]
+        },
+        {
+          "line": 273,
+          "source": "IF li%=3 THEN PRINT \"You missed and he deals a blow to your head.\"",
+          "literals": [
+            "You missed and he deals a blow to your head."
+          ]
+        },
+        {
+          "line": 276,
+          "source": "PRINT \"The sword strikes home and your foe dies.\":ob%(fo%)=0",
+          "literals": [
+            "The sword strikes home and your foe dies."
+          ]
+        },
+        {
+          "line": 277,
+          "source": "IF fo%<>{ITEM_DRAGON} THEN PRINT \"A black cloud descends and the corpse vaporises.\"",
+          "literals": [
+            "A black cloud descends and the corpse vaporises."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Candle and bomb",
+      "original": [
+        {
+          "line": 59,
+          "source": "IF U>200 THEN  PRINT \"Your candle is growing dim.\"",
+          "literals": [
+            "Your candle is growing dim."
+          ]
+        },
+        {
+          "line": 62,
+          "source": "PRINT \"In fact...it went out!\"",
+          "literals": [
+            "In fact...it went out!"
+          ]
+        },
+        {
+          "line": 158,
+          "source": "PRINT \"That won't burn, Dummy...In fact, the candle went out.\":C0=0: GOTO 5",
+          "literals": [
+            "That won't burn, Dummy...In fact, the candle went out."
+          ]
+        },
+        {
+          "line": 160,
+          "source": "PRINT \"But the candle is out, stupid!!\": GOTO 5",
+          "literals": [
+            "But the candle is out, stupid!!"
+          ]
+        },
+        {
+          "line": 161,
+          "source": "PRINT \"The fuse burnt away and....BOOM!!....the explosion blew you out of the way (Lucky!)\":R=0: IF A>1 THEN  LET A=A-1: IF A=20 THEN  LET T=19",
+          "literals": [
+            "The fuse burnt away and....BOOM!!....the explosion blew you out of the way (Lucky!)"
+          ]
+        }
+      ],
+      "current": [
+        {
+          "line": 281,
+          "source": "PRINT \"Nothing to ignite here. Keep your candle safe.\":RETURN",
+          "literals": [
+            "Nothing to ignite here. Keep your candle safe."
+          ]
+        },
+        {
+          "line": 283,
+          "source": "IF cl%<>1 THEN PRINT \"The candle is out; you need a flame.\":RETURN",
+          "literals": [
+            "The candle is out; you need a flame."
+          ]
+        },
+        {
+          "line": 284,
+          "source": "IF rm%<>{ROOM_TREASURE_DOOR} THEN PRINT \"BOOM! Smoke clears: nothing has changed.\":RETURN",
+          "literals": [
+            "BOOM! Smoke clears: nothing has changed."
+          ]
+        },
+        {
+          "line": 285,
+          "source": "IF td%={ROOM_TREASURE_ROOM} THEN PRINT \"The passage is already open. Save your bomb.\":RETURN",
+          "literals": [
+            "The passage is already open. Save your bomb."
+          ]
+        },
+        {
+          "line": 286,
+          "source": "PRINT \"BOOM! The door is torn from its hinges. The passage east is open.\":td%={ROOM_TREASURE_ROOM}:ob%({ITEM_BOMB})=0:RETURN",
+          "literals": [
+            "BOOM! The door is torn from its hinges. The passage east is open."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Rope",
+      "original": [
+        {
+          "line": 163,
+          "source": "IF A=28 THEN 164 ELSE  PRINT \"It's too dangerous!!!\": GOTO 5",
+          "literals": [
+            "It's too dangerous!!!"
+          ]
+        },
+        {
+          "line": 164,
+          "source": "PRINT \"You descend the rope, but it drops 10 feet short of the floor.  You jump the rest of the way.\":R=0:P(M)=A:A=35: GOTO 5",
+          "literals": [
+            "You descend the rope, but it drops 10 feet short of the floor.  You jump the rest of the way."
+          ]
+        }
+      ],
+      "current": [
+        {
+          "line": 162,
+          "source": "rs%={PROMPT}:IF rm%<>{ROOM_BALCONY} THEN PRINT \"There is no suitable rail here.\":RETURN",
+          "literals": [
+            "There is no suitable rail here."
+          ]
+        },
+        {
+          "line": 163,
+          "source": "IF it%<>{ITEM_ROPE} THEN PRINT \"Tie what?\":RETURN",
+          "literals": [
+            "Tie what?"
+          ]
+        },
+        {
+          "line": 164,
+          "source": "wd$=\" rail \":GOSUB @FIND_WORD:IF mp%=0 THEN PRINT \"Tie it to what? Try the rail.\":RETURN",
+          "literals": [
+            " rail ",
+            "Tie it to what? Try the rail."
+          ]
+        },
+        {
+          "line": 165,
+          "source": "IF ob%({ITEM_ROPE})<>{CARRIED} THEN PRINT \"You must be carrying the rope.\":RETURN",
+          "literals": [
+            "You must be carrying the rope."
+          ]
+        },
+        {
+          "line": 166,
+          "source": "ob%({ITEM_ROPE})={ROOM_BALCONY}:rp%=1:PRINT \"Rope secured to rail; it reaches the floor.\":GOTO @SPECIAL_DONE",
+          "literals": [
+            "Rope secured to rail; it reaches the floor."
+          ]
+        },
+        {
+          "line": 168,
+          "source": "rs%={PROMPT}:IF rm%<>{ROOM_BALCONY} OR rp%=0 THEN PRINT \"No secured rope here.\":RETURN",
+          "literals": [
+            "No secured rope here."
+          ]
+        },
+        {
+          "line": 169,
+          "source": "rp%=0:PRINT \"Rope untied on balcony.\":GOTO @SPECIAL_DONE",
+          "literals": [
+            "Rope untied on balcony."
+          ]
+        },
+        {
+          "line": 171,
+          "source": "rs%={PROMPT}:IF rp%=0 THEN PRINT \"TIE ROPE TO RAIL first.\":RETURN",
+          "literals": [
+            "TIE ROPE TO RAIL first."
+          ]
+        },
+        {
+          "line": 172,
+          "source": "rm%={ROOM_TEMPLE}:ft%=0:PRINT \"You climb down to the temple floor.\":GOTO @SPECIAL_DONE",
+          "literals": [
+            "You climb down to the temple floor."
+          ]
+        },
+        {
+          "line": 174,
+          "source": "rs%={PROMPT}:IF rp%=0 THEN PRINT \"There is no secured rope above you.\":RETURN",
+          "literals": [
+            "There is no secured rope above you."
+          ]
+        },
+        {
+          "line": 175,
+          "source": "rm%={ROOM_BALCONY}:ft%=0:PRINT \"You climb up to the balcony.\":GOTO @SPECIAL_DONE",
+          "literals": [
+            "You climb up to the balcony."
+          ]
+        },
+        {
+          "line": 288,
+          "source": "PRINT \"TIE ROPE TO RAIL at the balcony, then DOWN; UP returns.\":rs%={PROMPT}:RETURN",
+          "literals": [
+            "TIE ROPE TO RAIL at the balcony, then DOWN; UP returns."
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Generic command replies",
+      "original": [
+        {
+          "line": 170,
+          "source": "IF O<7 THEN  PRINT \"Nothing happens!\"",
+          "literals": [
+            "Nothing happens!"
+          ]
+        },
+        {
+          "line": 171,
+          "source": "IF O>6 AND O<13 THEN  PRINT \"Please tell me how.\"",
+          "literals": [
+            "Please tell me how."
+          ]
+        },
+        {
+          "line": 172,
+          "source": "IF O>12 THEN  PRINT \"I can't!\"",
+          "literals": [
+            "I can't!"
+          ]
+        }
+      ],
+      "current": [
+        {
+          "line": 187,
+          "source": "IF vb%<7 THEN PRINT \"Nothing happens!\"",
+          "literals": [
+            "Nothing happens!"
+          ]
+        },
+        {
+          "line": 188,
+          "source": "IF vb%>6 THEN IF vb%<13 THEN PRINT \"Please tell me how.\"",
+          "literals": [
+            "Please tell me how."
+          ]
+        },
+        {
+          "line": 189,
+          "source": "IF vb%>12 THEN PRINT \"I can't!\"",
+          "literals": [
+            "I can't!"
+          ]
+        },
+        {
+          "line": 190,
+          "source": "PRINT:rs%={PROMPT}:RETURN",
+          "literals": []
+        }
+      ]
+    }
+  ],
+  "allOriginalPrintStatements": [
+    {
+      "line": 3,
+      "source": "CURS 1,4: SPEED 255: PRINT \"  DREAMCARDS presents...  \": SPEED 0",
+      "literals": [
+        "  DREAMCARDS presents...  "
+      ]
+    },
+    {
+      "line": 4,
+      "source": "CURS 20,6: PRINT \"C A V E R N S    by John Hardy (1983)\": CURS 0: PLAY 0,40: CLS :F=0:U=0",
+      "literals": [
+        "C A V E R N S    by John Hardy (1983)"
+      ]
+    },
+    {
+      "line": 5,
+      "source": "CURS 1,7: PRINT [A63 45]",
+      "literals": []
+    },
+    {
+      "line": 8,
+      "source": "PRINT \"It's very dark, too dark to see anything...I'm scared!\"",
+      "literals": [
+        "It's very dark, too dark to see anything...I'm scared!"
+      ]
+    },
+    {
+      "line": 10,
+      "source": "IF A=1 THEN  PRINT \"You are standing in a darkened room. There is a door to the     north.\"",
+      "literals": [
+        "You are standing in a darkened room. There is a door to the     north."
+      ]
+    },
+    {
+      "line": 11,
+      "source": "IF A=2 THEN  PRINT \"You are in a forest clearing before a small bark hut. There are no windows, and locked door to the south. The latch was engaged when you closed the door.\"",
+      "literals": [
+        "You are in a forest clearing before a small bark hut. There are no windows, and locked door to the south. The latch was engaged when you closed the door."
+      ]
+    },
+    {
+      "line": 12,
+      "source": "IF A=3 THEN  PRINT \"You are deep in a dark forest. In the distance you can see a    mighty river.\"",
+      "literals": [
+        "You are deep in a dark forest. In the distance you can see a    mighty river."
+      ]
+    },
+    {
+      "line": 13,
+      "source": "IF A=4 THEN  PRINT \"You are standing in a field of four-leafed clovers. There is a  small hut to the north.\"",
+      "literals": [
+        "You are standing in a field of four-leafed clovers. There is a  small hut to the north."
+      ]
+    },
+    {
+      "line": 14,
+      "source": "IF A=13 THEN  PRINT \"You are standing on a rock in the middle of a mighty oak forest.Surrounding you are thousands of poisonous mushrooms.\"",
+      "literals": [
+        "You are standing on a rock in the middle of a mighty oak forest.Surrounding you are thousands of poisonous mushrooms."
+      ]
+    },
+    {
+      "line": 15,
+      "source": "IF A=15 THEN  PRINT \"You are on a cliff face over looking the river.\"",
+      "literals": [
+        "You are on a cliff face over looking the river."
+      ]
+    },
+    {
+      "line": 16,
+      "source": "IF A=5 THEN  PRINT \"The forest has opened up at this point. You are standing on a   cliff overlooking a wide glacial river. A small foot-beaten pathleads south.\" ",
+      "literals": [
+        "The forest has opened up at this point. You are standing on a   cliff overlooking a wide glacial river. A small foot-beaten pathleads south."
+      ]
+    },
+    {
+      "line": 17,
+      "source": "IF A=6 THEN  PRINT \"You are standing at the rocky edge of the mighty river Gioll.   The path forks east and west.\" ",
+      "literals": [
+        "You are standing at the rocky edge of the mighty river Gioll.   The path forks east and west."
+      ]
+    },
+    {
+      "line": 18,
+      "source": "IF A=7 THEN  PRINT \"You are on the edge of an enormous crater. The rim is extremely slippery. Clouds of water vapour rise high in the air as the    Gioll pours into it.\" ",
+      "literals": [
+        "You are on the edge of an enormous crater. The rim is extremely slippery. Clouds of water vapour rise high in the air as the    Gioll pours into it."
+      ]
+    },
+    {
+      "line": 19,
+      "source": "IF A=8 THEN  PRINT \"The path to the east stops here. You are on a rocky outcrop,    projected about 15 feet above the river. In the distance,       a tiny bridge spans the river.\"  ",
+      "literals": [
+        "The path to the east stops here. You are on a rocky outcrop,    projected about 15 feet above the river. In the distance,       a tiny bridge spans the river."
+      ]
+    },
+    {
+      "line": 20,
+      "source": "IF A=9 THEN  PRINT \"You are on the lower slopes of Mt. Ymir. The forest stretches   far away and to the west. Arctic winds blow fiercely, it's very cold!\"",
+      "literals": [
+        "You are on the lower slopes of Mt. Ymir. The forest stretches   far away and to the west. Arctic winds blow fiercely, it's very cold!"
+      ]
+    },
+    {
+      "line": 21,
+      "source": "IF A=10 THEN  PRINT \"You stand on a rocky precipice high above the river, Gioll;     Mt. Ymir stands to the north. A flimsy string bridge spans the  mighty river.\"",
+      "literals": [
+        "You stand on a rocky precipice high above the river, Gioll;     Mt. Ymir stands to the north. A flimsy string bridge spans the  mighty river."
+      ]
+    },
+    {
+      "line": 22,
+      "source": "IF A=11 THEN  PRINT \"You have made your way half way across the creaking bridge.     It sways violently from side to side. It's going to collapse anysecond!!\"",
+      "literals": [
+        "You have made your way half way across the creaking bridge.     It sways violently from side to side. It's going to collapse anysecond!!"
+      ]
+    },
+    {
+      "line": 23,
+      "source": "IF A=12 THEN  PRINT \"You are on the southern edge of the mighty river, before        the string bridge.\"",
+      "literals": [
+        "You are on the southern edge of the mighty river, before        the string bridge."
+      ]
+    },
+    {
+      "line": 24,
+      "source": "IF A=14 THEN  PRINT \"You are in a clearing in the forest. An ancient basalt rock      formation towers above you. To your south is the entrance of a  VERY interesting cave...\"",
+      "literals": [
+        "You are in a clearing in the forest. An ancient basalt rock      formation towers above you. To your south is the entrance of a  VERY interesting cave..."
+      ]
+    },
+    {
+      "line": 25,
+      "source": "IF A=16 THEN  PRINT \"You are just inside the cave. Sunlight pours into the cave      lighting a path to the east and another to the south. I don't   mind saying I'm a bit scared!\" ",
+      "literals": [
+        "You are just inside the cave. Sunlight pours into the cave      lighting a path to the east and another to the south. I don't   mind saying I'm a bit scared!"
+      ]
+    },
+    {
+      "line": 26,
+      "source": "IF A=17 THEN  PRINT \"This passage appears to be a dead end. On a wall before you is  carved `Find the Sacred Key of Thialfi'.\"",
+      "literals": [
+        "This passage appears to be a dead end. On a wall before you is  carved `Find the Sacred Key of Thialfi'."
+      ]
+    },
+    {
+      "line": 27,
+      "source": "IF A=19 THEN  PRINT \"You are in the legendary treasure room of the black elves of    Svartalfheim. Every red-blooded Viking has dreamed of entering  this sacred room.\"",
+      "literals": [
+        "You are in the legendary treasure room of the black elves of    Svartalfheim. Every red-blooded Viking has dreamed of entering  this sacred room."
+      ]
+    },
+    {
+      "line": 28,
+      "source": "IF A=20 THEN  PRINT \"You can see a small oak door to the east. It has been locked    from the inside.\"",
+      "literals": [
+        "You can see a small oak door to the east. It has been locked    from the inside."
+      ]
+    },
+    {
+      "line": 29,
+      "source": "IF A=22 THEN  PRINT  \"You are standing in an east-west corridor. You can feel a faint breeze coming from the east.\"",
+      "literals": [
+        "You are standing in an east-west corridor. You can feel a faint breeze coming from the east."
+      ]
+    },
+    {
+      "line": 30,
+      "source": "IF A=23 THEN  PRINT \"You are standing in what appears to have once been a torture    chamber. Apart from the rather comprehensive range of instumentsof absolutely inhuman agony,\"",
+      "literals": [
+        "You are standing in what appears to have once been a torture    chamber. Apart from the rather comprehensive range of instumentsof absolutely inhuman agony,"
+      ]
+    },
+    {
+      "line": 31,
+      "source": "IF A=23 THEN  PRINT \"coagulated blood stains on the walls and mangled bits of bone onthe floor make me think that a number of would be adventurers   croaked it here!\"",
+      "literals": [
+        "coagulated blood stains on the walls and mangled bits of bone onthe floor make me think that a number of would be adventurers   croaked it here!"
+      ]
+    },
+    {
+      "line": 32,
+      "source": "IF A=24 THEN  PRINT \"You stand in a long tunnel which has been bored out of the rock.It runs from north to south. A faint glow comes from a narrow   crack in the eastern wall.\"",
+      "literals": [
+        "You stand in a long tunnel which has been bored out of the rock.It runs from north to south. A faint glow comes from a narrow   crack in the eastern wall."
+      ]
+    },
+    {
+      "line": 33,
+      "source": "IF A=26 THEN  PRINT \"You are in a large round room with a number of exits. The walls have been painted in a mystical dark purple and a big chalk staris drawn in the centre of \"",
+      "literals": [
+        "You are in a large round room with a number of exits. The walls have been painted in a mystical dark purple and a big chalk staris drawn in the centre of "
+      ]
+    },
+    {
+      "line": 34,
+      "source": "IF A=26 THEN  PRINT \"the floor. Note: This is one of the hidden chambers of the      infamous pagan sect, the monks of Loki. Norse folk believe them to be gods.\"",
+      "literals": [
+        "the floor. Note: This is one of the hidden chambers of the      infamous pagan sect, the monks of Loki. Norse folk believe them to be gods."
+      ]
+    },
+    {
+      "line": 35,
+      "source": "IF A=27 THEN  PRINT \"You are standing on a narrow ledge, high above a subterranean   river. There is an exit to the east. \" ",
+      "literals": [
+        "You are standing on a narrow ledge, high above a subterranean   river. There is an exit to the east. "
+      ]
+    },
+    {
+      "line": 36,
+      "source": "IF A=28 THEN  PRINT \"You are on a balcony, overlooking a huge cavern which has been  converted into a pagan temple. Note: this temple has been       dedicated to Loki, the god of\"  ",
+      "literals": [
+        "You are on a balcony, overlooking a huge cavern which has been  converted into a pagan temple. Note: this temple has been       dedicated to Loki, the god of"
+      ]
+    },
+    {
+      "line": 37,
+      "source": "IF A=28 THEN  PRINT \"fire, who came to live in Svartalfheim after he had been        banished to exile by Odin. Since then he has been waiting       for the `End Of All Things'.\" ",
+      "literals": [
+        "fire, who came to live in Svartalfheim after he had been        banished to exile by Odin. Since then he has been waiting       for the `End Of All Things'."
+      ]
+    },
+    {
+      "line": 38,
+      "source": "IF A=33 THEN  PRINT \"You are in the central cave of a giant bat colony. Above you    hundreds of giant bats hang from the ceiling and the floor is   covered in centuries of \"",
+      "literals": [
+        "You are in the central cave of a giant bat colony. Above you    hundreds of giant bats hang from the ceiling and the floor is   covered in centuries of "
+      ]
+    },
+    {
+      "line": 39,
+      "source": "IF A=33 THEN  PRINT \"giant bat droppings. Careful where you step! Incidentally, the  smell is indescribable.\"",
+      "literals": [
+        "giant bat droppings. Careful where you step! Incidentally, the  smell is indescribable."
+      ]
+    },
+    {
+      "line": 40,
+      "source": "IF A=35 THEN  PRINT \"You are in the temple. To the north is a locked gate and on the wall is a giant statue of Loki, carved out of the living rock   itself!\"",
+      "literals": [
+        "You are in the temple. To the north is a locked gate and on the wall is a giant statue of Loki, carved out of the living rock   itself!"
+      ]
+    },
+    {
+      "line": 41,
+      "source": "IF A=37 THEN  PRINT \"You stand in an old and musty crypt, the final resting place of hundreds of Loki devotees. On the wall is carved:``What 3 letter word completes a word \"",
+      "literals": [
+        "You stand in an old and musty crypt, the final resting place of hundreds of Loki devotees. On the wall is carved:``What 3 letter word completes a word "
+      ]
+    },
+    {
+      "line": 42,
+      "source": "IF A=37 THEN  PRINT \"starting with 'G---' and another ending with '---X'' Note: The   monks of Loki must have liked silly puzzles.  Putrefaction and decay fills the air here.\"",
+      "literals": [
+        "starting with 'G---' and another ending with '---X'' Note: The   monks of Loki must have liked silly puzzles.  Putrefaction and decay fills the air here."
+      ]
+    },
+    {
+      "line": 43,
+      "source": "IF A=38 THEN  PRINT \"You are in a tiny cell. The western wall has now firmly closed  again. There is a ventilator shaft on the eastern wall.\" ",
+      "literals": [
+        "You are in a tiny cell. The western wall has now firmly closed  again. There is a ventilator shaft on the eastern wall."
+      ]
+    },
+    {
+      "line": 44,
+      "source": "IF A=40 THEN  PRINT \"You are on another ledge high above a subterranean river. The   water flows in through a hole in the cavern roof, to the north.\"",
+      "literals": [
+        "You are on another ledge high above a subterranean river. The   water flows in through a hole in the cavern roof, to the north."
+      ]
+    },
+    {
+      "line": 45,
+      "source": "IF A>40  AND  A<45 THEN  PRINT \"Somehow you have gotten into the complex drainage system of thisentire cavern network!!\"",
+      "literals": [
+        "Somehow you have gotten into the complex drainage system of thisentire cavern network!!"
+      ]
+    },
+    {
+      "line": 46,
+      "source": "IF A=45 THEN  PRINT \"You are standing near an enormous waterfall which brings water  down from the surface, from the river Gioll.\" ",
+      "literals": [
+        "You are standing near an enormous waterfall which brings water  down from the surface, from the river Gioll."
+      ]
+    },
+    {
+      "line": 47,
+      "source": "IF A=47 THEN  PRINT \"You are standing before a stone staircase which leads           southwards.\"",
+      "literals": [
+        "You are standing before a stone staircase which leads           southwards."
+      ]
+    },
+    {
+      "line": 48,
+      "source": "IF A=48 THEN  PRINT \"You are on a narrow and crumbling ledge. On the other side of   the river you can see a magic castle. (Don't ask me why it's    magic...I just know it is)\" ",
+      "literals": [
+        "You are on a narrow and crumbling ledge. On the other side of   the river you can see a magic castle. (Don't ask me why it's    magic...I just know it is)"
+      ]
+    },
+    {
+      "line": 49,
+      "source": "IF A=49 THEN  PRINT \"You are by the drawbridge which has just lowered itself....by   magic!!\"",
+      "literals": [
+        "You are by the drawbridge which has just lowered itself....by   magic!!"
+      ]
+    },
+    {
+      "line": 50,
+      "source": "IF A=50 THEN  PRINT \"You are in the courtyard of the magic castle. WOW! This castle  is really something! On the wall is inscribed 'hzb tzozi'.      A secret escape tunnel leads south\"",
+      "literals": [
+        "You are in the courtyard of the magic castle. WOW! This castle  is really something! On the wall is inscribed 'hzb tzozi'.      A secret escape tunnel leads south"
+      ]
+    },
+    {
+      "line": 51,
+      "source": "IF A=51 THEN  PRINT \"You are in the powder magazine of this really super castle.\"",
+      "literals": [
+        "You are in the powder magazine of this really super castle."
+      ]
+    },
+    {
+      "line": 52,
+      "source": "IF A=53 THEN  PRINT \"You stand before a small wooden bridge which crosses the river.\"",
+      "literals": [
+        "You stand before a small wooden bridge which crosses the river."
+      ]
+    },
+    {
+      "line": 53,
+      "source": "IF A=52 THEN  PRINT \"You are on the eastern side of the river. A small tunnel leads  east into the cliff face.\"",
+      "literals": [
+        "You are on the eastern side of the river. A small tunnel leads  east into the cliff face."
+      ]
+    },
+    {
+      "line": 54,
+      "source": "IF A=54 THEN  PRINT \"You are in a conduit draining into the river. The water comes upto your knees and is freezing cold. A narrow service path leads south.\"",
+      "literals": [
+        "You are in a conduit draining into the river. The water comes upto your knees and is freezing cold. A narrow service path leads south."
+      ]
+    },
+    {
+      "line": 55,
+      "source": "IF A=18 OR A=21 OR A=25 OR A>28 AND A<32 OR A=34 OR A=36 OR A=39 OR A=46 OR A=53 THEN  PRINT \"You are deep in a dark cavern.\"",
+      "literals": [
+        "You are deep in a dark cavern."
+      ]
+    },
+    {
+      "line": 56,
+      "source": "IF (A=10 OR A=12) AND H=128 THEN  PRINT \"Two of the ropes have snapped under your weight. It's totally unfit to cross again.\"",
+      "literals": [
+        "Two of the ropes have snapped under your weight. It's totally unfit to cross again."
+      ]
+    },
+    {
+      "line": 57,
+      "source": "IF A=14 AND P(4)=0 THEN  PRINT \"You can also see the bloody corpse of an enormous dragon.\"",
+      "literals": [
+        "You can also see the bloody corpse of an enormous dragon."
+      ]
+    },
+    {
+      "line": 58,
+      "source": "IF A=48 AND D=49 THEN  PRINT  \" A mighty golden drawbridge spans the waters.\"",
+      "literals": [
+        " A mighty golden drawbridge spans the waters."
+      ]
+    },
+    {
+      "line": 59,
+      "source": "IF U>200 THEN  PRINT \"Your candle is growing dim.\"",
+      "literals": [
+        "Your candle is growing dim."
+      ]
+    },
+    {
+      "line": 62,
+      "source": "PRINT \"In fact...it went out!\"",
+      "literals": [
+        "In fact...it went out!"
+      ]
+    },
+    {
+      "line": 68,
+      "source": "PRINT \"You can also see...\"",
+      "literals": [
+        "You can also see..."
+      ]
+    },
+    {
+      "line": 74,
+      "source": "PRINT \"Nearby there lurks...\"",
+      "literals": [
+        "Nearby there lurks..."
+      ]
+    },
+    {
+      "line": 77,
+      "source": "PRINT :R=1: PRMT ( )",
+      "literals": []
+    },
+    {
+      "line": 94,
+      "source": "PRINT \"You are carrying \";:V=0",
+      "literals": [
+        "You are carrying "
+      ]
+    },
+    {
+      "line": 98,
+      "source": "IF V=0 THEN  PRINT \"nothing.\": GOTO 5",
+      "literals": [
+        "nothing."
+      ]
+    },
+    {
+      "line": 99,
+      "source": "PRINT : FOR L=7 TO 24: IF P(L)=-1 THEN  GOSUB 165",
+      "literals": []
+    },
+    {
+      "line": 105,
+      "source": "PRINT \\\\\"You have a score of\";S;\" out of a possible 126 points in\";U;\" moves.\": GOSUB 192: PRINT \"Another adventure? \";:Y0$= KEY $",
+      "literals": [
+        "You have a score of",
+        " out of a possible 126 points in",
+        " moves.",
+        "Another adventure? "
+      ]
+    },
+    {
+      "line": 109,
+      "source": "IF Z=5 THEN  PRINT \"The giant bat picked you up and carried you to another place.\":A=33:R=0:P(5)=P(5)+7: GOTO 5",
+      "literals": [
+        "The giant bat picked you up and carried you to another place."
+      ]
+    },
+    {
+      "line": 112,
+      "source": "PRINT \"AUUUUUGH...you've just been killed by a\";K0$;K1$;\"!!\": GOTO 102",
+      "literals": [
+        "AUUUUUGH...you've just been killed by a",
+        "!!"
+      ]
+    },
+    {
+      "line": 120,
+      "source": "IF B=0 THEN  PRINT \"You can't go that way\"",
+      "literals": [
+        "You can't go that way"
+      ]
+    },
+    {
+      "line": 121,
+      "source": "IF B=128 THEN  PRINT \"You stumble and fall into the chasm and smash yourself to a pulp on the rocks below.\": GOTO 102",
+      "literals": [
+        "You stumble and fall into the chasm and smash yourself to a pulp on the rocks below."
+      ]
+    },
+    {
+      "line": 125,
+      "source": "R=0: PRINT \"Suddenly a magic wind carried you to another place...\":A=16: GOTO 5",
+      "literals": [
+        "Suddenly a magic wind carried you to another place..."
+      ]
+    },
+    {
+      "line": 127,
+      "source": "PRINT \"Hey! the eastern wall of the crypt slid open...\":E=38: GOTO 5",
+      "literals": [
+        "Hey! the eastern wall of the crypt slid open..."
+      ]
+    },
+    {
+      "line": 128,
+      "source": "IF M<1 THEN  PRINT \"eh?\": GOTO 5",
+      "literals": [
+        "eh?"
+      ]
+    },
+    {
+      "line": 129,
+      "source": "IF P(M)=-1 OR P(M)=A THEN 130 ELSE  PRINT \"Where? I can't see it.\": GOTO 5",
+      "literals": [
+        "Where? I can't see it."
+      ]
+    },
+    {
+      "line": 135,
+      "source": "IF Q>10 THEN  PRINT \"You are carrying too many objects.\": GOTO 5",
+      "literals": [
+        "You are carrying too many objects."
+      ]
+    },
+    {
+      "line": 140,
+      "source": "PRINT \"How am I supposed to use it?\": GOTO 5",
+      "literals": [
+        "How am I supposed to use it?"
+      ]
+    },
+    {
+      "line": 141,
+      "source": "IF A<>2 AND A<>35 THEN  PRINT \"It won't open!\": GOTO 5",
+      "literals": [
+        "It won't open!"
+      ]
+    },
+    {
+      "line": 142,
+      "source": "PRINT \"You opened the door.\":P(19)=A:R=0: IF A=2 THEN  LET A=1: GOTO 5 ELSE  LET A=37: GOTO 5",
+      "literals": [
+        "You opened the door."
+      ]
+    },
+    {
+      "line": 143,
+      "source": "IF Z=0 THEN  PRINT \"But there's nothing to kill...\": GOTO 5",
+      "literals": [
+        "But there's nothing to kill..."
+      ]
+    },
+    {
+      "line": 145,
+      "source": "PRINT  \"You swing with your sword but miss and the creature smashes your skull.\": GOTO 102",
+      "literals": [
+        "You swing with your sword but miss and the creature smashes your skull."
+      ]
+    },
+    {
+      "line": 148,
+      "source": "IF L=0 THEN  PRINT \"You attack but the creature moves aside.\"",
+      "literals": [
+        "You attack but the creature moves aside."
+      ]
+    },
+    {
+      "line": 149,
+      "source": "IF L=1 THEN  PRINT \"The creature deflects your blow.\"",
+      "literals": [
+        "The creature deflects your blow."
+      ]
+    },
+    {
+      "line": 150,
+      "source": "IF L=2 THEN  PRINT \"The foe is stunned but quickly regains his balance.\"",
+      "literals": [
+        "The foe is stunned but quickly regains his balance."
+      ]
+    },
+    {
+      "line": 151,
+      "source": "IF L=3 THEN  PRINT \"You missed and he deals a blow to your head.\"",
+      "literals": [
+        "You missed and he deals a blow to your head."
+      ]
+    },
+    {
+      "line": 153,
+      "source": "PRINT \"The sword strikes home and your foe dies...\":P(M)=-1: IF Z=3  OR  Z=5 THEN  LET P(Z)=P(Z)+10 ELSE  LET P(Z)=0: IF Z=1 THEN  PRINT \"Hey! Your sword has just crumbled into dust!!\":P(20)=35",
+      "literals": [
+        "The sword strikes home and your foe dies...",
+        "Hey! Your sword has just crumbled into dust!!"
+      ]
+    },
+    {
+      "line": 154,
+      "source": "IF Z<>4 THEN  PRINT \\\"Suddenly a black cloud descends and the corpse vaporizes into   nothing.\"",
+      "literals": [
+        "Suddenly a black cloud descends and the corpse vaporizes into   nothing."
+      ]
+    },
+    {
+      "line": 158,
+      "source": "PRINT \"That won't burn, Dummy...In fact, the candle went out.\":C0=0: GOTO 5",
+      "literals": [
+        "That won't burn, Dummy...In fact, the candle went out."
+      ]
+    },
+    {
+      "line": 160,
+      "source": "PRINT \"But the candle is out, stupid!!\": GOTO 5",
+      "literals": [
+        "But the candle is out, stupid!!"
+      ]
+    },
+    {
+      "line": 161,
+      "source": "PRINT \"The fuse burnt away and....BOOM!!....the explosion blew you out of the way (Lucky!)\":R=0: IF A>1 THEN  LET A=A-1: IF A=20 THEN  LET T=19",
+      "literals": [
+        "The fuse burnt away and....BOOM!!....the explosion blew you out of the way (Lucky!)"
+      ]
+    },
+    {
+      "line": 163,
+      "source": "IF A=28 THEN 164 ELSE  PRINT \"It's too dangerous!!!\": GOTO 5",
+      "literals": [
+        "It's too dangerous!!!"
+      ]
+    },
+    {
+      "line": 164,
+      "source": "PRINT \"You descend the rope, but it drops 10 feet short of the floor.  You jump the rest of the way.\":R=0:P(M)=A:A=35: GOTO 5",
+      "literals": [
+        "You descend the rope, but it drops 10 feet short of the floor.  You jump the rest of the way."
+      ]
+    },
+    {
+      "line": 165,
+      "source": "RESTORE 182: FOR K=1 TO L: READ H0$,H1$: NEXT K: PRINT \"a\";H0$;H1$;\", \";: RETURN ",
+      "literals": [
+        "a",
+        ", "
+      ]
+    },
+    {
+      "line": 170,
+      "source": "IF O<7 THEN  PRINT \"Nothing happens!\"",
+      "literals": [
+        "Nothing happens!"
+      ]
+    },
+    {
+      "line": 171,
+      "source": "IF O>6 AND O<13 THEN  PRINT \"Please tell me how.\"",
+      "literals": [
+        "Please tell me how."
+      ]
+    },
+    {
+      "line": 172,
+      "source": "IF O>12 THEN  PRINT \"I can't!\"",
+      "literals": [
+        "I can't!"
+      ]
+    },
+    {
+      "line": 173,
+      "source": "PRINT : GOTO 79",
+      "literals": []
+    },
+    {
+      "line": 192,
+      "source": "PRINT \"This gives you an adventurer's ranking of:\"",
+      "literals": [
+        "This gives you an adventurer's ranking of:"
+      ]
+    },
+    {
+      "line": 193,
+      "source": "IF S<20 THEN  PRINT \"Hopeless beginner\"",
+      "literals": [
+        "Hopeless beginner"
+      ]
+    },
+    {
+      "line": 194,
+      "source": "IF S<50 AND S>19 THEN  PRINT \"Experienced loser\"",
+      "literals": [
+        "Experienced loser"
+      ]
+    },
+    {
+      "line": 195,
+      "source": "IF S<100 AND S>49 THEN  PRINT \"Average Viking\"",
+      "literals": [
+        "Average Viking"
+      ]
+    },
+    {
+      "line": 196,
+      "source": "IF S<126 AND S>99 THEN  PRINT \"Excellent...but you've left something behind!\"",
+      "literals": [
+        "Excellent...but you've left something behind!"
+      ]
+    },
+    {
+      "line": 197,
+      "source": "IF S=126 THEN  PRINT \"Perfectionist and genius!!\"",
+      "literals": [
+        "Perfectionist and genius!!"
+      ]
+    },
+    {
+      "line": 200,
+      "source": "PRINT \"There, before you in a swirling mist stands an evil wizard with his hand held outwards...`Thou shall not pass' he cries.\"",
+      "literals": [
+        "There, before you in a swirling mist stands an evil wizard with his hand held outwards...`Thou shall not pass' he cries."
+      ]
+    },
+    {
+      "line": 202,
+      "source": "PRINT \"Before the entrance of the cave lies an enormous, green,        sleeping dragon. Realizing your presence, its eyes flicker open\"",
+      "literals": [
+        "Before the entrance of the cave lies an enormous, green,        sleeping dragon. Realizing your presence, its eyes flicker open"
+      ]
+    },
+    {
+      "line": 203,
+      "source": "PRINT \"and it leaps up, breathing jets fire at you.\"",
+      "literals": [
+        "and it leaps up, breathing jets fire at you."
+      ]
+    },
+    {
+      "line": 205,
+      "source": "PRINT \"From around the corner trots an old and gnarled drawf carrying  a lantern. `My job is to protect these stone steps!' he says andlunges at you with his dagger.\"",
+      "literals": [
+        "From around the corner trots an old and gnarled drawf carrying  a lantern. `My job is to protect these stone steps!' he says andlunges at you with his dagger."
+      ]
+    }
+  ],
+  "allCurrentPrintSourceLines": [
+    {
+      "line": 19,
+      "source": "PRINT \"DREAMCARDS presents...\"",
+      "literals": [
+        "DREAMCARDS presents..."
+      ]
+    },
+    {
+      "line": 20,
+      "source": "PRINT \"CAVERNS by John Hardy (c) 1982-83\":PRINT \"GNU Public License, 2019\":ft%=0:tu%=0",
+      "literals": [
+        "CAVERNS by John Hardy (c) 1982-83",
+        "GNU Public License, 2019"
+      ]
+    },
+    {
+      "line": 21,
+      "source": "PRINT \"Bring treasure home for double points. Take the compass!\":PRINT \"LOOK describes, INVENTORY lists, SCORE totals, QUIT finishes.\"",
+      "literals": [
+        "Bring treasure home for double points. Take the compass!",
+        "LOOK describes, INVENTORY lists, SCORE totals, QUIT finishes."
+      ]
+    },
+    {
+      "line": 30,
+      "source": "IF vb%={VERB_SCORE} THEN GOSUB @COMPUTE_SCORE:PRINT \"Your score is\";sc%;\" out of 126.\":GOTO @COMMAND_LOOP",
+      "literals": [
+        "Your score is",
+        " out of 126."
+      ]
+    },
+    {
+      "line": 42,
+      "source": "PRINT:PRINT \"Score:\";sc%;\" out of a possible 126 points in\";tu%;\" moves.\":GOSUB @RANKING:PRINT \"Another adventure?\"",
+      "literals": [
+        "Score:",
+        " out of a possible 126 points in",
+        " moves.",
+        "Another adventure?"
+      ]
+    },
+    {
+      "line": 79,
+      "source": "PRINT",
+      "literals": []
+    },
+    {
+      "line": 80,
+      "source": "IF vs%=0 THEN PRINT \"It's very dark, too dark to see anything...I'm scared!\":GOTO @DESCRIBE_FOES",
+      "literals": [
+        "It's very dark, too dark to see anything...I'm scared!"
+      ]
+    },
+    {
+      "line": 81,
+      "source": "RESTORE:FOR ix%=1 TO rm%:READ dc%:FOR iy%=1 TO dc%:READ ds$:IF ix%=rm% THEN PRINT ds$",
+      "literals": []
+    },
+    {
+      "line": 83,
+      "source": "IF rm%={ROOM_TREASURE_DOOR} THEN IF td%=0 THEN PRINT \"East: iron-bound door, barred within. Try explosives.\" ELSE PRINT \"East doorway blasted open.\"",
+      "literals": [
+        "East: iron-bound door, barred within. Try explosives.",
+        "East doorway blasted open."
+      ]
+    },
+    {
+      "line": 84,
+      "source": "IF rm%={ROOM_BALCONY} OR rm%={ROOM_TEMPLE} THEN IF rp%=1 THEN PRINT \"The secured rope reaches the floor. Use UP or DOWN.\"",
+      "literals": [
+        "The secured rope reaches the floor. Use UP or DOWN."
+      ]
+    },
+    {
+      "line": 85,
+      "source": "IF rm%={ROOM_TEMPLE} THEN IF gt% THEN PRINT \"North gate open.\" ELSE PRINT \"North gate locked.\"",
+      "literals": [
+        "North gate open.",
+        "North gate locked."
+      ]
+    },
+    {
+      "line": 86,
+      "source": "IF rm%={ROOM_CRYPT} THEN IF cr% THEN PRINT \"East seal open.\" ELSE PRINT \"Stones read V, A, R, D. Speak the name.\"",
+      "literals": [
+        "East seal open.",
+        "Stones read V, A, R, D. Speak the name."
+      ]
+    },
+    {
+      "line": 87,
+      "source": "IF rm%={ROOM_CELL} THEN IF sh% THEN PRINT \"East shaft open.\" ELSE PRINT \"Remove the grille; leave it here. It cannot fit through.\"",
+      "literals": [
+        "East shaft open.",
+        "Remove the grille; leave it here. It cannot fit through."
+      ]
+    },
+    {
+      "line": 88,
+      "source": "IF rm%={ROOM_CASTLE_VIEW} THEN IF db%={FATAL} THEN PRINT \"East drawbridge raised; seek another entrance.\" ELSE PRINT \"East drawbridge lowered.\"",
+      "literals": [
+        "East drawbridge raised; seek another entrance.",
+        "East drawbridge lowered."
+      ]
+    },
+    {
+      "line": 89,
+      "source": "IF rm%={ROOM_BASALT_CLEARING} THEN IF ob%({ITEM_DRAGON})={ABSENT} THEN PRINT \"You can also see the bloody corpse of an enormous dragon.\"",
+      "literals": [
+        "You can also see the bloody corpse of an enormous dragon."
+      ]
+    },
+    {
+      "line": 90,
+      "source": "IF ce%=1 THEN PRINT \"Your candle is growing dim.\"",
+      "literals": [
+        "Your candle is growing dim."
+      ]
+    },
+    {
+      "line": 91,
+      "source": "IF ce%=2 THEN PRINT \"Your candle has gone out.\"",
+      "literals": [
+        "Your candle has gone out."
+      ]
+    },
+    {
+      "line": 95,
+      "source": "IF qt%=0 THEN PRINT \"You can also see...\"",
+      "literals": [
+        "You can also see..."
+      ]
+    },
+    {
+      "line": 102,
+      "source": "PRINT \"Nearby there lurks...\"",
+      "literals": [
+        "Nearby there lurks..."
+      ]
+    },
+    {
+      "line": 106,
+      "source": "PRINT:RETURN",
+      "literals": []
+    },
+    {
+      "line": 108,
+      "source": "PRINT \"a\";ad$(li%);no$(li%);\", \";:RETURN",
+      "literals": [
+        "a",
+        ", "
+      ]
+    },
+    {
+      "line": 110,
+      "source": "IF li%={ITEM_WIZARD} THEN PRINT \"An evil wizard bars the way. He cries: Thou shalt not pass!\":RETURN",
+      "literals": [
+        "An evil wizard bars the way. He cries: Thou shalt not pass!"
+      ]
+    },
+    {
+      "line": 111,
+      "source": "IF li%={ITEM_DRAGON} THEN PRINT \"A sleeping dragon wakes and breathes jets of fire.\":RETURN",
+      "literals": [
+        "A sleeping dragon wakes and breathes jets of fire."
+      ]
+    },
+    {
+      "line": 112,
+      "source": "IF li%={ITEM_DWARF} THEN PRINT \"An old dwarf guards the steps, raising his dagger.\"",
+      "literals": [
+        "An old dwarf guards the steps, raising his dagger."
+      ]
+    },
+    {
+      "line": 115,
+      "source": "PRINT \"You are carrying \";:qt%=0",
+      "literals": [
+        "You are carrying "
+      ]
+    },
+    {
+      "line": 118,
+      "source": "IF qt%=0 THEN PRINT",
+      "literals": []
+    },
+    {
+      "line": 122,
+      "source": "IF qt%=0 THEN PRINT \"nothing.\"",
+      "literals": [
+        "nothing."
+      ]
+    },
+    {
+      "line": 153,
+      "source": "IF vb%={VERB_KILL} THEN IF it%<>{ITEM_SWORD} THEN PRINT \"With what weapon?\":rs%={PROMPT}:RETURN",
+      "literals": [
+        "With what weapon?"
+      ]
+    },
+    {
+      "line": 159,
+      "source": "IF rs%={PROMPT} THEN GOSUB @FIND_WORD:IF mp%>0 THEN PRINT \"The grille cannot fit. DROP GRILLE first.\":RETURN ELSE rs%=0",
+      "literals": [
+        "The grille cannot fit. DROP GRILLE first."
+      ]
+    },
+    {
+      "line": 162,
+      "source": "rs%={PROMPT}:IF rm%<>{ROOM_BALCONY} THEN PRINT \"There is no suitable rail here.\":RETURN",
+      "literals": [
+        "There is no suitable rail here."
+      ]
+    },
+    {
+      "line": 163,
+      "source": "IF it%<>{ITEM_ROPE} THEN PRINT \"Tie what?\":RETURN",
+      "literals": [
+        "Tie what?"
+      ]
+    },
+    {
+      "line": 164,
+      "source": "wd$=\" rail \":GOSUB @FIND_WORD:IF mp%=0 THEN PRINT \"Tie it to what? Try the rail.\":RETURN",
+      "literals": [
+        " rail ",
+        "Tie it to what? Try the rail."
+      ]
+    },
+    {
+      "line": 165,
+      "source": "IF ob%({ITEM_ROPE})<>{CARRIED} THEN PRINT \"You must be carrying the rope.\":RETURN",
+      "literals": [
+        "You must be carrying the rope."
+      ]
+    },
+    {
+      "line": 166,
+      "source": "ob%({ITEM_ROPE})={ROOM_BALCONY}:rp%=1:PRINT \"Rope secured to rail; it reaches the floor.\":GOTO @SPECIAL_DONE",
+      "literals": [
+        "Rope secured to rail; it reaches the floor."
+      ]
+    },
+    {
+      "line": 168,
+      "source": "rs%={PROMPT}:IF rm%<>{ROOM_BALCONY} OR rp%=0 THEN PRINT \"No secured rope here.\":RETURN",
+      "literals": [
+        "No secured rope here."
+      ]
+    },
+    {
+      "line": 169,
+      "source": "rp%=0:PRINT \"Rope untied on balcony.\":GOTO @SPECIAL_DONE",
+      "literals": [
+        "Rope untied on balcony."
+      ]
+    },
+    {
+      "line": 171,
+      "source": "rs%={PROMPT}:IF rp%=0 THEN PRINT \"TIE ROPE TO RAIL first.\":RETURN",
+      "literals": [
+        "TIE ROPE TO RAIL first."
+      ]
+    },
+    {
+      "line": 172,
+      "source": "rm%={ROOM_TEMPLE}:ft%=0:PRINT \"You climb down to the temple floor.\":GOTO @SPECIAL_DONE",
+      "literals": [
+        "You climb down to the temple floor."
+      ]
+    },
+    {
+      "line": 174,
+      "source": "rs%={PROMPT}:IF rp%=0 THEN PRINT \"There is no secured rope above you.\":RETURN",
+      "literals": [
+        "There is no secured rope above you."
+      ]
+    },
+    {
+      "line": 175,
+      "source": "rm%={ROOM_BALCONY}:ft%=0:PRINT \"You climb up to the balcony.\":GOTO @SPECIAL_DONE",
+      "literals": [
+        "You climb up to the balcony."
+      ]
+    },
+    {
+      "line": 177,
+      "source": "ht%={ROOM_DRAIN_JUNCTION}:PRINT \"You lift the latch. The hatch opens both ways.\"",
+      "literals": [
+        "You lift the latch. The hatch opens both ways."
+      ]
+    },
+    {
+      "line": 187,
+      "source": "IF vb%<7 THEN PRINT \"Nothing happens!\"",
+      "literals": [
+        "Nothing happens!"
+      ]
+    },
+    {
+      "line": 188,
+      "source": "IF vb%>6 THEN IF vb%<13 THEN PRINT \"Please tell me how.\"",
+      "literals": [
+        "Please tell me how."
+      ]
+    },
+    {
+      "line": 189,
+      "source": "IF vb%>12 THEN PRINT \"I can't!\"",
+      "literals": [
+        "I can't!"
+      ]
+    },
+    {
+      "line": 190,
+      "source": "PRINT:rs%={PROMPT}:RETURN",
+      "literals": []
+    },
+    {
+      "line": 201,
+      "source": "PRINT \"Without the compass, I lose my bearings!\":cn%=INT(RND(1)*4)",
+      "literals": [
+        "Without the compass, I lose my bearings!"
+      ]
+    },
+    {
+      "line": 204,
+      "source": "IF rm%={ROOM_TEMPLE} THEN IF nx%={ROOM_CRYPT} AND gt%=0 THEN PRINT \"The gate is locked. Use the key.\":rs%={PROMPT}:RETURN",
+      "literals": [
+        "The gate is locked. Use the key."
+      ]
+    },
+    {
+      "line": 205,
+      "source": "IF rm%={ROOM_DRAIN_JUNCTION} THEN IF nx%={ROOM_CELL} AND ht%=0 THEN PRINT \"The hatch is latched. OPEN HATCH.\":rs%={PROMPT}:RETURN",
+      "literals": [
+        "The hatch is latched. OPEN HATCH."
+      ]
+    },
+    {
+      "line": 207,
+      "source": "IF nx%=0 THEN PRINT \"You can't go that way\"",
+      "literals": [
+        "You can't go that way"
+      ]
+    },
+    {
+      "line": 208,
+      "source": "IF nx%={FATAL} THEN PRINT \"You fall into the chasm and die.\":rs%={FINISH}:RETURN",
+      "literals": [
+        "You fall into the chasm and die."
+      ]
+    },
+    {
+      "line": 221,
+      "source": "ft%=0:PRINT \"Suddenly a magic wind carried you to another place...\":rm%={ROOM_ENTRANCE}:RETURN",
+      "literals": [
+        "Suddenly a magic wind carried you to another place..."
+      ]
+    },
+    {
+      "line": 223,
+      "source": "IF rm%<>{ROOM_CRYPT} THEN PRINT \"Nothing happens here.\":RETURN",
+      "literals": [
+        "Nothing happens here."
+      ]
+    },
+    {
+      "line": 224,
+      "source": "PRINT \"The seal slides open both ways.\":cr%={ROOM_CELL}:RETURN",
+      "literals": [
+        "The seal slides open both ways."
+      ]
+    },
+    {
+      "line": 226,
+      "source": "PRINT \"The giant bat carries you to its colony.\":rm%={ROOM_BAT_COLONY}:ft%=0:ob%({ITEM_BAT})=0:RETURN",
+      "literals": [
+        "The giant bat carries you to its colony."
+      ]
+    },
+    {
+      "line": 228,
+      "source": "PRINT \"The creature kills you.\":rs%={FINISH}:RETURN",
+      "literals": [
+        "The creature kills you."
+      ]
+    },
+    {
+      "line": 235,
+      "source": "IF it%<1 THEN IF fo%>0 THEN @CREATURE_KILLS ELSE PRINT \"eh?\":RETURN",
+      "literals": [
+        "eh?"
+      ]
+    },
+    {
+      "line": 237,
+      "source": "IF ob%(it%)=rm% THEN @OBJECT_PRESENT ELSE IF fo%>0 THEN @CREATURE_KILLS ELSE PRINT \"Not here.\":RETURN",
+      "literals": [
+        "Not here."
+      ]
+    },
+    {
+      "line": 246,
+      "source": "NEXT ix%:IF cn%>10 THEN PRINT \"You cannot carry more.\":RETURN",
+      "literals": [
+        "You cannot carry more."
+      ]
+    },
+    {
+      "line": 249,
+      "source": "PRINT \"Taken: \";:li%=it%:GOSUB @PRINT_OBJECT:PRINT:RETURN",
+      "literals": [
+        "Taken: "
+      ]
+    },
+    {
+      "line": 251,
+      "source": "ob%(it%)=rm%:PRINT \"Dropped: \";:li%=it%:GOSUB @PRINT_OBJECT:PRINT:RETURN",
+      "literals": [
+        "Dropped: "
+      ]
+    },
+    {
+      "line": 255,
+      "source": "IF ob%(it%)<>{CARRIED} THEN IF ob%(it%)<>rm% THEN PRINT \"Where? I can't see it.\":RETURN",
+      "literals": [
+        "Where? I can't see it."
+      ]
+    },
+    {
+      "line": 258,
+      "source": "PRINT \"How am I supposed to use it?\":RETURN",
+      "literals": [
+        "How am I supposed to use it?"
+      ]
+    },
+    {
+      "line": 260,
+      "source": "IF rm%<>{ROOM_HUT_CLEARING} THEN IF rm%<>{ROOM_TEMPLE} THEN PRINT \"It won't open!\":RETURN",
+      "literals": [
+        "It won't open!"
+      ]
+    },
+    {
+      "line": 261,
+      "source": "PRINT \"You opened the door.\":IF rm%={ROOM_HUT_CLEARING} THEN rm%={ROOM_HUT}:GOSUB @HOMECOMING:RETURN ELSE gt%=1:rm%={ROOM_CRYPT}:RETURN",
+      "literals": [
+        "You opened the door."
+      ]
+    },
+    {
+      "line": 263,
+      "source": "IF fo%=0 THEN PRINT \"But there's nothing to kill...\":RETURN",
+      "literals": [
+        "But there's nothing to kill..."
+      ]
+    },
+    {
+      "line": 264,
+      "source": "IF ob%({ITEM_SWORD})<>{CARRIED} THEN PRINT \"You aren't carrying that.\":RETURN",
+      "literals": [
+        "You aren't carrying that."
+      ]
+    },
+    {
+      "line": 266,
+      "source": "PRINT \"You swing with your sword but miss and the creature smashes your skull.\":rs%={FINISH}:RETURN",
+      "literals": [
+        "You swing with your sword but miss and the creature smashes your skull."
+      ]
+    },
+    {
+      "line": 270,
+      "source": "IF li%=0 THEN PRINT \"You attack but the creature moves aside.\"",
+      "literals": [
+        "You attack but the creature moves aside."
+      ]
+    },
+    {
+      "line": 271,
+      "source": "IF li%=1 THEN PRINT \"The creature deflects your blow.\"",
+      "literals": [
+        "The creature deflects your blow."
+      ]
+    },
+    {
+      "line": 272,
+      "source": "IF li%=2 THEN PRINT \"The foe is stunned but quickly regains his balance.\"",
+      "literals": [
+        "The foe is stunned but quickly regains his balance."
+      ]
+    },
+    {
+      "line": 273,
+      "source": "IF li%=3 THEN PRINT \"You missed and he deals a blow to your head.\"",
+      "literals": [
+        "You missed and he deals a blow to your head."
+      ]
+    },
+    {
+      "line": 276,
+      "source": "PRINT \"The sword strikes home and your foe dies.\":ob%(fo%)=0",
+      "literals": [
+        "The sword strikes home and your foe dies."
+      ]
+    },
+    {
+      "line": 277,
+      "source": "IF fo%<>{ITEM_DRAGON} THEN PRINT \"A black cloud descends and the corpse vaporises.\"",
+      "literals": [
+        "A black cloud descends and the corpse vaporises."
+      ]
+    },
+    {
+      "line": 281,
+      "source": "PRINT \"Nothing to ignite here. Keep your candle safe.\":RETURN",
+      "literals": [
+        "Nothing to ignite here. Keep your candle safe."
+      ]
+    },
+    {
+      "line": 283,
+      "source": "IF cl%<>1 THEN PRINT \"The candle is out; you need a flame.\":RETURN",
+      "literals": [
+        "The candle is out; you need a flame."
+      ]
+    },
+    {
+      "line": 284,
+      "source": "IF rm%<>{ROOM_TREASURE_DOOR} THEN PRINT \"BOOM! Smoke clears: nothing has changed.\":RETURN",
+      "literals": [
+        "BOOM! Smoke clears: nothing has changed."
+      ]
+    },
+    {
+      "line": 285,
+      "source": "IF td%={ROOM_TREASURE_ROOM} THEN PRINT \"The passage is already open. Save your bomb.\":RETURN",
+      "literals": [
+        "The passage is already open. Save your bomb."
+      ]
+    },
+    {
+      "line": 286,
+      "source": "PRINT \"BOOM! The door is torn from its hinges. The passage east is open.\":td%={ROOM_TREASURE_ROOM}:ob%({ITEM_BOMB})=0:RETURN",
+      "literals": [
+        "BOOM! The door is torn from its hinges. The passage east is open."
+      ]
+    },
+    {
+      "line": 288,
+      "source": "PRINT \"TIE ROPE TO RAIL at the balcony, then DOWN; UP returns.\":rs%={PROMPT}:RETURN",
+      "literals": [
+        "TIE ROPE TO RAIL at the balcony, then DOWN; UP returns."
+      ]
+    },
+    {
+      "line": 296,
+      "source": "PRINT \"Ranking:\"",
+      "literals": [
+        "Ranking:"
+      ]
+    },
+    {
+      "line": 297,
+      "source": "IF sc%<20 THEN PRINT \"Hopeless beginner\":RETURN",
+      "literals": [
+        "Hopeless beginner"
+      ]
+    },
+    {
+      "line": 298,
+      "source": "IF sc%<50 THEN PRINT \"Experienced loser\":RETURN",
+      "literals": [
+        "Experienced loser"
+      ]
+    },
+    {
+      "line": 299,
+      "source": "IF sc%<100 THEN PRINT \"Average Viking\":RETURN",
+      "literals": [
+        "Average Viking"
+      ]
+    },
+    {
+      "line": 300,
+      "source": "IF sc%<126 THEN PRINT \"Excellent...but you've left something behind!\":RETURN",
+      "literals": [
+        "Excellent...but you've left something behind!"
+      ]
+    },
+    {
+      "line": 301,
+      "source": "IF sc%=126 THEN PRINT \"Perfectionist and genius!!\"",
+      "literals": [
+        "Perfectionist and genius!!"
+      ]
+    },
+    {
+      "line": 304,
+      "source": "PRINT \"Welcome home! Your treasures are safe.\"",
+      "literals": [
+        "Welcome home! Your treasures are safe."
+      ]
+    },
+    {
+      "line": 306,
+      "source": "NEXT ix%:GOSUB @COMPUTE_SCORE:PRINT \"Your score is\";sc%;\" out of 126.\":GOSUB @RANKING",
+      "literals": [
+        "Your score is",
+        " out of 126."
+      ]
+    },
+    {
+      "line": 307,
+      "source": "IF sc%=126 THEN PRINT \"All treasure home. Your quest is complete!\"",
+      "literals": [
+        "All treasure home. Your quest is complete!"
+      ]
+    },
+    {
+      "line": 308,
+      "source": "PRINT \"QUIT to finish, or leave to seek more treasure.\":RETURN",
+      "literals": [
+        "QUIT to finish, or leave to seek more treasure."
+      ]
+    }
+  ]
+}

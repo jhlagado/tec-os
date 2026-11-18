@@ -1465,3 +1465,380 @@ packs all matching developer scenarios; their regenerated JSON identities are
 committed alongside the ready CAV files. The final evidence and updated book
 handover distinguish all these checks from physical TEC-1G testing, which is
 still outstanding. No public site deployment or main-branch merge is claimed.
+
+
+## Author walkthrough: bridge prose — 18 November 2026
+
+Approved wording-only refinement, pending the next game text build: in the
+string-bridge midpoint description, replace the final sentence with:
+
+> Hold tight and follow it either north or south.
+
+Remove the redundant clause about there being no footing east or west. Keep
+the preceding creaking/swaying description. East and west remain blocked;
+no exit or combat rules change. The current running game and published card
+have not been changed by this review note.
+
+The author also explicitly reaffirmed retaining the clearly warned fatal
+western crater drop as a rare deliberate hazard.
+
+
+## Author walkthrough: save budget and dragon wording — 18 November 2026
+
+Review notes only: accumulate findings during the author's playthrough; do not
+implement game edits yet.
+
+- Investigate a compact complete-state save/restore using the existing 128-byte
+  CVB2 semantic payload (objects, creatures, puzzle flags, position, counters and
+  RNG). Measure resident snapshot/code costs and any newly linked BAZA file I/O
+  dependencies before choosing memory-only or disk persistence. The current
+  restored game is 37,248 file bytes; 4,039 bytes before dynamic allocation is
+  not all spare feature budget. No save facility has been added. A previous
+  large file-I/O size increase needs reproduction before attributing its cause.
+- Dragon intro is conditional on the live dragon's object being in the room;
+  it disappears after death, and the clearing then describes the corpse.
+  However, while alive each redisplay repeats the sleeping/waking sentence,
+  followed by the generic nearby-creature listing. Consider a non-repeating
+  awakening or less repetitive live-dragon wording. Source inspection verified
+  this behavior; no new live combat test or game change was performed here.
+
+
+## Author walkthrough: candle lighting and creature-specific combat — 18 November 2026
+
+Notes only, deferred until after the ongoing playthrough:
+
+- Reaffirm the earlier proposal for an unlit candle and a box of matches with
+  an explicit lighting action. The current candle at the daylight entrance is
+  already lit; matches and a lighting mechanic are not implemented. Preserve
+  fair access to light before bat transport or deeper exploration, and assess
+  inventory, candle-clock, checkpoint and size implications before a change.
+- Reduce duplicated live-dragon introductions. Review generic combat messages
+  such as a blow to the head for creature-appropriate wording (dragon fire or
+  claws, for example), without silently changing combat probabilities.
+- Eastern entrance passage currently contains the earlier explorer's Sacred
+  Key of Thialfi clue and the giant bat. On the next ordinary action the bat
+  transports the player to the bat colony and disappears. LOOK/inventory and
+  free clarification paths do not themselves trigger that transport. This is
+  a shortcut/alternate route, not a prerequisite for the southern route.
+
+
+## Author walkthrough: in-game HELP — 18 November 2026
+
+Requested review addition, not implemented during the playthrough: provide HELP
+(and consider ? as an alias) with a compact spoiler-free command reference.
+Cover movement abbreviations, LOOK, inventory aliases, SCORE, QUIT and restart,
+TAKE/GET, DROP/PUT, object use, explicit sword attacks and basic command syntax.
+Separate context-specific puzzle examples from general help; do not expose
+magic words, solutions or undiscovered objects merely by listing vocabulary.
+HELP should cost no turn or candle time and allow no enemy retaliation or bat
+transport. Advertise it in the opening banner and keep CAVERNS.TXT consistent.
+The current public game has no HELP handler; the external CAVERNS.TXT is the
+existing command reference. Preserve all existing memory/size gates.
+
+
+## Author walkthrough: torture-chamber exit wording — 18 November 2026
+
+Wording review only; current game unchanged. The author finds "the entrance
+cavern lies to the east" awkward and requests "the entrance to the cavern lies
+to the east". Retain the northward corridor and clarify the eastern return in
+full natural sentences. Geography check: east actually reaches room 18, the
+inner cavern, and north from there reaches room 16 at the daylight cave mouth.
+Resolve the final wording without implying east alone leads directly outside;
+"the cavern near the cave entrance lies to the east" is a geographically
+explicit alternative for the next prose pass. No exit changes requested.
+
+
+## Author-requested complete proofreading sweep — 18 November 2026
+
+The first manual pass is recorded in [caverns-proofreading-review.md](caverns-proofreading-review.md).
+All 54 rooms, all 24 object descriptions, displayed engine messages and the
+public instructions were inspected. Findings distinguish mechanical corrections,
+ambiguous meaning and output-format issues from optional stylistic changes.
+Preserve the author's original prose and UK spelling. Findings are notes only;
+no game edits or rebuilt artifacts are part of this sweep.
+
+
+## Author walkthrough: corridor's ambiguous cavern — 18 November 2026
+
+At room 22 the author reasonably reads "the western passage returns to the
+cavern" as returning to the entrance cavern reached before the torture chamber.
+Source tracing: entrance cavern18 WEST torture23 NORTH corridor22 WEST northern
+cavern21. These are two different caverns; corridor22 EAST is blocked. Thus do
+not reverse west to east. Correct the misleading definite article/return claim:
+"The western passage leads into another cavern; a doorway to the south leads
+back to the torture chamber." Keep the northern cavern's distinctive long-tunnel
+landmark. Wording proposal recorded only; no route or game artifact changed.
+
+
+## Author walkthrough: corridor orientation versus available exits — 18 November 2026
+
+Further room22 clarification: "east-west corridor" suggests an eastern exit,
+although east is blocked. Do not add a passage to accommodate wording. Describe
+the closed end explicitly, without inventing rubble, a door or a new puzzle.
+Suggested complete text, preserving the breeze and sentence structure:
+
+> You are standing in an east-west corridor. You can feel a faint breeze
+> stirring the stale air. The corridor ends to the east. The western passage
+> leads to a dark cavern, and a doorway to the south leads to the torture chamber.
+
+"Leads" is arrival-independent; avoid "returns" where prior visitation is not
+known. The western destination is room21, distinct from entrance cavern18,
+with the long tunnel south and treasure doorway north. Record this as an
+additional proofreading/navigation clarity item; current game unchanged.
+
+
+## Author walkthrough: arrival-neutral cavern descriptions — 18 November 2026
+
+Author-approved room21 wording for the later prose batch:
+
+> You are deep in a dark cavern. A passage leads north to an oak doorway,
+> and a draught comes from a corridor to the east. A long tunnel stretches
+> south into the darkness.
+
+Remove "north of the long tunnel" from the opening and introduce "A long
+tunnel" rather than assuming the player already knows it. Keep UK draught.
+All three bearings and destinations remain unchanged.
+
+Apply this editorial rule during the remaining review: descriptions must work
+from any legal entry, introduce landmarks without assuming previous visits,
+and use leads rather than returns where the latter presumes the player's
+route. A named destination may still be described if visible; do not erase
+useful bearings. Check encounter/state-dependent descriptions separately.
+
+For room22 the author prefers simply "a corridor" over "an east-west
+corridor". This preference supersedes the preceding proposed opening; keep
+the breeze, westward dark-cavern exit and southern torture-chamber doorway.
+Do not insist on an orientation label or invent an eastern passage.
+These are accumulated review decisions, not changes to the running game.
+
+
+## Author walkthrough: treasure-door status prose — 18 November 2026
+
+Confirmed source provenance: the original protected MicroWorld BASIC line28
+reads "You can see a small oak door to the east. It has been locked from the
+inside." The current separate engine line "East: iron-bound door, barred
+within. Try explosives." is modern abbreviated status text, not original
+prose. The restoration did not eliminate this fragment. Record as a remaining
+restoration defect, alongside other terse dynamic gate/shaft/bridge statuses.
+
+The author requests natural full sentences and a direction-neutral opening
+("You stand before an oak doorway ...") rather than an emphasis on the wall's
+bearing. Do not silently move the doorway north: north from cavern21 reaches
+the door approach20; the actual treasure passage then goes east to room19,
+and south returns to21. This eastward doorway also exists in the original.
+Explain the turn if needed, without suggesting direction of arrival determines
+which wall holds the door.
+
+Later wording must distinguish intact and blasted states. Suggested closed
+state: "The iron-bound oak door to the east is barred from the inside. It
+looks too strong to force, but perhaps explosives would open it." Suggested
+open state: "The blast has opened a passage east into the treasure room."
+Keep the agreed explosives clue and all current exits/puzzle rules. Reconcile
+static doorway wording so it never describes intact timber after destruction.
+Notes only; current game remains unchanged during the author's walkthrough.
+
+
+## Author decision: simplify the closed treasure-door description — 18 November 2026
+
+This supersedes the preceding closed-state wording proposal. Remove "in the
+eastern wall" and the abbreviated "East:" status line. The author does not
+want a repeated eastern bearing while inspecting a blocked door. Preserve the
+original small oak door/locked-from-inside description, with the agreed natural
+explosives hint, rather than replacing it with compressed labels.
+
+Candidate closed-state prose for the later text batch:
+
+> You can see a small oak door. It has been locked from the inside. Its heavy
+> timber is bound with iron, and the entrance looks formidable. Perhaps some
+> explosives would open it. A passage leads south to the cavern.
+
+Preserve original sentences wherever compatible with agreed changes. Avoid
+printing a second abbreviated or duplicated description immediately afterwards.
+The open state must no longer describe an intact locked door; describe the
+opened passage naturally. The existing actual passage is east into room19,
+so ensure the player can discover how to enter after opening it without
+silently changing the map or leaving an unannounced movement command.
+No exit changes have been requested or implemented. As agreed for this
+walkthrough, this is a recorded decision only, not an updated running build.
+
+
+## Author walkthrough: tunnel glow and non-scoring brick — 18 November 2026
+
+Source check: room24 originally described a faint glow from a narrow crack in
+the eastern wall. The added word "sealed" is modern; the author finds a sealed
+but glowing crack confusing and suggestive of an unavailable puzzle. The prior
+map review blocked the old east shortcut and retained the crack as scenery.
+There is no current crack-opening action or glow-related puzzle state. Review
+whether to restore the original "narrow crack" wording, make clear it is too
+narrow to pass through, or remove an unhelpful apparent clue. Do not invent a
+new puzzle or assert an unestablished light source. Wording decision pending;
+current game unchanged.
+
+The red house brick (object23, initially tunnel24) has value0, is outside the
+scoring treasure range7..17, and has no dedicated implemented tool use. Taking
+it consumes one carried-item slot but adds no points, even at the hut. The
+author has chosen to take it in this live playthrough; do not assume it is a
+quest requirement. This note is source inspection, not an externally controlled
+inventory change.
+
+
+## Author prose rule: restrained commas — 18 November 2026
+
+Remove the AI-added sealed from the tunnel crack wording. In all description
+corrections minimise commas without damaging grammar. No Oxford commas; avoid
+unnecessary commas before or after and. Preserve the author's style rather
+than imposing more formal punctuation. Use full stops where genuinely needed,
+not comma-heavy connective sentences. Apply by reading each sentence, never
+blindly deleting punctuation. This preference supersedes punctuation in earlier
+proposed replacement passages. The proofreading review now records this rule.
+Notes only; no running-game or media changes during this walkthrough.
+
+
+## Author walkthrough: round room and indefinite articles — 18 November 2026
+
+Original text checked: purple walls, chalk star, pagan sect, monks and Norse
+folk sentence are archival. The abbreviated final exit list is modern. Remove
+pagan from the round-room description as expressly requested. Introduce a long
+tunnel rather than the long tunnel and rewrite the modern exit list in natural
+full sentences with restrained commas. Preserve actual north/south/west/east
+connections and the remaining original atmosphere. The unclear them reference
+still requires a meaning decision, not an invented interpretation.
+
+A second sweep of all54 descriptions for arrival assumptions and a/an versus
+the is recorded in caverns-proofreading-review.md with room-specific candidates.
+Do not globally replace the: already introduced and uniquely identifiable
+features can retain it. The author also permits removing or improving the
+entire unhelpful glowing-crack sentence. No game implementation during review.
+
+
+## Original/current complete text inventory and balcony follow-up — 18 November 2026
+
+See caverns-text-recovery-plan.md and caverns-text-comparison.md. Fetched the
+archival repository and pinned the original protected listing from remote
+master. Inventory covers every PRINT source line, all54 room descriptions and
+all24 creature/item descriptions. This exposes shortened wizard/dragon/dwarf
+scenes and separate abbreviated status messages missed by the room-only pass.
+Editorial disposition and recovery remain queued, not claimed complete.
+
+The author also requests removing pagan from balcony room28. Its Loki/exile
+story is original, while the stone rail and final route sentences are modern
+additions. Preserve the explicit rope rail and modern navigation but compare
+these additions openly rather than attributing them to the original.
+No game code, source BAS, COM, checkpoints or starter media changed here.
+
+
+## Author prose rule: navigation additions must add information — 18 November 2026
+
+Retain modern navigation guidance when it helps the player find real exits,
+but remove duplication of bearings or landmarks already stated in the same
+room description. Integrate genuinely new information into natural sentences
+rather than appending a repeated exit inventory. Review each addition against
+the original/current comparison. The author does not request removal of all
+modern guidance or new map changes. Apply the restrained-comma and arrival-
+neutral article rules already recorded. No running-game changes yet.
+
+Walkthrough advice from round chamber26: eastern side cave25 is empty. The
+important key is in34, reachable by WEST29, SOUTH33, WEST34. Return EAST33,
+NORTH29, EAST26. This is source-checked route guidance, not commands executed
+on the author's live game. Recommend obtaining the key before rope descent.
+
+
+## Author walkthrough: bat-cave destination versus next room — 18 November 2026
+
+Room26's "bat caves west" misleadingly suggests the next room is the colony.
+WEST actually enters junction29; SOUTH from there reaches colony33. Prefer
+"A passage leads west towards the bat caves" or simply a westward passage.
+Distinguish an immediate destination from the region a route eventually reaches.
+Use this distinction in the wider direction-description review.
+
+At29 the forked stone pillar identifies the alternative western loop; it is a
+navigation landmark, not a puzzle, collectible or required interaction. SOUTH33
+then WEST34 is the shorter key route. The western alternative also reaches34
+via30,32,31. No map changes requested; wording notes only, current game unchanged.
+
+
+## Author walkthrough: USE ROPE shorthand — 18 November 2026
+
+After collecting key19 via the western bat-cave loop and returning to balcony28,
+the author entered USE ROPE. The current reply "TIE ROPE TO RAIL at the balcony,
+then DOWN; UP returns." is modern abbreviated instructional text. Replace it
+in the later text batch with complete sentences, for example:
+
+> Tie the rope to the stone rail before climbing down. Once it is secured,
+> you can climb down to the temple floor and climb back up to the balcony.
+
+Keep the exact supported commands discoverable (TIE ROPE TO RAIL, DOWN and UP),
+without suggesting USE ROPE silently attaches or descends. The explicit tying
+and two-way climb are approved mechanics and remain unchanged. Review the
+related secured/untied confirmation fragments as part of the same full-message
+inventory. No rope action or game artifact has been changed by this note.
+
+
+## Author walkthrough: rope confirmations and inappropriate UP/DOWN coaching — 18 November 2026
+
+Author explicitly requests deleting "Use UP or DOWN." from the secured-rope
+room message. It gives an inappropriate direction at each end of the rope:
+only DOWN from the balcony and UP from the temple floor are valid rope moves.
+Describe the secured rope naturally without automatic capitalised gameplay
+instructions. This overrides earlier proposals to keep such coaching in the
+room description. Separate requested HELP or a genuinely incomplete-command
+clarification from the ordinary narrative. Expand "Rope secured to rail; it
+reaches the floor." into a natural sentence. Review "Rope untied on balcony."
+and the other rope fragments likewise.
+
+The author also questions the repetitive upper-river-ledge west sentence on
+the balcony. Review whether it adds useful route information before retaining
+it; keep the temple floor below and visible rail. Remove pagan as already
+approved. Preserve actual exits and the two-way secured rope mechanic.
+
+Source answer to TAKE ROPE while tied: on balcony28 the rope object is present,
+so successful pickup moves it to inventory and clears rp to0, effectively
+untying it automatically. It prints the generic pickup confirmation. The
+normal carry limit still applies. DOWN then asks for the rope to be tied again.
+On temple floor35 the rope object's location remains28, so TAKE ROPE fails
+presence validation there; it cannot be pulled free from below by that command.
+This is source-inspected behavior, not an action entered in the author's game.
+No game edits have been applied during this review.
+
+
+## Author walkthrough: temple gate status versus original prose — 18 November 2026
+
+The author explicitly flags "North gate locked." as another unacceptable
+abbreviated addition and requests comparison with the original BASIC.
+Archival protected line40 already says:
+
+> You are in the temple. To the north is a locked gate and on the wall is a
+> giant statue of Loki, carved out of the living rock itself!
+
+Current static room35 changes locked gate to great gate and appends the balcony;
+the engine separately adds "North gate locked." or "North gate open.".
+Restore the original full-sentence gate/statue description with a conditional
+locked/open phrase so it remains truthful after unlocking. For example retain
+"To the north is a locked gate" while closed and "To the north is an open gate"
+when open. Do not print a second terse status line or repeat the same bearing.
+Keep the original statue imagery and low-comma style. Balcony/rope narration
+must not assume every entry was a descent or include automatic UP/DOWN coaching.
+
+This specific example is included in the already committed complete
+original/current PRINT inventory and the gate-status recovery action item.
+The requested action is queued for the later text batch; current game and
+starter-card artifacts remain unchanged under the ongoing notes-only review.
+
+
+## Full editorial audit and skilled concision target — 19 November 2026 (Melbourne)
+
+The author requests an evaluative audit, not only a string inventory. Completed
+source review is recorded in caverns-editorial-reform-register.md with all54
+room dispositions and16 message reform areas. Exact original/current text and
+source locations remain in caverns-text-comparison.md and its JSON inventory.
+The current temple statue paragraph still exists: its defect is the altered
+gate sentence plus a duplicate shorthand status. Other scenes genuinely lost
+imagery. Report those differences accurately rather than equating them.
+
+Recovery first, skilled editing second: the author suggests roughly30% shorter
+room descriptions without losing evocative elements. Treat this as a target to
+measure against the full recovered prose, not an inflexible quota. Preserve
+imagery, humour, sensory detail, clues and actual directions. Remove repetition
+and weak modern additions before original atmosphere. Record text byte counts,
+logical/padded executable size and headroom separately. No game artifact has
+been edited by this audit; implementation and author prose approval are pending.
