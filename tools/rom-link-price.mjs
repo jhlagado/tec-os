@@ -19,7 +19,8 @@ const BASE='96bf06bef12847631b68d95f5881ba0945893ca6';
 const CODEC='9dff4655a698ff921ebd94d0c5aebf5853c755952cef2f47097cbc3875161b3e';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const hex=n=>'$'+n.toString(16).toUpperCase().padStart(4,'0');
-const bodyFiles=['ccpbody.asm',...['ccpdir','ccpfile','ccpmut','ccpcmd','bdos','bdosfile','bdosrec','bdosfn','bdoslog','bdoscon'].map(n=>'cpm/'+n+'.asm')];
+const retainedBodyFiles=['cpm/ccpmut.asm'];
+const bodyFiles=['ccpbody.asm',...['ccpdir','ccpfile','ccpcmd','bdos','bdosfile','bdosrec','bdosfn','bdoslog','bdoscon'].map(n=>'cpm/'+n+'.asm')];
 const labels=s=>new Set([...s.matchAll(/^([A-Z_][A-Z0-9_]*):/gmi)].map(m=>m[1].toUpperCase()));
 function once(s,from,to){assert.equal(s.split(from).length,2,'expected one source boundary: '+from);return s.replace(from,to);}
 
@@ -54,6 +55,13 @@ function transformSource(src) {
     assert.ok(!/^\s*ORG\b/gmi.test(s),'body contains an origin');
     writeFileSync(p,changeBranches(file,s,target=>!ramLabels.has(target)),'latin1');
   }
+  const retainedBodyLabels=[];
+  for(const file of retainedBodyFiles){
+    const p=join(src,file),text=readFileSync(p,'latin1');
+    assert.ok(!/^\s*(?:ORG|[A-Z_][A-Z0-9_]*\s+EQU)\b/gmi.test(text),'retained body must have no origin or deferred alias');
+    retainedBodyLabels.push(...labels(text));
+    writeFileSync(p,changeBranches(file,text,target=>ramLabels.has(target)),'latin1');
+  }
   prefix=changeBranches('ccpboot.asm',prefix,target=>ramLabels.has(target));
   prefix+='\n  jp STARTED\n';
   changes.push({file:'ccpboot.asm',from:'fallthrough to STARTED',to:'jp STARTED',addedBytes:3});
@@ -64,7 +72,7 @@ function transformSource(src) {
   const before=[ '%INCLUDE "ccpequ.asm"','  ORG RAMORG','RAMBEG:',...bodyFiles.map(f=>'%INCLUDE "'+f+'"'),'RAMEND:','%INCLUDE "ram.asm"','%INCLUDE "lateequ.asm"'].join('\n');
   entry=once(entry,'%INCLUDE "ram.asm"',before);
   writeFileSync(join(src,'rom.asm'),entry,'latin1');
-  return {changes,deferredEquates:deferred.declarations,consoleLabels:[...labels(readFileSync(join(src,'conmode.asm'),'latin1'))]};
+  return {changes,retainedBodyLabels,deferredEquates:deferred.declarations,consoleLabels:[...labels(readFileSync(join(src,'conmode.asm'),'latin1'))]};
 }
 
 // Flatten only declared local includes into unique CP/M names. Absolute paths
@@ -137,7 +145,7 @@ export async function priceLink({codecPath=join(ROOT,'.inputs/pack-com.mjs')}={}
       assert.equal(globals.get('WSBASE')?.value,workspace);
       validatePriceRanges(map,range);
       assert.ok(at('BENTRY')>=origin&&at('BENTRY')<range.ramEnd,'BDOS must be in packet');
-      for(const name of ['CCPENT','CCPBAS','SVCDSP',...transformed.consoleLabels])assert.ok(at(name)>=0xc000&&at(name)<range.romEnd,'retained ROM label '+name);
+      for(const name of ['CCPENT','CCPBAS','SVCDSP',...transformed.consoleLabels,...transformed.retainedBodyLabels])assert.ok(at(name)>=0xc000&&at(name)<range.romEnd,'retained ROM label '+name);
       const packet=dense.subarray(0,range.ramEnd-origin),tokens=parse(packet),packed=Buffer.from(encode(packet,tokens).bytes);
       assert.equal(Buffer.compare(Buffer.from(decode(packed,packet.length)),packet),0,'host codec roundtrip');
       const workspaceSpan=at('BDOSRME')-workspace;
@@ -152,7 +160,7 @@ export async function priceLink({codecPath=join(ROOT,'.inputs/pack-com.mjs')}={}
         return {schema:'tecos-protected-code-price-v1',diagnosticOnly:true,targetExecuted:false,sourcePin:git('rev-parse','HEAD'),frozenTargetPin:BASE,
           compilerPin:'7a217f96c76f11641af3fa0b22d0b34be6e2a467',compilerSHA256:sha(pinnedBytes(ROOT,'TAS.COM')),
           codecPin:'eee4ee6846add13c0ea120fbf2de8be0ec08c0b1',codecSHA256:CODEC,historyPatchSHA256:sha(patch),
-          transformedBranches:transformed.changes,deferredEquates:transformed.deferredEquates,passes,retainedRomBytes:retained.length,retainedRomSHA256:sha(retained),packedBytes:packed.length,
+          retainedBodyFiles,retainedBodyLabels:transformed.retainedBodyLabels,transformedBranches:transformed.changes,deferredEquates:transformed.deferredEquates,passes,retainedRomBytes:retained.length,retainedRomSHA256:sha(retained),packedBytes:packed.length,
           subtotalBytes:retained.length+packed.length,unpriced:['native decoder','bounds and checksum validation','header and metadata','cold installation','ROM-safe failure path'],
           layoutProposal:layout,layoutBasis:'Proposed starter-card arithmetic only. Staged ALVINIT is unchanged; cold installation and allocation changes are unpriced.',allProposedResidentCasesCoexist:layout.cases.every(c=>c.coexists),qualification:'Size/coexistence experiment only; no normal bootable artifact, reserve pass, runtime, timing, stack or board clearance.'};
       }
