@@ -95,7 +95,7 @@ test('revised BASIC first-discovery quest banks all treasures, walks back from c
  walk('south','east','take rope','west','west','south');fight(4);
  walk('south','take candle','east','west');assert.equal(room(),33,'bat carries player to colony');
  walk('west','take key','west','north','east','east','south','north','east','east','west','south','east');
- assert.equal(room(),28);assert.match(command('down'),/TIE ROPE/);assert.equal(room(),28);
+ assert.equal(room(),28);assert.match(command('down'),/tie the rope/);assert.equal(room(),28);
  walk('tie rope to rail','down');assert.equal(room(),35);assert.equal(integer(m,'R0%'),1);
  assert.match(command('north'),/locked/);assert.equal(room(),35);
  walk('up','down','unlock gate with key');assert.equal(room(),37);assert.equal(obj(19),-1);
@@ -131,7 +131,7 @@ test('BASIC information, aliases, failed requests, compass warning, fatal restar
  assert.equal(integer(m,'U%'),0);
  for(const cmd of ['inventory','invent','list','i'])assert.match(keys(m,cmd,question(m)),/carrying nothing/);
  assert.match(keys(m,'take sword',question(m)),/Not here/);assert.equal(element(m,'P%',20),7);
- assert.match(keys(m,'take compass',question(m)),/Taken/);
+ assert.match(keys(m,'take compass',question(m)),/You take/);
  for(const cmd of ['north','west','west','south','west'])noDeath(keys(m,cmd,question(m)));
  assert.equal(integer(m,'A%'),7);assert.match(keys(m,'west',question(m)),/chasm/);
  assert.match(keys(m,'y',question(m)),/bark hut/);assert.equal(integer(m,'U%'),0);

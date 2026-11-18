@@ -25,13 +25,23 @@ function keys(m,s){const mark=m.output.length;m.enqueueInput(s+'\r','matrix');m.
 // Only the separately recorded prose and copyright changes are permitted.
 // Every command result, state field and RNG value remains compared.
 const oldProse=json('test/fixtures/caverns-prose-baseline.json');
-const prose=[...world.rooms.map(r=>[r.description,r.id]),...Object.entries(oldProse.descriptionByRoom).map(([id,s])=>[s,Number(id)])].sort((a,b)=>b[0].length-a[0].length);
+const edits=json('test/fixtures/caverns-prose-message-edits.json');
+const prose=[...world.rooms.map(r=>[r.description,r.id]),...Object.entries(edits.previousRooms).map(([id,text])=>[text,Number(id)]),...Object.entries(oldProse.descriptionByRoom).map(([id,s])=>[s,Number(id)])].sort((a,b)=>b[0].length-a[0].length);
 const escapeRegex=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const prosePatterns=prose.map(([text,id])=>[new RegExp([...text.replace(/\s+/g,'')].map(escapeRegex).join('\\s*'),'g'),id]);
+const literalPattern=text=>new RegExp([...text.replace(/\s+/g,'')].map(escapeRegex).join('\\s*'),'g');
+const sceneIds=[1,4,6];
+const oldIntroductions=['An evil wizard bars the way. He cries: Thou shalt not pass!','A sleeping dragon wakes and breathes jets of fire.','An old dwarf guards the steps, raising his dagger.'];
+const scenes=oldIntroductions.map((old,i)=>({id:sceneIds[i],old:literalPattern(old+'Nearby there lurks...'+edits.objects[sceneIds[i]-1].old+', '),current:literalPattern(edits.literalChanges[old])}));
+const literalEdits=Object.entries(edits.literalChanges).flatMap(([old,current],i)=>[[old,i],[current,i]]).sort((a,b)=>b[0].length-a[0].length).map(([text,i])=>[literalPattern(text),i]);
+const objectEdits=edits.objects.flatMap(o=>[o.old,o.new].map(text=>[new RegExp(literalPattern(text).source+'\\s*[,\\.]','g'),o.id]));
 function normal(s){
  s=s.replace(/\r\n/g,'\n').replace(/(ERROR IN|BREAK IN) \d+/g,'$1 <line>');
  for(const [pattern,id]of prosePatterns)s=s.replace(pattern,'<room-'+id+'>');
- return s.replace(/(<room-\d+>)\n+/g,'$1\n').replace('CAVERNS by John Hardy (c) 1982-83','CAVERNS by John Hardy (c) 1983');
+ for(const scene of scenes)s=s.replace(scene.old,'<scene-'+scene.id+'>\n').replace(scene.current,'<scene-'+scene.id+'>\n');
+ for(const [pattern,id]of literalEdits)s=s.replace(pattern,'<literal-'+id+'>');
+ for(const [pattern,id]of objectEdits)s=s.replace(pattern,'<object-'+id+'>');
+ return s.replace(/(<object-\d+>)[ \t\n]*/g,'$1').replace(/(<scene-\d+>)[ \t\n]*/g,'$1').replace(/(<room-\d+>)\n+/g,'$1\n').replace('CAVERNS by John Hardy (c) 1982-83','CAVERNS by John Hardy (c) 1983');
 }
 
 function encodeOld(s){const b=Buffer.from(encodeScenario(s));Buffer.from(old.comSha256,'hex').copy(b,8,0,8);b.writeUInt16LE(0,6);let sum=0;for(let i=0;i<128;i++)if(i!==6&&i!==7)sum+=b[i];b.writeUInt16LE(sum,6);return b;}
