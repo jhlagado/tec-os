@@ -1,0 +1,454 @@
+{
+  "scope": "Source-based editorial audit; implementation pending. Original/current full text and source statements are in inventory.json.",
+  "original": {
+    "repository": "https://github.com/jhlagado/caverns",
+    "ref": "d60481500140c79da0e6e06719a518c4231c4588",
+    "commit": "d60481500140c79da0e6e06719a518c4231c4588",
+    "file": "src/protected/caverns.basic",
+    "sha256": "2ba8f0c0b893e6a7eeaecde210148b78b98cad8137f26cc9cabe76d291693219"
+  },
+  "current": {
+    "worldSha256": "d0ee51ac062096f65ed9974393b5378ecd3301abb72f180035b2b144bdf2be8a",
+    "engineSha256": "b5cd7346e379c99d612bc566e6a97073eb006c0147093c22035bbe09f8dd86a7"
+  },
+  "rooms": [
+    {
+      "room": 1,
+      "key": "HUT",
+      "disposition": "Retain original; trim added guidance",
+      "findingAndAction": "Darkened room and northern door survive. Added hut/clearing detail is useful only if it avoids duplication; remove the unnecessary comma."
+    },
+    {
+      "room": 2,
+      "key": "HUT_CLEARING",
+      "disposition": "Retain corrected prose",
+      "findingAndAction": "Original clearing/window/latch scene survives with a missing-word correction. Keep west/east paths but use natural low-comma sentences."
+    },
+    {
+      "room": 3,
+      "key": "DARK_FOREST",
+      "disposition": "Retain imagery; trim additions",
+      "findingAndAction": "Original dark forest and distant river survive. Glinting water is modern embellishment; assess it openly rather than calling it archival. Keep useful exits once."
+    },
+    {
+      "room": 4,
+      "key": "CLOVER_FIELD",
+      "disposition": "Retain approved bearing fix",
+      "findingAndAction": "Original northward hut reference conflicts with the corrected map. Keep the western clearing and eastern slopes without a compressed destination list."
+    },
+    {
+      "room": 5,
+      "key": "RIVER_CLIFF",
+      "disposition": "Retain original; neutralise arrival",
+      "findingAndAction": "Glacial cliff and foot-beaten path survive. Keep the restored missing space. Change returns east to leads east if the exit sentence is needed."
+    },
+    {
+      "room": 6,
+      "key": "RIVERBANK",
+      "disposition": "Retain original and useful exit",
+      "findingAndAction": "Gioll and the east/west fork survive. The northward climb adds new information; retain it without an unnecessary connective comma."
+    },
+    {
+      "room": 7,
+      "key": "CRATER",
+      "disposition": "Retain original and approved warning",
+      "findingAndAction": "Crater, slippery rim and rising vapour all survive. Keep the explicit fatal-west warning and safe east route as reaffirmed by the author."
+    },
+    {
+      "room": 8,
+      "key": "OUTCROP",
+      "disposition": "Retain corrected geometry",
+      "findingAndAction": "Original height and distant bridge survive. Keep the distinction between seeing the bridge and reaching it; concise detour guidance must not repeat the same bearing."
+    },
+    {
+      "room": 9,
+      "key": "YMIR_SLOPES",
+      "disposition": "Retain weather and routes",
+      "findingAndAction": "Original arctic winds/cold survive. Mount spelling and comma-splice fix are reasonable. Describe western field and southern path in natural sentences."
+    },
+    {
+      "room": 10,
+      "key": "BRIDGE_APPROACH",
+      "disposition": "Trim repetitive modern addition",
+      "findingAndAction": "Original precipice, Gioll, mountain and string bridge survive. The added north-return phrase repeats the mountain bearing; consolidate without losing southward crossing information."
+    },
+    {
+      "room": 11,
+      "key": "STRING_BRIDGE",
+      "disposition": "Apply explicit author edit",
+      "findingAndAction": "Original creaking/swaying survives. Collapse warning is obsolete with the reusable bridge. Use the agreed north/south sentence and remove the redundant side-footing clause."
+    },
+    {
+      "room": 12,
+      "key": "SOUTH_LANDING",
+      "disposition": "Retain original; rewrite added exits",
+      "findingAndAction": "Original southern-bank sentence survives. Added north/west/east directions are useful new information but their comma-heavy list needs the author style pass."
+    },
+    {
+      "room": 13,
+      "key": "MUSHROOM_ROCK",
+      "disposition": "Retain original scene",
+      "findingAndAction": "Oak forest and poisonous mushrooms survive. Two modern route sentences can remain if clear and non-repetitive; remove unnecessary comma before and."
+    },
+    {
+      "room": 14,
+      "key": "BASALT_CLEARING",
+      "disposition": "Retain original emphasis",
+      "findingAndAction": "Basalt formation and VERY interesting cave survive. Northern exit addition must not assume the player arrived from the forest."
+    },
+    {
+      "room": 15,
+      "key": "ROPE_CLIFF",
+      "disposition": "Retain corrected vantage point",
+      "findingAndAction": "Original cliff view is expanded to a shelf on the southern bank. Keep physically clear positioning; remove return-language assumptions and excess punctuation."
+    },
+    {
+      "room": 16,
+      "key": "ENTRANCE",
+      "disposition": "Retain original and fairness hint",
+      "findingAndAction": "Original sunlight and frightened aside survive. Outside route and need-for-light warning are useful approved additions; do not imply matches already exist."
+    },
+    {
+      "room": 17,
+      "key": "EXPLORER_PASSAGE",
+      "disposition": "Retain author-approved clue attribution",
+      "findingAndAction": "Sacred Key clue survives. Earlier explorer attribution is an approved modern change. Keep a natural westward route without assuming prior visitation."
+    },
+    {
+      "room": 18,
+      "key": "ENTRANCE_CAVERN",
+      "disposition": "Retain useful expansion",
+      "findingAndAction": "Original was only the generic dark-cavern sentence. Modern daylight/north and torture-chamber/west information adds orientation rather than replacing rich original prose."
+    },
+    {
+      "room": 19,
+      "key": "TREASURE_ROOM",
+      "disposition": "Retain original atmosphere",
+      "findingAndAction": "Black elves, Svartalfheim and Viking dream survive. The westward exit is a useful addition; no abbreviated status sentence is needed."
+    },
+    {
+      "room": 20,
+      "key": "TREASURE_DOOR",
+      "disposition": "Restore original; reform dynamic states",
+      "findingAndAction": "Original small oak door locked from inside was replaced by formidable-door prose plus a terse status. Restore its meaning in natural closed-state sentences without the repeated east label. Open-state prose must not describe an intact door."
+    },
+    {
+      "room": 21,
+      "key": "NORTH_CAVERN",
+      "disposition": "Apply explicit author edit",
+      "findingAndAction": "Original generic cavern was expanded. Remove north of the long tunnel from the opening. Introduce a long tunnel south and an oak doorway north without assuming prior visits."
+    },
+    {
+      "room": 22,
+      "key": "CORRIDOR",
+      "disposition": "Apply explicit author edit",
+      "findingAndAction": "Original corridor/breeze survives but its directional breeze changed. Call it a corridor as requested. West leads to a different cavern, not back to the entrance cavern. Keep south to torture chamber; no new eastern exit."
+    },
+    {
+      "room": 23,
+      "key": "TORTURE_CHAMBER",
+      "disposition": "Preserve original scene; clarify exit",
+      "findingAndAction": "Original grotesque instruments, blood/bone and croaked-it voice survive with spelling/spacing fixes. Only clarify the modern eastern cavern destination and remove unnecessary comma."
+    },
+    {
+      "room": 24,
+      "key": "LONG_TUNNEL",
+      "disposition": "Resolve misleading addition",
+      "findingAndAction": "Original north/south tunnel survives. Sealed was invented later. Author allows removal or improvement of the whole glowing-crack sentence; do not invent a puzzle or light source to explain it."
+    },
+    {
+      "room": 25,
+      "key": "SIDE_CAVE",
+      "disposition": "Retain useful expansion",
+      "findingAndAction": "Original was generic dark cavern. Modern empty side-cave distinction and sole west exit are helpful; avoid back as an assumption if not needed."
+    },
+    {
+      "room": 26,
+      "key": "ROUND_CHAMBER",
+      "disposition": "Apply author edits; preserve imagery",
+      "findingAndAction": "Purple walls, chalk star, monks and ambiguous Norse-folk sentence are archival. Remove pagan. Reform the modern abbreviated exit list with a long tunnel and a passage towards the bat caves. Ask about the meaning of them before changing lore."
+    },
+    {
+      "room": 27,
+      "key": "UPPER_LEDGE",
+      "disposition": "Retain original and clearer destination",
+      "findingAndAction": "Original ledge/river and eastern exit survive. Balcony destination clarifies that exit. A northern passage is new useful information; prefer leads to a round chamber."
+    },
+    {
+      "room": 28,
+      "key": "BALCONY",
+      "disposition": "Apply author edits; recover cadence",
+      "findingAndAction": "Original temple dedication/exile/End Of All Things survive in lightly rephrased form. Remove pagan. Rail is modern and necessary for the agreed rope action. Review the added west/below sentences for duplication and retain no automatic command coaching."
+    },
+    {
+      "room": 29,
+      "key": "BAT_JUNCTION",
+      "disposition": "Retain deliberate maze landmarks",
+      "findingAndAction": "Original was generic dark cavern. Draught, junction and pillar are new navigation aids approved in the bat-loop simplification. Write full low-comma sentences and make the southern colony an immediate destination."
+    },
+    {
+      "room": 30,
+      "key": "FORKED_PILLAR",
+      "disposition": "Retain deliberate maze landmarks",
+      "findingAndAction": "Original was generic dark cavern. Pillar and limestone chamber distinguish the modern reciprocal loop; do not claim the new details were archival."
+    },
+    {
+      "room": 31,
+      "key": "LOW_PASSAGE",
+      "disposition": "Retain deliberate maze landmarks",
+      "findingAndAction": "Original was generic dark cavern. Dripping low passage is a new recognition cue; preserve the actual north/east connections in complete sentences."
+    },
+    {
+      "room": 32,
+      "key": "PALE_CHAMBER",
+      "disposition": "Retain necessary new description",
+      "findingAndAction": "The original renderer has no matching description for this room. Pale limestone is a modern landmark, not recovered lost text. Retain it as part of the approved simple loop."
+    },
+    {
+      "room": 33,
+      "key": "BAT_COLONY",
+      "disposition": "Preserve original scene; reduce commas",
+      "findingAndAction": "Original bats, centuries of droppings and indescribable smell survive. Added commas are not needed for the original cadence. Keep genuinely new north/west route guidance."
+    },
+    {
+      "room": 34,
+      "key": "KEY_CHAMBER",
+      "disposition": "Neutralise arrival assumption",
+      "findingAndAction": "Original was generic dark cavern. Key-chamber approach wording beyond the bat colony assumes an entry route; change to neutral location/visible connections."
+    },
+    {
+      "room": 35,
+      "key": "TEMPLE",
+      "disposition": "Restore integrated state-aware original",
+      "findingAndAction": "Original statue imagery remains in the current paragraph. Locked gate became great gate plus an extra North gate locked/open fragment. Integrate locked/open wording into the original sentence and delete duplicate fragments. Balcony text must not assert every arrival was a descent."
+    },
+    {
+      "room": 36,
+      "key": "WIZARD_CAVERN",
+      "disposition": "Retain useful expansion",
+      "findingAndAction": "Original was generic dark cavern. Shaft and river-sound directions clarify the lower region; avoid redundant bearings or a bare exit list."
+    },
+    {
+      "room": 37,
+      "key": "CRYPT",
+      "disposition": "Retain approved riddle change; review lost voice",
+      "findingAndAction": "Original crypt/decay survives. APE riddle was deliberately replaced by VARD. The original monks-liked-silly-puzzles aside was lost too; consider recovering the aside only if it fits the approved clue. Do not restore APE mechanics."
+    },
+    {
+      "room": 38,
+      "key": "CELL",
+      "disposition": "Retain approved reversible route",
+      "findingAndAction": "Original cell survives. Closed western wall is obsolete. Preserve shaft/hatch information in natural prose; remove terse shaft and DROP command coaching from ordinary description while keeping fair physical clues."
+    },
+    {
+      "room": 39,
+      "key": "SHAFT",
+      "disposition": "Retain useful expansion",
+      "findingAndAction": "Original was generic dark cavern. Shaft/cell and southern cavern directions are useful; avoid just beyond as an assumption about arrival."
+    },
+    {
+      "room": 40,
+      "key": "LOWER_LEDGE",
+      "disposition": "Retain river imagery; reform additions",
+      "findingAndAction": "Original ledge, subterranean river and roof inflow survive. Lower-region route additions are useful but currently rely on fragments and semicolon lists. Clarify in full sentences without inventing river flow directions."
+    },
+    {
+      "room": 41,
+      "key": "WEST_DRAIN",
+      "disposition": "Preserve original surprise",
+      "findingAndAction": "Original drainage-network exclamation survives in rephrased form. Prefer its original voice with spacing correction where possible. Added conduit/junction directions are useful."
+    },
+    {
+      "room": 42,
+      "key": "MIDDLE_DRAIN",
+      "disposition": "Review lost shared voice",
+      "findingAndAction": "Original shared drainage surprise was replaced with a neutral introduction. Restore evocative wording where it helps, but do not mechanically repeat one exclamation in every drain. Keep distinctive route information."
+    },
+    {
+      "room": 43,
+      "key": "DRAIN_JUNCTION",
+      "disposition": "Reform new junction/puzzle description",
+      "findingAndAction": "Original shared drainage line replaced by a detailed junction. Keep approved physical hatch/latch clue and real paths. Remove unrequested automatic OPEN HATCH coaching from ordinary narrative if the latch is adequately described."
+    },
+    {
+      "room": 44,
+      "key": "BLIND_DRAIN",
+      "disposition": "Retain useful branch distinction",
+      "findingAndAction": "Original shared drainage line replaced by a blind-branch description. This is a useful modern distinction, not a lost rich individual scene. Keep a natural exit sentence."
+    },
+    {
+      "room": 45,
+      "key": "WATERFALL",
+      "disposition": "Retain original and useful paths",
+      "findingAndAction": "Original waterfall/surface-Gioll sentence survives. Review repeated from phrasing only mechanically. New steps/safe paths should be complete sentences with no invented bearings."
+    },
+    {
+      "room": 46,
+      "key": "PEARL_CHAMBER",
+      "disposition": "Retain deliberate recognition cue",
+      "findingAndAction": "Original was generic dark cavern. Pearl-white walls and a winding height-changing passage clarify the modern geography; do not replace with an abbreviated exit list."
+    },
+    {
+      "room": 47,
+      "key": "STONE_STEPS",
+      "disposition": "Retain corrected staircase geometry",
+      "findingAndAction": "Original staircase/southward direction survives. Current top-of-stairs and waterfall/east-chamber details add orientation. No need to remove useful atmosphere or bearings."
+    },
+    {
+      "room": 48,
+      "key": "CASTLE_VIEW",
+      "disposition": "Preserve original joke",
+      "findingAndAction": "Original crumbling ledge, magic castle and conversational aside survive. Additional east crossing and northern route must not repeat the castle bearing or presume entry route."
+    },
+    {
+      "room": 49,
+      "key": "DRAWBRIDGE",
+      "disposition": "Restore wonder where compatible",
+      "findingAndAction": "Original drawbridge lowering by magic was replaced with golden-bridge and mechanical status prose. Preserve present crossing rules but consider restoring original magical voice rather than a technical crossing-secures explanation."
+    },
+    {
+      "room": 50,
+      "key": "COURTYARD",
+      "disposition": "Preserve original exuberance",
+      "findingAndAction": "Courtyard WOW, really-something castle, inscription and escape tunnel survive. Added drawbridge/magazine directions need natural wording and restrained commas, not wholesale removal."
+    },
+    {
+      "room": 51,
+      "key": "MAGAZINE",
+      "disposition": "Preserve original joke",
+      "findingAndAction": "Original really-super-castle sentence survives. Westward courtyard guidance adds information; prefer leads rather than back if route-neutrality matters."
+    },
+    {
+      "room": 52,
+      "key": "EAST_BANK",
+      "disposition": "Retain approved bearing correction",
+      "findingAndAction": "Original eastern bank survives. Old eastward cliff tunnel now leads north under the corrected map. Do not restore the wrong bearing; clarify underground river and wooden crossing naturally."
+    },
+    {
+      "room": 53,
+      "key": "WOODEN_BRIDGE",
+      "disposition": "Retain original bridge; remove original duplication",
+      "findingAndAction": "Original wooden bridge survives with useful crossing/path directions. The archival renderer also prints generic dark cavern here; dropping that duplicate was a reasonable cleanup."
+    },
+    {
+      "room": 54,
+      "key": "CONDUIT",
+      "disposition": "Preserve original sensory detail",
+      "findingAndAction": "Original knee-deep freezing water survives with a missing-space fix. Keep the service path and new drains route, removing unnecessary connective comma and assumed known destinations."
+    }
+  ],
+  "reformItems": [
+    {
+      "id": "SCENE-01",
+      "area": "Wizard entrance",
+      "sourceLocations": "Original lines 200 / current FOE_INTRO",
+      "finding": "Swirling mist, outstretched hand and the full challenge were condensed into a generic blocking-the-way sentence.",
+      "action": "Recover the original scene with shall/shalt and grammar corrected; avoid repeating a first appearance on every redisplay."
+    },
+    {
+      "id": "SCENE-02",
+      "area": "Dragon entrance",
+      "sourceLocations": "Original 202\u2013203 / current FOE_INTRO",
+      "finding": "Enormous green dragon, flickering eyes and leap were shortened to a waking/fire sentence plus the generic creature listing.",
+      "action": "Recover evocative details. Avoid repeated awakening and duplicate introduction. Correct missing of in jets of fire."
+    },
+    {
+      "id": "SCENE-03",
+      "area": "Dwarf entrance",
+      "sourceLocations": "Original 205 / current FOE_INTRO",
+      "finding": "Lantern, quoted duty and lunge were removed from the richer scene.",
+      "action": "Restore the original scene with dwarf and word-spacing corrected; retain current encounter behavior."
+    },
+    {
+      "id": "STATE-01",
+      "area": "Temple gate",
+      "sourceLocations": "Original 40 / current room35 and gate status",
+      "finding": "Original statue paragraph still exists; extra gate fragment duplicates and interrupts it.",
+      "action": "Use the original integrated locked-gate sentence and an open-state variant. Delete North gate locked/open fragments."
+    },
+    {
+      "id": "STATE-02",
+      "area": "Treasure door",
+      "sourceLocations": "Original 28 / current room20 and door status",
+      "finding": "Original full inside-locking description moved into terse East status.",
+      "action": "Restore original meaning in full sentences with approved explosives hint. Remove repeated east label. Keep different truthful blasted state."
+    },
+    {
+      "id": "STATE-03",
+      "area": "Rope",
+      "sourceLocations": "Original 163\u2013164 / new rope handlers",
+      "finding": "Old unsafe short rope was deliberately replaced by secure two-way rope; new messages are terse.",
+      "action": "Keep safe agreed mechanics. Expand confirmations. Delete automatic Use UP or DOWN coaching. Do not restore the ten-foot shortfall."
+    },
+    {
+      "id": "STATE-04",
+      "area": "Crypt seal and shaft",
+      "sourceLocations": "Original 127 / current seal and shaft statuses",
+      "finding": "Original animated eastern wall now uses terse East seal/shaft status and command instructions.",
+      "action": "Describe the opening naturally. Retain VARD and reversibility; keep physical grille-size information without a compressed command list."
+    },
+    {
+      "id": "STATE-05",
+      "area": "Drawbridge",
+      "sourceLocations": "Original 49,58 / current room49 and bridge status",
+      "finding": "Original magical lowering/waters imagery replaced by technical status/crossing language.",
+      "action": "Restore wonder where compatible with current lowered/raised state. Full sentences for both states, not East drawbridge raised/lowered fragments."
+    },
+    {
+      "id": "MESSAGE-01",
+      "area": "Chasm death",
+      "sourceLocations": "Original 121 / current fatal movement",
+      "finding": "Original stumbling/fall/rocks scene shortened to a generic fall-and-die sentence.",
+      "action": "Offer the original atmospheric version with mechanical correction. Preserve only the approved warned crater hazard, not removed surprise deaths."
+    },
+    {
+      "id": "MESSAGE-02",
+      "area": "Creature death and aftermath",
+      "sourceLocations": "Original 112,154 / current CREATURE_KILLS and sword aftermath",
+      "finding": "Named-creature death and fuller black-cloud disappearance are now generic/shortened.",
+      "action": "Recover creature-specific identification and original cloud imagery. Keep permanent defeats and the dragon corpse exception."
+    },
+    {
+      "id": "MESSAGE-03",
+      "area": "Score/ranking introduction",
+      "sourceLocations": "Original 105,192 / current ending and ranking",
+      "finding": "Full adventurer-ranking introduction shortened to Ranking.",
+      "action": "Use natural original score/ranking language integrated with the approved homecoming and optional continued exploration."
+    },
+    {
+      "id": "MESSAGE-04",
+      "area": "Combat responses",
+      "sourceLocations": "Original 145,148\u2013151,153 / current SWORD",
+      "finding": "Most combat wording survives. He/his and head-blow language is original, not newly introduced abbreviation.",
+      "action": "Correct pronouns and creature-appropriate actions as separately requested. Preserve RNG, fatigue, hit odds and outcome semantics."
+    },
+    {
+      "id": "MESSAGE-05",
+      "area": "Candle/bomb responses",
+      "sourceLocations": "Original 59,62,158,160,161 / current lighting/bomb",
+      "finding": "Some shorter text reflects removal of insulting replies and arbitrary bomb relocation.",
+      "action": "Do not restore old side effects or room subtraction. Recover fuse/explosion atmosphere only where truthful; keep helpful non-insulting full sentences."
+    },
+    {
+      "id": "MESSAGE-06",
+      "area": "Inventory/action confirmations",
+      "sourceLocations": "Original 68,74,94,98,165 / current shared printer",
+      "finding": "Many headers and trailing commas are original. New Taken/Dropped confirmations are modern additions requested by the author.",
+      "action": "Preserve confirmations; use natural sentences and correct singular/plural/list punctuation. Do not call inherited punctuation an AI-created loss."
+    },
+    {
+      "id": "MESSAGE-07",
+      "area": "Opening and restart",
+      "sourceLocations": "Original 3\u20134,105\u2013106 / current banner/end",
+      "finding": "Presentation-only platform effects omitted; credits changed as authorised; guidance/homecoming added.",
+      "action": "Keep 1982\u201383/GPL2019. Optional HELP for controls; do not restore platform graphics/music dependencies merely for source similarity."
+    },
+    {
+      "id": "MESSAGE-08",
+      "area": "Transport and commands",
+      "sourceLocations": "Original 109,120,125,128\u2013143,170\u2013172 / current command/action handlers",
+      "finding": "Some replies survive exactly; bat destination is more explicit; teleport sentence retains original past-tense shift.",
+      "action": "Retain useful clarity with grammar fixes. Do not imply shorter text necessarily lost imagery where the original was already brief."
+    }
+  ]
+}

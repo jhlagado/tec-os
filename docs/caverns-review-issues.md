@@ -1823,3 +1823,22 @@ This specific example is included in the already committed complete
 original/current PRINT inventory and the gate-status recovery action item.
 The requested action is queued for the later text batch; current game and
 starter-card artifacts remain unchanged under the ongoing notes-only review.
+
+
+## Full editorial audit and skilled concision target — 19 November 2026 (Melbourne)
+
+The author requests an evaluative audit, not only a string inventory. Completed
+source review is recorded in caverns-editorial-reform-register.md with all54
+room dispositions and16 message reform areas. Exact original/current text and
+source locations remain in caverns-text-comparison.md and its JSON inventory.
+The current temple statue paragraph still exists: its defect is the altered
+gate sentence plus a duplicate shorthand status. Other scenes genuinely lost
+imagery. Report those differences accurately rather than equating them.
+
+Recovery first, skilled editing second: the author suggests roughly30% shorter
+room descriptions without losing evocative elements. Treat this as a target to
+measure against the full recovered prose, not an inflexible quota. Preserve
+imagery, humour, sensory detail, clues and actual directions. Remove repetition
+and weak modern additions before original atmosphere. Record text byte counts,
+logical/padded executable size and headroom separately. No game artifact has
+been edited by this audit; implementation and author prose approval are pending.

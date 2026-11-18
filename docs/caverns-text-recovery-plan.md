@@ -7,6 +7,21 @@ state-dependent messages in the engine. It did not establish that every
 original scene or line of dialogue had been recovered. The complete inventory
 now covers both paths instead of relying on terse-text heuristics.
 
+## Editorial audit and later concision
+
+The [editorial reform register](caverns-editorial-reform-register.md) now gives
+an individual disposition for all 54 rooms and 16 concrete message reform
+areas. This goes beyond the comparison inventory: it judges what was lost,
+what is duplicated, what is a useful modern addition and what reflects an
+approved gameplay change. Findings remain pending application.
+
+The author requests full-prose recovery before skilled editing for concision.
+Aim for roughly 30% shorter room descriptions only where this preserves the
+evocative elements. Do not impose a quota, promise a 30% executable saving or
+return to compressed labels. Remove duplication and weak additions before
+cutting original imagery. Measure encoded text, final COM size and runtime
+headroom separately against the full recovered candidate.
+
 ## Comparison records
 
 - [Full original/current comparison](caverns-text-comparison.md): all 54 rooms,
