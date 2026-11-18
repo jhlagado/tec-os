@@ -13,11 +13,11 @@ fragments. The separate concision pass preserves the approved navigation,
 warning, rope and clue changes. It removes duplication and unnecessary commas
 rather than replacing descriptions with labels.
 
-Current room text: 8,158 characters versus 10,387 in the recorded full-prose
-candidate (21.46% less). This is not a 30% reduction in executable size. The
+Current room text: 8,131 characters versus 10,387 in the recorded full-prose
+candidate (21.72% less). This is not a 30% reduction in executable size. The
 rough 30% editorial aspiration is not enforced at the expense of imagery.
-The native candidate is 35,968 file bytes (35,941 logical), saving 1,280 file
-bytes versus the previous build. It leaves 5,275 bytes before dynamic allocation
+The native candidate is 35,968 file bytes (35,876 logical), saving 1,280 file
+bytes versus the previous build. It leaves 5,340 bytes before dynamic allocation
 after the 768-byte stack reservation. Qualification is still pending.
 
 Recovered scenes include the wizard's swirling mist and hand, the green dragon
@@ -99,8 +99,8 @@ additional clipped status, not the original statue imagery.
 
 The same final engine and object/rule DATA were compiled with the untrimmed
 recovered room paragraphs as a separate, unshipped control. It is 38,272 file
-bytes (38,272 logical). The edited build is 35,968 file bytes (35,941 logical),
-saving 2,304 file bytes or 2,331 logical bytes from room editing alone. The
+bytes (38,234 logical). The edited build is 35,968 file bytes (35,876 logical),
+saving 2,304 file bytes or 2,358 logical bytes from room editing alone. The
 control is a successful compilation measurement, not a full-play qualification.
 [Exact evidence](evidence/caverns-prose-concision/budget.json) includes both
 compiler/runtime identities and executable hashes. Reproduce it with
@@ -123,10 +123,20 @@ to "The eastern wall of the crypt slides open." This removes an arrival
 assumption and repeated information. Only 35 literal bytes changed; executable
 record rounding saves another 128 file bytes. No game logic changed.
 
-The platform reference COM is 594b1e39 (36,096 bytes). The final COM is a686342f
+The platform reference COM is 594b1e39 (36,096 bytes). The crypt-only intermediate COM is a686342f
 (35,968 bytes). Both full 1,433-check logs identify the reference version.
 The final artifact separately passes all 41 affected game/card/editor/vector
 checks, the 480-command state/RNG comparison and 16 state-dependent prose
 observations. All unaffected OS/compiler/Viewer implementation bytes remain
 unchanged. Final compilation and browser receipts identify the exact final COM;
 do not treat the older browser screenshots as final-artifact compilation proof.
+
+
+The final deduplication removes a repeated drawbridge bearing and repeated
+crypt name instruction. It also makes the completion line a full sentence.
+The final COM is d5637368, still 35,968 file bytes and now 35,876 logical.
+These text-only changes separately pass all 41 affected native checks,
+480-command exact state/RNG comparison, full126-point/all54-room quest and
+16 conditional-prose observations. No world connections or puzzle rules change.
+The final scene/size records use final-* filenames to distinguish them from
+intermediate polished-* and original reference receipts.

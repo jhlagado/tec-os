@@ -7,7 +7,7 @@ and [map audit](caverns-map-audit.md), outside the practical manual.
 ## Readiness
 
 Two independent full platform runs pass **1,433 tests each, zero failures or
-skips** on the prose-engine reference. A final literal-only crypt correction
+skips** on the prose-engine reference. Final text-only corrections
 then passes **41 affected native checks**, including the 126-point quest through
 all 54 rooms, 480-command complete-state/RNG comparison, checkpoint restoration,
 TED editing and compiler/game interrupt vectors. Sixteen conditional-prose
@@ -24,7 +24,7 @@ outstanding. No public version or release tag is created by this increment.
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Current source and artifacts | jhlagado/tec-os, 319eee3782e9dfb14a67eace1a688caf2b6da25f3c1652e7 |
+| Current source and artifacts | jhlagado/tec-os, 67efb1b0951ce30bf01d0ad892e24bfed6b421fd |
 | Firmware code pin | jhlagado/tec-os, 1dd75f5bc97672d71a885010ba3aff9c2f598d6c; runtime source unchanged from tested 9b25a0cf |
 | Source on SYSTEM | programs/CAVERNS.BAS |
 | Verification executable, excluded from starter | programs/CAVERNS.COM; 35,968 bytes |
@@ -39,8 +39,8 @@ outstanding. No public version or release tag is created by this increment.
 | Development checkpoints | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 | Assembly comparison, development only | programs/CAVASM.COM |
 
-Source SHA-256: fc1cfc1e5dcfd9df264555fc8afa5a6b0c8ca3a91d918a6615bb4cea9ec017f0.
-Executable SHA-256: a686342fae8869418b7824501659e946c6fdbbf5ed058a480834bb34e60eb21d.
+Source SHA-256: 2f65e0a2a89045ec87b6c7291654b9a8612bfc1747c3c241f5da4b826768b7bd.
+Executable SHA-256: d563736861387ebf9152e730d28b0d5513ceba1c1b0f7666ddc4c5942bab956d.
 Compiler SHA-256: f8d4b8944be95451faa7aa0bc99e611f6793b7d4a8e413344e951e26ede07498.
 Runtime SHA-256: 29c07740630069921f93581c8527d5db057c63a073a95b37c7a020df92ae5e38.
 
@@ -84,7 +84,7 @@ Counted DATA lines preserve paragraphs longer than BASIC's 255-byte single
 string limit. Forty-column prose layout is not the current qualification target.
 
 The shell-resident TPA is 41,984 bytes. The executable occupies 35,968 file bytes
-and 35,941 logical bytes; reserving a 768-byte CPU stack leaves 5,275 bytes for
+and 35,876 logical bytes; reserving a 768-byte CPU stack leaves 5,340 bytes for
 dynamic allocations before initialisation. Arrays, strings and control frames
 consume that space during play. Bare-ROM TPA is 46,536 bytes, but the example
 runs with the shell resident. Large source experiments can still exceed memory.

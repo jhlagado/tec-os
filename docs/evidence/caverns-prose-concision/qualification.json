@@ -1,5 +1,5 @@
 {
-  "status": "Core increment qualified and on main; final small narrative deduplication scoped checks in progress.",
+  "status": "Native final artifact qualified: two full platform reference runs plus41 final affected checks,480-command state/RNG comparison and16 conditional-prose observations. Viewer final receiving/publication pending.",
   "fullProseCharacters": 10387,
   "editedRoomCharacters": 8131,
   "roomReductionPercent": 21.72,
@@ -28,7 +28,7 @@
     "commands": 480,
     "stateAndRNG": "identical",
     "outputExceptions": "exact recorded room and message edits only",
-    "gameSHA256": "a686342fae8869418b7824501659e946c6fdbbf5ed058a480834bb34e60eb21d"
+    "gameSHA256": "d563736861387ebf9152e730d28b0d5513ceba1c1b0f7666ddc4c5942bab956d"
   },
   "stateDependentProseObservations": 16,
   "focusedInitial": {
@@ -53,9 +53,9 @@
     "evidence": "jhlagado/tec-os-viewer docs/evidence/caverns-prose-concision/ (receiving record pending)"
   },
   "bookStarter": {
-    "sourceAllocatedBytes": 25344,
+    "sourceAllocatedBytes": 25216,
     "files": 15,
-    "fileBytes": 116736,
+    "fileBytes": 116608,
     "freeBytes": 903168
   },
   "freshBrowserTrial": {
@@ -146,7 +146,7 @@
   "finalQuest": {
     "score": 126,
     "rooms": 54,
-    "gameSHA256": "a686342fae8869418b7824501659e946c6fdbbf5ed058a480834bb34e60eb21d"
+    "gameSHA256": "d563736861387ebf9152e730d28b0d5513ceba1c1b0f7666ddc4c5942bab956d"
   },
   "temporaryIndependentCheckoutRemoved": true,
   "finalNarrativeDeduplication": {
@@ -157,6 +157,14 @@
       "Completion uses a full sentence."
     ],
     "gameLogicChanged": false,
-    "affectedChecks": "in progress"
+    "affectedChecks": {
+      "tests": 41,
+      "pass": 41,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "codePin": "67efb1b0951ce30bf01d0ad892e24bfed6b421fd",
+    "stateDependentObservations": 16
   }
 }
