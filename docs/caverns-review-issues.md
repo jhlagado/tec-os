@@ -1660,3 +1660,23 @@ so ensure the player can discover how to enter after opening it without
 silently changing the map or leaving an unannounced movement command.
 No exit changes have been requested or implemented. As agreed for this
 walkthrough, this is a recorded decision only, not an updated running build.
+
+
+## Author walkthrough: tunnel glow and non-scoring brick — 18 November 2026
+
+Source check: room24 originally described a faint glow from a narrow crack in
+the eastern wall. The added word "sealed" is modern; the author finds a sealed
+but glowing crack confusing and suggestive of an unavailable puzzle. The prior
+map review blocked the old east shortcut and retained the crack as scenery.
+There is no current crack-opening action or glow-related puzzle state. Review
+whether to restore the original "narrow crack" wording, make clear it is too
+narrow to pass through, or remove an unhelpful apparent clue. Do not invent a
+new puzzle or assert an unestablished light source. Wording decision pending;
+current game unchanged.
+
+The red house brick (object23, initially tunnel24) has value0, is outside the
+scoring treasure range7..17, and has no dedicated implemented tool use. Taking
+it consumes one carried-item slot but adds no points, even at the hut. The
+author has chosen to take it in this live playthrough; do not assume it is a
+quest requirement. This note is source inspection, not an externally controlled
+inventory change.
