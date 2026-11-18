@@ -1585,3 +1585,28 @@ Suggested complete text, preserving the breeze and sentence structure:
 known. The western destination is room21, distinct from entrance cavern18,
 with the long tunnel south and treasure doorway north. Record this as an
 additional proofreading/navigation clarity item; current game unchanged.
+
+
+## Author walkthrough: arrival-neutral cavern descriptions — 18 November 2026
+
+Author-approved room21 wording for the later prose batch:
+
+> You are deep in a dark cavern. A passage leads north to an oak doorway,
+> and a draught comes from a corridor to the east. A long tunnel stretches
+> south into the darkness.
+
+Remove "north of the long tunnel" from the opening and introduce "A long
+tunnel" rather than assuming the player already knows it. Keep UK draught.
+All three bearings and destinations remain unchanged.
+
+Apply this editorial rule during the remaining review: descriptions must work
+from any legal entry, introduce landmarks without assuming previous visits,
+and use leads rather than returns where the latter presumes the player's
+route. A named destination may still be described if visible; do not erase
+useful bearings. Check encounter/state-dependent descriptions separately.
+
+For room22 the author prefers simply "a corridor" over "an east-west
+corridor". This preference supersedes the preceding proposed opening; keep
+the breeze, westward dark-cavern exit and southern torture-chamber doorway.
+Do not insist on an orientation label or invent an eastern passage.
+These are accumulated review decisions, not changes to the running game.
