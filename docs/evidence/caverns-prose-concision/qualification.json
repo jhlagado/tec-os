@@ -1,5 +1,5 @@
 {
-  "status": "Native compilation and immutable-world checks pass; focused gameplay/strict/Viewer qualification pending.",
+  "status": "First full strict run passes1433/1433; independent second run in progress. Game/browser/book checks pass; main integration pending.",
   "fullProseCharacters": 10387,
   "editedRoomCharacters": 8158,
   "roomReductionPercent": 21.46,
@@ -83,5 +83,17 @@
     "buildHTMLPages": 43,
     "internalLinksAssetsFragments": 2981,
     "errors": 0
-  }
+  },
+  "strictRuns": [
+    {
+      "index": 1,
+      "tests": 1433,
+      "pass": 1433,
+      "fail": 0,
+      "skipped": 0,
+      "logSHA256": "55cf6b8dedabe4019fa6c7f632b48944dce370cf02056c69f761b9e41da7f4cb",
+      "codePin": "7cea9d0b52bb4a9d3e8c3dd83d2dcc3155278b20",
+      "secondRun": "still active, not yet qualified"
+    }
+  ]
 }
