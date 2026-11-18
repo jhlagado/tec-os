@@ -119,3 +119,47 @@ media/Viewer only after the appropriate checks. Compare all exits, object
 state, RNG and non-prose behavior against the qualified version. Check the
 corrected text at 80 columns and exercise both sides of each dynamic message.
 Until then the running game and its published card remain unchanged.
+
+
+## Arrival-neutral article sweep and round-room provenance
+
+Additional author direction during the 18 November walkthrough: use a/an when
+introducing an unseen landmark instead of presuming the player already knows
+it. This is semantic review, not a global replacement of the. Keep definite
+articles for something already introduced in the same description, unique named
+features, body parts and definite relations. Record candidates without changing
+the running game.
+
+All 54 room descriptions were checked again for destination articles, returns/
+back phrasing and assumptions about the entry route. Main candidates:
+
+| Rooms | Review candidate |
+| --- | --- |
+| 3, 4, 9 | Introduce a hut clearing or a field of clovers without assuming a visit. Keep Mount Ymir as a proper name. |
+| 5, 7, 10, 14, 15, 17 | Review returns/back as route-dependent wording; leads is neutral. A safe exit remains explicit at the crater. |
+| 20, 21, 22 | Apply the already recorded doorway/cavern/corridor decisions; introduce a cavern and a long tunnel. |
+| 26 | Replace the compressed exit inventory with complete sentences introducing a long tunnel, a river ledge, bat caves and a side cave. |
+| 27, 28, 29, 30 | Introduce a round chamber, an upper river ledge and a junction as first-seen destinations when appropriate. |
+| 34 | Avoid beyond the bat colony as an assumed approach. |
+| 35 | High overhead is the balcony from which you descended assumes rope descent. The player can also return via the crypt. Prefer a balcony high overhead without asserting the most recent route. |
+| 36, 37, 38, 40 | Review the temple, crypt and cavern as previously known destinations; preserve visible/established relations and specific gates. |
+| 42, 43, 44 | Introduce a conduit/junction without implying a previous visit; leads instead of returns. |
+| 45, 47, 48 | Introduce a lower ledge/waterfall where not established; keep a visible feature definite once introduced in the same passage. |
+| 49, 50, 51, 52, 53, 54 | Review courtyard, powder magazine, conduit and riverbank as route destinations; no automatic global article changes or exit edits. |
+
+The original round-room description already contains the mystical dark purple
+walls, chalk star, infamous pagan sect, monks of Loki and ambiguous sentence
+about Norse folk believing them to be gods. Its preserved spelling has a missing
+space in staris. The current compressed final exit list is a modern addition,
+not archival wording. The author now explicitly requests removing pagan from
+the round-room sentence; this does not by itself authorise removing it from
+the separate balcony/temple description. Keep the original atmosphere and
+correct spacing/grammar with minimal changes. The them ambiguity remains open.
+
+Candidate replacement for the modern exit list, respecting low-comma style:
+"A long tunnel leads north. A passage south leads to a river ledge. Bat caves
+lie to the west and a small side cave opens to the east."
+
+The author's latest crack instruction allows improving or removing the entire
+unhelpful glowing-crack sentence. This supersedes treating deletion of sealed
+alone as a complete solution. Do not invent a new light source or puzzle.

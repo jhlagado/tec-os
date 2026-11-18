@@ -1692,3 +1692,20 @@ not comma-heavy connective sentences. Apply by reading each sentence, never
 blindly deleting punctuation. This preference supersedes punctuation in earlier
 proposed replacement passages. The proofreading review now records this rule.
 Notes only; no running-game or media changes during this walkthrough.
+
+
+## Author walkthrough: round room and indefinite articles — 18 November 2026
+
+Original text checked: purple walls, chalk star, pagan sect, monks and Norse
+folk sentence are archival. The abbreviated final exit list is modern. Remove
+pagan from the round-room description as expressly requested. Introduce a long
+tunnel rather than the long tunnel and rewrite the modern exit list in natural
+full sentences with restrained commas. Preserve actual north/south/west/east
+connections and the remaining original atmosphere. The unclear them reference
+still requires a meaning decision, not an invented interpretation.
+
+A second sweep of all54 descriptions for arrival assumptions and a/an versus
+the is recorded in caverns-proofreading-review.md with room-specific candidates.
+Do not globally replace the: already introduced and uniquely identifiable
+features can retain it. The author also permits removing or improving the
+entire unhelpful glowing-crack sentence. No game implementation during review.
