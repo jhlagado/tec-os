@@ -1,12 +1,14 @@
 # Caverns prose recovery and light editing
 
-The author’s review added two subsequent prose passes. Rooms 1–10 restore
-the clearing, distant river, high vapour and view from Mount Ymir. The outcrop
-shows the bridge and leaves the route to the player. Rooms 11–20 restore the
-basalt towering above the clearing and sunlight pouring into the cave. The
-treasure doorway describes what lies beyond it only after it opens. The
-current COM (`588c4999`) occupies 35,968 bytes. The figures and release receipts
-below describe the earlier editorial pass.
+The author’s review now covers all 54 rooms. Later edits restore details such
+as sunlight pouring into the cave, bats hanging over centuries of droppings
+and the roar of the waterfall below the stone staircase. The original
+Castle View aside stays and its north path is described without an exit list.
+The current COM (`3420a054`) occupies 36,224 bytes. The release figures and
+receipts below describe the earlier editorial pass.
+
+The [incidental text review](caverns-incidental-text-review.md) lists the game
+messages and item descriptions separately for author review.
 
 Native qualification is complete. Two full platform runs pass 1,433 tests
 each. Final literal-only corrections then pass all 41 affected

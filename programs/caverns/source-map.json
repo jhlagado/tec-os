@@ -61,12 +61,12 @@
     "COMPUTE_SCORE": 2240,
     "RANKING": 2280,
     "HOMECOMING": 2350,
-    "EXIT_DATA": 3510,
-    "OBJECT_DATA": 3590,
-    "INITIAL_DATA": 3640,
-    "VALUE_DATA": 3650,
-    "DIRECTION_DATA": 3660,
-    "VERB_DATA": 3670
+    "EXIT_DATA": 3530,
+    "OBJECT_DATA": 3610,
+    "INITIAL_DATA": 3660,
+    "VALUE_DATA": 3670,
+    "DIRECTION_DATA": 3680,
+    "VERB_DATA": 3690
   },
   "constants": {
     "ABSENT": 0,
