@@ -1636,3 +1636,27 @@ open state: "The blast has opened a passage east into the treasure room."
 Keep the agreed explosives clue and all current exits/puzzle rules. Reconcile
 static doorway wording so it never describes intact timber after destruction.
 Notes only; current game remains unchanged during the author's walkthrough.
+
+
+## Author decision: simplify the closed treasure-door description — 18 November 2026
+
+This supersedes the preceding closed-state wording proposal. Remove "in the
+eastern wall" and the abbreviated "East:" status line. The author does not
+want a repeated eastern bearing while inspecting a blocked door. Preserve the
+original small oak door/locked-from-inside description, with the agreed natural
+explosives hint, rather than replacing it with compressed labels.
+
+Candidate closed-state prose for the later text batch:
+
+> You can see a small oak door. It has been locked from the inside. Its heavy
+> timber is bound with iron, and the entrance looks formidable. Perhaps some
+> explosives would open it. A passage leads south to the cavern.
+
+Preserve original sentences wherever compatible with agreed changes. Avoid
+printing a second abbreviated or duplicated description immediately afterwards.
+The open state must no longer describe an intact locked door; describe the
+opened passage naturally. The existing actual passage is east into room19,
+so ensure the player can discover how to enter after opening it without
+silently changing the map or leaving an unannounced movement command.
+No exit changes have been requested or implemented. As agreed for this
+walkthrough, this is a recorded decision only, not an updated running build.
