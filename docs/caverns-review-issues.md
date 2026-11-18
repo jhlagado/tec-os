@@ -1534,3 +1534,15 @@ HELP should cost no turn or candle time and allow no enemy retaliation or bat
 transport. Advertise it in the opening banner and keep CAVERNS.TXT consistent.
 The current public game has no HELP handler; the external CAVERNS.TXT is the
 existing command reference. Preserve all existing memory/size gates.
+
+
+## Author walkthrough: torture-chamber exit wording — 18 November 2026
+
+Wording review only; current game unchanged. The author finds "the entrance
+cavern lies to the east" awkward and requests "the entrance to the cavern lies
+to the east". Retain the northward corridor and clarify the eastern return in
+full natural sentences. Geography check: east actually reaches room 18, the
+inner cavern, and north from there reaches room 16 at the daylight cave mouth.
+Resolve the final wording without implying east alone leads directly outside;
+"the cavern near the cave entrance lies to the east" is a geographically
+explicit alternative for the next prose pass. No exit changes requested.
