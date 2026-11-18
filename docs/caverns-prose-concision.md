@@ -91,3 +91,23 @@ this text-only increment. These remain separate review items.
 
 The statue remains in the temple paragraph. These sentences replace the
 additional clipped status, not the original statue imagery.
+
+
+## Controlled native size comparison
+
+The same final engine and object/rule DATA were compiled with the untrimmed
+recovered room paragraphs as a separate, unshipped control. It is 38,400 file
+bytes (38,307 logical). The edited build is 36,096 file bytes (35,976 logical),
+saving 2,304 file bytes or 2,331 logical bytes from room editing alone. The
+control is a successful compilation measurement, not a full-play qualification.
+[Exact evidence](evidence/caverns-prose-concision/budget.json) includes both
+compiler/runtime identities and executable hashes. Reproduce it with
+`node tools/caverns-prose-budget.mjs` after building the normal starter card.
+Neither CAVFULL.BAS nor CAVFULL.COM is included in the public media.
+
+A fresh browser compiled the exact edited COM from the source-only starter,
+played the opening, displayed the temple and restored an exported checkpoint
+in independent browser storage. Its [result](evidence/caverns-prose-concision/browser-result.json)
+and temple screenshot are retained. A stale article assertion was corrected;
+no source/runtime change was needed. Full strict platform qualification remains
+pending while these game/browser checks pass.

@@ -56,5 +56,24 @@
     "files": 15,
     "fileBytes": 116736,
     "freeBytes": 903168
+  },
+  "freshBrowserTrial": {
+    "passed": true,
+    "sourceOnlyCompileMatchesCOM": true,
+    "profile": 80,
+    "openingPlay": true,
+    "templeProse": true,
+    "exportAndFreshContextRestore": true,
+    "viewerSourceCommit": "adb09fd5076ca6f233ccca6929fee45c47020967",
+    "standaloneSha256": "3f360b1734a420973a877bb44119309bb85472a5e5fd4cfee6cc2785cf4bdc0b",
+    "note": "One stale the-cave assertion was updated for the approved a-cave text; all commands/state checks retained."
+  },
+  "fullRoomControl": {
+    "fileBytes": 38400,
+    "logicalBytes": 38307,
+    "sameFinalEngine": true,
+    "fileBytesSavedByRoomEditing": 2304,
+    "logicalBytesSavedByRoomEditing": 2331,
+    "scope": "Compilation-only unshipped control; no gameplay qualification claim."
   }
 }
