@@ -1481,3 +1481,23 @@ have not been changed by this review note.
 
 The author also explicitly reaffirmed retaining the clearly warned fatal
 western crater drop as a rare deliberate hazard.
+
+
+## Author walkthrough: save budget and dragon wording — 18 November 2026
+
+Review notes only: accumulate findings during the author's playthrough; do not
+implement game edits yet.
+
+- Investigate a compact complete-state save/restore using the existing 128-byte
+  CVB2 semantic payload (objects, creatures, puzzle flags, position, counters and
+  RNG). Measure resident snapshot/code costs and any newly linked BAZA file I/O
+  dependencies before choosing memory-only or disk persistence. The current
+  restored game is 37,248 file bytes; 4,039 bytes before dynamic allocation is
+  not all spare feature budget. No save facility has been added. A previous
+  large file-I/O size increase needs reproduction before attributing its cause.
+- Dragon intro is conditional on the live dragon's object being in the room;
+  it disappears after death, and the clearing then describes the corpse.
+  However, while alive each redisplay repeats the sleeping/waking sentence,
+  followed by the generic nearby-creature listing. Consider a non-repeating
+  awakening or less repetitive live-dragon wording. Source inspection verified
+  this behavior; no new live combat test or game change was performed here.
