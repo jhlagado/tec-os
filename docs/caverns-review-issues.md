@@ -1546,3 +1546,13 @@ inner cavern, and north from there reaches room 16 at the daylight cave mouth.
 Resolve the final wording without implying east alone leads directly outside;
 "the cavern near the cave entrance lies to the east" is a geographically
 explicit alternative for the next prose pass. No exit changes requested.
+
+
+## Author-requested complete proofreading sweep — 18 November 2026
+
+The first manual pass is recorded in [caverns-proofreading-review.md](caverns-proofreading-review.md).
+All 54 rooms, all 24 object descriptions, displayed engine messages and the
+public instructions were inspected. Findings distinguish mechanical corrections,
+ambiguous meaning and output-format issues from optional stylistic changes.
+Preserve the author's original prose and UK spelling. Findings are notes only;
+no game edits or rebuilt artifacts are part of this sweep.
