@@ -233,7 +233,18 @@ function hello3Round(card) {
   assert.notDeepEqual(digits(), shown, "the count moves on the digits");
   const from = m.output.length;
   m.enqueueInput("\x1b", "matrix");
-  m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.text(from).includes("MON3>")), 50_000_000, "MON3> after Esc");
+  const step = m.step.bind(m), lineKey = m.sym("LINKEY");
+  let heldEscapes = 0;
+  m.step = () => {
+    if (m.pc === lineKey && m.cpu.cpu.a === 0x1b) heldEscapes++;
+    return step();
+  };
+  try {
+    m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.text(from).includes("MON3>")), 50_000_000, "MON3> after Esc");
+  } finally {
+    m.step = step;
+  }
+  assert.equal(heldEscapes, 0, "no held Escape reaches monitor line input");
   assert.match(m.text(from), /\r\nMON3>$/, "nothing after MON3>");
   assert.deepEqual(lcdRows(m), HELLO3_ROWS, "the LCD as HELLO3 left it");
   const exit = line(m, "EXIT");
@@ -253,8 +264,9 @@ function noRecord(b, at) {
 }
 
 // The matrix scan's record alone keeps a held Esc from the MON3> line, so this
-// mutant drops it too, to show what the wait does.
-test("mutant: a MON3.SVC that doesn't wait for the keys to go up, nor record them, lets Esc reach the line after MON3>", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
+// mutant drops it too, to show what the wait does. Observe delivery before
+// buffered input can discard Escape without echoing it.
+test("mutant: a MON3.SVC that doesn't wait for release or record keys delivers Esc to monitor line input", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, (b, at) => {
     const i = find(b, at("KEYUP"), [0x3a, 0x03, 0x00, 0x0f, 0x30], 6);
@@ -263,7 +275,7 @@ test("mutant: a MON3.SVC that doesn't wait for the keys to go up, nor record the
   });
   const card = Uint8Array.from(starter().card);
   volume(card, "A").write("MON3.SVC", file);
-  assert.throws(() => hello3Round(card), /nothing after MON3>/);
+  assert.throws(() => hello3Round(card), /no held Escape reaches monitor line input/);
 });
 
 // The same after CON TTY, the console the page's serial terminal gives: TEC-OS
