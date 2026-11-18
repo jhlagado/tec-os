@@ -75,5 +75,13 @@
     "fileBytesSavedByRoomEditing": 2304,
     "logicalBytesSavedByRoomEditing": 2331,
     "scope": "Compilation-only unshipped control; no gameplay qualification claim."
+  },
+  "bookChecks": {
+    "sourceCheck": "passed",
+    "publishingTests": 3,
+    "publishingPass": 3,
+    "buildHTMLPages": 43,
+    "internalLinksAssetsFragments": 2981,
+    "errors": 0
   }
 }
