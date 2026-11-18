@@ -1568,3 +1568,20 @@ not reverse west to east. Correct the misleading definite article/return claim:
 "The western passage leads into another cavern; a doorway to the south leads
 back to the torture chamber." Keep the northern cavern's distinctive long-tunnel
 landmark. Wording proposal recorded only; no route or game artifact changed.
+
+
+## Author walkthrough: corridor orientation versus available exits — 18 November 2026
+
+Further room22 clarification: "east-west corridor" suggests an eastern exit,
+although east is blocked. Do not add a passage to accommodate wording. Describe
+the closed end explicitly, without inventing rubble, a door or a new puzzle.
+Suggested complete text, preserving the breeze and sentence structure:
+
+> You are standing in an east-west corridor. You can feel a faint breeze
+> stirring the stale air. The corridor ends to the east. The western passage
+> leads to a dark cavern, and a doorway to the south leads to the torture chamber.
+
+"Leads" is arrival-independent; avoid "returns" where prior visitation is not
+known. The western destination is room21, distinct from entrance cavern18,
+with the long tunnel south and treasure doorway north. Record this as an
+additional proofreading/navigation clarity item; current game unchanged.
