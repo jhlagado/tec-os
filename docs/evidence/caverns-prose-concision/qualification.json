@@ -83,7 +83,8 @@
     "publishingPass": 3,
     "buildHTMLPages": 43,
     "internalLinksAssetsFragments": 2981,
-    "errors": 0
+    "errors": 0,
+    "scope": "Final source-only starter allocation and card capture; source check, publishing tests and complete site build repeated after final narrative edits."
   },
   "strictRuns": [
     {

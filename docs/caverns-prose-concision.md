@@ -1,7 +1,7 @@
 # Caverns prose recovery and light editing
 
 Native qualification is complete. Two full platform runs pass 1,433 tests
-each. A final one-sentence literal correction then passes all 41 affected
+each. Final literal-only corrections then pass all 41 affected
 native checks and 16 conditional-prose observations. No compiler, runtime,
 world topology or puzzle-state change is part of this increment. Viewer final
 pin/publication status is recorded separately in the qualification receipt.
@@ -18,7 +18,7 @@ candidate (21.72% less). This is not a 30% reduction in executable size. The
 rough 30% editorial aspiration is not enforced at the expense of imagery.
 The native candidate is 35,968 file bytes (35,876 logical), saving 1,280 file
 bytes versus the previous build. It leaves 5,340 bytes before dynamic allocation
-after the 768-byte stack reservation. Qualification is still pending.
+after the 768-byte stack reservation. Native qualification is complete; final Viewer receiving and publication are recorded below.
 
 Recovered scenes include the wizard's swirling mist and hand, the green dragon
 and its jets of fire, and the dwarf's lantern and dialogue. Generic nearby-foe
@@ -102,7 +102,7 @@ recovered room paragraphs as a separate, unshipped control. It is 38,272 file
 bytes (38,234 logical). The edited build is 35,968 file bytes (35,876 logical),
 saving 2,304 file bytes or 2,358 logical bytes from room editing alone. The
 control is a successful compilation measurement, not a full-play qualification.
-[Exact evidence](evidence/caverns-prose-concision/budget.json) includes both
+[Exact evidence](evidence/caverns-prose-concision/final-budget.json) includes both
 compiler/runtime identities and executable hashes. Reproduce it with
 `node tools/caverns-prose-budget.mjs` after building the normal starter card.
 Neither CAVFULL.BAS nor CAVFULL.COM is included in the public media.

@@ -1856,3 +1856,16 @@ bytes versus37,248. Native quest, differential, TED and checkpoint checks pass;
 full platform and Viewer qualification are still running. The ambiguous Norse
 folk/them meaning is deliberately preserved for author review. In-game HELP,
 matches and save/load remain future work. No BAZA code change is required.
+
+
+## Final native prose recovery and light editing
+
+Superseding the candidate figures above: all54 room paragraphs and the
+state-dependent messages are restored and lightly edited. Room text is8,131
+characters versus10,387 in the full recovery candidate (21.72% less). The
+final native COM is35,968 bytes. All41 affected checks,480-command exact
+state/RNG comparison,126-point/all54-room quest and16 conditional-prose
+observations pass. The two full1,433-check platform runs identify the prior
+reference artifact separately. No map or puzzle rules changed.
+See [the editorial record](caverns-prose-concision.md) for every
+before/recovered/edited passage and exact qualification scope.
