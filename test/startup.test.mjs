@@ -166,10 +166,11 @@ test("a read that returns an error starts nothing, whatever the record holds", (
   assert.equal(marked(m), 0);
 });
 
-test("NAME.SVX is no service: the type must be SVC in full", () => {
+test("NAME.SVX selects neither a COM nor a service: the type must be exact", () => {
   const m = start({ "SAY.COM": SAY });
   prompt(m);
-  assert.doesNotMatch(m.command("SAY.SVX"), /SAY\.SVX\?/);
+  assert.match(m.command("SAY.SVX"), /SAY\.SVX\?/);
+  assert.equal(m.read(m.sym("SVCHEAD")), 0, "no service installed");
 });
 
 test("a reset clears the position, so the file runs again", () => {
