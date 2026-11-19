@@ -8,7 +8,7 @@ REM Recovery: Microbee Software Preservation Project; Alan Laughton (ChickenMan)
 REM Author-approved TEC-OS rewrite. The archival listing is unchanged.
 REM Insert experimental lines between these ten-step line numbers.
 REM State: rm room, ob objects, db drawbridge, ht hatch, sh shaft, td door.
-REM State: cr crypt, cl candle, ft fatigue, tu turns, rp tied rope, gt gate.
+REM State: cr crypt, cl crystal glow, ft fatigue, tu turns, rp tied rope, gt gate.
 REM hb and jf retain reserved CVB2 checkpoint fields. Integers use %.
 DIM ob%(24),ex%(216),il%(48),ad$(24),no$(24),di$(3),ve$(26),sv%(36)
 GOSUB @LOAD_TABLES
@@ -20,7 +20,7 @@ PRINT "DREAMCARDS presents..."
 PRINT "CAVERNS by John Hardy (c) 1982-83":PRINT "GNU General Public License, 2019":ft%=0:tu%=0
 PRINT "Bring treasure home for double points. Take the compass!":PRINT "Type HELP for commands. See CAVERNS.TXT for the story."
 @GAME_LOOP:
-REM Apply view-time candle events before rendering; rendering changes no world state.
+REM Apply view-time crystal events before rendering; rendering changes no world state.
 GOSUB @PREPARE_VIEW
 GOSUB @DESCRIBE_ROOM
 @COMMAND_LOOP:
@@ -96,12 +96,12 @@ FOR fo%=1 TO 6:IF ob%(fo%)=rm% THEN RETURN
 NEXT fo%:fo%=0:RETURN
 
 @PREPARE_VIEW:
-REM The historical candle clock is checked only where the player could see.
+REM The crystal clock is checked only where the player could see.
 vs%=1:ce%=0
 IF rm%<18 THEN @VIEW_CLOCK
 IF cl%<>1 THEN vs%=0:RETURN
-IF ob%({ITEM_CANDLE})=rm% THEN @VIEW_CLOCK
-IF ob%({ITEM_CANDLE})<>{CARRIED} THEN vs%=0:RETURN
+IF ob%({ITEM_CRYSTAL})=rm% THEN @VIEW_CLOCK
+IF ob%({ITEM_CRYSTAL})<>{CARRIED} THEN vs%=0:RETURN
 @VIEW_CLOCK:
 IF cl%=1 THEN IF tu%=201 THEN ce%=1
 IF cl%=0 OR tu%<230 THEN RETURN
@@ -111,15 +111,15 @@ PRINT
 IF vs%=0 THEN PRINT "It's very dark, too dark to see anything... I'm scared!":GOTO @DESCRIBE_FOES
 RESTORE:FOR ix%=1 TO rm%:READ dc%:FOR iy%=1 TO dc%:READ ds$:IF ix%=rm% THEN PRINT ds$
 NEXT iy%:NEXT ix%
-IF rm%={ROOM_TREASURE_DOOR} THEN IF td%=0 THEN PRINT "A formidable oak door bound with iron is locked from the inside. Perhaps explosives would open it." ELSE PRINT "The blast has opened a passage east into the treasure room."
+IF rm%={ROOM_TREASURE_DOOR} THEN IF td%=0 THEN PRINT "A formidable oak door bound with iron is locked from the inside. It would take a powerful blow to break it." ELSE PRINT "The blast has opened a passage east into the treasure room."
 IF rm%={ROOM_BALCONY} OR rm%={ROOM_TEMPLE} THEN IF rp%=1 THEN PRINT "The rope hangs from the stone rail to the temple floor."
 IF rm%={ROOM_TEMPLE} THEN IF gt% THEN PRINT "The gate to the north stands open." ELSE PRINT "To the north is a locked gate."
 IF rm%={ROOM_CRYPT} THEN IF cr% THEN PRINT "The stone seal in the eastern wall stands open." ELSE PRINT "The stones are marked V, A, R and D."
 IF rm%={ROOM_CELL} THEN IF sh% THEN PRINT "An open ventilation shaft leads east." ELSE PRINT "A rusty grille covers the ventilation shaft."
 IF rm%={ROOM_CASTLE_VIEW} THEN IF db%={FATAL} THEN PRINT "A raised drawbridge keeps you from crossing to the castle." ELSE PRINT "A mighty golden drawbridge spans the waters."
 IF rm%={ROOM_BASALT_CLEARING} THEN IF ob%({ITEM_DRAGON})={ABSENT} THEN PRINT "You can also see the bloody corpse of an enormous dragon."
-IF ce%=1 THEN PRINT "Your candle is growing dim."
-IF ce%=2 THEN PRINT "Your candle has gone out."
+IF ce%=1 THEN PRINT "The crystal's glow is fading."
+IF ce%=2 THEN PRINT "The crystal has gone dark."
 qt%=0
 FOR li%={FIRST_ITEM} TO {OBJECT_COUNT}
 IF ob%(li%)<>rm% THEN @NEXT_VISIBLE_ITEM
@@ -136,7 +136,7 @@ NEXT li%
 @ROOM_PROMPT:
 PRINT:RETURN
 @PRINT_OBJECT:
-IF li%={ITEM_CANDLE} AND cl%=0 THEN PRINT "an unlit candle.":RETURN
+IF li%={ITEM_CRYSTAL} AND cl%=0 THEN PRINT "a dark crystal.":RETURN
 PRINT "a";ad$(li%);LEFT$(no$(li%),LEN(no$(li%))-1);".":RETURN
 @FOE_INTRO:
 IF li%={ITEM_WIZARD} THEN PRINT "Before you in a swirling mist stands an evil wizard with his hand held outwards. 'Thou shalt not pass!' he cries.":RETURN
@@ -280,14 +280,16 @@ cn%=0:FOR ix%={FIRST_ITEM} TO {OBJECT_COUNT}:IF ob%(ix%)={CARRIED} THEN cn%=cn%+
 NEXT ix%:IF cn%>10 THEN PRINT "You are carrying too many objects.":RETURN
 ob%(it%)={CARRIED}:IF it%={ITEM_GRILLE} THEN sh%={ROOM_SHAFT}
 IF it%={ITEM_ROPE} THEN rp%=0
-PRINT "You take ";:li%=it%:GOSUB @PRINT_OBJECT:PRINT:RETURN
+PRINT "You take ";:li%=it%:GOSUB @PRINT_OBJECT:PRINT
+IF it%={ITEM_FLASK} THEN @FLASK_CLUE
+RETURN
 @DROP_OBJECT:
 ob%(it%)=rm%:PRINT "You drop ";:li%=it%:GOSUB @PRINT_OBJECT:PRINT:RETURN
 @USE_TOOL:
-IF it%={ITEM_BOMB} THEN wd$=" candle ":GOSUB @FIND_WORD:IF mp%>0 THEN it%={ITEM_CANDLE}
+IF it%={ITEM_FLASK} THEN @USE_ENCHANTMENT
 IF it%<{ITEM_KEY} THEN @CANNOT_USE ELSE IF it%>{ITEM_ROPE} THEN @CANNOT_USE
 IF ob%(it%)<>{CARRIED} THEN IF ob%(it%)<>rm% THEN PRINT "Where? I can't see it.":RETURN
-ON it%-18 GOTO @UNLOCK,@SWORD,@CANDLE,@ROPE_HELP
+ON it%-18 GOTO @UNLOCK,@SWORD,@CANNOT_USE,@ROPE_HELP
 @CANNOT_USE:
 PRINT "How am I supposed to use it?":RETURN
 @UNLOCK:
@@ -310,14 +312,15 @@ RETURN
 PRINT "The sword strikes home and your foe dies.":ob%(fo%)=0
 IF fo%<>{ITEM_DRAGON} THEN PRINT "Suddenly a black cloud descends and the corpse vaporises into nothing."
 fo%=0:ft%=0:RETURN
-@CANDLE:
-IF ob%({ITEM_BOMB})={CARRIED} THEN @IGNITE ELSE IF ob%({ITEM_BOMB})=rm% THEN @IGNITE
-PRINT "Nothing to ignite here.":RETURN
-@IGNITE:
-IF cl%<>1 THEN PRINT "The candle is out.":RETURN
-IF rm%<>{ROOM_TREASURE_DOOR} THEN PRINT "BOOM! You are thrown aside. When the smoke clears nothing has changed.":RETURN
-IF td%={ROOM_TREASURE_ROOM} THEN PRINT "The passage is already open. Save your bomb.":RETURN
-PRINT "The fuse burns away and... BOOM! The door is torn from its hinges. A passage opens to the east.":td%={ROOM_TREASURE_ROOM}:ob%({ITEM_BOMB})=0:RETURN
+@USE_ENCHANTMENT:
+wd$=no$({ITEM_CRYSTAL}):GOSUB @FIND_WORD:IF mp%=0 THEN @FLASK_CLUE
+IF ob%({ITEM_CRYSTAL})<>{CARRIED} THEN PRINT "You need to carry the crystal.":RETURN
+IF rm%<>{ROOM_TREASURE_DOOR} THEN PRINT "The seal glints briefly. Nothing else happens.":RETURN
+PRINT "The flask bursts in a flash. The oak door splinters and a passage opens east."
+td%={ROOM_TREASURE_ROOM}:ob%({ITEM_FLASK})={ABSENT}:RETURN
+@FLASK_CLUE:
+PRINT "The flask holds enchanted powder."
+PRINT "Its seal reads: 'Use with the crystal. Stand well back.'":RETURN
 @ROPE_HELP:
 rs%={PROMPT}:IF rm%={ROOM_BALCONY} THEN PRINT "The stone rail looks strong enough to hold the rope." ELSE PRINT "There is nowhere to fasten the rope here."
 RETURN
@@ -337,9 +340,10 @@ IF sc%=126 THEN PRINT "Perfectionist and genius!!"
 RETURN
 @HOMECOMING:
 PRINT "Welcome home!"
-FOR ix%={FIRST_ITEM} TO {LAST_TREASURE}:IF ix%<>{ITEM_COMPASS} THEN IF ix%<>{ITEM_BOMB} THEN IF ob%(ix%)={CARRIED} THEN ob%(ix%)={ROOM_HUT}
+FOR ix%={FIRST_ITEM} TO {LAST_TREASURE}:IF ix%<>{ITEM_COMPASS} THEN IF ix%<>{ITEM_FLASK} THEN IF ob%(ix%)={CARRIED} THEN ob%(ix%)={ROOM_HUT}
 NEXT ix%:GOSUB @COMPUTE_SCORE:PRINT "Your score is";sc%;" out of 126.":GOSUB @RANKING
-IF sc%=126 THEN PRINT "All your treasure is home. Your quest is complete!"
+IF sc%=126 THEN PRINT "For a moment the little bark hut feels like a king's hall."
+IF sc%=126 THEN PRINT "The lost treasures of Svartalfheim gleam before you. Your quest is complete!"
 PRINT "QUIT to finish, or leave to seek more treasure.":RETURN
 END
 @WORLD_DATA

@@ -543,7 +543,7 @@
     {
       "id": 50,
       "key": "COURTYARD",
-      "description": "You are in the courtyard of a magic castle. WOW! This castle is really something! On the wall is inscribed 'hzb tzozi'. A drawbridge lies west and a doorway leads east to a powder magazine. An escape tunnel leads south to a riverbank.",
+      "description": "You are in the courtyard of a magic castle. WOW! This castle is really something! On the wall is inscribed 'hzb tzozi'. A drawbridge lies west and a doorway leads east to a store-room. An escape tunnel leads south to a riverbank.",
       "exits": {
         "north": 0,
         "south": 52,
@@ -554,7 +554,7 @@
     {
       "id": 51,
       "key": "MAGAZINE",
-      "description": "You are in the powder magazine of this really super castle. A doorway leads west into the courtyard.",
+      "description": "You are in the store-room of this really super castle. A doorway leads west into the courtyard.",
       "exits": {
         "north": 0,
         "south": 0,
@@ -663,9 +663,9 @@
     },
     {
       "id": 9,
-      "key": "BOMB",
-      "adjective": " home-made",
-      "noun": " bomb ",
+      "key": "FLASK",
+      "adjective": " sealed",
+      "noun": " flask ",
       "initial": 51,
       "value": 3
     },
@@ -759,9 +759,9 @@
     },
     {
       "id": 21,
-      "key": "CANDLE",
-      "adjective": " small lit",
-      "noun": " candle ",
+      "key": "CRYSTAL",
+      "adjective": " small glowing",
+      "noun": " crystal ",
       "initial": 16,
       "value": 0
     },

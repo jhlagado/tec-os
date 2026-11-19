@@ -255,7 +255,7 @@
 <title>r16</title>
 <path fill="white" stroke="#778397" d="M753.5,-1525C753.5,-1525 642.5,-1525 642.5,-1525 636.5,-1525 630.5,-1519 630.5,-1513 630.5,-1513 630.5,-1497 630.5,-1497 630.5,-1491 636.5,-1485 642.5,-1485 642.5,-1485 753.5,-1485 753.5,-1485 759.5,-1485 765.5,-1491 765.5,-1497 765.5,-1497 765.5,-1513 765.5,-1513 765.5,-1519 759.5,-1525 753.5,-1525"/>
 <text text-anchor="middle" x="698" y="-1508.4" font-family="DejaVu Sans" font-size="12.00">16 &#160;Cave entrance</text>
-<text text-anchor="middle" x="698" y="-1495.4" font-family="DejaVu Sans" font-size="12.00">Lit candle</text>
+<text text-anchor="middle" x="698" y="-1495.4" font-family="DejaVu Sans" font-size="12.00">Glowing crystal</text>
 </g>
 <!-- r14&#45;&gt;r16 -->
 <g id="edge15" class="edge">
@@ -337,9 +337,9 @@
 <!-- r20 -->
 <g id="node20" class="node">
 <title>r20</title>
-<path fill="white" stroke="#778397" d="M1218,-1624C1218,-1624 1082,-1624 1082,-1624 1076,-1624 1070,-1618 1070,-1612 1070,-1612 1070,-1596 1070,-1596 1070,-1590 1076,-1584 1082,-1584 1082,-1584 1218,-1584 1218,-1584 1224,-1584 1230,-1590 1230,-1596 1230,-1596 1230,-1612 1230,-1612 1230,-1618 1224,-1624 1218,-1624"/>
+<path fill="white" stroke="#778397" d="M1247,-1624C1247,-1624 1053,-1624 1053,-1624 1047,-1624 1041,-1618 1041,-1612 1041,-1612 1041,-1596 1041,-1596 1041,-1590 1047,-1584 1053,-1584 1053,-1584 1247,-1584 1247,-1584 1253,-1584 1259,-1590 1259,-1596 1259,-1596 1259,-1612 1259,-1612 1259,-1618 1253,-1624 1247,-1624"/>
 <text text-anchor="middle" x="1150" y="-1607.4" font-family="DejaVu Sans" font-size="12.00">20 &#160;Treasure doorway</text>
-<text text-anchor="middle" x="1150" y="-1594.4" font-family="DejaVu Sans" font-size="12.00">Bomb opens east door</text>
+<text text-anchor="middle" x="1150" y="-1594.4" font-family="DejaVu Sans" font-size="12.00">Crystal and flask open east door</text>
 </g>
 <!-- r19&#45;&gt;r20 -->
 <g id="edge19" class="edge">
@@ -848,8 +848,8 @@
 <g id="node51" class="node">
 <title>r51</title>
 <path fill="white" stroke="#778397" d="M1786,-250C1786,-250 1656,-250 1656,-250 1650,-250 1644,-244 1644,-238 1644,-238 1644,-222 1644,-222 1644,-216 1650,-210 1656,-210 1656,-210 1786,-210 1786,-210 1792,-210 1798,-216 1798,-222 1798,-222 1798,-238 1798,-238 1798,-244 1792,-250 1786,-250"/>
-<text text-anchor="middle" x="1721" y="-233.4" font-family="DejaVu Sans" font-size="12.00">51 &#160;Powder magazine</text>
-<text text-anchor="middle" x="1721" y="-220.4" font-family="DejaVu Sans" font-size="12.00">Bomb</text>
+<text text-anchor="middle" x="1721" y="-233.4" font-family="DejaVu Sans" font-size="12.00">51 &#160;Castle store&#45;room</text>
+<text text-anchor="middle" x="1721" y="-220.4" font-family="DejaVu Sans" font-size="12.00">Sealed flask</text>
 </g>
 <!-- r50&#45;&gt;r51 -->
 <g id="edge53" class="edge">

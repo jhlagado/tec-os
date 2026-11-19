@@ -87,10 +87,10 @@ the opening and exported/restored a checkpoint in a fresh browser context.
 The full Viewer suite passes all 202 checks, including its unchanged resource gates. None substitutes for a board run. Gameplay review of this
 revision and a physical TEC-1G run remain the final human checks.
 
-Known limits: eleven carried objects; combat can lose; finite candle lifetime
-(230 action turns under the retained rule); the candle is still found lit.
-Matches/explicit candle lighting, stronger startup entropy and persistent
-in-game saves remain future work. Development checkpoints restore an exact
+Known limits include eleven carried objects, lethal combat and finite crystal
+light. Its glow fades after 201 action turns and goes out at 230 under the
+existing view-time rule. A dark crystal still activates the flask at the oak
+door. Stronger startup entropy and persistent in-game saves remain future work. Development checkpoints restore an exact
 random state, so identical commands intentionally repeat the same outcome.
 In the game, HELP shows the commands. SAVE records one checkpoint in RAM.
 RESTORE or LOAD returns to it, including from the restart prompt or after

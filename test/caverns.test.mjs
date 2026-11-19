@@ -93,7 +93,7 @@ test('revised BASIC first-discovery quest banks all treasures, walks back from c
  const turns=integer(m,'U%');assert.match(command('attack troll'),/With what/);assert.equal(integer(m,'U%'),turns);
  fight(3);walk('south','east','west');assert.equal(room(),11,'bridge side exits blocked');
  walk('south','east','take rope','west','west','south');fight(4);
- walk('south','take candle','east','west');assert.equal(room(),33,'bat carries player to colony');
+ walk('south','take crystal','east','west');assert.equal(room(),33,'bat carries player to colony');
  walk('west','take key','west','north','east','east','south','north','east','east','west','south','east');
  assert.equal(room(),28);assert.match(command('down'),/tie the rope/);assert.equal(room(),28);
  walk('tie rope to rail','down');assert.equal(room(),35);assert.equal(integer(m,'R0%'),1);
@@ -106,17 +106,17 @@ test('revised BASIC first-discovery quest banks all treasures, walks back from c
  walk('east','take pearl','south');assert.equal(room(),43);
  assert.match(command('south'),/latched/);walk('open hatch','south','north','east','west','west','west','west','take stone','south','east','north');
  assert.equal(room(),50);assert.match(events.at(-1).out,/hzb tzozi/);
- walk('east','take bomb');const before=Array.from({length:24},(_,i)=>obj(i+1));
- assert.match(command('light bomb with candle'),/nothing has changed/);assert.deepEqual(Array.from({length:24},(_,i)=>obj(i+1)),before);
+ walk('east');assert.match(command('take flask'),/Use with the crystal/);const before=Array.from({length:24},(_,i)=>obj(i+1));
+ assert.match(command('use crystal with flask'),/Nothing else happens/);assert.deepEqual(Array.from({length:24},(_,i)=>obj(i+1)),before);
  // The walking return proves GALAR is a convenience, not the escape requirement.
  walk('west','west','west','north','west','north','west','west','south','up','west','north','north','north');assert.equal(room(),21);
  walk('galar','north','north','east','north','north','north','west','west');assert.equal(room(),2);
  assert.match(command('use key'),/Welcome home/);assert.equal(room(),1);assert.equal(obj(19),-1);
  for(const i of [7,10,12,13])assert.equal(obj(i),1,'treasures bank automatically');
- walk('galar','south','west','north','take diamond','west','north','light bomb with candle');assert.equal(room(),20);assert.equal(obj(9),0);
+ walk('galar','south','west','north','take diamond','west','north','use crystal with flask');assert.equal(room(),20);assert.equal(obj(9),0);
  walk('east');fight(2);walk('take ring','take pendant','take grail','take shield');
  walk('galar','north','north','east','north','north','north','west','west');
- assert.match(command('use key'),/quest is complete/);assert.equal(room(),1);
+ const ending=command('use key');assert.match(ending,/king's hall/);assert.match(ending,/quest is complete/);assert.equal(room(),1);
  assert.equal(integer(m,'S%'),126);assert.equal(integer(m,'H%'),11);
  for(const id of treasures.filter(i=>i!==8))assert.equal(obj(id),1);
  assert.equal(obj(8),-1,'useful compass remains carried and is valued at home');

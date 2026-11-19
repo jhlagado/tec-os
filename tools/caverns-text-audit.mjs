@@ -51,8 +51,8 @@ const groups=[
  ['Bat transport and death',[109,112,121],['@BAT_TRANSPORT:','@OBJECT_ACTION:']],
  ['Movement and magic',[120,125,127],['@MOVE:','@BAT_TRANSPORT:']],
  ['Object errors and carrying',[128,129,135,140,141,142,143],['@OBJECT_ACTION:','@SWORD:']],
- ['Sword combat',[145,148,149,150,151,153,154],['@SWORD:','@CANDLE:']],
- ['Candle and bomb',[59,62,158,160,161],['@CANDLE:','@ROPE_HELP:']],
+ ['Sword combat',[145,148,149,150,151,153,154],['@SWORD:','@USE_ENCHANTMENT:']],
+ ['Crystal and flask',[59,62,158,160,161],['@USE_ENCHANTMENT:','@ROPE_HELP:']],
  ['Rope',[163,164],['@TIE_ROPE:','@OPEN_HATCH:'],['@ROPE_HELP:','@COMPUTE_SCORE:']],
  ['Generic command replies',[170,171,172],['@EXECUTE_COMMAND:','@DIRECTION_OR_OBJECT:']]
 ];

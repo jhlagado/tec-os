@@ -15,7 +15,7 @@ clover field to Mount Ymir, then south to the troll. ATTACK TROLL WITH SWORD;
 repeat correct attacks if necessary. Combat can lose. Once defeated it stays
 absent. Cross south twice. Take the rope from the cliff east of the southern
 landing, return west, then west through the oak forest and south to the dragon.
-Defeat it, go south, and take the lit candle at the entrance before going east.
+Defeat it, go south, and take the glowing crystal at the entrance before going east.
 
 The giant bat at the eastern dead end carries you to its colony on your next
 action. LOOK/inventory are safe. The key is west of the colony; alternatively
@@ -45,7 +45,7 @@ The eastern drain branch is a dead end. West through two passages reaches the
 freezing conduit and stone. South follows the service path to the wooden
 bridge; east crosses to the eastern bank; north through the tunnel reaches
 the castle courtyard. The inscription hzb tzozi is Atbash for SAY GALAR.
-East is the powder magazine and bomb. West from the courtyard crosses the
+East is the store-room and sealed flask. West from the courtyard crosses the
 drawbridge and secures a reciprocal return to the lower river ledge.
 
 A fully walking return is drawbridge west to the ledge, north to the river
@@ -56,9 +56,10 @@ shortcut is removed. GALAR is a fast return to the entrance, not obligatory.
 ## Treasure room and homecoming
 
 The diamond lies in the corridor north of the torture chamber. From the
-northern cavern, north reaches the treasure door. LIGHT BOMB WITH CANDLE
-opens the eastern passage, consumes the bomb and leaves you outside. Elsewhere
-an explosion changes neither room nor surroundings and retains the bomb.
+northern cavern, north reaches the treasure door. USE CRYSTAL WITH FLASK
+opens the eastern passage, spends the flask and leaves you outside. The
+crystal still rouses the enchantment after going dark. Elsewhere the seal
+glints briefly and the flask is retained.
 
 Enter east, defeat the demon, and take ring, pendant, grail and shield. Use
 GALAR or walk back to the cave entrance. Outside, north reaches the basalt

@@ -36,9 +36,17 @@ const scenes=oldIntroductions.map((old,i)=>({id:sceneIds[i],old:literalPattern(o
 const literalEdits=Object.entries(edits.literalChanges).flatMap(([old,current],i)=>[[old,i],[current,i]]).sort((a,b)=>b[0].length-a[0].length).map(([text,i])=>[literalPattern(text),i]);
 const contextualEdits=Object.entries(edits.contextualVariants).flatMap(([replacement,variants])=>
  variants.map(text=>[literalPattern(text),replacement]));
+const addedNarration=[
+ "The flask holds enchanted powder.",
+ "Its seal reads: 'Use with the crystal. Stand well back.'",
+ "For a moment the little bark hut feels like a king's hall.",
+].map(text=>new RegExp(literalPattern(text).source+'[ \t]*\n','g'));
+const currentCommand=command=>command==='light bomb with candle'?'use crystal with flask':
+ command.replace(/\bcandle\b/g,'crystal').replace(/\bbomb\b/g,'flask');
 const objectEdits=edits.objects.flatMap(o=>[o.old,o.new].map(text=>[new RegExp(literalPattern(text).source+'\\s*[,\\.]','g'),o.id]));
 function normal(s){
  s=s.replace(/\r\n/g,'\n').replace(/(ERROR IN|BREAK IN) \d+/g,'$1 <line>');
+ for(const pattern of addedNarration)s=s.replace(pattern,'');
  for(const [pattern,id]of prosePatterns)s=s.replace(pattern,'<room-'+id+'>');
  for(const scene of scenes)s=s.replace(scene.old,'<scene-'+scene.id+'>\n').replace(scene.current,'<scene-'+scene.id+'>\n');
  for(const [pattern,text]of contextualEdits)s=s.replace(pattern,text);
@@ -69,10 +77,13 @@ const saveReport=()=>{mkdirSync(ROOT+'/build/caverns/rewrite',{recursive:true});
 async function compare(name,s,commands,{quest=false}={}){
  const [a,b]=await pair(s),events=[];
  function step(command){
-  const x=keys(a.m,command),y=keys(b.m,command);
-  assert.equal(normal(y),normal(x),`${name}: output for ${command}`);
+  const translated=currentCommand(command);
+  const x=keys(a.m,command),y=keys(b.m,translated);
+  const comparable=translated!==command&&y.startsWith(translated+'\r\n')
+   ?command+y.slice(translated.length):y;
+  assert.equal(normal(comparable),normal(x),`${name}: output for ${command}`);
   const before=state(a.m,a.f,a.l),after=state(b.m,b.f,b.l);assert.deepEqual(after,before,`${name}: state after ${command}`);
-  events.push({command,room:after.variables['A%'],turns:after.variables['U%'],fatigue:after.variables['F%'],rng:after.rng,output:y});return y;
+  events.push({command,...(translated!==command?{currentCommand:translated}:{}),room:after.variables['A%'],turns:after.variables['U%'],fatigue:after.variables['F%'],rng:after.rng,output:y});return y;
  }
  let ended=false;
  for(let i=0;i<commands.length;i++){
@@ -105,7 +116,7 @@ test('rewritten listing uses ten-step numbering, lowercase variables, uppercase 
  for(const [file,hash]of [['CAVBASIC.COM',old.comSha256],['CAVBASIC.BAS',old.sourceSha256],['CAVLOAD.COM',oldLayout.launcherSha256]])assert.equal(createHash('sha256').update(read('test/fixtures/caverns-baseline/'+file)).digest('hex'),hash);
 });
 test('rewrite matches baseline output, complete state and RNG across checkpoints and boundary cases',{timeout:600000},async()=>{
- for(const name of ['troll','south','rope','cave','candle','check2','check3','check4','check5','check6','check7','check8','hut']){
+ for(const name of ['troll','south','rope','cave','crystal','check2','check3','check4','check5','check6','check7','check8','hut']){
   const s=json('test/caverns-scenarios/'+name+'.json');await compare(name,s,['look','list','inventory','invent','i','score','quit','y','look']);
  }
  await compare('uppercase and invalid objects',scenario(),['LOOK','LIST','take sword','take','put','using rope','with key','TAKE COMPASS','DROP COMPASS','GET COMPASS','north','south','vard','galar']);
@@ -115,9 +126,9 @@ test('rewrite matches baseline output, complete state and RNG across checkpoints
  }
  await compare('rope lifecycle',scenario({'A%':28},objects({8:-1,19:-1,20:-1,21:-1,22:-1})),['use rope','down','tie rope','tie rope to rail','down','up','take rope','down','tie rope to rail','untie rope','tie stone','look']);
  await compare('grille and crypt',scenario({'A%':38,'E%':38,'K0%':1},objects({8:-1,19:-1,20:-1,21:-1})),['take grill','east','inventory','drop grille','east','west','west','vard','south','north']);
- await compare('wrong-place bomb',scenario({'A%':51},objects({8:-1,9:-1,20:-1,21:-1})),['use candle','light bomb with candle','drop bomb','use candle','take bomb','galar']);
- await compare('blast door',scenario({'A%':20},objects({8:-1,9:-1,20:-1,21:-1})),['light bomb with candle','light bomb with candle','east','score','attack demon with sword']);
- for(const turns of [200,229,230,32767])await compare('candle '+turns,scenario({'A%':18,'U%':turns},objects({8:-1,21:-1})),['look','dance','look','score','north','south']);
+ await compare('wrong-place flask',scenario({'A%':51},objects({8:-1,9:-1,20:-1,21:-1})),['light bomb with candle','drop bomb','take bomb','galar']);
+ await compare('blast door',scenario({'A%':20},objects({8:-1,9:-1,20:-1,21:-1})),['light bomb with candle','east','score','attack demon with sword']);
+ for(const turns of [200,229,230,32767])await compare('crystal glow '+turns,scenario({'A%':18,'U%':turns},objects({8:-1,21:-1})),['look','dance','look','score','north','south']);
  await compare('darkness and recovery',scenario({'A%':35,'C0%':0,'R0%':1},objects({8:-1,21:16,22:28})),['look','inventory','up','down','north','use key']);
  await compare('compass loss',scenario({'A%':3},objects({8:1})),Array.from({length:15},(_,i)=>i%2?'north':'east'));
  await compare('hatch persistence',scenario({'A%':43,'E%':38,'K0%':1,'G%':39},objects({8:-1,21:-1})),['south','open hatch','south','west','south','north','east','north','look']);

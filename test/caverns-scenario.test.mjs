@@ -47,6 +47,25 @@ test('scenario launcher preserves public addresses and restores all monsters, ob
  assert.equal(patched.readUInt16LE(after.offset+6),game.readUInt16LE(before.offset+6),'stack reserve unchanged');
  assert.deepEqual(m.violations,[]);
 });
+test('the flask opens the oak door once, even after the crystal goes dark',{timeout:120000},async()=>{
+ const objects=[...ip];objects[7]=-1;objects[8]=-1;objects[20]=-1;
+ const m=boot(await imageWith(scenario({'A%':20,'U%':229},objects)),{tms:true,matrix:true,width:80});
+ const enter=command=>keys(m,command,question(m));
+ enter('cavload test');
+ assert.match(enter('use flask'),/Use with the crystal/);
+ assert.match(enter('inventory'),/a dark crystal/);
+ assert.equal(snapshot(m).variables['C0%'],0);
+ assert.equal(snapshot(m).variables['T%'],0);
+ assert.equal(snapshot(m).objects[8],-1);
+ assert.match(enter('use flask with crystal'),/oak door splinters/);
+ const opened=snapshot(m);
+ assert.equal(opened.variables['T%'],19);
+ assert.equal(opened.objects[8],0);
+ assert.equal(opened.objects[20],-1);
+ enter('use crystal with flask');
+ assert.equal(snapshot(m).variables['T%'],19);
+ assert.deepEqual(m.violations,[]);
+});
 test('HELP is free and SAVE and RESTORE round-trip a live game in one slot',{timeout:120000},async()=>{
  const objects=[...ip];objects[7]=-1;objects[18]=-1;objects[20]=-1;objects[21]=28;
  const start=scenario({'A%':28,'D%':49,'W%':43,'G%':39,'T%':19,'E%':38,'R0%':1,'F%':2,'U%':201},objects);
@@ -59,7 +78,7 @@ test('HELP is free and SAVE and RESTORE round-trip a live game in one slot',{tim
  assertState(m,saved);
  assert.match(enter('save'),/saved in memory/);
  assertState(m,saved);
- enter('down');enter('use key');enter('drop candle');
+ enter('down');enter('use key');enter('drop crystal');
  assert.equal(snapshot(m).variables['K0%'],1);
  assert.equal(snapshot(m).objects[20],37);
  assert.match(enter('load'),/Game restored/);
@@ -92,7 +111,7 @@ test('real picked-up objects and encounter state survive exported file and fresh
  fight(3);keys(n,'south',question(n));keys(n,'south',question(n));capture('SOUTH');
  keys(n,'east',question(n));keys(n,'take rope',question(n));capture('ROPE');keys(n,'west',question(n));keys(n,'west',question(n));keys(n,'south',question(n));fight(4);
  keys(n,'south',question(n));capture('CAVE');
- keys(n,'take candle',question(n));capture('CANDLE');
+ keys(n,'take crystal',question(n));capture('CRYSTAL');
  assert.deepEqual(m.violations,[]);assert.deepEqual(n.violations,[]);
 });
 test('missing, wrong-game, incompatible, truncated and corrupt scenarios are rejected before mutation',{timeout:120000},async()=>{
@@ -119,7 +138,7 @@ test('missing, wrong-game, incompatible, truncated and corrupt scenarios are rej
 });
 
 test('all bundled review checkpoints load exactly in a new machine',{timeout:120000},async()=>{
- for(const name of ['troll','south','rope','cave','candle','check2','check3','check4','check5','check6','check7','check8','vault','hut']){
+ for(const name of ['troll','south','rope','cave','crystal','check2','check3','check4','check5','check6','check7','check8','vault','hut']){
   const s=JSON.parse(readFileSync(ROOT+'/test/caverns-scenarios/'+name+'.json'));
   const m=boot(await imageWith(s),{tms:true,matrix:true,width:80});
   keys(m,'cavload test',question(m));assertState(m,s);

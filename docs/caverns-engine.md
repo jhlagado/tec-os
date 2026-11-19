@@ -35,7 +35,7 @@ deriving treasure values from object IDs. The second half of il% holds these
 read-only values without adding another array descriptor. Each new adventure resets mutable state and
 RNG normally, then prints the unchanged welcome. The main loop is:
 
-1. Prepare visibility/candle events, then render the room without world effects.
+1. Prepare visibility/crystal events, then render the room without world effects.
 2. Read/normalise input and recognise ordered vocabulary without world effects.
 3. Handle free LOOK, inventory, SCORE and QUIT.
 4. Resolve special requests and clarification. Incomplete requests return a
@@ -50,7 +50,7 @@ handling, scoring and homecoming have named responsibilities. Rendering item
 and inventory lists uses a single pass rather than counting then rescanning.
 
 Ordinary invalid actions retain their existing turn costs; making every failed
-request free would change the game. The historical visibility-dependent candle
+request free would change the game. The visibility-dependent crystal
 check is preserved in the event stage, not silently replaced by a new clock.
 Room-description DATA is scanned into one temporary string to stay inside TPA;
 a 54-string heap cache is deliberately avoided.
@@ -85,7 +85,7 @@ Manual insertions in the free number slots do not renumber existing targets.
 | Shaft | sh% | Closed or cleared destination |
 | Treasure door | td% | Closed or blasted destination |
 | Crypt | cr% | Closed or open seal |
-| Candle | cl% | Lit flag |
+| Crystal | cl% | Glow flag |
 | Combat | ft% | Fatigue |
 | Time | tu% | Action turns |
 | Rope | rp% | Secured flag |
@@ -96,7 +96,7 @@ Manual insertions in the free number slots do not renumber existing targets.
 Parser/display variables are deliberately separate: cm$ command, yn$ restart
 answer, wd$ searched word, mp% match position, si% search index, vb% recognised
 verb, it% item, fo% creature, ac% action, nx% destination, ei% exit-table index,
-rs% result, tc% turn cost, vs% visibility, ce% candle event, ds$ description,
+rs% result, tc% turn cost, vs% visibility, ce% crystal event, ds$ description,
 li% displayed object, ix% loop index and qt% temporary quantity. Immutable
 ad$/no$/di$/ve$ tables hold adjective/noun/direction/verb text; ex% holds exits.
 
@@ -116,7 +116,7 @@ then send the same keyboard commands. They compare output, every object,
 all thirteen persisted fields and the exact RNG state after each command.
 No live game state or random value is patched. The comparisons include seeded
 combat successes/deaths, aliases, unknown commands, inventory, rope lifecycle,
-crypt/grille/hatch progression, dark recovery, candle thresholds, turn-counter
+crypt/grille/hatch progression, dark recovery, crystal thresholds, turn-counter
 saturation, homecoming, restart and a full quest. Error source-line numbers
 are normalised because the required renumbering intentionally changes them.
 

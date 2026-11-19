@@ -57,7 +57,6 @@ Commands use whole words, in either case:
   USE KEY, OPEN DOOR WITH KEY
   TIE ROPE TO RAIL, DOWN, UP, UNTIE ROPE
   OPEN HATCH
-  LIGHT BOMB WITH CANDLE
 HELP shows a short command list. HELP, LOOK, inventory, SCORE, SAVE and
 RESTORE cost no turns. An incomplete attack asks for a weapon.
 
@@ -67,11 +66,11 @@ be retraced; locked passages explain what blocks them. A visible fatal
 crater edge remains dangerous. Combat can still kill you, but fatigue clears
 between encounters. A secured rope allows climbing both down and up.
 Successful actions confirm what changed. Read the clues you discover.
-The candle is currently found lit; matches are a later refinement.
+A crystal lights the caves. Its glow fades as the adventure goes on.
 
 SAVE holds one checkpoint in memory. Saving again replaces it. RESTORE
 (or LOAD) brings back your room, inventory, creatures, puzzle progress,
-candle and turn count. Combat rolls can differ after a restore. The slot
+crystal glow and turn count. Combat rolls can differ after a restore. The slot
 survives Y at the restart prompt. It lasts until you exit the program or
 power off.
 
