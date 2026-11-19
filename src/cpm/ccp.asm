@@ -384,10 +384,9 @@ KEYSK:
 ; Exact type SVC enters the loader's
 ; SVCRUN, without CMDCOM's fallback to
 ; A: it enters a service that is
-; in, or installs the file. Other types
-; load as COM, CMD among them, so a
-; typed NAME.CMD with no shell runs
-; NAME.COM.
+; in, or installs the file. CMDCOM
+; checks every other explicit type
+; before loading application memory.
 
   ld hl,(CMDFCB+9)
   ld de,'V'*256+'S'
@@ -417,8 +416,11 @@ SVCFAIL:
 SVCOK:
   jp STARTED     ; normal newline entry
 
-; Load a COM image: force type COM and
-; call LOADCOM on the named/default
+; Load a COM image. A blank type means
+; COM. Reject other explicit types
+; before LOADCOM changes memory. The
+; parser left-aligns and pads the type.
+; Call LOADCOM on the named/default
 ; drive. Carry clear enters CMDRUN.
 ; Carry/NZ rejects unloadable input.
 ; Carry/Z, no such file, retries on A
@@ -426,6 +428,19 @@ SVCOK:
 ; PZDU's drive is not A.
 
 CMDCOM:
+  ld a,(CMDFCB+9)
+  cp SPACE
+  jr z,COMTYPE   ; blank type: COM
+  ld hl,(CMDFCB+9)
+  ld de,'O'*256+'C'
+  or a
+  sbc hl,de
+  jp nz,BADCMD
+  ld a,(CMDFCB+11)
+  cp 'M'
+  jp nz,BADCMD
+
+COMTYPE:
   ld hl,'O'*256+'C'
   ld (CMDFCB+9),hl
   ld a,'M'       ; type COM

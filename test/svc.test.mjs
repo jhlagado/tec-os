@@ -495,7 +495,7 @@ test("NAME.SVC installs, from a drive too; a file that won't read and a refused 
   assert.equal(t.word(6), (stub & 0xff00) - 0x200);
 });
 
-test("an old NAME.DRV is no service: the COM path says NAME.DRV? with nothing loaded", async () => {
+test("an old NAME.DRV is rejected without loading a service", async () => {
   const image = standardCard();
   volume(image, "A").write("OK.DRV", (await svc()).file);
   const m = boot(image);

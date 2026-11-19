@@ -99,10 +99,40 @@ test("ERA frees each directory entry's blocks once", async () => {
   assert.equal(frees, 1);
 });
 
-test("NAME.DRV runs NAME.COM if there is one, and says NAME.DRV? only with no program of the name", async () => {
+test("unsupported explicit types stop before COM loading and preserve application memory", async () => {
   const m = await machine({ "ONE.COM": SAY });
-  assert.match(m.command("ONE.DRV"), /C\r\n/);
-  assert.match(m.command("TWO.DRV"), /TWO\.DRV\?/);
+  const canary = Uint8Array.from({ length: 128 }, (_, i) => i ^ 0xa5);
+  canary.forEach((b, i) => m.write(0x100 + i, b));
+  let loads = 0;
+  const load = m.sym("LOADCOM"), step = m.step.bind(m);
+  m.step = () => { if (m.pc === load) loads++; return step(); };
+  for (const name of ["ONE.DRV", "ONE.CMD", "ONE.BIN", "ONE.C", "ONE.CO", "ONE.COX", "ONE.SV", "ONE.SVX", "one.cmd", "A:ONE.CMD", "B:ONE.CMD", "TWO.DRV"]) {
+    assert.match(m.command(name), new RegExp(`${name.toUpperCase().replaceAll(".", "\\.")}\\?`));
+    assert.equal(loads, 0, `${name}: no COM load attempt`);
+    assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x100 + i)), canary, name);
+    assert.equal(word(m, m.sym("PRGCODE")), 0xff00, name);
+  }
+  assert.deepEqual(m.violations, []);
+});
+
+test("bare and explicit COM still execute while shell CMD selects the script", async () => {
+  const m = await machine({ "ONE.COM": SAY });
+  assert.match(m.command("ONE"), /C\r\n/);
+  assert.match(m.command("ONE.COM"), /C\r\n/);
+  assert.match(m.command("A:ONE.COM"), /C\r\n/);
+  assert.match(m.command("ONE."), /C\r\n/);
+  m.command("B:");
+  assert.match(m.command("ONE.COM"), /C\r\n/, "missing unqualified COM falls back to A");
+  assert.match(m.command("B:ONE.COM"), /B:ONE\.COM\?/, "explicit drive prevents fallback");
+  m.command("A:");
+  const before = word(m, 6);
+  assert.doesNotMatch(m.command("RES.SVC"), /RES\.SVC\?/);
+  assert.ok(word(m, 6) < before, "explicit SVC still installs its service");
+  const shell = await machine({ "JOB.COM": SAY, "JOB.CMD": startupFile("ECHO SCRIPT_OK") }, { shell: true });
+  const out = shell.command("JOB.CMD");
+  assert.match(out, /SCRIPT_OK/);
+  assert.doesNotMatch(out, /\r\nC\r\n/);
+  assert.deepEqual(shell.violations, []);
 });
 
 test("REN takes one drive from either name, and a name on another drive is refused", async () => {
@@ -334,9 +364,9 @@ test("SH3 separators ordinary", async () => {
   assert.doesNotMatch(m.text(m.mark ?? 0), /hello/);
 });
 
-test("SH3 cmd runs com", async () => {
+test("SH3 explicit CMD requires the shell", async () => {
   const m = await machine(bareFiles);
-  assert.match(m.command("X.CMD"), /C\r\n/, "X.CMD runs X.COM");
+  assert.match(m.command("X.CMD"), /X\.CMD\?/, "X.CMD cannot run X.COM");
   assert.match(m.command("Y.CMD"), /Y\.CMD\?/);
   assert.equal(code(m), 0xff00);
 });
@@ -394,16 +424,13 @@ test("SH2 mutant: DIR with its own width removed lays out 80 columns on 40", () 
   assert.doesNotMatch(dirAt40(mut), /\r\nCOPY\.COM {5}TERM\.COM {5}PROBE\.COM\r\n/);
 });
 
-test("SH3 mutant: revision 0's .CMD refusal stops NAME.COM", async () => {
-  // NOTDRIVE's type test made CMD's: a .CMD goes to the loader, which can't install it.
+test("explicit-type guard bypass reproduces the legacy CMD-to-COM defect", async () => {
   const mut = romWith((b, at) => {
-    const i = findIn(b, at("NOTDRIVE"), [0x11, 0x53, 0x56], 128); // LD DE,'V'*256+'S'
-    b[i + 1] = 0x43; b[i + 2] = 0x4d; // 'M'*256+'C'
-    const j = findIn(b, i, [0xfe, 0x43], 16); // CP 'C'
-    b[j + 1] = 0x44; // 'D'
+    const from = at("CMDCOM"), to = at("COMTYPE") + 0xc000;
+    b[from] = 0xc3; b[from + 1] = to & 0xff; b[from + 2] = to >> 8;
   });
   const m = await mutantMachine(mut, bareFiles);
-  assert.doesNotMatch(m.command("X.CMD"), /C\r\n/);
+  assert.match(m.command("X.CMD"), /C\r\n/);
 });
 
 test("SH3 mutant: revision 0's function 47 guard refuses the line", async () => {

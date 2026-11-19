@@ -38,7 +38,10 @@ The bare prompt behaves as a CP/M 2.2 CCP:
   `DIR!TYPE?`.
 - `COPY`, `DEL` and `SERVICES` are names like any other: `NAME?` with FF00h,
   unless a `.COM` of the name exists.
-- A typed `NAME.CMD` runs `NAME.COM`, and says `NAME.CMD?` if there is none.
+- A bare `NAME` selects `NAME.COM`. An explicit `.COM` or `.SVC` selects
+  that executable type. Other explicit extensions produce `NAME.EXT?` with
+  FF00h before any COM load. `NAME.CMD` requires the shell script reader
+  and cannot run `NAME.COM` at the bare prompt.
 - A function 47 line is echoed after the prompt and runs whole, as one
   command: `TYPE X!TYPE Y` is `TYPE` with the tail `X!TYPE Y`.
 - `DIR` and `TYPE` list without pausing, and `DIR` is the ROM's wide listing.
