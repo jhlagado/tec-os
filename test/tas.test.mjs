@@ -53,7 +53,7 @@ test("the media tool refuses a TAS.COM missing or not as pinned", () => {
   assert.match(missing.stderr, /no TAS\.COM at/);
   const wrong = media(resolve(ROOT, "README.md"));
   assert.notEqual(wrong.status, 0);
-  assert.match(wrong.stderr, /TAS\.COM at .* has sha256 [0-9a-f]+, pinned 00e34db2/);
+  assert.match(wrong.stderr, /TAS\.COM at .* has sha256 [0-9a-f]+, pinned e512c53f/);
 });
 
 test("TAS X X.SVC makes a service that loads", { skip: TAS.skip, timeout: 900_000 }, () => {

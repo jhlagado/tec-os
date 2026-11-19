@@ -8,7 +8,7 @@ import { inputsDir, pinnedBytes } from './pins.mjs';
 import { decodeImage, scanSource, tasImage } from './tas-d8.mjs';
 
 const runnerPin = '9752fde15349861e5b3caaff3fefe58dbdae8fc7';
-const tasPin = '9752fde15349861e5b3caaff3fefe58dbdae8fc7';
+const tasPin = '4085619d7692d16ae030d082480f345792d4b68f';
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const include = /^([ \t]*%INCLUDE[ \t]+")([^"\r\n]+)(")/gim;
 
@@ -78,8 +78,8 @@ export async function tasAssembler() {
   const root = fileURLToPath(new URL('../../', import.meta.url));
   const entry = JSON.parse(readFileSync(join(root, 'test/inputs.json'), 'utf8')).inputs['TAS.COM'];
   assert.equal(entry.commit, tasPin, 'unsupported TAS manifest commit');
-  assert.equal(entry.sha256, '00e34db203603062c985c31ee53bdd21cb505281d388c8d64155d31cd9b6ccc4', 'unsupported TAS manifest hash');
-  assert.equal(entry.bytes, 11098, 'unsupported TAS manifest byte count');
+  assert.equal(entry.sha256, 'e512c53fce2c6a69180abb4602186c98f9e2f46f8524296013ac7f8817f67add', 'unsupported TAS manifest hash');
+  assert.equal(entry.bytes, 11104, 'unsupported TAS manifest byte count');
   const override = process.env.TECOS_TAS_HOST;
   assert.ok(override !== '', 'TECOS_TAS_HOST is empty: unset it or select the prepared pinned host');
   const host = resolve(override ?? join(inputsDir(root), 'tas-host'));
