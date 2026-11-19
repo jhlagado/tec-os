@@ -111,7 +111,7 @@
 1110 PRINT:RETURN
 1120 IF td% THEN PRINT "An open doorway leads east into the treasure room.":RETURN
 1130 PRINT "A formidable oak door bound with iron is locked from the inside."
-1140 PRINT "I wonder if even a blast would open it.":RETURN
+1140 PRINT "I wonder if even an explosive would open it.":RETURN
 1150 IF li%=21 AND cl%=0 THEN PRINT "a dark crystal.":RETURN
 1160 PRINT "a";ad$(li%);LEFT$(no$(li%),LEN(no$(li%))-1);".":RETURN
 1170 IF li%=1 THEN PRINT "Before you in a swirling mist stands an evil wizard with his hand held outwards. 'Thou shalt not pass!' he cries.":RETURN

@@ -138,7 +138,7 @@ PRINT:RETURN
 @DESCRIBE_TREASURE_DOOR:
 IF td% THEN PRINT "An open doorway leads east into the treasure room.":RETURN
 PRINT "A formidable oak door bound with iron is locked from the inside."
-PRINT "I wonder if even a blast would open it.":RETURN
+PRINT "I wonder if even an explosive would open it.":RETURN
 @PRINT_OBJECT:
 IF li%={ITEM_CRYSTAL} AND cl%=0 THEN PRINT "a dark crystal.":RETURN
 PRINT "a";ad$(li%);LEFT$(no$(li%),LEN(no$(li%))-1);".":RETURN
