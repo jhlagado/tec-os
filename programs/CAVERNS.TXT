@@ -1,84 +1,116 @@
-CAVERNS -- JOHN HARDY'S BASIC ADVENTURE, REFINED FOR TEC-OS
+CAVERNS
+-------
+
+Copyright (c) 1982-83 John Hardy. Dreamcards.
+Released under the GNU General Public License in 2019.
+
+Caverns is a text adventure written in 1982 for the Sinclair ZX81.
+John Hardy and Ken Stone ported it to the VIC-20, and the Microbee
+edition followed in 1983. The recovered MicroWorld BASIC version is
+the basis of this TEC-OS edition, revised with the original author.
+
 
 THE LEGEND OF SVARTALFHEIM
+------------------------
 
-Deep in the icy mountains of northern Iotunheim lived a band of elves
-who called themselves the Great Sons of Svartalfheim. They mined the
-limestone caves for precious minerals and fashioned them into jewellery.
-Merchants came from Asgar and Fenris to buy their work. The elves grew
-prosperous and linked their mines to a golden city beneath the mountains.
+Deep in the icy mountains of northern Iotunheim there lived a small
+band of elves who called themselves the Great Sons of Svartalfheim.
 
-The greedy King of the Danes sent his troops to sack the city and took
-the elves away to work in his royal foundry. A strange illness swept
-through them. Within weeks they were all dead and their gifts were lost.
+These elves worked day and night deep underground in the limestone
+caves, mining for precious minerals which they fashioned into
+jewellery. So prized were their products that merchants and traders
+came from distant Asgar and Fenris to purchase them. The elves became
+very prosperous and built a mighty empire deep underground which
+linked all the mines to a central city.
 
-Centuries later a goatherd named Peter came running into town. High in
-the hills he had found a cave guarded by a green serpent that breathed
-fire. He escaped the dragon and found a room full of gold and silver.
-The only proof he brought home was a tiny ruby ring of exquisite
-workmanship. When he led the villagers back beyond Mount Ymir, a rockfall
-killed them before they reached the entrance. The hoard passed into myth.
+Then one day the King of the Danes, who was a very greedy man, sent his
+troops into the mines to sack the golden city. Every elf found was to
+be brought to the Royal Palace to work in the foundry. This was done
+and all the inhabitants of Svartalfheim were forced to live within
+the city walls.
 
-Four hundred years have passed since Peter's day. You have followed the
-valley into the foothills of Ymir to seek the lost treasure. Your base is
-a small bark hut that once belonged to a hermit.
+Suddenly, to the surprise of all around, the elves began to die as if
+of some strange illness. Nothing could be done to save them and within
+a few weeks all of the elves were dead and their wonderful gifts lost
+forever. The King was furious and executed several of his courtesans,
+but the damage had already been done.
 
-Adapted from John Hardy's original Microbee introduction
-(jhlagado/caverns, src/caverns-intro.basic, lines 22-38).
+Centuries passed and the story of Svartalfheim faded from memory until
+one day a goatherd called Peter ran into town with an incredible story.
 
-PLAYING ON TEC-OS
+'Way up in the hills,' he said, 'is the entrance to a cave guarded by
+a green serpent that breathes flames!'
 
-On the starter disk's main SYSTEM volume:
+Peter told a story of how he managed to escape the fiery breath of
+the dragon and found a tiny room filled with more gold and silver
+than he could possibly carry. The only jewel he could bring back to
+prove his story was a tiny ruby ring which had obviously been crafted
+with great skill.
+
+Peter led a group of his fellow villagers back up into the mountains
+beyond Mount Ymir, but they were all killed in a rockfall before they
+could reach the entrance. So Svartalfheim was once again lost and
+stories of its hidden treasures became myths.
+
+It is four hundred years since the days of Peter the goatherd and you
+have come to Iotunheim to search for the treasure yourself. You
+followed the valley to a forest in the foothills of Ymir and set up
+a base in a small hut which at one time belonged to a hermit.
+
+From John Hardy's recovered Microbee introduction,
+jhlagado/caverns, src/caverns-intro.basic, lines 22-38.
+
+
+THE QUEST
+---------
+
+Find the lost treasures and bring them back to the hut. When you
+return through its locked door with the key, carried treasures are
+deposited and your score and ranking are shown. Treasures count
+double at home. The highest score is 126. You can leave the hut
+again to explore or type QUIT to finish.
+
+Take the compass before leaving. Read what you find and pay attention
+to signs of danger. A crystal lights the caves, but its glow fades as
+the adventure goes on.
+
+
+COMMANDS
+--------
+
+Commands work in upper or lower case. Type HELP for a short reminder.
+
+  N, S, E, W               Move. Full direction names also work.
+  UP, DOWN                 Climb where there is a way.
+  LOOK                     Describe your surroundings again.
+  INVENTORY                List what you carry. LIST and I also work.
+  SCORE                    Check your score.
+  TAKE COMPASS             Pick something up. GET also works.
+  DROP COMPASS             Put something down. PUT also works.
+  USE KEY                  Try an object's usual purpose.
+  ATTACK TROLL WITH SWORD  Specify a weapon when you attack.
+  SAVE                     Save one checkpoint in memory.
+  RESTORE or LOAD          Return to that checkpoint.
+  QUIT                     Show your score and ranking.
+
+SAVE replaces the previous checkpoint. You can RESTORE after dying
+or after typing Y to start again. The slot lasts while Caverns is
+running. It disappears when you exit the game or power off. A restored
+fight can play out differently.
+
+At the end of an adventure, Y starts again, N returns to TEC-OS and
+RESTORE resumes your saved game. HELP, LOOK, INVENTORY, SCORE, SAVE
+and RESTORE cost no turns.
+
+
+STARTING THE GAME
+-----------------
+
+From the TEC-OS SYSTEM volume, type:
+
   CON PICO 80
   BAZA CAVERNS
   CAVERNS
 
-Caverns is supplied as BASIC source. BAZA creates your executable.
-TED CAVERNS.BAS opens it for reading or editing; Ctrl-S saves the file.
-Lines are numbered in tens, leaving room to insert your experiments.
-Keywords are UPPERCASE and variables lowercase.
-To preserve the original, COPY CAVERNS.BAS CAVBOOK.BAS and edit that copy.
-The compiled game includes its selected runtime. BAZA.RTL is needed to
-compile, not to run. No UNLOAD is needed.
-
-Find the lost treasures and bring them home. Returning through the hut door
-with the key welcomes you home, deposits carried treasures, and displays
-your score and ranking. Equipment is retained. Your possessions count double
-at home. The maximum score is 126. You may leave again to explore, or QUIT.
-After QUIT or death, N returns to TEC-OS and Y starts another adventure.
-If you have a checkpoint, you can also type RESTORE at that prompt.
-
-Commands use whole words, in either case:
-  NORTH, SOUTH, EAST, WEST (or N/S/E/W)
-  HELP, LOOK, LIST, INVENTORY, INVENT (or I), SCORE, QUIT
-  SAVE, RESTORE (or LOAD)
-  TAKE COMPASS, GET COMPASS, DROP COMPASS, PUT COMPASS
-  ATTACK TROLL WITH SWORD (ATTACK TROLL SWORD also works)
-  USE KEY, OPEN DOOR WITH KEY
-  TIE ROPE TO RAIL, DOWN, UP, UNTIE ROPE
-  OPEN HATCH
-HELP shows a short command list. HELP, LOOK, inventory, SCORE, SAVE and
-RESTORE cost no turns. An incomplete attack asks for a weapon.
-
-Take the compass before leaving. Without it you lose your bearings.
-Room descriptions distinguish paths from distant views. Normal paths can
-be retraced; locked passages explain what blocks them. A visible fatal
-crater edge remains dangerous. Combat can still kill you, but fatigue clears
-between encounters. A secured rope allows climbing both down and up.
-Successful actions confirm what changed. Read the clues you discover.
-A crystal lights the caves. Its glow fades as the adventure goes on.
-
-SAVE holds one checkpoint in memory. Saving again replaces it. RESTORE
-(or LOAD) brings back your room, inventory, creatures, puzzle progress,
-crystal glow and turn count. Combat rolls can differ after a restore. The slot
-survives Y at the restart prompt. It lasts until you exit the program or
-power off.
-
-To keep source edits in the Viewer, save in TED and download the card image.
-The card image preserves files. The in-game checkpoint lives only in memory.
-
-Copyright 1982-83 John Hardy; Microbee edition 1983. Dreamcards.
-GNU GPL release 2019; see repository LICENSE. Recovered MicroWorld BASIC
-for the Microbee, refined by its author. See the repository documentation
-for ZX81/VIC-20 lineage, preservation credits, tests and development history.
-The assembly Caverns80 version is retained for development, not shipped here.
+BAZA compiles CAVERNS.BAS into CAVERNS.COM. Once compiled, type CAVERNS
+to play again.
