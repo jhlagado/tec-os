@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
+import { at as shellAt } from "./lib/shell.mjs";
 import { AREA_COM, PUT_COM, ROOT, TEST_CLOCK, abiDeclarations, boot, marked, putBytes, service, romFor, standardCard, startupFile, volume, withMarks, withShell } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
@@ -129,7 +130,7 @@ test("bare and explicit COM still execute while shell CMD selects the script", a
   assert.doesNotMatch(m.command("RES.SVC"), /RES\.SVC\?/);
   assert.ok(word(m, 6) < before, "explicit SVC still installs its service");
   const shell = await machine({ "JOB.COM": SAY, "JOB.CMD": startupFile("ECHO SCRIPT_OK") }, { shell: true });
-  const out = shell.command("JOB.CMD");
+  const out = shellAt(shell, "JOB.CMD");
   assert.match(out, /SCRIPT_OK/);
   assert.doesNotMatch(out, /\r\nC\r\n/);
   assert.deepEqual(shell.violations, []);
