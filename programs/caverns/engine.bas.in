@@ -111,7 +111,7 @@ PRINT
 IF vs%=0 THEN PRINT "It's very dark, too dark to see anything... I'm scared!":GOTO @DESCRIBE_FOES
 RESTORE:FOR ix%=1 TO rm%:READ dc%:FOR iy%=1 TO dc%:READ ds$:IF ix%=rm% THEN PRINT ds$
 NEXT iy%:NEXT ix%
-IF rm%={ROOM_TREASURE_DOOR} THEN IF td%=0 THEN PRINT "A formidable oak door bound with iron is locked from the inside. It would take a powerful blow to break it." ELSE PRINT "The blast has opened a passage east into the treasure room."
+IF rm%={ROOM_TREASURE_DOOR} THEN GOSUB @DESCRIBE_TREASURE_DOOR
 IF rm%={ROOM_BALCONY} OR rm%={ROOM_TEMPLE} THEN IF rp%=1 THEN PRINT "The rope hangs from the stone rail to the temple floor."
 IF rm%={ROOM_TEMPLE} THEN IF gt% THEN PRINT "The gate to the north stands open." ELSE PRINT "To the north is a locked gate."
 IF rm%={ROOM_CRYPT} THEN IF cr% THEN PRINT "The stone seal in the eastern wall stands open." ELSE PRINT "The stones are marked V, A, R and D."
@@ -135,6 +135,10 @@ FOR li%=1 TO 6:IF ob%(li%)=rm% THEN IF li%<>{ITEM_WIZARD} AND li%<>{ITEM_DRAGON}
 NEXT li%
 @ROOM_PROMPT:
 PRINT:RETURN
+@DESCRIBE_TREASURE_DOOR:
+IF td% THEN PRINT "An open doorway leads east into the treasure room.":RETURN
+PRINT "A formidable oak door bound with iron is locked from the inside."
+PRINT "I wonder if even a blast would open it.":RETURN
 @PRINT_OBJECT:
 IF li%={ITEM_CRYSTAL} AND cl%=0 THEN PRINT "a dark crystal.":RETURN
 PRINT "a";ad$(li%);LEFT$(no$(li%),LEN(no$(li%))-1);".":RETURN
@@ -316,7 +320,9 @@ fo%=0:ft%=0:RETURN
 wd$=no$({ITEM_CRYSTAL}):GOSUB @FIND_WORD:IF mp%=0 THEN @FLASK_CLUE
 IF ob%({ITEM_CRYSTAL})<>{CARRIED} THEN PRINT "You need to carry the crystal.":RETURN
 IF rm%<>{ROOM_TREASURE_DOOR} THEN PRINT "The seal glints briefly. Nothing else happens.":RETURN
-PRINT "The flask bursts in a flash. The oak door splinters and a passage opens east."
+PRINT "A thread of blue light leaps from the crystal. The flask cracks."
+PRINT "Pale fire races along the iron bands. The oak groans and bursts inwards."
+PRINT "Beyond the smoke a passage leads east."
 td%={ROOM_TREASURE_ROOM}:ob%({ITEM_FLASK})={ABSENT}:RETURN
 @FLASK_CLUE:
 PRINT "The flask holds enchanted powder."

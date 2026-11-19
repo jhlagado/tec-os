@@ -51,13 +51,13 @@ test('the flask opens the oak door once, even after the crystal goes dark',{time
  const objects=[...ip];objects[7]=-1;objects[8]=-1;objects[20]=-1;
  const m=boot(await imageWith(scenario({'A%':20,'U%':229},objects)),{tms:true,matrix:true,width:80});
  const enter=command=>keys(m,command,question(m));
- enter('cavload test');
+ assert.match(enter('cavload test'),/I wonder if even a blast would open it/);
  assert.match(enter('use flask'),/Use with the crystal/);
  assert.match(enter('inventory'),/a dark crystal/);
  assert.equal(snapshot(m).variables['C0%'],0);
  assert.equal(snapshot(m).variables['T%'],0);
  assert.equal(snapshot(m).objects[8],-1);
- assert.match(enter('use flask with crystal'),/oak door splinters/);
+ assert.match(enter('use flask with crystal'),/blue light[\s\S]*oak groans[\s\S]*passage leads east/);
  const opened=snapshot(m);
  assert.equal(opened.variables['T%'],19);
  assert.equal(opened.objects[8],0);

@@ -6,7 +6,7 @@ and the roar of the waterfall below the stone staircase. The original
 Castle View aside stays and its north path is described without an exit list.
 The room review COM (`3420a054`) occupies 36,224 bytes. The current build adds
 the approved incidental edits, HELP, a RAM checkpoint and the crystal and
-flask puzzle. It occupies 38,400 bytes. The release figures and receipts below
+flask puzzle. It occupies 38,528 bytes. The release figures and receipts below
 describe earlier passes.
 
 The [incidental text review](caverns-incidental-text-review.md) records the wording before the incidental edits and the author’s review options.
