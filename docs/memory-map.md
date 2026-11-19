@@ -21,15 +21,15 @@ The two-volume reference card, with no drives field, instead has
 B988h and 47240 bytes bare. The word at 0001h points into the RAM BIOS table at
 BF00h.
 
-## ROM (15787 of 16384 bytes used, 597 free)
+## ROM (15814 of 16384 bytes used, 570 free)
 
 | Addresses | Bytes | Region |
 | --- | ---: | --- |
 | C000h–C002h | 3 | reset jump |
 | C003h–C00Ah | 8 | table |
 | C00Bh–C608h | 1534 | data |
-| C609h–FDAAh | 14242 | code |
-| FDABh–FFFFh | 597 | free |
+| C609h–FDC5h | 14269 | code |
+| FDC6h–FFFFh | 570 | free |
 
 ## Page zero, 0040h–004Fh
 

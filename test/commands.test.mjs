@@ -276,9 +276,9 @@ test("SH1 rom figure", () => {
   const second = { ...census(), hash: sha(readFileSync(resolve(ROOT, "build/tecos/tecos.rom"))) };
   assert.equal(second.hash, first.hash, "two builds, one image");
   const { used, free, regions } = first.rom;
-  // The ROM's figure includes buffered
-  // line navigation filtering.
-  assert.deepEqual([used, free], [15787, 597], "the ROM's bytes used and free");
+  // The ROM figure includes buffered line
+  // navigation and explicit type checks.
+  assert.deepEqual([used, free], [15814, 570], "the ROM's bytes used and free");
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   assert.ok(first.ram.tpa.bytes >= 47240, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
