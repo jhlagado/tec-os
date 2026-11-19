@@ -102,7 +102,7 @@ ROM's CCP leaves out ([shell.md](shell.md)): the history, `COPY`, `DEL`,
 `SERVICES`, the pager, lines of several commands and `.CMD` scripts. With no
 shell, after a reset with a key held for one, `!` and `&` are ordinary
 characters, `COPY`, `DEL` and `SERVICES` are names like any other, `DIR` and
-`TYPE` don't pause, a typed `NAME.CMD` runs `NAME.COM`, and only the first line
+`TYPE` don't pause, a typed `NAME.CMD` is rejected and only the first line
 of `STARTUP.CMD` runs.
 
 Under the shell a line of up to 127 characters, typed, from a script, from
@@ -161,8 +161,8 @@ In ROM too:
 - `NAME.SVC` installs a service, and enters it when its execution record asks,
   as `MON3.SVC`'s and `SHELL.SVC`'s do; typed again, it enters the copy that is
   in (`docs/services.md`). `UNLOAD` removes the lowest. A `.DRV` name is no
-  longer a service: `NAME.DRV` goes down the `.COM` path, runs a `NAME.COM` if
-  there is one, and prints `NAME.DRV?` if there is none.
+  longer a service: `NAME.DRV` produces `NAME.DRV?` before loading any COM.
+  Bare names select COM. Explicit extensions select only their stated type.
 - After a reset, recognised or not, and not on an ordinary exit, the first line
   of `A:STARTUP.CMD` that is neither empty nor a `;` comment runs before the
   first prompt, from the first record, on the volume on A:; a keypad key held

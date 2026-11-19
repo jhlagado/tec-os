@@ -124,7 +124,7 @@ installation have additional forms handled by the command processor.
 | `D:` | ROM | Select drive D, with the same form for another drive |
 | `NAME [ARGS]` | ROM | Load a COM program and pass its arguments |
 | `NAME.SVC [ARGS]` | ROM | Load a resident service, and enter its application when it has one |
-| `NAME.CMD` | Shell | Run a script of command lines. Without the shell, run `NAME.COM` |
+| `NAME.CMD` | Shell | Run a script of command lines. Requires the shell |
 
 CP/M 2.2's SAVE, which wrote memory pages from `0100h` to a file, is not
 provided. The cited revision's table still held it. It has since left the
@@ -563,6 +563,7 @@ A missing script produces the same rejection (`b95b2a9:docs/shell.md:98-120`).
 
 `STARTUP.CMD` is read the same way after the ROM has run its first line,
 when that line installs the shell. Typing `STARTUP.CMD` runs the whole file
-again as a typed script. Without the shell a typed `NAME.CMD` runs
-`NAME.COM`, and only the first line of `STARTUP.CMD` runs
-(`b95b2a9:docs/shell.md:33-51`, `b95b2a9:docs/shell.md:122-140`).
+again as a typed script. Without the shell a typed `NAME.CMD` produces
+`NAME.CMD?` before any COM load (`9428374:src/cpm/ccp.asm`). Only the first
+line of `STARTUP.CMD` runs during ROM startup
+(`b95b2a9:docs/shell.md:122-140`).

@@ -183,12 +183,13 @@ STARTUP.CMD?
 B:WORK>
 ```
 
-An ordinary program name uses COM even if you type another extension.
-`TAS.COM` and `TAS.TXT` both select `TAS.COM`. The shell treats an
-explicit `.CMD` as a script on the named or current drive. Script
-lookup stays on that drive. B has no STARTUP.CMD in this example,
+A bare program name selects COM. An explicit extension selects that type:
+`TAS.COM` selects `TAS.COM` but `TAS.TXT` produces `TAS.TXT?` before any COM
+load. The shell treats an explicit `.CMD` as a script on the named or current
+drive. Script lookup stays on that drive. B has no STARTUP.CMD in this example,
 so its command fails. `A:STARTUP.CMD` would run A's script again.
-The ROM alone treats `.CMD` like another extension and searches for COM.
+Without the shell, `.CMD` produces a command error and cannot run a COM file
+(`9428374:src/cpm/ccp.asm`, `9428374:docs/shell.md`).
 
 SVC files have a narrower search. A service command reads only the
 named or current drive. At `B:WORK>` you must

@@ -169,8 +169,10 @@ is absent (`b95b2a9:src/cpm/ccp.asm:397-422`, `b95b2a9:src/cpm/ccpcmd.asm:689-70
 `b95b2a9:src/tables.asm:53-78`).
 
 A keyword match jumps to its handler. Otherwise the FCB must be
-unambiguous. Type SVC enters `SVCGO` for installation. Every other type
-becomes COM, so `TAS.TXT` searches for `TAS.COM` (`b95b2a9:src/cpm/ccp.asm:420-474`).
+unambiguous. Type SVC enters `SVCRUN` for service dispatch. A blank type
+selects COM. An exact COM uses the application loader. Other explicit types
+reach `BADCMD` before any COM load, so `TAS.TXT` produces `TAS.TXT?`
+(`9428374:src/cpm/ccp.asm`). The shell handles explicit CMD before ROM dispatch.
 During startup, INIT result `TNENODV` is a quiet success. Other install
 failures reach `BADCMD` (`b95b2a9:src/cpm/ccp.asm:442-458`). A service execution
 record can also request entry after installation or entry into an existing
