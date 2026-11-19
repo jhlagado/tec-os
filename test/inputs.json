@@ -4,12 +4,12 @@
     "TAS.COM": {
       "env": "TAS_COM",
       "default": "../thorium/dist/TAS.COM",
-      "source": "jhlagado/thorium 7a217f9, dist/TAS.COM",
+      "source": "jhlagado/thorium 9752fde, dist/TAS.COM",
       "repo": "jhlagado/thorium",
-      "commit": "7a217f96c76f11641af3fa0b22d0b34be6e2a467",
+      "commit": "9752fde15349861e5b3caaff3fefe58dbdae8fc7",
       "path": "dist/TAS.COM",
-      "bytes": 11013,
-      "sha256": "8e1f0efb662e5d6bab5e2b7f9479bc60d6f989d07fb22d11c9ffc70e2f5ed359"
+      "bytes": 11098,
+      "sha256": "00e34db203603062c985c31ee53bdd21cb505281d388c8d64155d31cd9b6ccc4"
     },
     "TED.COM": {
       "env": "TED_COM",

@@ -7,8 +7,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inputsDir, pinnedBytes } from './pins.mjs';
 import { decodeImage, scanSource, tasImage } from './tas-d8.mjs';
 
-const runnerPin = '3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689';
-const tasPin = '7a217f96c76f11641af3fa0b22d0b34be6e2a467';
+const runnerPin = '9752fde15349861e5b3caaff3fefe58dbdae8fc7';
+const tasPin = '9752fde15349861e5b3caaff3fefe58dbdae8fc7';
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const include = /^([ \t]*%INCLUDE[ \t]+")([^"\r\n]+)(")/gim;
 
@@ -78,15 +78,15 @@ export async function tasAssembler() {
   const root = fileURLToPath(new URL('../../', import.meta.url));
   const entry = JSON.parse(readFileSync(join(root, 'test/inputs.json'), 'utf8')).inputs['TAS.COM'];
   assert.equal(entry.commit, tasPin, 'unsupported TAS manifest commit');
-  assert.equal(entry.sha256, '8e1f0efb662e5d6bab5e2b7f9479bc60d6f989d07fb22d11c9ffc70e2f5ed359', 'unsupported TAS manifest hash');
-  assert.equal(entry.bytes, 11013, 'unsupported TAS manifest byte count');
+  assert.equal(entry.sha256, '00e34db203603062c985c31ee53bdd21cb505281d388c8d64155d31cd9b6ccc4', 'unsupported TAS manifest hash');
+  assert.equal(entry.bytes, 11098, 'unsupported TAS manifest byte count');
   const override = process.env.TECOS_TAS_HOST;
   assert.ok(override !== '', 'TECOS_TAS_HOST is empty: unset it or select the prepared pinned host');
   const host = resolve(override ?? join(inputsDir(root), 'tas-host'));
   assert.ok(readdirSyncSafe(host), 'no TAS host at ' + host + ': prepare .inputs/tas-host as described in README.md or set TECOS_TAS_HOST');
   const com = pinnedBytes(root, 'TAS.COM');
   const runner = join(host, 'tools/tas.mjs');
-  assert.equal(sha(readFileSync(runner)), 'e68e24d900bdc9aa391086f0425d0a56feedeb7257c5a71facdd4bd6f8f7bade', 'Thorium runner pin mismatch');
+  assert.equal(sha(readFileSync(runner)), '7a6d1e7d8188287526948a0823e4040a4bee45d4f3284f8988fbe77ec0ac3ae1', 'Thorium runner pin mismatch');
   assert.equal(sha(readFileSync(join(host, 'package-lock.json'))), 'fc8bcae3046fa185048627e0df26c602772cfb3b190a54089e2fe6764839bf2a', 'Thorium lock pin mismatch');
   const runtime = join(host, 'node_modules/@jhlagado/debug80-runtime');
   const hash = createHash('sha256');
