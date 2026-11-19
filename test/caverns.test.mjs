@@ -133,7 +133,16 @@ test('BASIC information, aliases, failed requests, compass warning, fatal restar
  assert.match(keys(m,'take sword',question(m)),/Not here/);assert.equal(element(m,'P%',20),7);
  assert.match(keys(m,'take compass',question(m)),/You take/);
  for(const cmd of ['north','west','west','south','west'])noDeath(keys(m,cmd,question(m)));
- assert.equal(integer(m,'A%'),7);assert.match(keys(m,'west',question(m)),/chasm/);
+ assert.equal(integer(m,'A%'),7);
+ assert.match(keys(m,'save',question(m)),/saved in memory/);
+ assert.match(keys(m,'west',question(m)),/fall into the crater/);
+ assert.match(keys(m,'restore',question(m)),/Game restored/);
+ assert.equal(integer(m,'A%'),7);
+ assert.match(keys(m,'west',question(m)),/fall into the crater/);
+ assert.match(keys(m,'y',question(m)),/bark hut/);assert.equal(integer(m,'U%'),0);
+ assert.match(keys(m,'load',question(m)),/Game restored/);
+ assert.equal(integer(m,'A%'),7);assert.equal(element(m,'P%',8),-1);
+ assert.match(keys(m,'west',question(m)),/fall into the crater/);
  assert.match(keys(m,'y',question(m)),/bark hut/);assert.equal(integer(m,'U%'),0);
  keys(m,'north',question(m));assert.match(keys(m,'west',question(m)),/lose my bearings/);
  keys(m,'quit',question(m));keys(m,'n');assert.ok(m.ready());assert.deepEqual(m.violations,[]);

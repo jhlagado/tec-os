@@ -34,11 +34,14 @@ const sceneIds=[1,4,6];
 const oldIntroductions=['An evil wizard bars the way. He cries: Thou shalt not pass!','A sleeping dragon wakes and breathes jets of fire.','An old dwarf guards the steps, raising his dagger.'];
 const scenes=oldIntroductions.map((old,i)=>({id:sceneIds[i],old:literalPattern(old+'Nearby there lurks...'+edits.objects[sceneIds[i]-1].old+', '),current:literalPattern(edits.literalChanges[old])}));
 const literalEdits=Object.entries(edits.literalChanges).flatMap(([old,current],i)=>[[old,i],[current,i]]).sort((a,b)=>b[0].length-a[0].length).map(([text,i])=>[literalPattern(text),i]);
+const contextualEdits=Object.entries(edits.contextualVariants).flatMap(([replacement,variants])=>
+ variants.map(text=>[literalPattern(text),replacement]));
 const objectEdits=edits.objects.flatMap(o=>[o.old,o.new].map(text=>[new RegExp(literalPattern(text).source+'\\s*[,\\.]','g'),o.id]));
 function normal(s){
  s=s.replace(/\r\n/g,'\n').replace(/(ERROR IN|BREAK IN) \d+/g,'$1 <line>');
  for(const [pattern,id]of prosePatterns)s=s.replace(pattern,'<room-'+id+'>');
  for(const scene of scenes)s=s.replace(scene.old,'<scene-'+scene.id+'>\n').replace(scene.current,'<scene-'+scene.id+'>\n');
+ for(const [pattern,text]of contextualEdits)s=s.replace(pattern,text);
  for(const [pattern,id]of literalEdits)s=s.replace(pattern,'<literal-'+id+'>');
  for(const [pattern,id]of objectEdits)s=s.replace(pattern,'<object-'+id+'>');
  return s.replace(/(<object-\d+>)[ \t\n]*/g,'$1').replace(/(<scene-\d+>)[ \t\n]*/g,'$1').replace(/(<room-\d+>)\n+/g,'$1\n').replace('CAVERNS by John Hardy (c) 1982-83','CAVERNS by John Hardy (c) 1983');

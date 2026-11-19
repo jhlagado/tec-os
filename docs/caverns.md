@@ -8,7 +8,8 @@ qualification record before treating it as the public Viewer version.
 
 The starter disk's main SYSTEM volume supplies **CAVERNS.BAS** and
 **CAVERNS.TXT**. Neither the BASIC executable nor the assembly version is
-preinstalled. Build the BASIC game yourself with the included BAZA compiler:
+preinstalled. At the TEC-OS prompt, `TYPE CAVERNS.TXT` shows the legend of Svartalfheim
+and the instructions. Build the BASIC game with the included BAZA compiler:
 
 ```
 CON PICO 80
@@ -16,7 +17,7 @@ BAZA CAVERNS
 CAVERNS
 ```
 
-The current restored-prose executable is **36,224 bytes**, including its selected runtime.
+The current executable is **38,400 bytes**, including its selected runtime.
 Compilation and play work with the shell resident (TPA 41,984 bytes); no UNLOAD
 is needed. BAZA.RTL is required for compilation, not beside the running game.
 Use the PICO9918 console at 80 columns and matrix keyboard input, as tested.
@@ -91,7 +92,12 @@ Known limits: eleven carried objects; combat can lose; finite candle lifetime
 Matches/explicit candle lighting, stronger startup entropy and persistent
 in-game saves remain future work. Development checkpoints restore an exact
 random state, so identical commands intentionally repeat the same outcome.
-The development-only loader is not an in-game SAVE/LOAD command.
+In the game, HELP shows the commands. SAVE records one checkpoint in RAM.
+RESTORE or LOAD returns to it, including from the restart prompt or after
+answering Y and starting in the hut. SAVE replaces the slot. It is lost when
+the program exits or the machine powers off. In-game restores keep the running
+random stream, so combat rolls can differ. The development loader separately
+supports exact seeded scenarios from disk.
 
 ## Exact artifacts and reproduction
 
@@ -111,7 +117,7 @@ see [compiler integration evidence](caverns-compact-emission.md). Shared print
 helpers then made it 36,736 bytes, and the compact-code compiler at `5f6b58d`
 (direct jumps, equality compares, inline numeric literals and digit-only whole
 numbers in `DATA`; Baza's `docs/compact-code.md`) made it 33,280. The later restart-based coordinates, short constant FOR loops
-and shared numeric publishing at `eee4ee6` reduced that abbreviated-text build to 29,056 bytes. The restored prose and subsequent author review bring the current build to 36,224 bytes. The engine
+and shared numeric publishing at `eee4ee6` reduced that abbreviated-text build to 29,056 bytes. The restored prose, author revisions, HELP and the RAM checkpoint bring the current build to 38,400 bytes. The engine
 and world data are separated, with ten-step numbering and the requested casing.
 See [engine structure and authoring](caverns-engine.md). Descriptions
 are scanned from compact DATA into one temporary string rather than retaining

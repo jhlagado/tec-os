@@ -47,6 +47,31 @@ test('scenario launcher preserves public addresses and restores all monsters, ob
  assert.equal(patched.readUInt16LE(after.offset+6),game.readUInt16LE(before.offset+6),'stack reserve unchanged');
  assert.deepEqual(m.violations,[]);
 });
+test('HELP is free and SAVE and RESTORE round-trip a live game in one slot',{timeout:120000},async()=>{
+ const objects=[...ip];objects[7]=-1;objects[18]=-1;objects[20]=-1;objects[21]=28;
+ const start=scenario({'A%':28,'D%':49,'W%':43,'G%':39,'T%':19,'E%':38,'R0%':1,'F%':2,'U%':201},objects);
+ const m=boot(await imageWith(start),{tms:true,matrix:true,width:80});
+ const enter=command=>keys(m,command,question(m));
+ enter('cavload test');
+ const saved=snapshot(m);
+ assert.match(enter('HeLp'),/SAVE keeps one game in memory/);
+ assert.match(enter('load'),/no saved game/i);
+ assertState(m,saved);
+ assert.match(enter('save'),/saved in memory/);
+ assertState(m,saved);
+ enter('down');enter('use key');enter('drop candle');
+ assert.equal(snapshot(m).variables['K0%'],1);
+ assert.equal(snapshot(m).objects[20],37);
+ assert.match(enter('load'),/Game restored/);
+ assertState(m,saved);
+ enter('untie rope');
+ const replacement=snapshot(m);
+ enter('save');
+ enter('drop key');
+ assert.match(enter('restore'),/Game restored/);
+ assertState(m,replacement);
+ assert.deepEqual(m.violations,[]);
+});
 test('real picked-up objects and encounter state survive exported file and fresh boot; RNG continuation matches',{timeout:120000},async()=>{
  const image=await imageWith(null),v=volume(image,'A');v.write('CAVERNS.COM',readFileSync(ROOT+'/programs/CAVERNS.COM'));
  const m=boot(image,{tms:true,matrix:true,width:80});keys(m,'caverns',question(m));

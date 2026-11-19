@@ -1,8 +1,8 @@
 # Caverns incidental text review
 
-This inventory uses the live authoring source after the room review. The
-wording suggestions here are for discussion. All messages shown as current
-still print as listed. Room paragraphs have their own source and review.
+This is the review snapshot from before the approved message edits. The
+template now contains the revised wording, HELP and the in-memory checkpoint.
+The tables preserve what the author reviewed.
 
 Each group lists current player-facing text and relevant MicroWorld BASIC
 antecedents. Italic placeholders stand for values printed by the game. Line

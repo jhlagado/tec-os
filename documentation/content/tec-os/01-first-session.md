@@ -74,7 +74,7 @@ graphics LCD. In this session it leaves the PICO9918 selected as the
 after the prompt and press Return. The prompt is already on screen, so it
 is not part of the command you enter. The same session produced:
 
-<!-- TEC-OS with the sized DIR (ROM 35893cab, starter card c0138daf): node tools/capture.mjs --board pico --screen DIR. The PICO9918's 40-column screen from the DIR line; right-hand blanks and empty bottom rows omitted. -->
+<!-- TEC-OS with the sized DIR (ROM 41c87b73, starter card 48d67a0f): node tools/capture.mjs --board pico --screen DIR. The PICO9918's 40-column screen from the DIR line; right-hand blanks and empty bottom rows omitted. -->
 ```text
 A:SYSTEM>DIR
 
@@ -88,13 +88,13 @@ TAS.COM        11136
 BAZA.COM       13440
 BAZA.RTL       13056
 BOUNCE.BAS      5376
-CAVERNS.TXT     2688
+CAVERNS.TXT     4352
 DEMO.ASM       15360
 MON3.SVC        5248
 HELLO3.ASM      2176
-CAVERNS.BAS    25216
-15 files, 116608 bytes
-903168 free on A:SYSTEM
+CAVERNS.BAS    27008
+15 files, 120064 bytes
+899072 free on A:SYSTEM
 A:SYSTEM>
 ```
 
@@ -154,7 +154,7 @@ A drive letter followed by a colon changes the current drive. `B:` selects
 WORK and `A:` returns to SYSTEM. This screen follows the listing above
 with both drive commands:
 
-<!-- TEC-OS with the sized DIR (ROM 35893cab, starter card c0138daf): node tools/capture.mjs --board pico --screen DIR B: A:. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS with the sized DIR (ROM 41c87b73, starter card 48d67a0f): node tools/capture.mjs --board pico --screen DIR B: A:. Full screen; trailing empty rows omitted. -->
 ```text
 A:SYSTEM>GLCD.SVC
 
@@ -170,13 +170,13 @@ TAS.COM        11136
 BAZA.COM       13440
 BAZA.RTL       13056
 BOUNCE.BAS      5376
-CAVERNS.TXT     2688
+CAVERNS.TXT     4352
 DEMO.ASM       15360
 MON3.SVC        5248
 HELLO3.ASM      2176
-CAVERNS.BAS    25216
-15 files, 116608 bytes
-903168 free on A:SYSTEM
+CAVERNS.BAS    27008
+15 files, 120064 bytes
+899072 free on A:SYSTEM
 A:SYSTEM>B:
 B:WORK>A:
 A:SYSTEM>

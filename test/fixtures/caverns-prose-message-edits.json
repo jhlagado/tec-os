@@ -5,17 +5,17 @@
     "It's very dark, too dark to see anything...I'm scared!": "It's very dark, too dark to see anything... I'm scared!",
     "East: iron-bound door, barred within. Try explosives.": "A formidable oak door bound with iron is locked from the inside. Perhaps explosives would open it.",
     "East doorway blasted open.": "The blast has opened a passage east into the treasure room.",
-    "The secured rope reaches the floor. Use UP or DOWN.": "The rope hangs securely from the rail to the temple floor.",
-    "North gate open.": "To the north is an open gate.",
+    "The secured rope reaches the floor. Use UP or DOWN.": "The rope hangs from the stone rail to the temple floor.",
+    "North gate open.": "The gate to the north stands open.",
     "North gate locked.": "To the north is a locked gate.",
     "East seal open.": "The stone seal in the eastern wall stands open.",
     "Stones read V, A, R, D. Speak the name.": "The stones are marked V, A, R and D.",
     "East shaft open.": "An open ventilation shaft leads east.",
-    "Remove the grille; leave it here. It cannot fit through.": "A rusty grille covers the ventilation shaft. It is too large to carry through.",
+    "Remove the grille; leave it here. It cannot fit through.": "A rusty grille covers the ventilation shaft.",
     "East drawbridge raised; seek another entrance.": "A raised drawbridge keeps you from crossing to the castle.",
     "East drawbridge lowered.": "A mighty golden drawbridge spans the waters.",
     "An evil wizard bars the way. He cries: Thou shalt not pass!": "Before you in a swirling mist stands an evil wizard with his hand held outwards. 'Thou shalt not pass!' he cries.",
-    "A sleeping dragon wakes and breathes jets of fire.": "An enormous green dragon guards the cave entrance. Its eyes flicker as it leaps up breathing jets of fire.",
+    "A sleeping dragon wakes and breathes jets of fire.": "An enormous green dragon guards the cave entrance. Its eyes flicker open and it leaps up, breathing jets of fire.",
     "An old dwarf guards the steps, raising his dagger.": "From around the corner trots an old and gnarled dwarf carrying a lantern. 'My job is to protect these stone steps!' he says and lunges at you with his dagger.",
     "Rope secured to rail; it reaches the floor.": "You tie the rope securely to the stone rail. It reaches the temple floor.",
     "No secured rope here.": "There is no secured rope here.",
@@ -28,7 +28,7 @@
     "Suddenly a magic wind carried you to another place...": "Suddenly a magic wind carries you to another place...",
     "The seal slides open both ways.": "The eastern wall of the crypt slides open.",
     "The creature kills you.": "The creature strikes before you can defend yourself. You have been killed!",
-    "You fall into the chasm and die.": "You stumble and fall into the chasm. You smash into the rocks below.",
+    "You fall into the chasm and die.": "You stumble and fall into the crater and smash yourself to a pulp on the rocks below.",
     "Taken: ": "You take ",
     "Dropped: ": "You drop ",
     "The foe is stunned but quickly regains his balance.": "The foe is stunned but quickly regains its balance.",
@@ -36,11 +36,18 @@
     "A black cloud descends and the corpse vaporises.": "Suddenly a black cloud descends and the corpse vaporises into nothing.",
     "BOOM! Smoke clears: nothing has changed.": "BOOM! You are thrown aside. When the smoke clears nothing has changed.",
     "BOOM! The door is torn from its hinges. The passage east is open.": "The fuse burns away and... BOOM! The door is torn from its hinges. A passage opens to the east.",
-    "TIE ROPE TO RAIL at the balcony, then DOWN; UP returns.": "Tie the rope to the stone rail before climbing down. Once it is secured you can climb back up to the balcony.",
+    "TIE ROPE TO RAIL at the balcony, then DOWN; UP returns.": "The stone rail looks strong enough to hold the rope.",
     "Ranking:": "This gives you an adventurer's ranking of:",
     "Excellent...but you've left something behind!": "Excellent... but you've left something behind!",
     "You lift the latch. The hatch opens both ways.": "You lift the latch and open the service hatch.",
-    "All treasure home. Your quest is complete!": "All your treasure is home. Your quest is complete!"
+    "All treasure home. Your quest is complete!": "All your treasure is home. Your quest is complete!",
+    "Score:": "You have a score of",
+    "Tie it to what? Try the rail.": "Tie it to what?",
+    "The giant bat carries you to its colony.": "The giant bat picks you up and carries you to its colony.",
+    "You cannot carry more.": "You are carrying too many objects.",
+    "Nothing to ignite here. Keep your candle safe.": "Nothing to ignite here.",
+    "The candle is out; you need a flame.": "The candle is out.",
+    "Welcome home! Your treasures are safe.": "Welcome home!"
   },
   "objects": [
     {
@@ -224,5 +231,24 @@
     1,
     4,
     6
-  ]
+  ],
+  "contextualVariants": {
+    "The stone rail looks strong enough to hold the rope.": [
+      "There is nowhere to fasten the rope here."
+    ],
+    "You miss and the creature strikes back.": [
+      "You miss and the dragon breathes fire at you."
+    ],
+    "a small lit candle.": [
+      "an unlit candle."
+    ],
+    "The creature strikes before you can defend yourself. You have been killed!": [
+      "You have been killed by an evil wizard.",
+      "You have been killed by a fiery demon.",
+      "You have been killed by an axe-wielding troll.",
+      "You have been killed by a fire-breathing dragon.",
+      "You have been killed by a giant bat.",
+      "You have been killed by an old and gnarled dwarf."
+    ]
+  }
 }

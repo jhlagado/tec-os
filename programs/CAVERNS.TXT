@@ -1,5 +1,33 @@
 CAVERNS -- JOHN HARDY'S BASIC ADVENTURE, REFINED FOR TEC-OS
 
+THE LEGEND OF SVARTALFHEIM
+
+Deep in the icy mountains of northern Iotunheim lived a band of elves
+who called themselves the Great Sons of Svartalfheim. They mined the
+limestone caves for precious minerals and fashioned them into jewellery.
+Merchants came from Asgar and Fenris to buy their work. The elves grew
+prosperous and linked their mines to a golden city beneath the mountains.
+
+The greedy King of the Danes sent his troops to sack the city and took
+the elves away to work in his royal foundry. A strange illness swept
+through them. Within weeks they were all dead and their gifts were lost.
+
+Centuries later a goatherd named Peter came running into town. High in
+the hills he had found a cave guarded by a green serpent that breathed
+fire. He escaped the dragon and found a room full of gold and silver.
+The only proof he brought home was a tiny ruby ring of exquisite
+workmanship. When he led the villagers back beyond Mount Ymir, a rockfall
+killed them before they reached the entrance. The hoard passed into myth.
+
+Four hundred years have passed since Peter's day. You have followed the
+valley into the foothills of Ymir to seek the lost treasure. Your base is
+a small bark hut that once belonged to a hermit.
+
+Adapted from John Hardy's original Microbee introduction
+(jhlagado/caverns, src/caverns-intro.basic, lines 22-38).
+
+PLAYING ON TEC-OS
+
 On the starter disk's main SYSTEM volume:
   CON PICO 80
   BAZA CAVERNS
@@ -17,18 +45,21 @@ Find the lost treasures and bring them home. Returning through the hut door
 with the key welcomes you home, deposits carried treasures, and displays
 your score and ranking. Equipment is retained. Your possessions count double
 at home. The maximum score is 126. You may leave again to explore, or QUIT.
-After QUIT, N returns to TEC-OS and Y starts another adventure.
+After QUIT or death, N returns to TEC-OS and Y starts another adventure.
+If you have a checkpoint, you can also type RESTORE at that prompt.
 
 Commands use whole words, in either case:
   NORTH, SOUTH, EAST, WEST (or N/S/E/W)
-  LOOK, LIST, INVENTORY, INVENT (or I), SCORE, QUIT
+  HELP, LOOK, LIST, INVENTORY, INVENT (or I), SCORE, QUIT
+  SAVE, RESTORE (or LOAD)
   TAKE COMPASS, GET COMPASS, DROP COMPASS, PUT COMPASS
   ATTACK TROLL WITH SWORD (ATTACK TROLL SWORD also works)
   USE KEY, OPEN DOOR WITH KEY
   TIE ROPE TO RAIL, DOWN, UP, UNTIE ROPE
   OPEN HATCH
   LIGHT BOMB WITH CANDLE
-LOOK, inventory and SCORE are free. An incomplete attack asks for a weapon.
+HELP shows a short command list. HELP, LOOK, inventory, SCORE, SAVE and
+RESTORE cost no turns. An incomplete attack asks for a weapon.
 
 Take the compass before leaving. Without it you lose your bearings.
 Room descriptions distinguish paths from distant views. Normal paths can
@@ -38,10 +69,14 @@ between encounters. A secured rope allows climbing both down and up.
 Successful actions confirm what changed. Read the clues you discover.
 The candle is currently found lit; matches are a later refinement.
 
-There is no in-game SAVE or LOAD command. Developer scenario files and their
-separate CAVLOAD launcher are not part of this starter disk. To preserve
-source edits in the Viewer, save in TED, then download the card image.
-An image download preserves files, not the running game's memory.
+SAVE holds one checkpoint in memory. Saving again replaces it. RESTORE
+(or LOAD) brings back your room, inventory, creatures, puzzle progress,
+candle and turn count. Combat rolls can differ after a restore. The slot
+survives Y at the restart prompt. It lasts until you exit the program or
+power off.
+
+To keep source edits in the Viewer, save in TED and download the card image.
+The card image preserves files. The in-game checkpoint lives only in memory.
 
 Copyright 1982-83 John Hardy; Microbee edition 1983. Dreamcards.
 GNU GPL release 2019; see repository LICENSE. Recovered MicroWorld BASIC

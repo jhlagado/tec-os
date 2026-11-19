@@ -190,13 +190,13 @@ directory is:
 node tools/tecvol.mjs dir dist/starter.img A
 ```
 
-<!-- TEC-OS with the sized DIR (ROM 35893cab, starter card c0138daf): host-tool output of the command above. -->
+<!-- TEC-OS with the sized DIR (ROM 41c87b73, starter card 48d67a0f): host-tool output of the command above. -->
 ```text
  0 BAZA.COM        13440
  0 BAZA.RTL        13056
  0 BOUNCE.BAS       5376
- 0 CAVERNS.BAS     25216
- 0 CAVERNS.TXT      2688
+ 0 CAVERNS.BAS     27008
+ 0 CAVERNS.TXT      4352
  0 DEMO.ASM        15360
  0 GLCD.SVC          896
  0 HELLO3.ASM       2176
