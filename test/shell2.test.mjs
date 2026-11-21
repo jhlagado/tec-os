@@ -1209,7 +1209,9 @@ test("S2-12 no mount.com", () => {
   assert.ok(!names.includes("HELLO3.BIN"));
   assert.ok(names.includes("CAVERNS.BAS"));
   assert.ok(!names.includes("CAVERNS.COM"), "readers compile the supplied source");
-  assert.equal(names.length, 15);
+  assert.ok(names.includes("SNAKE9.ASM"));
+  assert.ok(names.includes("SNAKE9.BIN"));
+  assert.equal(names.length, 17);
 });
 
 test("S2-12 instruction", () => {
