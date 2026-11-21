@@ -7,14 +7,21 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { dirname, relative, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const [rootArg, pin, output] = process.argv.slice(2);
 if (!rootArg || !/^[0-9a-f]{40}$/.test(pin ?? '') || !output) {
   throw Error('usage: trace-ccp-operands.mjs ROOT FULL_PIN OUTPUT.json');
 }
 const root = resolve(rootArg);
+const out = resolve(output);
+const underRoot = relative(root, out);
+assert.ok(underRoot.startsWith('../'), 'write model evidence outside the measured checkout');
+const driver = fileURLToPath(import.meta.url);
+const driverRoot = resolve(dirname(driver), '..');
+const driverPin = execFileSync('git', ['-C', driverRoot, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+assert.equal(execFileSync('git', ['-C', driverRoot, 'status', '--porcelain'], { encoding: 'utf8' }).trim(), '');
 const git = (...args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trim();
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const verify = () => {
@@ -38,7 +45,7 @@ globalThis.__ccpTraceModel = {
 once('import { test } from "node:test";', 'const test = globalThis.__ccpTraceModel.register;');
 once('return { input, output, calls, peak: log.peak() };',
   'return { input, output, calls, peak: log.peak(), trace: log.calls() };');
-once('  assert.deepEqual(m.violations, []);', `  globalThis.__ccpTraceModel.capture({ rows, violations: [...m.violations], romSymbols: Object.fromEntries(m.symbols), serviceBase: m.read(m.sym("LOWPG")) * 256 });
+once('  assert.deepEqual(m.violations, []);', `  globalThis.__ccpTraceModel.capture({ rows, violations: [...m.violations], romSymbols: Object.fromEntries(m.symbols), shellTable: m.read(m.sym("SHOWN")) | (m.read(m.sym("SHOWN") + 1) << 8), serviceHeadPage: m.read(m.sym("SVCHEAD")) });
   assert.deepEqual(m.violations, []);`);
 source = source.replace(/from (["'])(\.[^"']+)\1/g, (_whole, _quote, specifier) =>
   `from ${JSON.stringify(pathToFileURL(resolve(dirname(path), specifier)).href)}`);
@@ -57,14 +64,23 @@ try {
   const { makeSvc } = await import(url('tools/lib/svc.mjs'));
   const shell = await makeSvc(resolve(root, 'drivers/shell.asm'), { work: resolve(root, 'build/svc') });
   assert.equal(sha(shell.file), sha(SHELL_SVC), 'captured shell and symbol map agree');
+  for (const capture of captures) {
+    capture.shellBase = capture.shellTable ? capture.shellTable - shell.symbols.TABLE : null;
+    if (capture.shellBase !== null) assert.equal(capture.shellBase & 255, 0, 'installed shell base is page aligned');
+  }
   verify();
-  writeFileSync(output, JSON.stringify({
+  writeFileSync(out, JSON.stringify({
     classification: 'paired-trace model, not a test pass', pin, clean: true,
     node: process.version, sourceSha256: sha(original),
+    transformedSourceSha256: sha(source), driverPin, driverSha256: sha(readFileSync(driver)),
+    d8Sha256: sha(readFileSync(resolve(root, 'build/tecos/tecos.d8.json'))),
+    inputManifestSha256: sha(readFileSync(resolve(root, 'test/inputs.json'))),
+    inputPins: JSON.parse(readFileSync(resolve(root, 'test/inputs.json'), 'utf8')).inputs,
     fixtureSha256: sha(readFileSync(resolve(root, 'test/fixtures/ccp-operands.json'))),
     romSha256: sha(romFor().rom), shellSha256: sha(SHELL_SVC),
     shellSymbolsOffsets: shell.symbols, captures, exceptions,
   }, null, 2) + '\n');
+  verify();
 } finally {
   delete globalThis.__ccpTraceModel;
 }
