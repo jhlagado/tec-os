@@ -58,10 +58,32 @@ KEYBREAK:
   ld a,(KBSLOT)
   cp $3B
   jr nz,KEYKEEP
+  ; Only the direct GETCHAR call in LINLOOP can offer a parked read.
+  ld hl,2
+  add hl,sp
+  ld e,(hl)
+  inc hl
+  ld d,(hl)
+  ld hl,LINLOOP+3
+  or a
+  sbc hl,de
+  jr nz,KEYOLD
+  ld a,(HKDEP)
+  cp 1
+  jr nz,KEYOLD
+  ld de,PARKREC
+  ld bc,1
+  call REGFIND
+  jr c,KEYOLD
+  ld bc,LINEPARK
+  ld de,BDOSRME-BDOSRAM
+  jr KEYDISP
+KEYOLD:
   ld de,KEYREC
   ld bc,1
   call REGFIND
   jr c,KEYKEEP
+KEYDISP:
   call KEYCALL
   jr nc,KEYKEEP  ; provider declined the current context
   xor a
@@ -74,3 +96,29 @@ KEYCALL:
   jp (hl)
 
 KEYREC: DB "KEYBREAK"
+
+; KEYPARK v1 enters on the suspended BDOS stack. BC is LINEPARK and
+; DE is its backup length. Move to a private stack before calling LINEPARK.
+; LINEPARK takes HL=returning disk callback and DE=private backup buffer.
+; The callback may use disk calls only and must not abort or warm boot.
+; Register results are unspecified apart from its returned A and flags.
+; Keep disk/BIOS caches live so committed writes survive restoration.
+LINEPARK:
+  push de
+  push hl
+  ld hl,BDOSRAM
+  ld bc,BDOSRME-BDOSRAM
+  ldir
+  ld a,$FF
+  ld (ERRMODE),a
+  pop hl
+  call KEYCALL
+  pop hl
+  push af
+  ld de,BDOSRAM
+  ld bc,BDOSRME-BDOSRAM
+  ldir
+  pop af
+  ret
+
+PARKREC: DB "KEYPARK "

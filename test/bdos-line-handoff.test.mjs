@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { makeSvc } from "../tools/lib/svc.mjs";
-import { ROOT, program, romFor } from "./lib/fixtures.mjs";
+import { ROOT, program, romFor, volume } from "./lib/fixtures.mjs";
 import { card, machine, runFor, runTo, word } from "./lib/mon3.mjs";
 
 const fixture = await program("bdosline");
@@ -23,7 +23,7 @@ function press(m, key, shifted = false) {
   runFor(m, 100_000);
 }
 
-function readLine({ leak = false, probe, tbg } = {}) {
+function readLine({ leak = false, probe, tbg, park = false } = {}) {
   const files = { "BDOSLINE.COM": fixture.bytes };
   if (probe) files["KEYPROBE.SVC"] = probe.file;
   if (tbg) files["TBG.SVC"] = tbg;
@@ -64,8 +64,15 @@ function readLine({ leak = false, probe, tbg } = {}) {
     const count = (m.read(m.sym("SVCHEAD")) << 8) + (probe?.symbols.COUNT ?? 0);
     setKey(m, 1, true); // Ctrl
     setKey(m, 0x3b, true); // X
+    if (park) runTo(m, (m.read(m.sym("SVCHEAD")) << 8) + probe.symbols.WAITR);
     runFor(m, 100_000);
     if (probe) assert.equal(m.read(count), 1, "the resident callback owns the keyboard");
+    if (park) {
+      const snapshot = volume(m.sdImage, "A").read("PARKTEST.BIN");
+      assert.equal(snapshot.length, 128);
+      assert.equal(snapshot[0], 0x5a);
+      assert.deepEqual(readState(), pending, "the parked disk write restores the input context");
+    }
     if (tbg) assert.match(lcd(), /^TBG: INPUT PAUSED/);
     runFor(m, 100_000);
     setKey(m, 0x3b, false);
@@ -99,11 +106,19 @@ test("the line comparison detects an extra matrix keystroke", () => {
 
 test("KEYBREAK resumes a pending BDOS line without leaking debugger keys",
   { skip: !romFor().symbols.has("KEYBREAK") }, async () => {
-    const probe = await makeSvc(resolve(ROOT, "test/programs/keyprobe.asm"), { work: resolve(ROOT, "build/svc") });
+    const probe = await makeSvc(resolve(ROOT, "test/programs/keyprobe.asm"), { defs: { PARK: 0 }, work: resolve(ROOT, "build/svc") });
     assert.equal(readLine({ probe }), "ABC");
   });
 
 test("TBG returns keyboard ownership to its target's pending BDOS read",
   { skip: !process.env.TBG_SVC || !romFor().symbols.has("KEYBREAK") }, () => {
     assert.equal(readLine({ tbg: readFileSync(process.env.TBG_SVC) }), "ABC");
+  });
+
+test("a parked BDOS read permits a disk write and resumes the same line",
+  { skip: !romFor().symbols.has("LINEPARK") }, async () => {
+    const probe = await makeSvc(resolve(ROOT, "test/programs/keyprobe.asm"), {
+      defs: { PARK: 1 }, work: resolve(ROOT, "build/svc"),
+    });
+    assert.equal(readLine({ probe, park: true }), "ABC");
   });
