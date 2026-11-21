@@ -142,7 +142,9 @@ const WAS = {
   used: 15856,
   path: { bare: { warm: 84569, program: 112340 }, shell: { warm: 184379, program: 117644 } },
 };
-const BARE_SEARCH_PRICE = { rom: 64, shell: 256 };
+// The owner approved 6 ms at 4 MHz for
+// this shell launch path only.
+const BARE_SEARCH_PRICE = { rom: 64, shell: 256, launch: 24_000 };
 const MAIN = { tpa: { twoVolume: 47237, starter: 46533 }, shelled: 42752 };
 
 test("USER-removal savings remain after the approved bare-search ROM and RAM costs", () => {
@@ -173,7 +175,7 @@ function path(m) {
   return { warm, program: m.cycles - from };
 }
 
-test("the ordinary command path is no slower without USER: to the prompt after a warm boot, and from a typed command to the program", (t) => {
+test("the ordinary command path retains warm-prompt bounds and the approved shell launch allowance", (t) => {
   const now = {}, kept = {};
   for (const shell of [false, true]) {
     const image = () => {
@@ -187,7 +189,8 @@ test("the ordinary command path is no slower without USER: to the prompt after a
   t.diagnostic(JSON.stringify({ now, was: WAS.path, kept }));
   for (const k of ["bare", "shell"]) {
     assert.ok(now[k].warm <= WAS.path[k].warm, `${k}: ${now[k].warm} T-states from a warm boot to the prompt, ${WAS.path[k].warm} before`);
-    assert.ok(now[k].program <= WAS.path[k].program, `${k}: ${now[k].program} T-states from a typed command to the program, ${WAS.path[k].program} before`);
+    const allowance = k === "shell" ? BARE_SEARCH_PRICE.launch : 0;
+    assert.ok(now[k].program <= WAS.path[k].program + allowance, `${k}: ${now[k].program} T-states from a typed command to the program, ${WAS.path[k].program} before plus ${allowance} approved`);
     assert.ok(kept[k].warm > WAS.path[k].warm, `${k}: the ROM kept from before, which sets the area at each entry, is over that figure to the prompt: ${kept[k].warm}`);
   }
 });
