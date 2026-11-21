@@ -8,7 +8,7 @@ import { ROOT, program, romFor } from "./lib/fixtures.mjs";
 import { card, machine, runFor, runTo, word } from "./lib/mon3.mjs";
 
 const fixture = await program("bdosline");
-const { BEFORE, AFTER, RETURNS, LOWGUARD, LINEBUF, HIGHGRD, DONE } = fixture.symbols;
+const { BEFORE, AFTER, RETURNS, LOWGUARD, LINEBUF, HIGHGRD, DONE, DMABUF } = fixture.symbols;
 
 function setKey(m, key, down) {
   m.tec1g.applyMatrixKey(key >> 3, key & 7, down);
@@ -45,6 +45,20 @@ function readLine({ leak = false, probe, tbg } = {}) {
   press(m, 0x24, true); // A
   press(m, 0x25, true); // B
   assert.match(m.text(), /AB$/);
+  const readState = () => ({
+    callerStack: word(m, m.sym("OLDSP")),
+    parameter: word(m, m.sym("PARAM")),
+    dma: word(m, m.sym("CURDMA")),
+    cursor: word(m, m.sym("LINPTR")),
+    count: m.read(m.sym("LINCNT")),
+    bytes: [m.read(LINEBUF + 2), m.read(LINEBUF + 3)],
+    depth: m.read(m.sym("HKDEP")),
+  });
+  const pending = readState();
+  assert.equal(pending.dma, DMABUF);
+  assert.equal(pending.parameter, LINEBUF);
+  assert.equal(pending.count, 2);
+  assert.deepEqual(pending.bytes, [0x41, 0x42]);
   assert.equal(m.read(RETURNS), 0, "BDOS is still reading the line");
   if (probe || tbg) {
     const count = (m.read(m.sym("SVCHEAD")) << 8) + (probe?.symbols.COUNT ?? 0);
@@ -59,6 +73,7 @@ function readLine({ leak = false, probe, tbg } = {}) {
     press(m, 0x35); // R resumes when released.
     if (probe) assert.equal(m.read(count), 1, "the held chord dispatched once");
     assert.equal(m.read(RETURNS), 0, "the original line is still pending");
+    assert.deepEqual(readState(), pending, "resume preserves the pending BDOS context");
   }
   if (leak) press(m, 0x3b, true); // X, an intentionally leaked debugger key
   press(m, 0x26, true); // C
@@ -66,6 +81,8 @@ function readLine({ leak = false, probe, tbg } = {}) {
   runTo(m, DONE);
   assert.equal(word(m, BEFORE), word(m, AFTER), "the read restores SP");
   assert.equal(m.read(RETURNS), 1);
+  assert.equal(word(m, m.sym("CURDMA")), DMABUF, "the caller's DMA survives");
+  assert.equal(m.read(m.sym("HKDEP")), 0, "the original call leaves BDOS once");
   assert.equal(m.read(LOWGUARD), 0xa5);
   assert.equal(m.read(HIGHGRD), 0x5a);
   const length = m.read(LINEBUF + 1);

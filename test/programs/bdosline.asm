@@ -1,6 +1,9 @@
 ; Capture returns and SP around a BDOS
 ; buffered line read for the TBG test.
   ORG $0100
+  ld de,DMABUF
+  ld c,26
+  call 5
   ld (BEFORE),sp
   ld de,LINEBUF
   ld c,10
@@ -18,3 +21,4 @@ LOWGUARD: DB $A5
 LINEBUF: DB 8,0
   DS 8
 HIGHGRD: DB $5A
+DMABUF: DS 128
