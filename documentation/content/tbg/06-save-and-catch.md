@@ -23,3 +23,5 @@ The experimental TEC-OS ROM supports two more ways to enter TBG:
   shows `INPUT PAUSED`, focus the LCD in the Viewer and press **R** to return
   to the same read. Focus the program's input surface again and finish typing.
   Saving a snapshot while this read is paused is still in development.
+
+![With the experimental ROM, Ctrl-X pauses a pending matrix line read. R returns to that read so you can finish the line.](/images/tbg/input-pause.svg)

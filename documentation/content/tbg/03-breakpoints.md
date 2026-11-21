@@ -19,6 +19,8 @@ Use **Up** and **Down** to select `TAKE` at `0104`. Press **B** to toggle
 its breakpoint. Press **Left** to return to Code. These are two ways to
 toggle the same breakpoint, so use one of them for this exercise.
 
+![B sets the breakpoint on the selected Code row. R runs to that address and stops before POP DE.](/images/tbg/breakpoint.svg)
+
 Press **R**. Look for `PC: 0104` and `BP` on the register screen. The PUSH
 has run, and the POP is still ahead. Press **P** to open Memory. The initial
 pointer is PC. Press **Right** to follow SP and look for `34 12`. Press

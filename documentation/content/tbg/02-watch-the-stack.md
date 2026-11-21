@@ -37,5 +37,7 @@ A matching `STEP.TBG` from TAS adds `SY` beside the PC on the register display.
 5. Press **R** to let `RET` finish the program. The register display shows
    `EX`. Press **Q** to return to CP/M.
 
+![S executes PUSH HL, which moves SP down two bytes. Another S executes POP DE, which restores SP and leaves DE holding 1234h.](/images/tbg/stack-step.svg)
+
 The stack view prints words. The byte view prints the bytes in address
 order, so the same saved word appears there as `34 12`.

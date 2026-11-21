@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 133" role="img" aria-labelledby="title">
+<title id="title">How TBG finds symbols for STEP.COM</title>
+<style>
+svg {color:#233333;--panel:#edf4ee;--edge:#648479;--accent:#155c48}
+@media(prefers-color-scheme:dark) {svg {color:#eef4ef;--panel:#172c27;--edge:#739888;--accent:#a3dfbd}}
+rect {fill:var(--panel);stroke:var(--edge)}
+text {fill:currentColor;font:15px ui-monospace,monospace}
+.head {fill:var(--accent);font:bold 16px system-ui,sans-serif}
+.mark {fill:var(--accent);font-weight:bold}
+.arrow {fill:var(--accent);font:bold 22px system-ui,sans-serif}
+</style>
+<rect x="18.0" y="8" width="209.33333333333334" height="117" rx="7"/>
+<text class="head" x="31.0" y="34">Assemble</text>
+<text x="31.0" y="61">TAS STEP</text>
+<text x="31.0" y="88">Produces STEP.COM</text>
+<text x="31.0" y="115">and STEP.TBG</text>
+<text class="arrow" text-anchor="middle" x="241.33333333333334" y="73.5">→</text>
+<rect x="255.33333333333334" y="8" width="209.33333333333334" height="117" rx="7"/>
+<text class="head" x="268.33333333333337" y="34">Match the files</text>
+<text x="268.33333333333337" y="61">Same name prefix</text>
+<text x="268.33333333333337" y="88">Same drive and user</text>
+<text x="268.33333333333337" y="115">Matching build</text>
+<text class="arrow" text-anchor="middle" x="478.6666666666667" y="73.5">→</text>
+<rect x="492.6666666666667" y="8" width="209.33333333333334" height="117" rx="7"/>
+<text class="head" x="505.6666666666667" y="34">Debug</text>
+<text class="mark" x="505.6666666666667" y="61">PC: 0100SY</text>
+<text x="505.6666666666667" y="88">Code → Right</text>
+<text x="505.6666666666667" y="115">Select TAKE</text>
+</svg>

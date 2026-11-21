@@ -7,6 +7,8 @@ nav_group: Using TBG
 
 # 4. Controls at a glance
 
+![M cycles Registers, Stack, and Code. P opens the Memory view. Right from Code opens Symbols when a matching sidecar is available.](/images/tbg/views.svg)
+
 | Key | What it does |
 | --- | --- |
 | **S** | Step one instruction while staying in the current view. |

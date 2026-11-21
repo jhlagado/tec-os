@@ -27,3 +27,5 @@ On the LCD, look for `PC: 0100`. The program is loaded and has yet to execute
 its first instruction. `PC` is the address of the next instruction, and `SP`
 points to the top of the program's stack. The numbers on these screens are
 hexadecimal.
+
+![Start TBG from the CP/M prompt, then move keyboard focus to the character LCD when PC shows 0100h.](/images/tbg/first-stop.svg)
