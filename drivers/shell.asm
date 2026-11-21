@@ -480,6 +480,9 @@ SCRCHK:
   ld de,CFCB
   call PARSEFCB  ; the name in CFCB
   jp c,HAND      ; the ROM refuses it
+  ld a,(CFCB+1)
+  cp SPACE
+  jp z,HAND      ; drive-only command
   ld a,(CFCB+9)
   cp SPACE
   jr z,SCRBARE

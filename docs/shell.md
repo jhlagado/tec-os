@@ -38,8 +38,12 @@ The bare prompt behaves as a CP/M 2.2 CCP:
   `DIR!TYPE?`.
 - `COPY`, `DEL` and `SERVICES` are names like any other: `NAME?` with FF00h,
   unless a `.COM` of the name exists.
-- A bare `NAME` selects `NAME.COM`. An explicit `.COM` or `.SVC` selects
-  that executable type. Other explicit extensions produce `NAME.EXT?` with
+- A bare `NAME` tries `NAME.COM` then `NAME.SVC`. COM searches the current
+  drive then A: unless a drive was named. SVC uses the named or current
+  drive. With the shell, a missing executable also allows `NAME.CMD`.
+  A found but unloadable executable stops the search. `NAME.` retains its
+  COM-only meaning. An explicit `.COM` or `.SVC` selects only that type.
+  Other explicit extensions produce `NAME.EXT?` with
   FF00h before any COM load. `NAME.CMD` requires the shell script reader
   and cannot run `NAME.COM` at the bare prompt.
 - A function 47 line is echoed after the prompt and runs whole, as one
@@ -100,7 +104,13 @@ A line is split into pieces at separators, and each piece runs in turn:
 
 ## `.CMD` scripts
 
-Typed with the shell, `NAME.CMD` runs a script:
+Typed with the shell, `NAME.CMD` runs a script. Bare `NAME` also selects it
+when neither COM nor SVC has priority. A ready resident service retains its
+priority even after its source file is removed. For example, `MON3` starts
+`MON3.SVC` when no `MON3.COM` exists. Explicit `NAME.CMD` always selects the
+script, even alongside `NAME.COM` and `NAME.SVC`.
+
+Script handling follows these rules:
 
 1. The file is read from the drive named, else the current one, with no
    fallback to A:. With no file the shell says `NAME.CMD?`, with FF00h.

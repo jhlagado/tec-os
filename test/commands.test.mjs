@@ -170,6 +170,7 @@ test("bare search preserves named drives and COM fallback to A before SVC", asyn
     const local = await machine({}, { shell });
     volume(local.sdImage, "B").write("LOCAL.SVC", svc);
     if (shell) shellAt(local, "B:"); else local.command("B:");
+    assert.equal(local.read(4) & 15, 1, "B: remains a drive command");
     const out = shell ? shellAt(local, "LOCAL P") : local.command("LOCAL P");
     assert.match(out, /EXEC/, "missing A COM restores current drive before SVC");
     assert.deepEqual([m.violations, local.violations], [[], []]);
