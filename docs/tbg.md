@@ -32,6 +32,9 @@ stack pointer should be two bytes lower.
 - In Code, press `B` to toggle a breakpoint at the selected instruction.
   An asterisk marks a breakpoint. In the other views, `B` targets the next
   instruction.
+- When symbols are available, press Right in Code to open the symbol browser.
+  Up and Down select a symbol, B toggles a breakpoint at a label, and Left
+  returns to Code.
 - Press `R` to run. TBG returns control at a breakpoint or when the program
   returns. Press `Q` to leave the debugger.
 
@@ -44,9 +47,8 @@ snapshot in place. The last LCD row reports the result.
 The experimental TEC-OS ROM also supports `TBG.SVC ARM`, which stops the next
 eligible COM loaded from the shell and looks for its matching sidecar on
 the drive and in the user area where the shell found the executable. If the
-debugged program is waiting for
-matrix input through BDOS, Ctrl-X opens the input pause screen. Press `R` to
-return to the same read, then finish typing. Disk operations during that pause,
-and breakpoints entered by symbol name are still in development.
+debugged program is waiting for matrix input through BDOS, Ctrl-X opens the input pause screen. Press `R` to
+return to the same read, then finish typing. Disk operations during that pause are
+still in development.
 
 [Origo P5 evidence](https://github.com/jhlagado/origo/tree/main/studies/p5-tdb)
