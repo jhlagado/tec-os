@@ -238,6 +238,7 @@ CINMX:
 
 CINME:
   jr z,CINMX
+%INCLUDE "gen/keybreak.asm"
   call CINTAKE
   push af
   call CURHIDE
