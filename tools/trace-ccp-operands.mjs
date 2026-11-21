@@ -29,6 +29,21 @@ const verify = () => {
   assert.equal(git('status', '--porcelain'), '', 'capture requires a clean pinned checkout');
 };
 verify();
+for (const key of ['TAS_COM', 'TECOS_TAS_HOST']) {
+  assert.equal(process.env[key], undefined, `unset ${key} to use this root's prepared inputs`);
+}
+const host = resolve(root, '.inputs/tas-host');
+const hostGit = (...args) => execFileSync('git', ['-C', host, ...args], { encoding: 'utf8' }).trim();
+const hostPin = hostGit('rev-parse', 'HEAD');
+const verifyHost = () => {
+  assert.equal(hostGit('rev-parse', 'HEAD'), hostPin);
+  assert.equal(hostGit('status', '--porcelain', '--untracked-files=no'), '', 'tracked compiler host source must be clean');
+};
+verifyHost();
+const inputBytes = readFileSync(resolve(root, 'test/inputs.json'));
+const inputPins = JSON.parse(inputBytes).inputs;
+const tasSha256 = sha(readFileSync(resolve(root, '.inputs/TAS.COM')));
+assert.equal(tasSha256, inputPins['TAS.COM'].sha256);
 const path = resolve(root, 'test/ccp-operands.test.mjs');
 const original = readFileSync(path, 'utf8');
 let source = original;
@@ -68,19 +83,19 @@ try {
     capture.shellBase = capture.shellTable ? capture.shellTable - shell.symbols.TABLE : null;
     if (capture.shellBase !== null) assert.equal(capture.shellBase & 255, 0, 'installed shell base is page aligned');
   }
-  verify();
+  verify(); verifyHost();
   writeFileSync(out, JSON.stringify({
     classification: 'paired-trace model, not a test pass', pin, clean: true,
     node: process.version, sourceSha256: sha(original),
     transformedSourceSha256: sha(source), driverPin, driverSha256: sha(readFileSync(driver)),
     d8Sha256: sha(readFileSync(resolve(root, 'build/tecos/tecos.d8.json'))),
-    inputManifestSha256: sha(readFileSync(resolve(root, 'test/inputs.json'))),
-    inputPins: JSON.parse(readFileSync(resolve(root, 'test/inputs.json'), 'utf8')).inputs,
+    inputManifestSha256: sha(inputBytes), inputPins,
+    tasSha256, tasHostPin: hostPin, tasHostTrackedClean: true,
     fixtureSha256: sha(readFileSync(resolve(root, 'test/fixtures/ccp-operands.json'))),
     romSha256: sha(romFor().rom), shellSha256: sha(SHELL_SVC),
     shellSymbolsOffsets: shell.symbols, captures, exceptions,
   }, null, 2) + '\n');
-  verify();
+  verify(); verifyHost();
 } finally {
   delete globalThis.__ccpTraceModel;
 }
