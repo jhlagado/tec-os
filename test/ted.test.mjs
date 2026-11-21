@@ -17,6 +17,10 @@ import { check, pinned } from "./lib/inputs.mjs";
 const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
 const CURSOR = 0x24ca; // the cursor's offset in the text
+// The approved eighteenth shell page
+// reduces the former capacity floors.
+const BARE_SEARCH_PAGE = 256;
+
 const TEXCAP = 0x2551; // the text's room, from the word at 0006h
 const NOTES = "hello\nsecond line\n";
 const EDITED = "hello\nYsecond line\n";
@@ -209,12 +213,13 @@ test("TED B:HELLO.ASM from A: opens B:'s file, and ^T B builds it on B: with A:'
   assert.deepEqual(m.violations, []);
 });
 
-test("TED's text holds at least 28,182 bytes on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
+test("TED's text holds at least 27,926 bytes on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
   check(TED);
   // The starter's display files: on a board with both, GLCD.SVC loads and gives
   // way to the ROM's PICO9918 console, so one driver is loaded (the figures).
   // The starter card's four drives, as its recipe asks for them.
-  for (const [board, floor] of [[{ glcd: false }, 28_182], [{ tms: true, matrix: true, glcd: true }, 28_182]]) {
+  for (const [board, historicalFloor] of [[{ glcd: false }, 28_182], [{ tms: true, matrix: true, glcd: true }, 28_182]]) {
+    const floor = historicalFloor - BARE_SEARCH_PAGE;
     const image = createContainer(
       [
         { geometry: "G1M", label: "SYSTEM", mount: "A" },
@@ -237,10 +242,11 @@ test("TED's text holds at least 28,182 bytes on the starter's files, SHELL.SVC a
 // The smallest system the starter card teaches: the shell, MON3.SVC
 // installed and left by EXIT, then TED. Its room is below the 24,576-byte
 // source limit, so a source at the limit is edited with MON3.SVC unloaded.
-test("TED's text holds at least 23,318 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 22,550 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
+test("TED's text holds at least 23,062 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 22,294 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
   check(TED);
   const P = /\r\n\d*[A-P](:\S*)?>$/;
-  for (const [board, via, floor] of [[{ glcd: false }, "serial", 23_318], [{ matrix: true, glcd: true }, "matrix", 22_550]]) {
+  for (const [board, via, historicalFloor] of [[{ glcd: false }, "serial", 23_318], [{ matrix: true, glcd: true }, "matrix", 22_550]]) {
+    const floor = historicalFloor - BARE_SEARCH_PAGE;
     const m = boot(new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))), board);
     const type = (line, done, what) => {
       const mark = m.output.length;
