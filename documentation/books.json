@@ -6,5 +6,12 @@
     "parent": "TEC-OS",
     "description": "Using the machine, writing programs and understanding the operating system.",
     "accent": "tec-os"
+  },
+  {
+    "id": "tbg",
+    "title": "Learning TBG on TEC-OS",
+    "label": "TBG book",
+    "parent": "TBG",
+    "description": "Step through a Z80 program, inspect its stack and set breakpoints on the TEC-1G LCD."
   }
 ]
