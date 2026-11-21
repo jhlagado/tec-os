@@ -244,7 +244,7 @@ export class Machine {
       }
       if (!empty(a)) {
         ram.memWrite(a, value);
-        if (a === kblast && !(system.sysCtrl & 0x04)) {
+        if (a === kblast && this.classicBankIn) {
           const head = this.pending?.[0];
           if (head?.via === "matrix" && head.down && !head.up &&
               head.key >= 3 && head.key <= 6 && (value & 255) === head.key &&
