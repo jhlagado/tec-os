@@ -14,7 +14,7 @@ ROM table at `C003h`.
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
   `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,536 bytes on the
   starter card with nothing loaded, its four drives' vectors taken; the card's
-  `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 41,984, and 41,216
+  `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 41,728, and 40,960
   with the GLCD's driver too.
   EXPAND 1 is TEC-OS's own: its block cache. TEC-OS says so at boot and stops if either half
   is missing.

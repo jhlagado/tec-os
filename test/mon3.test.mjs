@@ -1633,10 +1633,10 @@ test("KG68 docs agree", async () => {
   const bare = fig.top - 0x300;
   const tpa = (top) => (top - 0x100).toLocaleString("en");
   assert.ok(mon3.includes(`from \`B6C8h\` to \`${h4(bare)}\`, and the TPA from 46,536 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
-  // With the shell: (0006h) is A500h with SHELL.SVC alone on the starter
+  // With the shell: (0006h) is A400h with SHELL.SVC alone on the starter
   // card, as shell2.test measures it, MON3.SVC's pages lower, and GLCD.SVC
   // three pages lower still.
-  const shellTop = 0xa500;
+  const shellTop = 0xa400;
   const withMon3 = shellTop - fig.pages * 0x100;
   assert.ok(mon3.includes(`from \`${h4(shellTop)}\` to \`${h4(withMon3)}\`, and the TPA from ${tpa(shellTop)} bytes to **${tpa(withMon3)}**`), "(0006h) and the TPA with the shell");
   assert.ok(mon3.includes(`\`${h4(withMon3 - 0x300)}\`, a TPA of **${tpa(withMon3 - 0x300)}**`), "and with GLCD.SVC too");

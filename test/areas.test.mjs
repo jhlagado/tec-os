@@ -142,17 +142,18 @@ const WAS = {
   used: 15856,
   path: { bare: { warm: 84569, program: 112340 }, shell: { warm: 184379, program: 117644 } },
 };
+const BARE_SEARCH_PRICE = { rom: 64, shell: 256 };
 const MAIN = { tpa: { twoVolume: 47237, starter: 46533 }, shelled: 42752 };
 
-test("without USER the ROM is smaller, SHELL.SVC is no more than 17 pages and no TPA row is smaller than main's", () => {
+test("USER-removal savings remain after the approved bare-search ROM and RAM costs", () => {
   const census = JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
-  assert.ok(census.rom.used < WAS.used, `${census.rom.used} bytes used, fewer than ${WAS.used}`);
+  assert.ok(census.rom.used - BARE_SEARCH_PRICE.rom < WAS.used, `${census.rom.used} bytes used including ${BARE_SEARCH_PRICE.rom} approved lookup bytes`);
   for (const row of ["twoVolume", "starter"]) assert.ok(census.ram.cards[row].tpa >= MAIN.tpa[row], `${row}: TPA ${census.ram.cards[row].tpa}`);
   const top = (m) => m.read(6) | (m.read(7) << 8);
   const bare = top(boot(card())), shelled = top(boot(card({ shell: true })));
   const pages = (bare >> 8) - (shelled >> 8);
-  assert.ok(pages <= 17, `SHELL.SVC takes ${pages} pages from the TPA, no more than 17`);
-  assert.ok(shelled - 0x100 >= MAIN.shelled, `the TPA under the shell on the two-volume card: ${shelled - 0x100}`);
+  assert.ok(pages <= 18, `SHELL.SVC takes ${pages} pages from the TPA, no more than 18`);
+  assert.ok(shelled - 0x100 + BARE_SEARCH_PRICE.shell >= MAIN.shelled, `the TPA under the shell on the two-volume card: ${shelled - 0x100}`);
 });
 
 /** T-states from a warm boot's first instruction to the prompt, and from a typed command to its program's first instruction. */

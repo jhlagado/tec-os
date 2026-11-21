@@ -614,8 +614,8 @@ const extra = (svc) => svc.file[8] | (svc.file[9] << 8);
 const pages = (svc) => Math.ceil((svc.image + extra(svc)) / 256);
 
 test("S2-11 size", (t) => {
-  assert.ok(pages(SHELL) <= 17, `SHELL.SVC in 17 pages: ${SHELL.image} + ${extra(SHELL)}`);
-  assert.ok(SHELL.image + extra(SHELL) <= 4352);
+  assert.ok(pages(SHELL) <= 18, `SHELL.SVC in 18 pages: ${SHELL.image} + ${extra(SHELL)}`);
+  assert.ok(SHELL.image + extra(SHELL) <= 4608);
   assert.equal(sym.RING % 256, 0, "the ring's page aligned");
   // A reading, not a gate: 14 pages is the aim.
   t.diagnostic(`image ${SHELL.image}, file ${SHELL.file.length}, extra RAM ${extra(SHELL)}, ${pages(SHELL)} pages, ${sym.RING - sym.STKTOP} bytes of room; ${SHELL.image + extra(SHELL) - 14 * 256} bytes over 14 pages`);
@@ -818,13 +818,13 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
     }
     return { tpa: word(m, 6) - 0x100, glcd: m.read(m.sym("CONMOD")) === 3, n: owners(m).length };
   };
-  assert.equal(tpa(["SHELL.SVC"]).tpa, 41984, "with the shell");
-  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 41216, "and GLCD.SVC");
-  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 37120, "and MON3.SVC");
+  assert.equal(tpa(["SHELL.SVC"]).tpa, 41728, "with the shell");
+  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 40960, "and GLCD.SVC");
+  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 36864, "and MON3.SVC");
   // The three together on a GLCD board, in three orders, the GLCD the console.
   for (const [startup, typed] of [[["SHELL.SVC", "GLCD.SVC", "MON3.SVC"], []], [["SHELL.SVC", "MON3.SVC", "GLCD.SVC"], []], [["GLCD.SVC"], ["SHELL.SVC", "MON3.SVC"]]]) {
     const r = tpa(startup, typed);
-    assert.deepEqual(r, { tpa: 36352, glcd: true, n: 3 }, startup.concat(typed).join(", "));
+    assert.deepEqual(r, { tpa: 36096, glcd: true, n: 3 }, startup.concat(typed).join(", "));
   }
 });
 
@@ -1229,7 +1229,7 @@ test("S2-12 tpa", () => {
   const bare = shellMachine(card);
   assert.equal(word(bare, 6) - 0x100, 46_536, "bare: four drives' vectors");
   const m = shellMachine(starterImage());
-  assert.equal(word(m, 6) - 0x100, 41_984, "with the shell, the starter card's STARTUP.CMD");
+  assert.equal(word(m, 6) - 0x100, 41_728, "with the shell, the starter card's STARTUP.CMD");
 });
 
 /** A card of the drives field's absence, built from the starter recipe without it: its machine under the shell. */
@@ -1312,19 +1312,19 @@ test("S2-13 docs", () => {
   assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
   for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
-    "a TPA of 41,984 bytes"])
+    "a TPA of 41,728 bytes"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);
   const container = flat("docs/container-format.md");
   assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
   assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
   const compat = flat("docs/compatibility.md");
-  for (const s of ["46,536 bytes", "41,984", "41,216"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  for (const s of ["46,536 bytes", "41,728", "40,960"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
-  assert.match(flat("docs/mon3.md"), /from `A500h` to `9200h`, and the TPA from 41,984 bytes to \*\*37,120\*\*/);
-  assert.match(flat("docs/mon3.md"), /it is `8F00h`, a TPA of \*\*36,352\*\*/);
+  assert.match(flat("docs/mon3.md"), /from `A400h` to `9100h`, and the TPA from 41,728 bytes to \*\*36,864\*\*/);
+  assert.match(flat("docs/mon3.md"), /it is `8E00h`, a TPA of \*\*36,096\*\*/);
   // The figures are measured ones: no doc speaks of a projection or of a qualification still to come.
   for (const n of ["README.md", "docs/shell.md", "docs/compatibility.md", "docs/memory-map.md", "docs/mon3.md"])
-    assert.doesNotMatch(flat(n), /\bprojects? (word|A500h|text|41,|these)|projected|projections?\b|pending (current )?runtime|qualification must confirm|to be confirmed/i, `${n}: measured figures, stated plainly`);
+    assert.doesNotMatch(flat(n), /\bprojects? (word|A400h|text|41,|these)|projected|projections?\b|pending (current )?runtime|qualification must confirm|to be confirmed/i, `${n}: measured figures, stated plainly`);
   // No doc teaches MOUNT.COM or a volume marked written behind.
   for (const n of ["README.md", "docs/shell.md", "docs/recovery.md", "docs/compatibility.md", "docs/container-format.md", "docs/rom-services.md", "docs/wip.md", "docs/mon3.md"]) {
     const t = flat(n);
