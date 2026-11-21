@@ -506,6 +506,7 @@ CMDRN1:
   ld a,(CMDFCB)  ; source FCB drive byte
   ld (PZLDRV),a  ; publish loaded drive
   pop de         ; the entry
+%INCLUDE "../gen/comcall.asm"
 
 ; The transient's two-byte return word
 ; is outside default DMA (0080h..00FFh).
@@ -733,6 +734,7 @@ LOADOK:
   call DOSSEQ    ; inline close
                  ; descriptor
   DB 16*2+0      ; 16: CMDFCB
+%INCLUDE "../gen/comuser.asm"
   or a           ; ignore close result
   ret
 

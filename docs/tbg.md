@@ -42,10 +42,11 @@ At a normal stop, press `W` to write one binary register snapshot,
 snapshot in place. The last LCD row reports the result.
 
 The experimental TEC-OS ROM also supports `TBG.SVC ARM`, which stops the next
-eligible COM loaded from the shell. If the debugged program is waiting for
+eligible COM loaded from the shell and looks for its matching sidecar on
+the drive and in the user area where the shell found the executable. If the
+debugged program is waiting for
 matrix input through BDOS, Ctrl-X opens the input pause screen. Press `R` to
 return to the same read, then finish typing. Disk operations during that pause,
-automatic symbol lookup on armed launch, and breakpoints entered by symbol
-name are still in development.
+and breakpoints entered by symbol name are still in development.
 
 [Origo P5 evidence](https://github.com/jhlagado/origo/tree/main/studies/p5-tdb)

@@ -40,6 +40,7 @@
 %INCLUDE "cpm/bdoslog.asm"
 %INCLUDE "cpm/bdoscon.asm"
 %INCLUDE "services.asm"
+%INCLUDE "gen/combody.asm"
 %INCLUDE "cache.asm"
 %INCLUDE "hk.asm"
 %INCLUDE "loader.asm"

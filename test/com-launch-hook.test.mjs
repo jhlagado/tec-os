@@ -1,0 +1,31 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { resolve } from "node:path";
+import { makeSvc } from "../tools/lib/svc.mjs";
+import { ROOT, romFor } from "./lib/fixtures.mjs";
+import { card, machine, runTo, word } from "./lib/mon3.mjs";
+
+test("the resident COMSTART callback sees prepared COM state and returns to the normal launch", { skip: !romFor().symbols.has("COMHOOK") && process.env.TECOS_COMSTART !== "1" }, async () => {
+  const probe = await makeSvc(resolve(ROOT, "test/programs/comhook.asm"), { work: resolve(ROOT, "build/svc") });
+  const m = machine(card({ "ARM.SVC": probe.file, "STEP.COM": Uint8Array.of(0xc9) }));
+  m.command("ARM.SVC");
+  assert.ok(m.read(m.sym("SVCHEAD")), "service installed");
+  m.command("MISSING");
+  m.type("STEP X\r");
+  runTo(m, 0x100);
+  assert.equal(word(m, 0x120), 0x100);
+  assert.equal(word(m, 0x122), 0x180);
+  assert.equal(m.read(0x124), "X".charCodeAt(0));
+  assert.equal(m.cpu.cpu.a, 0, "normal launch flag");
+  assert.equal(word(m, m.cpu.cpu.sp), 0, "normal warm-boot return frame");
+  m.runUntil(() => m.ready(), 45_000_000, "CCP after the COM");
+  m.type("STEP Y\r");
+  runTo(m, 0x100);
+  assert.equal(word(m, 0x120), 0, "the callback consumed its one-shot arm");
+  m.runUntil(() => m.ready(), 45_000_000, "CCP after the second COM");
+  m.command("UNLOAD");
+  assert.equal(m.read(m.sym("SVCHEAD")), 0, "service removed");
+  m.type("STEP Z\r");
+  runTo(m, 0x100);
+  assert.equal(word(m, 0x120), 0, "an unloaded callback cannot run");
+});

@@ -61,6 +61,15 @@ export function serialTiming() {
 
 function writeGenerated(profile, wsbase) {
   mkdirSync(GEN, { recursive: true });
+  const comStart = process.env.TECOS_COMSTART === "1";
+  writeFileSync(resolve(GEN, "comcall.asm"), comStart ? `  ld a,d
+  dec a
+  or e
+  call z,COMHOOK ; only the COM path
+` : "");
+  writeFileSync(resolve(GEN, "comuser.asm"), comStart ? "  call COMUSER\n" : "");
+  writeFileSync(resolve(GEN, "combody.asm"), comStart ? '%INCLUDE "../comhook.asm"\n' : "");
+  writeFileSync(resolve(GEN, "keybreak.asm"), comStart ? "  call KEYBREAK\n  jr z,CINMX\n" : "");
   const s = serialTiming();
   writeFileSync(
     resolve(GEN, "config.asm"),
