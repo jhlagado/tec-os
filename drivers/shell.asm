@@ -479,17 +479,137 @@ SCRCHK:
   ld hl,(PIECE)
   ld de,CFCB
   call PARSEFCB  ; the name in CFCB
-  jr c,HAND      ; the ROM refuses it
+  jp c,HAND      ; the ROM refuses it
+  ld a,(CFCB+9)
+  cp SPACE
+  jr z,SCRBARE
   ld hl,(CFCB+9)
   ld de,'M'*256+'C'
   or a
   sbc hl,de
-  jr nz,HAND     ; not .CM?
+  jp nz,HAND     ; not .CM?
   ld a,(CFCB+11)
   cp 'D'
-  jr nz,HAND     ; not .CMD
+  jp nz,HAND     ; not .CMD
   call CRLF      ; after the line
-  jr CMDSCR
+  jp CMDSCR
+
+; Bare commands select COM, SVC then CMD.
+; Only scripts are opened here. The ROM
+; loads executables after HAND. Search
+; uses DMA 0080h, which script reads
+; already reload between lines.
+
+SCRBARE:
+  ld hl,(PIECE)
+
+SBDOT:
+  ld a,(hl)
+  cp '.'
+  jp z,HAND      ; explicit trailing dot
+  or a
+  jr z,SBLOOK
+  cp SPACE
+  jr z,SBLOOK
+  inc hl
+  jr SBDOT
+
+SBLOOK:
+  call CPCHK     ; no empty/wildcard name
+  call SETDMA
+  ld hl,SBEXT
+  call SBPROBE
+  jp nz,HAND     ; COM on named/current
+  ld a,(CFCB)
+  or a
+  jr nz,SBSVC    ; explicit drive
+  ld a,(CURDSK)
+  and $0F
+  jr z,SBSVC     ; already on A
+  ld a,1
+  ld (CFCB),a
+  call SBFIND    ; COM on A
+  push af
+  xor a
+  ld (CFCB),a    ; restore default drive
+  pop af
+  jp nz,HAND
+
+SBSVC:
+  ld hl,SBEXT+3
+  call SBPROBE
+  jp nz,HAND     ; SVC before CMD
+  call SBRES
+  jp c,HAND      ; resident entry, no file
+  ld hl,SBEXT+6
+  call SBPROBE
+  jp z,HAND      ; ROM reports missing
+  call CRLF
+  jp CMDSCR
+
+SBPROBE:
+  ld de,CFCB+9
+  ld bc,3
+  ldir
+
+SBFIND:
+  ld de,CFCB
+  ld c,17        ; presence, no image load
+  call BDOS
+  inc a          ; FFh absent -> Z
+  ret
+
+; Ready execution records retain their
+; names after the source file is gone.
+; Check the same EX/version/state/name
+; fields as the ROM. Carry delegates
+; matches to SVCRUN, including ambiguity.
+; No service entry is called here.
+
+SBRES:
+  ld a,(LOWPG)
+
+SBRLOOP:
+  or a
+  ret z
+  ld h,a
+  ld l,25        ; execution record
+  ld a,(hl)
+  cp 'E'
+  jr nz,SBRNEXT
+  inc l
+  ld a,(hl)
+  cp 'X'
+  jr nz,SBRNEXT
+  inc l
+  ld a,(hl)
+  dec a          ; version 1
+  jr nz,SBRNEXT
+  inc l
+  ld a,(hl)
+  cpl
+  and 3          ; ready and enter
+  jr nz,SBRNEXT
+  ld l,31        ; file name, eight bytes
+  ld de,CFCB+1
+  ld b,8
+
+SBRCMP:
+  ld a,(de)
+  cp (hl)
+  jr nz,SBRNEXT
+  inc de
+  inc l
+  djnz SBRCMP
+  scf
+  ret
+
+SBRNEXT:
+  ld l,8         ; next resident owner
+  ld a,(hl)
+  jr SBRLOOP
+
+SBEXT: DB "COMSVCCMD"
 
 ; Fold a..z to upper case from HL to
 ; the zero, or with FOLDW to the first

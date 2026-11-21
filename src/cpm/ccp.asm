@@ -411,13 +411,13 @@ SVCFAIL:
   xor TNENODV    ; compare absent-device
   dec l          ; require SVCRC=1
   or l           ; both conditions zero
-  jr nz,BADCMD
+  jp nz,BADCMD
 
 SVCOK:
   jp STARTED     ; normal newline entry
 
-; Load a COM image. A blank type means
-; COM. Reject other explicit types
+; Load a COM image. A blank type tries
+; COM then SVC. Reject other explicit types
 ; before LOADCOM changes memory. The
 ; parser left-aligns and pads the type.
 ; Call LOADCOM on the named/default
@@ -430,7 +430,7 @@ SVCOK:
 CMDCOM:
   ld a,(CMDFCB+9)
   cp SPACE
-  jr z,COMTYPE   ; blank type: COM
+  jr z,COMBARE   ; search bare names
   ld hl,(CMDFCB+9)
   ld de,'O'*256+'C'
   or a
@@ -441,24 +441,77 @@ CMDCOM:
   jp nz,BADCMD
 
 COMTYPE:
+  call SETCOM
+  call FINDCOM
+  jp c,BADCMD
+  jr CMDRUN
+
+; A name without a dot tries COM before
+; SVC. Keep its original drive because
+; FINDCOM may retry on A. A failed COM
+; read must not fall through to SVC.
+
+COMBARE:
+  ld hl,(CMDSTRT)
+
+CBDOT:
+  ld a,(hl)
+  cp '.'
+  jr z,COMTYPE   ; trailing dot: COM only
+  or a
+  jr z,CBLOOK
+  cp SPACE
+  jr z,CBLOOK
+  inc hl
+  jr CBDOT
+
+CBLOOK:
+  ld a,(CMDFCB)
+  push af
+  call SETCOM
+  call FINDCOM
+  pop bc         ; B = original drive
+  jr nc,CMDRUN
+  jp nz,BADCMD   ; found but unloadable
+  ld a,b
+  ld (CMDFCB),a
+  ld hl,'V'*256+'S'
+  ld (CMDFCB+9),hl
+  ld a,'C'
+  ld (CMDFCB+11),a
+  jp SVCRUN
+
+SETCOM:
   ld hl,'O'*256+'C'
   ld (CMDFCB+9),hl
-  ld a,'M'       ; type COM
-
+  ld a,'M'
   ld (CMDFCB+11),a
-  call LOADCOM   ; named/current drive
-  jr nc,CMDRUN   ; carry clear: loaded
-  jr nz,BADCMD   ; carry/NZ: reject
-  ld hl,CMDFCB   ; carry/Z: retry check
+  ret
+
+; COM lookup keeps the established
+; current-drive then A policy. Carry/Z
+; means absent. Carry/NZ means a found
+; file failed loading. No later type
+; may hide that failure.
+
+FINDCOM:
+  call LOADCOM
+  ret nc
+  ret nz
+  ld hl,CMDFCB
   ld a,(hl)
   or a
-  jr nz,BADCMD   ; explicit drive: stop
-  ld a,(PZDU)    ; saved prompt drive
+  jr nz,COMNONE  ; explicit drive
+  ld a,(PZDU)
   or a
-  jr z,BADCMD    ; already A: stop
-  inc (hl)       ; FCB drive 1=A
-  call LOADCOM   ; the same name on A
-  jr c,BADCMD    ; retry failed
+  jr z,COMNONE   ; already on A
+  inc (hl)       ; retry on A
+  jp LOADCOM
+
+COMNONE:
+  xor a
+  scf
+  ret
 
 ; After a successful load, PREPPAGE
 ; publishes argument FCBs, tail and
