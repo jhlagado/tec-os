@@ -42,6 +42,8 @@ in `A` and word results in `HL`. Thus function 2 takes a character in `E`
 while function 9 takes a string address in `DE`. The definition
 `BDOS EQU $0005` names the entry address in source.
 
+![CALL 0005h enters the BDOS. Console and disk operations use BIOS entries to reach device routines or installed hooks.](/images/tec-os/bdos-layers.svg)
+
 ## Calls, returns and saved values
 
 The program needs a return address for each call. `CALL` stores the following

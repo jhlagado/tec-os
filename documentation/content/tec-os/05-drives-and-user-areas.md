@@ -96,6 +96,8 @@ error. Q and later letters are outside that range so `Q:` gives `Q:?`.
 [Appendix D](appendix-d-error-messages.md) explains these messages and the
 returned-error option for programs.
 
+![Drive letters select volumes on the same card. CD D:GAMES assigns GAMES to D without moving its files.](/images/tec-os/drive-volumes.svg)
+
 ## User areas
 
 CP/M gives every file a user area numbered 0 through 15, a way to keep

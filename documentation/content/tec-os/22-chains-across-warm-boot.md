@@ -252,6 +252,8 @@ the same form and sets `FF00h`. COPY's four error messages reach that
 failure code through `ERRMSG`. A successful COPY ends through `BDONE`
 with 0 (`b95b2a9:drivers/shell.asm:554-608`, `b95b2a9:drivers/shellcmd.asm:130-154`).
 
+![The shell tests the previous result for an ampersand continuation. An exclamation mark permits continuation regardless of that result.](/images/tec-os/command-chain.svg)
+
 ## Cancellation instead of continuation
 
 Cancellation removes the position needed for continuation. Clearing

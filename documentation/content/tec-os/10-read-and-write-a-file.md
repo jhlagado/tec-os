@@ -133,6 +133,8 @@ its FCB before exiting. Warm boot flushes cached writes but cannot close FCBs
 left in the program's memory. The write sequence below separates those
 completion steps.
 
+![The FCB holds file state. A separate 128-byte DMA buffer holds transferred data and initially overlaps the command tail.](/images/tec-os/fcb-and-buffer.svg)
+
 ## SHOW reads a text file
 
 The complete SHOW program reads through the default FCB and DMA buffer, then

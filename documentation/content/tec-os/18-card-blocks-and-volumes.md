@@ -274,6 +274,8 @@ address. It then restores the preceding interrupt state and returns
 `A` = 0 for success or 1 for error (`b95b2a9:src/bios.asm:387-399`,
 `b95b2a9:src/bios.asm:373-449`, `b95b2a9:src/cache.asm:380-437`).
 
+![Four 128-byte records share a 512-byte SD block. Record 133 uses slot 1 of block offset 33.](/images/tec-os/record-to-block.svg)
+
 ## Merging a write
 
 A record write changes only a quarter of an SD block. The other quarters

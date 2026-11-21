@@ -130,6 +130,8 @@ validation rereads required table blocks from the card even if cached
 (`b95b2a9:src/boot.asm:92-101`, `b95b2a9:src/boot.asm:660-671`, `b95b2a9:src/vol.asm:42-47`,
 `b95b2a9:src/vol.asm:367-420`).
 
+![Cold boot initialises the machine. Warm boot rebuilds selected state and attempts pending writes while retaining the resident environment.](/images/tec-os/boot-paths.svg)
+
 ## RAM before the workspace
 
 The resident workspace and stacks require `8000h–BFFFh`, with cache storage in

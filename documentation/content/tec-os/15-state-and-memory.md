@@ -64,6 +64,8 @@ the cache bank is selected because fixed RAM stays visible
 (`b95b2a9:src/layout.asm:64-69`, `b95b2a9:src/abi.inc:307-309`, `b95b2a9:src/ram.asm:428-445`,
 `b95b2a9:src/cache.asm:701-708`).
 
+![Fixed RAM and ROM remain visible in both bank views. Selecting EXPAND 1 hides upper program RAM and its stacks.](/images/tec-os/bank-window.svg)
+
 ## The workspace across a program exit
 
 Each build fixes the workspace layout. BIOS, CCP and BDOS blocks lie below the

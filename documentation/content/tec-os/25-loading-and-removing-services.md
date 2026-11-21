@@ -301,6 +301,8 @@ proposed record via `SLN`. Zero records leave the registry unchanged.
 `SVCSHUT` clears busy. Final flags report success for `SVCRC` zero and
 failure for 1 or 2 (`b95b2a9:src/loader.asm:482-518`).
 
+![Service installation is tentative through INIT and record validation. Successful publication commits the registry and resident memory reservation.](/images/tec-os/service-commit.svg)
+
 ## Rollback and retained pages
 
 Failure does not always release the tentative pages. Before the move,

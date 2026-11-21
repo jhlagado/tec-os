@@ -142,6 +142,8 @@ TAS also writes debugger information to BANNER.DBG beside the other files
 on B. Keep the three BANNER files together. This exercise uses the `.ASM`
 file for editing and the `.COM` file for running.
 
+![TED saves the source. TAS creates BANNER.COM and the CCP loads it at 0100h when you run it.](/images/tec-os/edit-build-run.svg)
+
 ## The printed line
 
 The greeting is stored in the program alongside the instructions that
