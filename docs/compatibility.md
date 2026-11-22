@@ -166,9 +166,11 @@ In ROM too:
   SVC, and the shell adds CMD scripts. A ROM or shell built-in keeps
   precedence, so a script named `TYPE.CMD` is run only by its full name.
   Explicit extensions select only their stated type. A card saved before the
-  eighteen-page shell keeps the `SHELL.SVC` it holds, which tries CMD at the
-  older priority; back the image up, then choose New starter card to take the
-  new shell. Nothing on a saved card is replaced silently.
+  eighteen-page shell keeps the `SHELL.SVC` it holds, which runs a script only
+  by its full `NAME.CMD`; a bare name goes to the ROM, which tries COM then SVC.
+  The full COM, SVC, CMD order and the built-in precedence need the new shell:
+  back the image up, then choose New starter card to take it. Nothing on a
+  saved card is replaced silently.
 - After a reset, recognised or not, and not on an ordinary exit, the first line
   of `A:STARTUP.CMD` that is neither empty nor a `;` comment runs before the
   first prompt, from the first record, on the volume on A:; a keypad key held
