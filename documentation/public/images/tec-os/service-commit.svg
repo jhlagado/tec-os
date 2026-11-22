@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="310" viewBox="0 0 720 310" role="img" aria-labelledby="title desc">
 <title id="title">Tentative service installation and final commit</title>
-<desc id="desc">The service loader validates file size, dependencies and stack allowances, then applies relocation and moves the resident image tentatively. INIT runs before returned-record validation and final registry/reservation commit. Failure requires cleanup; arbitrary device or BIOS changes made by INIT are not automatically reversed.</desc>
+<desc id="desc">The service loader validates file size, dependencies and stack allowances, then applies relocation and moves the resident image tentatively. INIT runs before returned-record validation and final registry/reservation commit. Failure can release pages or retain them without proposed registry records. Arbitrary device or BIOS changes made by INIT are not automatically reversed.</desc>
 <defs><style>
 svg {color:#233333;--panel:#edf4ee;--edge:#648479;--accent:#155c48;--paper:#fff}
 @media(prefers-color-scheme:dark) {svg {color:#eef4ef;--panel:#172c27;--edge:#739888;--accent:#a3dfbd;--paper:#1c1f22}}
@@ -44,6 +44,6 @@ text {fill:currentColor;font:14px ui-monospace,monospace}
 <text class="" x="596" y="214" text-anchor="middle" xml:space="preserve">Publish registry</text>
 <text class="" x="596" y="233" text-anchor="middle" xml:space="preserve">Commit PZTOP</text>
 
-<text class="note" x="360" y="280" text-anchor="middle" xml:space="preserve">Failure takes cleanup paths before a successful reservation commit.</text>
+<text class="note" x="360" y="280" text-anchor="middle" xml:space="preserve">Cleanup can release pages or retain them without registry records.</text>
 <text class="note" x="360" y="302" text-anchor="middle" xml:space="preserve">INIT must undo its own device or hook changes where required.</text>
 </svg>

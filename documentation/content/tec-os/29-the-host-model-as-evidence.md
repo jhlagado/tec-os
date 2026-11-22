@@ -454,4 +454,5 @@ diagnostic logic rather than board behaviour (`b95b2a9:docs/diagnostics.md:15-18
 `tools/diag-check.mjs`, is absent at that source. A board log supports
 its particular observation, leaving other timings, devices and application
 workflows to be checked separately.
+
 ![Model and physical-board results require separate runs. Each result applies to its recorded setup and the paths actually exercised.](/images/tec-os/evidence-scopes.svg)
