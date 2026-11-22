@@ -137,6 +137,16 @@ test("bare and explicit COM still execute while shell CMD selects the script", a
   assert.deepEqual(shell.violations, []);
 });
 
+test("a ROM built-in name is never shadowed by a same-named script: TYPE, ERA, REN, CON and UNLOAD", async () => {
+  for (const name of ["TYPE", "ERA", "REN", "CON", "UNLOAD"]) {
+    const m = await machine({ [`${name}.CMD`]: startupFile("ECHO SCRIPT_RAN") }, { shell: true });
+    assert.match(shellAt(m, `${name}.CMD`), /SCRIPT_RAN/, `${name}.CMD still names the script`);
+    assert.doesNotMatch(shellAt(m, name.toLowerCase()), /SCRIPT_RAN/, `${name.toLowerCase()} in lower case reaches the ROM's built-in`);
+    assert.doesNotMatch(shellAt(m, name), /SCRIPT_RAN/, `${name} typed bare reaches the ROM's built-in (UNLOAD removes the shell, so it goes last)`);
+    assert.deepEqual(m.violations, []);
+  }
+});
+
 test("bare names search COM then SVC then shell CMD and preserve explicit types", async () => {
   const svc = await executableService();
   const script = startupFile("ECHO SCRIPT_OK");

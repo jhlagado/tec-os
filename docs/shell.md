@@ -41,6 +41,9 @@ The bare prompt behaves as a CP/M 2.2 CCP:
 - A bare `NAME` tries `NAME.COM` then `NAME.SVC`. COM searches the current
   drive then A: unless a drive was named. SVC uses the named or current
   drive. With the shell, a missing executable also allows `NAME.CMD`.
+  A built-in always wins: `TYPE`, `ERA`, `REN`, `CON` and `UNLOAD` go to the
+  ROM, `COPY`, `DEL`, `SERVICES`, `CD`, `DIR`, `CLS`, `ECHO` and `PAUSE` to
+  the shell, and a script of the same name runs only as `NAME.CMD`.
   A found but unloadable executable stops the search. `NAME.` retains its
   COM-only meaning. An explicit `.COM` or `.SVC` selects only that type.
   Other explicit extensions produce `NAME.EXT?` with

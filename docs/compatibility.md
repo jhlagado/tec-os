@@ -162,7 +162,13 @@ In ROM too:
   as `MON3.SVC`'s and `SHELL.SVC`'s do; typed again, it enters the copy that is
   in (`docs/services.md`). `UNLOAD` removes the lowest. A `.DRV` name is no
   longer a service: `NAME.DRV` produces `NAME.DRV?` before loading any COM.
-  Bare names select COM. Explicit extensions select only their stated type.
+  A bare name tries COM, then SVC, then CMD: the ROM's prompt tries COM and
+  SVC, and the shell adds CMD scripts. A ROM or shell built-in keeps
+  precedence, so a script named `TYPE.CMD` is run only by its full name.
+  Explicit extensions select only their stated type. A card saved before the
+  eighteen-page shell keeps the `SHELL.SVC` it holds, which tries CMD at the
+  older priority; back the image up, then choose New starter card to take the
+  new shell. Nothing on a saved card is replaced silently.
 - After a reset, recognised or not, and not on an ordinary exit, the first line
   of `A:STARTUP.CMD` that is neither empty nor a `;` comment runs before the
   first prompt, from the first record, on the volume on A:; a keypad key held

@@ -416,8 +416,11 @@ SPEND:
 ; ECHO and PAUSE are the shell's (SHTAB
 ; holds each keyword, zero-ended, and
 ; its handler, entered with HL after the
-; word); a first word of type CMD is a
-; script. Only the first word is folded
+; word). TYPE, ERA, REN, CON and UNLOAD
+; are the ROM's: their entries hand the
+; piece straight to it, so a script of
+; the same name is never found. A first
+; word of type CMD is a script. Only the first word is folded
 ; to match them, so ECHO keeps the
 ; text's case: the ROM folds the rest of
 ; a piece it is handed, and a handler
@@ -787,6 +790,16 @@ SHTAB:
   DW CMDECHO
   DB "PAUSE",0
   DW CMDPAU
+  DB "TYPE",0
+  DW HAND
+  DB "ERA",0
+  DW HAND
+  DB "REN",0
+  DW HAND
+  DB "CON",0
+  DW HAND
+  DB "UNLOAD",0
+  DW HAND
   DB 0
 
 %INCLUDE "shellcmd.asm"
