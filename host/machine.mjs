@@ -460,9 +460,9 @@ export class Machine {
 
   /**
    * The GLCD console as text: each 6 x 8 cell of the 128 x 64 graphics RAM
-   * is matched against the font, 768 bytes from 20h: the ROM's own copy, FONT,
-   * is generated from format/font5x7.txt, and the test library passes the same
-   * glyphs in Machine.font. Reverse cells read as
+   * is matched against the font, 768 bytes from 20h: format/font5x7.txt, which the
+   * ROM stores packed and gives out a glyph at a time (TNGLYPH), and the test
+   * library passes the same glyphs in Machine.font. Reverse cells read as
    * their character; unknown patterns read as "?".
    */
   glcdScreen(cols = 21, rows = 8) {
