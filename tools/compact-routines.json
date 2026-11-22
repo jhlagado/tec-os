@@ -56,7 +56,6 @@
     "R10",
     "R20",
     "R28",
-    "R30",
     "R38",
     "BEEP",
     "TOSEG",
@@ -93,6 +92,28 @@
     "PTUNE",
     "STRSER",
     "RGBS"
+  ],
+  "drivers/mon3run.asm": [
+    "MENTER",
+    "MAUTRET"
+  ],
+  "drivers/mon3brk.asm": [
+    "R30",
+    "BPCLEAR",
+    "CREG",
+    "BPWORD",
+    "CCONT"
+  ],
+  "drivers/mon3dis.asm": [
+    "CDIS",
+    "DISROW"
+  ],
+  "drivers/mon3dump.asm": [
+    "CDUMP",
+    "DUROW",
+    "DUATTR",
+    "DUMARK",
+    "ADDRW"
   ],
   "drivers/mon3gfx.asm": [
     "R18",

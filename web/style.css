@@ -172,16 +172,17 @@ pre:focus {
   align-items: flex-start;
 }
 .leds {
+  --led-size: clamp(22px, 3.5vw, 30px);
   display: grid;
-  grid-template-columns: repeat(8, 14px);
+  grid-template-columns: repeat(8, var(--led-size));
   gap: 4px;
   background: #0b0b0b;
   padding: 8px;
   border-radius: 6px;
 }
 .leds div {
-  width: 14px;
-  height: 14px;
+  width: var(--led-size);
+  height: var(--led-size);
   border-radius: 50%;
   background: #222;
 }

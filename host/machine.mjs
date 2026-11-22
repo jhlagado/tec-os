@@ -15,6 +15,10 @@ import { getMatrixCombosForAscii } from "@jhlagado/debug80-runtime/platforms/tec
 import { Ds1302 } from "@jhlagado/debug80-runtime/platforms/tec1g/ds1302";
 import { toLatin1 } from "../tools/lib/bytes.mjs";
 
+// Keep queued arrows visible to a program that polls the row directly
+// just after a MON-3 scan. Fifty milliseconds at 4 MHz.
+const ARROW_HOLD_CYCLES = 200_000;
+
 const MODIFIER_KEY = { shift: 0, ctrl: 1, fn: 2 };
 
 const SD_PORT = 0xfd;
@@ -532,6 +536,10 @@ export class Machine {
       // EXPAND 1 in, the byte there is the bank's, so the key stays down.
       if (!this.classicBankIn) return;
       if (!head.up && this.read(kblast) === head.key) {
+        if (head.key >= 3 && head.key <= 6) {
+          head.releaseAt ??= this.cycles + ARROW_HOLD_CYCLES;
+          if (this.cycles < head.releaseAt) return;
+        }
         this.tec1g.applyMatrixKey(head.combo.row, head.combo.col, false);
         if (head.mod !== undefined) this.tec1g.applyMatrixKey(0, head.mod, false);
         head.up = true;

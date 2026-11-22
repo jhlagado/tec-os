@@ -307,3 +307,40 @@ it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
 divide and CRC-16 have no caller in the ROM and go in include files on the
 card, beside floating point and drawing. A disassembler does not fit.
+
+## Resident COM launch callback
+
+With the experimental ROM build (`TECOS_COMSTART=1 npm run build`),
+a resident service may publish a registry record named `COMSTART`, version 1,
+whose table pointer is a callable entry. After loading a COM and preparing the
+argument FCBs, command tail and default DMA, the CCP calls the newest matching
+record with HL = 0100h and DE = the record-rounded exclusive image end. An
+unsuccessful load or entry into a resident service does not dispatch the callback.
+The registry lookup adds no numbered ABI call.
+
+The callback runs in the classic bank on the CCP's stack, before the CCP installs
+the transient's normal stack. A returning callback preserves SP, IX, IY, I, the
+alternate registers and interrupt state, as well as any page-zero and console
+state needed for launch. The CCP supplies the normal primary entry registers and
+return frame after the callback returns. A callback doing substantial work should
+switch to its own stack. A debugger taking over the launch can run the prepared
+program itself and warm boot when done.
+
+A debugger can keep its one-shot arm flag in resident storage and consume it when
+the callback runs. The resident loader removes the record with its owner. Each
+launch resolves the callback anew, so the CCP retains no stale callback pointer.
+
+## Polled keyboard break callback
+
+The same experimental ROM can call a resident `KEYBREAK` version 1 registry
+entry when the blocking matrix input loop reads Ctrl-X. With a provider
+installed, the chord is consumed if its callback returns carry set. A carry-clear
+return declines the chord. Other keys and the serial console retain their
+normal paths. Buffered bytes already pending at entry to the BIOS are delivered
+first.
+
+The callback runs while the input caller is suspended. It must return using
+the original stack, preserve IX, IY, I, the alternate registers and interrupt
+state, and avoid reentering BDOS. It can use the character LCD and scan the
+matrix directly. Wait for the debugger's resume key to be released before
+returning. The ROM then resumes the original input wait.

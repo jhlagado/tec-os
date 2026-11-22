@@ -36,7 +36,7 @@ export async function execFile(over = {}) {
 }
 
 /** MON3.SVC's SHA-256: the file the card holds, as media writes it. */
-export const MON3_SVC_SHA = "a4742967123b66893f7b8506242c59dc597818697fe13eeb97158d445e27cbaa";
+export const MON3_SVC_SHA = "37f30fa7926e9ac1fe8513566c45d77c119d295e368be2e69e3151d5c98d998a";
 
 /** The card's MON3.SVC, by media's writer: the pinned file, and the same as SVC, the tests' own build. */
 export async function cardMon3(svc) {
@@ -55,7 +55,7 @@ export const mon3Svc = (opt = {}) => makeSvc(resolve(ROOT, "drivers/mon3.asm"), 
  * the least (0006h), and the least TPA alone and with GLCD.SVC. Every size
  * test reads it.
  */
-export const MON3_CEILING = { bytes: 4608, pages: 18, top: 0xa700, tpa: 42496, tpaGlcd: 41728 };
+export const MON3_CEILING = { bytes: 7936, pages: 31, top: 0x9a00, tpa: 39168, tpaGlcd: 38400 };
 
 /** What follows from a build SVC on the starter card: its pages, (0006h), its entry, the TPA and its SERVICES line. */
 export function figures(svc) {
@@ -65,7 +65,7 @@ export function figures(svc) {
 }
 
 /** MON3.SVC's source files, drivers/mon3.asm first and then those it includes: { name: text }. */
-export const MON3_FILES = ["mon3.asm", "mon3api.asm", "mon3io.asm", "mon3hex.asm", "mon3gfx.asm"];
+export const MON3_FILES = ["mon3.asm", "mon3api.asm", "mon3io.asm", "mon3hex.asm", "mon3gfx.asm", "mon3dump.asm", "mon3edit.asm", "mon3dis.asm", "mon3brk.asm", "mon3var.asm", "mon3run.asm"];
 export function mon3Sources() {
   const out = {};
   for (const n of MON3_FILES) {
@@ -95,7 +95,10 @@ export async function mon3Variant(edits, opt = {}) {
   }
   const dir = resolve(ROOT, "build/mon3-variants", sha(JSON.stringify(edits)).slice(0, 16));
   mkdirSync(dir, { recursive: true });
-  for (const [n, text] of Object.entries(files)) writeFileSync(resolve(dir, n), text.replace('%INCLUDE "../src/abi.inc"', `%INCLUDE "${resolve(ROOT, "src/abi.inc")}"`));
+  for (const [n, text] of Object.entries(files)) {
+    const source = text.replace(/^(%INCLUDE ")\.\.\/([^"]+)"/gm, (_, directive, path) => `${directive}${resolve(ROOT, path)}"`);
+    writeFileSync(resolve(dir, n), source);
+  }
   return makeSvc(resolve(dir, "mon3.asm"), { work: resolve(ROOT, "build/svc"), ...opt });
 }
 

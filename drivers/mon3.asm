@@ -163,7 +163,11 @@ ENT1:
   ld bc,6
   ldir           ; into SAVEN
   call FORMS     ; page zero taken
+  call BPCLEAR
   call WSINIT    ; MON-3's variables
+  ld hl,$4000
+  ld (DUMPAT),hl
+  ld (DISFROM),hl
   call HOOKIN    ; warm boot hooked
   ld a,(INT38)
   or a           ; 0038h ours?
@@ -172,7 +176,7 @@ ENT1:
   ld a,(DMG)
   or a           ; damaged before?
   call nz,DWARN  ; then say so again
-  jp PROMPT
+  jp MENTER
 
 ; Name the held slot. Its digits go
 ; out by BDOS 2, so a refusal leaves
@@ -351,6 +355,7 @@ WSINIT:
   ld (PROTM),a   ; no PROTECT
   ld (PROTM+1),a
   ld (RUNOK),a   ; nothing to run
+  ld (AUTORUN),a
   call GWS       ; and a clear GBUF
   ld hl,$001B    ; 4800 baud, as MON-3
   ld (BAUD),hl   ; sets it with no RTC
@@ -378,15 +383,14 @@ DEFLEN EQU $-DEFS
 RETIS:
   reti
 
-; The command line. Print MON3>, take a
-; line by BDOS 10, make it upper case,
-; and run LOAD, GO or EXIT with HL at
-; the operand and Z if there is none.
-; Anything else prints a question mark.
-; Runs on this service's own stack.
+; Uppercase the input line.
+; Dispatch with HL at the operand,
+; Z if empty.
 
 PROMPT:
   ld sp,MSTK     ; our own stack
+  xor a          ; interactive now
+  ld (AUTORUN),a
   ld de,MPROM
   call PRINT     ; MON3>
   ld de,LBUF     ; 40 characters
@@ -447,11 +451,9 @@ BAD:
   call PRINT     ; a question mark
   jr PROMPT
 
-; Match the keyword at DE, zero-ended,
-; with the word at HL. Z: DE is at the
-; handler's word and HL past the word.
-; NZ: DE is past the keyword's zero.
-; Clobbers A.
+; Match DE with the word at HL.
+; Z: HL past the word, DE at handler.
+; NZ: DE past the keyword.
 
 WORD:
   ld a,(de)
@@ -486,6 +488,16 @@ CMDS:
   DW CGO
   DB "EXIT",0
   DW CEXIT
+  DB "MEM",0
+  DW CDUMP
+  DB "EDIT",0
+  DW CEDIT
+  DB "DIS",0
+  DW CDIS
+  DB "REG",0
+  DW CREG
+  DB "CONT",0
+  DW CCONT
   DB 0
 
 ; Skip spaces at HL. Returns A = the
@@ -511,6 +523,7 @@ SKIP1:
 ; A .HEX file goes to the HEX loader.
 
 CLOAD:
+  call BPCLEAR
   ld a,(DMG)
   or a           ; the tables damaged?
   jr z,CLOAD1
@@ -579,14 +592,13 @@ LEND:
   jr nz,LFAIL
   ld hl,(LDAT)
 
-; A good load at HL: runnable now.
+; Mark the image runnable.
 
 LGOOD:
   ld (RUNAT),hl  ; for GO
   ld a,1
   ld (RUNOK),a   ; runnable now
-  call DMA80
-  jp PROMPT
+  jp MAUTGOOD
 
 LFAIL:
   call DMA80
@@ -669,6 +681,7 @@ GO1:
   ld hl,(RUNAT)
 
 GO2:
+  call BPCLEAR
   push hl
   ld c,48        ; flush
   call BDOS
@@ -714,23 +727,20 @@ GO2:
 PREIN:
   di
   ld sp,MSTK     ; our own stack
+  call BPCLEAR
   call CHECK     ; before RUNOK goes
   call WSINIT    ; the workspace anew
   jr MRET1
 
-; A program's RET lands here, through
-; the latch stub. Every drive's vector
-; is rebuilt at its next use, the GLCD
-; console's panel is set again, and a
-; form feed gives the console back. A
-; warning or a breakpoint's address
-; follows it, so that a video console
-; still shows it at MON3>. Before the
-; form feed, the keys must be up.
+; Return on our stack, check tables,
+; then restore the console and prompt.
 
 MRET:
   di             ; interrupts off
   ld sp,MSTK     ; our own stack
+  call BPCLEAR
+
+BRKRET:
   call CHECK     ; before any write
 
 MRET1:
@@ -781,6 +791,7 @@ KEYSUP:
   call DWARN
 
 MRET2:
+  call MAUTRET
   ld hl,BRKF
   ld a,(hl)
   or a           ; from RST 30h?
@@ -1176,6 +1187,12 @@ HEXC:
 %INCLUDE "mon3io.asm"
 %INCLUDE "mon3hex.asm"
 %INCLUDE "mon3gfx.asm"
+%INCLUDE "mon3dump.asm"
+%INCLUDE "mon3edit.asm"
+%INCLUDE "mon3dis.asm"
+%INCLUDE "../vendor/mon3/z80dis.asm"
+%INCLUDE "mon3brk.asm"
+%INCLUDE "mon3run.asm"
 
 MPROM: DB 13,10,"MON3>$"
 MCRLF: DB 13,10,'$'
@@ -1233,8 +1250,9 @@ HEXT: DS 5       ; four digits, an end
 LBUF: DB 40      ; BDOS 10's buffer
   DS 42
 FCB: DS 36
+%INCLUDE "mon3var.asm"
 
-; The monitor's stack.
+; Monitor stack.
 
   DS 80
 MSTK:

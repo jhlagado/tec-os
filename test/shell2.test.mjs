@@ -868,11 +868,11 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
   };
   assert.equal(tpa(["SHELL.SVC"]).tpa, 42496, "with the shell");
   assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 41728, "and GLCD.SVC");
-  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 37888, "and MON3.SVC");
+  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 34560, "and MON3.SVC");
   // The three together on a GLCD board, in three orders, the GLCD the console.
   for (const [startup, typed] of [[["SHELL.SVC", "GLCD.SVC", "MON3.SVC"], []], [["SHELL.SVC", "MON3.SVC", "GLCD.SVC"], []], [["GLCD.SVC"], ["SHELL.SVC", "MON3.SVC"]]]) {
     const r = tpa(startup, typed);
-    assert.deepEqual(r, { tpa: 37120, glcd: true, n: 3 }, startup.concat(typed).join(", "));
+    assert.deepEqual(r, { tpa: 33792, glcd: true, n: 3 }, startup.concat(typed).join(", "));
   }
 });
 
@@ -1361,7 +1361,7 @@ test("S2-13 docs", () => {
   const compat = flat("docs/compatibility.md");
   for (const s of ["46,533 bytes", "42,496", "41,728"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
-  assert.match(flat("docs/mon3.md"), /from `A700h` to `9500h`/);
+  assert.match(flat("docs/mon3.md"), /from `A700h` to `8800h`/);
   // No doc teaches MOUNT.COM or a volume marked written behind.
   for (const n of ["README.md", "docs/shell.md", "docs/recovery.md", "docs/compatibility.md", "docs/container-format.md", "docs/rom-services.md", "docs/wip.md", "docs/mon3.md"]) {
     const t = flat(n);

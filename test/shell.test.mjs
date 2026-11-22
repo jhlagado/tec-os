@@ -510,7 +510,7 @@ test("SH14 mon3 record", () => {
   const f = MON3.file;
   assert.deepEqual([...f.subarray(25, 29)], [0x45, 0x58, 1, 2], "version 1, bit 1 set in the file");
   const extra = f[8] | (f[9] << 8);
-  assert.ok(Math.ceil((MON3.image + extra) / 256) <= 18, "within 18 pages");
+  assert.ok(Math.ceil((MON3.image + extra) / 256) <= 31, "within 31 pages");
 });
 
 test("SH14 mon3 enter and again", () => {
@@ -594,12 +594,13 @@ test("SH14 card boards", async () => {
   assert.deepEqual(owners(serial).map((o) => o.name), ["SHELL"], "a serial board: the shell in");
 });
 
-test("SH14 mutant: MON3.SVC with today's INIT loses bit 1, so a second copy installs", async () => {
+test("SH14 mutant: MON3.SVC with bit 1 lost opens the file again", async () => {
   const mut = await mon3Variant([["  set 0,(hl)     ; ready, bit 1 kept", "  ld (hl),1      ; ready"]]);
   const m = shellMachine(shellCard({ "MON3.SVC": mut.file }, { startup: [] }));
   assert.doesNotMatch(at(m, "MON3.SVC"), /MON3>/, "installed, not entered");
+  const n = opens(m);
   at(m, "MON3.SVC");
-  assert.equal(owners(m).length, 2);
+  assert.ok(n() > 0, "tries to load a second copy");
 });
 
 test("SH14 mutant: setDisplayLine writing its display line first, the shell never loads", async () => {
@@ -704,7 +705,7 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(0)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "SHELL,GLCD,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3, "the GLCD the console");
-    assert.equal(word(m, 6), 0x9500);
+    assert.equal(word(m, 6), 0x8800);
   }
   {
     const m = glcdBoard(["SHELL.SVC", "MON3.SVC", "GLCD.SVC"]);
@@ -713,7 +714,7 @@ test("SH7 with glcd and mon3", () => {
     m.type("EXIT\r");
     m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 900_000_000, "GLCD.SVC after EXIT");
     assert.equal(names(m), "SHELL,MON3,GLCD");
-    assert.equal(word(m, 6), 0x9500);
+    assert.equal(word(m, 6), 0x8800);
   }
   {
     const m = glcdBoard(["GLCD.SVC"]);
@@ -724,7 +725,7 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(m.mark)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "GLCD,SHELL,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3);
-    assert.equal(word(m, 6), 0x9500);
+    assert.equal(word(m, 6), 0x8800);
   }
 });
 
@@ -732,7 +733,7 @@ test("SH7 tpa figures", () => {
   const m = shelled({ "MON3.SVC": MON3.file });
   assert.equal(word(m, 6), 0xaa00, "SHELL.SVC alone: TPA 43,264");
   at(m, "MON3.SVC", { re: M3 });
-  assert.equal(word(m, 6), 0x9800, "with MON3.SVC: 38,656");
+  assert.equal(word(m, 6), 0x8b00, "with MON3.SVC: 35,328");
   const g = glcdBoard(["SHELL.SVC", "GLCD.SVC"]);
   g.runUntil(() => g.ready() && g.read(g.sym("CONMOD")) === 3, 900_000_000, "the GLCD's prompt");
   assert.equal(word(g, 6), 0xa700, "with GLCD.SVC: 42,496");

@@ -42,15 +42,22 @@ record asks to be entered on install. It stays installed after `EXIT`, so
 `UNLOAD` or a reset removes it. `docs/services.md` gives the identity rule:
 `B:MON3.SVC` enters the copy installed from A:, and a second copy needs
 `UNLOAD` first. An older card's line with `/E` after the name still enters:
-the `/E` is only a tail, which `MON3.SVC` doesn't read.
+`/E` is accepted as a legacy tail.
 
-On the starter card it is 4,606 bytes of header and image in **18 pages**, 5,032
+`MON3.SVC name.BIN [addr]` or `MON3.SVC name.HEX` loads and runs the
+file on entry, including re-entry. It uses the same loader and start
+address as `LOAD` followed by `GO`. A normal program return takes you
+back to the TEC-OS prompt. A rejected load or a breakpoint leaves you at
+`MON3>`. Disk I/O errors still follow the normal BDOS warm-boot path.
+An argument tail longer than 40 characters prints `?`.
+
+On the starter card it is 7,788 bytes of header and image in **31 pages**, 8,601
 bytes as a file with its relocation data. The starter card loads `SHELL.SVC`
-first, so the word at `0006h` goes from `A700h` to `9500h`, and the TPA from
-42,496 bytes to **37,888**. With `GLCD.SVC` installed too, as the GLCD
-console's startup does, it is `9200h`, a TPA of **37,120**. On the starter card
+first, so the word at `0006h` goes from `A700h` to `8800h`, and the TPA from
+42,496 bytes to **34,560**. With `GLCD.SVC` installed too, as the GLCD
+console's startup does, it is `8500h`, a TPA of **33,792**. On the starter card
 with no shell, whose four drives take the bare ROM's word to `B6C5h`, it goes
-from `B6C5h` to `A400h`, and the TPA from 46,533 bytes to 41,728, and 40,960 with
+from `B6C5h` to `9700h`, and the TPA from 46,533 bytes to 38,400, and 37,632 with
 `GLCD.SVC`. The monitor, its line buffer, its FCB, its saved page
 zero and its stack are all in those pages, above anything a MON-3 program may
 load into. MON-3's graphics buffer and variables are not: they are MON-3's
@@ -58,7 +65,7 @@ own workspace, in the TPA where MON-3 keeps them.
 
 ## Commands
 
-The line is read by BDOS 10 and made upper case. Anything but these three
+The line is read by BDOS 10 and made upper case. Anything but these commands
 prints `?`.
 
 - **`LOAD name.BIN [addr]`**, or any type but `HEX`, loads the file at 4000h, or at the hexadecimal
@@ -109,6 +116,41 @@ prints `?`.
   | HL | the program's address |
   | SP | 087Eh, holding the return address 0049h |
   | DE | 0049h. MON-3's is C209h, its own return: the one difference |
+
+- **`MEM [start [end]]`** displays four bytes per aligned row, with hex
+  digits and printable ASCII. An explicit address or inclusive range
+  highlights the selected bytes in reverse video and adds one row on
+  either side where memory permits. A serial terminal needs ANSI support
+  for the highlight. Addresses are hexadecimal, or a saved breakpoint
+  register named `@BC`, `@DE`, `@HL`, `@IX`, `@IY`, `@PC`, or `@SP`.
+  Bare `MEM` shows up to 32 bytes starting after the last row shown, with
+  no highlight. It starts at 4000h in a new session or 0000h after FFFFh.
+  A malformed or descending range prints `?`.
+
+- **`EDIT address byte [byte ...]`** writes consecutive hexadecimal bytes
+  and shows them highlighted in the aligned memory view. For example,
+  `EDIT 4002 3E 2A C9` writes three bytes starting at 4002h. A saved
+  register such as `@HL` can supply the address at a breakpoint. The
+  entire command is checked before writing. Writes use the same RAM bounds
+  as `LOAD`, including its protection for page zero and 0800h–08FFh.
+- **`DIS [start [end]]`** lists Z80 instructions forward from an address,
+  with their addresses, raw bytes, and decoded operands. It accepts the
+  same hexadecimal and saved-register operands as `MEM`. `DIS @PC`
+  starts at the breakpoint's resume address. Without an end, it lists up
+  to eight instructions. With an end, it includes instructions that start
+  at or below that address. Bare `DIS` continues at the next instruction
+  using a cursor independent of `MEM`. A new session starts at 4000h.
+  The command uses the original MON-3 decoder with resident workspace.
+
+- **`REG`** shows the CPU state saved by the last `RST 30h`: AF
+  (A and the flags byte), BC, DE, HL, IX, IY, alternate BC, DE, HL and AF,
+  and the resume PC and SP.
+- **`CONT`** restores the saved registers, stack, latch shadow and
+  interrupt-enable state, then resumes immediately after `RST 30h`. The
+  monitor console handling and disk reset still occur at the stop. The Z80
+  refresh counter continues to advance while stopped. `LOAD` and a new
+  `GO` discard the saved stop. `CONT` refuses to resume if the tables'
+  integrity check reported damage.
 
 - **`EXIT`** turns interrupts off, sets IM 1, resets the drives, puts page
   zero back, takes the warm-boot hook out, turns the digits and LED matrix
@@ -228,7 +270,7 @@ The next entry takes it out first, and `UNLOAD` does too.
 | `RST 18h` | GLCD API, selector in A | calls 0 to 20, MON-3's own routines; 21 and above show `displayError` |
 | `RST 20h` | digits, keys, LCD wait | implemented, keypad and matrix, with MON-3's fall-through flags |
 | `RST 28h` | LCD busy wait | implemented |
-| `RST 30h` | breakpoint | prints `BRK` and the address and returns to `MON3>`. There is no resume |
+| `RST 30h` | breakpoint | saves registers, prints `BRK` and the next address, and returns to `MON3>`. `CONT` resumes |
 | `RST 38h` | `USER_INT` | through `USER_INT`, when 0038h held its default at entry |
 | NMI | `USER_NMI` | through `USER_NMI` at 0066h, in a session |
 

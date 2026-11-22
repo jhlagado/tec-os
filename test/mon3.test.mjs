@@ -1087,6 +1087,116 @@ test("KG62 bin loads", async () => {
   leave(m, { mon3: true });
 });
 
+test("MON3 one-shot launch returns on RET and stops on a breakpoint", async () => {
+  const svc = await mon3Build();
+  const m = boot({
+    "MON3.SVC": svc.file,
+    "RET.BIN": bin(0xc9),
+    "RET.HEX": Buffer.from(":01400000C9F6\r\n:00000001FF\r\n"),
+    "BRK.BIN": bin(0xf7, 0xc9),
+  });
+  assert.equal(line(m, "MON3.SVC ret.bin").mon3, false);
+  assert.deepEqual(services(m), [figures(svc).line]);
+  assert.equal(line(m, "MON3.SVC RET.BIN").mon3, false);
+  assert.equal(line(m, "MON3.SVC RET.HEX").mon3, false);
+  assert.ok(refused(line(m, "MON3.SVC MISSING.BIN")));
+  assert.ok(refused(line(m, "GO")));
+  assert.equal(line(m, "EXIT").mon3, false);
+  assert.match(line(m, "MON3.SVC BRK.BIN").out, /BRK 4001\r\n/);
+  assert.ok(line(m, "CONT").mon3);
+});
+
+test("MON3 memory view inspects a loaded program and leaves it runnable", async () => {
+  const { m, svc } = await inSession({
+    "DUMP.BIN": Uint8Array.of(0xc9, 0x41, 0x24, 0x7f, 0x42),
+  });
+  assert.ok(ok(line(m, "LOAD DUMP.BIN")));
+  const selected = line(m, "mem 4000 4004").out;
+  const reverse = (hex) => `\x1b[7m${hex}\x1b[0m`;
+  assert.match(selected, /\r\n3FFC /);
+  assert.ok(selected.includes(`4000 ${["C9", "41", "24", "7F"].map(reverse).join(" ")} .A$.\r\n`));
+  assert.ok(selected.includes(`4004 ${reverse("42")} `));
+  assert.match(selected, /\r\n4008 /);
+  assert.match(line(m, "MEM").out, /\r\n400C /);
+  const focus = line(m, "MEM 4002").out;
+  assert.ok(focus.includes(`4000 C9 41 ${reverse("24")} 7F .A$.\r\n`));
+  assert.ok(refused(line(m, "MEM @HL")));
+  assert.ok(refused(line(m, "MEM 4004 4000")));
+  assert.ok(refused(line(m, "MEM 4000 4001 extra")));
+  assert.match(line(m, "MEM FFFF").out, /\r\nFFF8 .*\r\nFFFC (?:[0-9A-F]{2} ){3}\x1b\[7m[0-9A-F]{2}\x1b\[0m [ -~]{4}\r\n\r\nMON3>$/);
+  assert.equal(runnable(m, svc), 1);
+  assert.ok(ok(line(m, "GO")));
+});
+
+test("MON3 edits validated bytes and highlights the result", async () => {
+  const { m } = await inSession({
+    "EDIT.BIN": Uint8Array.of(0xf7, 0xc9, 0x24, 0x7f, 0x42),
+  });
+  assert.ok(ok(line(m, "LOAD EDIT.BIN")));
+  assert.ok(ok(line(m, "GO")));
+  for (const command of [
+    "EDIT 4001", "EDIT 4001 00 NO", "EDIT 4001 00 100",
+    "EDIT 0008 AA", "EDIT 07FF AA BB", "EDIT FFFF AA BB",
+  ]) assert.ok(refused(line(m, command)), command);
+  assert.match(line(m, "MEM 4000").out, / C9 24 7F /);
+  const edited = line(m, "EDIT @PC 00 00 C9").out;
+  assert.ok(edited.includes("4000 F7 \x1b[7m00\x1b[0m \x1b[7m00\x1b[0m \x1b[7mC9\x1b[0m "));
+  assert.ok(ok(line(m, "CONT")));
+});
+
+test("MON3 disassembles forward and remembers the next instruction", async () => {
+  const { m } = await inSession({
+    "DIS.BIN": Uint8Array.of(0x21, 0x34, 0x12, 0x3e, 0x2a, 0xc9,
+      0xfd, 0x21, 0x78, 0x56, 0xdd, 0x36, 0x01, 0x42, 0xc9),
+  });
+  assert.ok(ok(line(m, "LOAD DIS.BIN")));
+  const listing = line(m, "DIS 4000 400D").out;
+  assert.match(listing, /4000 +21 34 12 +LD HL,1234/i);
+  assert.match(listing, /4003 +3E 2A +LD A,2A/i);
+  assert.match(listing, /4005 +C9 +RET/);
+  assert.match(listing, /4006 +FD 21 78 56 +LD IY,5678/i);
+  assert.match(listing, /400A +DD 36 01 42 +LD \(IX\+01\),42/i);
+  assert.match(line(m, "DIS").out, /400E +C9 +RET/);
+});
+
+test("MON3 breakpoint displays registers and CONT restores them", async () => {
+  const { m } = await inSession({ "STOP.BIN": Uint8Array.of(0xf7, 0xc9) });
+  assert.ok(refused(line(m, "REG")));
+  assert.ok(refused(line(m, "CONT")));
+  assert.ok(ok(line(m, "LOAD STOP.BIN")));
+  m.type("GO\r");
+  runTo(m, 0x4000);
+  const cpu = m.cpu.cpu;
+  const registers = {
+    a: 0x12, b: 0x23, c: 0x34, d: 0x45, e: 0x56, h: 0x67, l: 0x78,
+    ix: 0x89ab, iy: 0xcdef, i: 0x40, iff1: 1, iff2: 1,
+    a_prime: 0xab, b_prime: 0xbc, c_prime: 0xcd, d_prime: 0xde,
+    e_prime: 0xef, h_prime: 0xf1, l_prime: 0x21,
+    flags: { S: 1, Z: 0, Y: 1, H: 0, X: 1, P: 0, N: 1, C: 0 },
+    flags_prime: { S: 0, Z: 1, Y: 0, H: 1, X: 0, P: 1, N: 0, C: 1 },
+  };
+  Object.assign(cpu, structuredClone(registers));
+  const stopped = m.output.length;
+  m.runUntil(() => m.waitingForInput() && /MON3>$/.test(m.text(stopped)), 100_000_000, "breakpoint");
+  assert.match(m.text(stopped), /BRK 4001/);
+  const regs = line(m, "REG").out;
+  assert.match(regs, /AF=12AA BC=2334\r\nDE=4556 HL=6778\r\nIX=89AB IY=CDEF/);
+  assert.match(regs, /BC'BCCD DE'DEEF\r\nHL'F121 AF'AB55\r\nPC=4001 SP=087E/);
+  assert.ok(line(m, "MEM @PC @PC").out.includes("4000 F7 \x1b[7mC9\x1b[0m "));
+  assert.ok(line(m, "MEM @SP").out.includes("087C "));
+  assert.ok(refused(line(m, "MEM @AF")));
+  assert.match(line(m, "MEM DE").out, /\r\n00DC /);
+  assert.match(line(m, "DIS @PC @PC").out, /4001 +C9 +RET/);
+  const resumed = m.output.length;
+  m.type("CONT\r");
+  runTo(m, 0x4001);
+  for (const [name, value] of Object.entries(registers)) assert.deepEqual(cpu[name], value, name);
+  assert.equal(cpu.sp, 0x087e);
+  assert.equal(word(m, cpu.sp), 0x0049);
+  m.runUntil(() => m.waitingForInput() && /MON3>$/.test(m.text(resumed)), 100_000_000, "resumed program return");
+  assert.ok(refused(line(m, "CONT")));
+});
+
 async function refusedLoads(variant) {
   const top = FIG.top;
   const { m, svc } = await inSession({ "OVER.BIN": pattern((top - 0x4000) / 128 + 1), "THREE.BIN": pattern(3), "FIFTEEN.BIN": pattern(15), "EMPTY.BIN": new Uint8Array(0), "ONE.BIN": pattern(1) }, { svc: variant });
