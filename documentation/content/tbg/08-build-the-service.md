@@ -7,12 +7,12 @@ nav_group: Reference
 
 # 8. Build the service if you need a copy
 
-From a Thorium checkout next to your TEC-OS checkout, run
-`node tools/build-tdb.mjs --service ../tec-os`. The output is
-`build/tbg/TBG.SVC`. Copy that file to your TEC-OS disk. The standard Viewer
-ROM supports the direct-launch exercises in this manual. Armed launch and
-the Ctrl-X input pause require the experimental ROM.
+TBG has its own repository. Clone it beside your Thorium and TEC-OS
+checkouts, run `npm ci` in Thorium, then run `npm run build` in the TBG
+checkout. The output is `build/TBG.SVC`. Copy that file to your TEC-OS disk.
+The standard Viewer ROM supports the direct-launch exercises in this manual.
+Armed launch and the Ctrl-X input pause require the experimental ROM.
 
+[TBG source](https://github.com/jhlagado/tbg) ·
 [Viewer build source](https://github.com/jhlagado/tec-os-viewer/tree/tbg-lcd-workflow) ·
-[Thorium source](https://github.com/jhlagado/thorium) ·
-[Origo P5 test evidence](https://github.com/jhlagado/origo/tree/tbg-resident-evidence)
+[Origo P8 test evidence](https://github.com/jhlagado/origo/tree/main/studies/p8-tbg/evidence)
