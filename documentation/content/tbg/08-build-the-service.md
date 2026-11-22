@@ -9,7 +9,8 @@ nav_group: Reference
 
 TBG has its own repository. Clone it beside your Thorium and TEC-OS
 checkouts, run `npm ci` in Thorium, then run `npm run build` in the TBG
-checkout. The output is `build/TBG.SVC`. Copy that file to your TEC-OS disk.
+checkout. The outputs are `build/TBG.SVC` and `build/TBG.HLP`, the help pages H
+shows. Copy both files to your TEC-OS disk.
 The standard Viewer ROM supports the direct-launch exercises in this manual.
 Armed launch and the Ctrl-X input pause require the experimental ROM.
 
