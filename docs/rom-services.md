@@ -59,7 +59,8 @@ so a glyph is four bytes, two rows a byte, and the four glyphs that light a fift
 column (`#`, `$`, `+` and 7Fh) carry the rows that do in an 8-byte list beside it.
 There is no 768-byte table to point at, so `TNFONT`, which returned one at ABI 5.1, is
 refused, and a caller that tests carry learns it; one that does not reads whatever
-its HL held. `TNGLYPH` unpacks one glyph. It is reentrant and is never a housekeeping
+its HL held. `TNGLYPH` unpacks one glyph. It is not for an interrupt or NMI handler: it is a
+foreground call and its stack bound assumes a foreground caller. It is never a housekeeping
 point: the dispatcher sends it straight to the unpacker, before the step that can run
 the write-behind worker, so a driver drawing at depth 0 is never printed into by a
 notice in the middle of its draw. The PICO9918's console loads its patterns
