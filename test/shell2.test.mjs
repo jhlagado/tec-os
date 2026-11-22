@@ -970,12 +970,14 @@ function bdos11(logged, rom) {
 
 // The qualified ROM's readings are taken with this build's SHELL.SVC on the
 // card, so they move with the shell's file: the bounds are over that control.
+// The five ROM built-in names in the shell's keyword table add one more walk of
+// the table to the command that launches the program, 1,111 T in the worst case.
 test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
   const qualifiedB = bdos11("B", QUALIFIED_POLL), qualifiedA = bdos11("A", QUALIFIED_POLL);
   const b = bdos11("B"), a = bdos11("A");
   t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
-  assert.deepEqual(qualifiedB, { nothing: 4962, worst: 8_797_881 });
-  assert.deepEqual(qualifiedA, { nothing: 4953, worst: 9_257_751 });
+  assert.deepEqual(qualifiedB, { nothing: 4962, worst: 8_798_992 });
+  assert.deepEqual(qualifiedA, { nothing: 4953, worst: 9_258_862 });
   for (const [drive, current, qualified] of [["B", b, qualifiedB], ["A", a, qualifiedA]])
     assert.ok(current.nothing - qualified.nothing <= 360, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
   assert.ok(b.worst / qualifiedB.worst - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / qualifiedB.worst - 1) * 100).toFixed(2)} % over qualified`);
