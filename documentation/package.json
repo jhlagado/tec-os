@@ -10,7 +10,9 @@
     "check": "node scripts/check-source.mjs",
     "check:import": "node scripts/check-source.mjs --import",
     "check:site": "node scripts/check-site.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "diagrams": "node scripts/tec-os-figures.mjs",
+    "diagrams:check": "node scripts/tec-os-figures.mjs --check"
   },
   "devDependencies": {
     "gray-matter": "4.0.3",

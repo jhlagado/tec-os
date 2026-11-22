@@ -433,6 +433,8 @@ These are cooperative opportunities, not a timer or wall-clock deadline
 
 <a id="a-failed-flush"></a>
 
+![Queued data can combine multiple writes to a block. Directory publication follows its data prerequisites and failed acknowledged data remains pending.](/images/tec-os/cache-order.svg)
+
 ## A failed write
 
 A delayed write can fail after its data call succeeded. Warm boot retains the

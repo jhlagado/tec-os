@@ -491,6 +491,10 @@ html {
   min-width: min(560px, 100vw - 2rem);
 }
 
+.vp-doc figure.plate > img[src*="/images/tec-os/"] {
+  min-width: 560px;
+}
+
 .vp-doc figure.plate > figcaption {
   position: sticky;
   left: 0;

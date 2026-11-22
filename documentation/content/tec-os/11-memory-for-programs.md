@@ -56,6 +56,8 @@ RAM because warm boot would reload it from disk. TEC-OS has no additional CCP
 RAM to reclaim. All available program memory is already included below the TPA
 ceiling.
 
+![Programs start at 0100h and end below the address held at 0006h. Resident reservations lower that ceiling.](/images/tec-os/tpa-boundary.svg)
+
 ## The inherited stack and a private stack
 
 The inherited stack is a small reservation in resident workspace above the
