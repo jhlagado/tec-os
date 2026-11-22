@@ -29,8 +29,8 @@ function readLine({ leak = false, probe, tbg, park = false } = {}) {
   if (tbg) files["TBG.SVC"] = tbg;
   const m = machine(card(files), { tms: true, matrix: true });
   if (probe) m.command("KEYPROBE.SVC");
-  function lcd() {
-    return String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20));
+  function lcd(row = 0) {
+    return String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(row * 20, row * 20 + 20));
   }
   if (tbg) {
     m.type("TBG.SVC BDOSLINE\r");
@@ -77,6 +77,17 @@ function readLine({ leak = false, probe, tbg, park = false } = {}) {
     runFor(m, 100_000);
     setKey(m, 0x3b, false);
     setKey(m, 1, false);
+    if (tbg && m.symbols.has("LINEPARK")) {
+      press(m, 0x3a); // W saves the parked call's register snapshot.
+      m.runUntil(() => lcd(3).startsWith("Saved TBGSTATE.BIN") && word(m, m.sym("OLDSP")) === pending.callerStack,
+        45_000_000, "parked snapshot saved");
+      const snapshot = Buffer.from(volume(m.sdImage, "A").read("TBGSTATE.BIN"));
+      assert.equal(snapshot.length, 128);
+      assert.equal(snapshot.readUInt16LE(4), LINEBUF);
+      assert.equal(snapshot.readUInt16LE(12), word(m, BEFORE));
+      assert.equal(snapshot.readUInt16LE(14), word(m, pending.callerStack));
+      assert.deepEqual(readState(), pending, "saving preserves the pending input");
+    }
     press(m, 0x35); // R resumes when released.
     if (probe) assert.equal(m.read(count), 1, "the held chord dispatched once");
     assert.equal(m.read(RETURNS), 0, "the original line is still pending");
