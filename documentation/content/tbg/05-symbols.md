@@ -15,7 +15,8 @@ user area as the COM.
 
 ![Keep STEP.COM and STEP.TBG from the same TAS build together. SY confirms that TBG has matching globals to browse.](/images/tbg/symbols.svg)
 
-TBG checks the sidecar against the loaded program. If there is no matching
-sidecar, you can still step, inspect memory, and set breakpoints by browsing
-Code. If `SY` is missing, check the filename and user area, then assemble
+TBG checks the sidecar against the loaded program. When it matches, Symbols
+joins the Tab order after Memory, and Shift+Tab from Registers reaches it in
+one step. If there is no matching sidecar, Symbols is left out, and you can
+still step, inspect memory, and set breakpoints by browsing Code. If `SY` is missing, check the filename and user area, then assemble
 again to make sure the files are from the same build.
