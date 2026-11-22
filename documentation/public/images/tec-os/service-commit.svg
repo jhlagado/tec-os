@@ -32,7 +32,7 @@ text {fill:currentColor;font:14px ui-monospace,monospace}
 <rect class="" x="24" y="163" width="200" height="88" rx="4"/>
 <text class="head" x="124" y="189" text-anchor="middle" xml:space="preserve">4 · Run INIT</text>
 <text class="" x="124" y="214" text-anchor="middle" xml:space="preserve">Initialise the service</text>
-<text class="" x="124" y="233" text-anchor="middle" xml:space="preserve">Return proposed records</text>
+<text class="" x="124" y="233" text-anchor="middle" xml:space="preserve">Return records</text>
 <path class="arrow" d="M226 207 L254 207" marker-end="url(#arrow)"/>
 <rect class="" x="260" y="163" width="200" height="88" rx="4"/>
 <text class="head" x="360" y="189" text-anchor="middle" xml:space="preserve">5 · Check records</text>

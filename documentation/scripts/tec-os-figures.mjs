@@ -138,7 +138,7 @@ add('service-commit', 'Tentative service installation and final commit',
   'The service loader validates file size, dependencies and stack allowances, then applies relocation and moves the resident image tentatively. INIT runs before returned-record validation and final registry/reservation commit. Failure requires cleanup; arbitrary device or BIOS changes made by INIT are not automatically reversed.', 310, [
     row(20, [['1 · Validate', 'File / dependencies', 'Stack allowances'], ['2 · Relocate', 'Patch the loaded', 'Image at 0100h'], ['3 · Move resident', 'Tentative boundary', 'PZTOP not committed']]),
     '<path class="arrow" d="M696 108 V132 H12 V207 H18" marker-end="url(#arrow)"/>',
-    row(163, [['4 · Run INIT', 'Initialise the service', 'Return proposed records'], ['5 · Check records', 'Validate bounds', 'And registry capacity'], ['6 · Commit', 'Publish registry', 'Commit PZTOP']]),
+    row(163, [['4 · Run INIT', 'Initialise the service', 'Return records'], ['5 · Check records', 'Validate bounds', 'And registry capacity'], ['6 · Commit', 'Publish registry', 'Commit PZTOP']]),
     note(280, 'Failure takes cleanup paths before a successful reservation commit.'),
     note(302, 'INIT must undo its own device or hook changes where required.')
   ]);
