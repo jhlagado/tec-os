@@ -122,7 +122,7 @@ installation have additional forms handled by the command processor.
 | `PAUSE [TEXT]` | Shell | Print the text or `[more]` and wait for a key |
 | `UNLOAD` | ROM | Attempt to remove the newest service |
 | `D:` | ROM | Select drive D, with the same form for another drive |
-| `NAME [ARGS]` | ROM | Load a COM program and pass its arguments |
+| `NAME [ARGS]` | ROM, shell | Run the first of `NAME.COM`, `NAME.SVC` and `NAME.CMD` that exists, in that order; built-ins first. The ROM prompt tries COM and SVC; the shell adds CMD. A found file that cannot load fails without trying the next |
 | `NAME.SVC [ARGS]` | ROM | Load a resident service, and enter its application when it has one |
 | `NAME.CMD` | Shell | Run a script of command lines. Requires the shell |
 

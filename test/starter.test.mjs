@@ -1,5 +1,5 @@
 // The starter card built by tools/media.mjs is also the Viewer's card:
-// fifteen source/pinned files on A:, booting to the shell. BAZA builds
+// seventeen source/pinned files on A:, booting to the shell. BAZA builds
 // BOUNCE's game, TAS builds DEMO and HELLO3 from source, and MON3.SVC loads
 // HELLO3's generated image. The web host upgrades older system services.
 // Emulator evidence; external programs are pinned in test/inputs.json.
@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import { GLCD_SVC, ROOT, boot, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 import { digitsOf, find, hello3, lcdRows, line, mon3Svc, svcMutant } from "./lib/mon3.mjs";
+import { assembleProgram } from "../tools/lib/assemble.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
 import { needsStarter, prepareCard } from "../host/card.mjs";
 
@@ -41,13 +42,15 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly fifteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the starter card holds exactly seventeen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   check(BAZA);
   check(RTL);
   check(BOUNCE);
   const { card, recipe } = starter();
+  const snake = await assembleProgram(resolve(ROOT, "programs/SNAKE9.ASM"), { base: 0x4000 });
+  assert.equal(sha(snake.bytes), "c1fa08cc2e19f13a56b41a484a56d9c9d1876ffa2d9ec4a82cdb780b962c3c5d", "the published Snake9 binary is preserved");
   const want = {
     "STARTUP.CMD": Buffer.from("SHELL.SVC\r\nGLCD.SVC\r\n\x1a", "latin1"),
     "SHELL.SVC": SHELL_SVC,
@@ -64,6 +67,8 @@ test("the starter card holds exactly fifteen files, each by its hash, the PICO99
     "DEMO.ASM": text("DEMO.ASM"),
     "MON3.SVC": (await mon3Svc()).file,
     "HELLO3.ASM": textAt("test/programs/hello3.asm"),
+    "SNAKE9.ASM": text("SNAKE9.ASM"),
+    "SNAKE9.BIN": snake.bytes,
   };
   const a = volume(card, "A");
   assert.deepEqual(a.list().map((f) => f.name).sort(), Object.keys(want).sort());

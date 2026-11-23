@@ -627,8 +627,8 @@ test("SH14 mutant: withoutDisplay keeping its : makes a kept piece a bad name", 
 const pages = (svc) => Math.ceil((svc.image + (svc.file[8] | (svc.file[9] << 8))) / 256);
 
 test("SH7 size", () => {
-  assert.ok(pages(SHELL) <= 17, `SHELL.SVC in 17 pages: ${SHELL.image} + extra`);
-  assert.ok(SHELL.image + (SHELL.file[8] | (SHELL.file[9] << 8)) <= 4352);
+  assert.ok(pages(SHELL) <= 18, `SHELL.SVC in 18 pages: ${SHELL.image} + extra`);
+  assert.ok(SHELL.image + (SHELL.file[8] | (SHELL.file[9] << 8)) <= 4608);
   assert.equal(sym.RING % 256, 0, "the ring's page aligned");
 });
 
@@ -704,7 +704,7 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(0)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "SHELL,GLCD,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3, "the GLCD the console");
-    assert.equal(word(m, 6), 0x9200);
+    assert.equal(word(m, 6), 0x9100);
   }
   {
     const m = glcdBoard(["SHELL.SVC", "MON3.SVC", "GLCD.SVC"]);
@@ -713,7 +713,7 @@ test("SH7 with glcd and mon3", () => {
     m.type("EXIT\r");
     m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 900_000_000, "GLCD.SVC after EXIT");
     assert.equal(names(m), "SHELL,MON3,GLCD");
-    assert.equal(word(m, 6), 0x9200);
+    assert.equal(word(m, 6), 0x9100);
   }
   {
     const m = glcdBoard(["GLCD.SVC"]);
@@ -724,18 +724,18 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(m.mark)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "GLCD,SHELL,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3);
-    assert.equal(word(m, 6), 0x9200);
+    assert.equal(word(m, 6), 0x9100);
   }
 });
 
 test("SH7 tpa figures", () => {
   const m = shelled({ "MON3.SVC": MON3.file });
-  assert.equal(word(m, 6), 0xa800, "SHELL.SVC alone: TPA 42,752");
+  assert.equal(word(m, 6), 0xa700, "SHELL.SVC alone: TPA 42,496");
   at(m, "MON3.SVC", { re: M3 });
-  assert.equal(word(m, 6), 0x9500, "with MON3.SVC: 37,888");
+  assert.equal(word(m, 6), 0x9400, "with MON3.SVC: 37,632");
   const g = glcdBoard(["SHELL.SVC", "GLCD.SVC"]);
   g.runUntil(() => g.ready() && g.read(g.sym("CONMOD")) === 3, 900_000_000, "the GLCD's prompt");
-  assert.equal(word(g, 6), 0xa500, "with GLCD.SVC: 41,984");
+  assert.equal(word(g, 6), 0xa400, "with GLCD.SVC: 41,728");
 });
 
 test("SH7 mutant: SHELL.SVC declaring 6 on the CCP's stack makes GLCD.SVC?", async () => {
@@ -745,9 +745,9 @@ test("SH7 mutant: SHELL.SVC declaring 6 on the CCP's stack makes GLCD.SVC?", asy
   assert.match(m.text(0), /GLCD\.SVC\?/);
 });
 
-test("SH7 mutant: a 128-byte recall buffer takes an eighteenth page", async () => {
+test("SH7 mutant: a 128-byte recall buffer exceeds the eighteen-page limit", async () => {
   const mut = await shellVariant([["STKTOP    EQU   STKBOT+48\n", "STKTOP    EQU   STKBOT+48+128\n"]]);
-  assert.equal(pages(mut), 18);
+  assert.equal(pages(mut), 19);
 });
 
 // --- Pieces, separators and lines ------------------------------------------

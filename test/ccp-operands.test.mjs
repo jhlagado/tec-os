@@ -19,6 +19,12 @@
 // which is no operand of it, the CCP's FCBs and line buffer are three bytes
 // higher, and the seventeen-page shell's line buffer and COPY's FCB are 11
 // bytes lower. Traces from main and this build paired as before, every row.
+// Eleven digests pair c7943e7 with
+// 1518fb7. The bare lookup adds one SVC
+// open after a missing COM. Its code
+// and extra page move LBUF and CFCB.
+// Existing FCB bytes, output and peak
+// ceilings are kept.
 // Raw buffer addresses are part of each call digest, so relocation alone
 // changes it. Fixture updates require paired traces with identical output,
 // logical buffer identities, defined operands, FCB bytes and stack peaks.

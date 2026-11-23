@@ -15,6 +15,12 @@ import { getMatrixCombosForAscii } from "@jhlagado/debug80-runtime/platforms/tec
 import { Ds1302 } from "@jhlagado/debug80-runtime/platforms/tec1g/ds1302";
 import { toLatin1 } from "../tools/lib/bytes.mjs";
 
+// A RAM scanner can poll the matrix again
+// after acknowledging a key. Keep arrows
+// down for fifty milliseconds there. The
+// ROM console consumes the key directly.
+const ARROW_HOLD_CYCLES = 200_000;
+
 const MODIFIER_KEY = { shift: 0, ctrl: 1, fn: 2 };
 
 const SD_PORT = 0xfd;
@@ -217,6 +223,7 @@ export class Machine {
     let cleared = false;
     const freeFrom = symbols.has("HRING") ? 0xbe00 : 0xbd00;
     this.expand1Writes = [];
+    const kblast = symbols.get("KBLAST");
     this.cpu.hardware.memWrite = (addr, value) => {
       const a = addr & 0xffff;
       if (clearEnd > 0) {
@@ -235,7 +242,18 @@ export class Machine {
       else if (a < 0x0800 && system.shadowEnabled) {
         this.violations.push({ kind: "overlay-write", addr: a, pc: this.cpu.cpu.pc });
       }
-      if (!empty(a)) ram.memWrite(a, value);
+      if (!empty(a)) {
+        ram.memWrite(a, value);
+        if (a === kblast && this.classicBankIn) {
+          const head = this.pending?.[0];
+          if (head?.via === "matrix" && head.down && !head.up &&
+              head.key >= 3 && head.key <= 6 && (value & 255) === head.key &&
+              head.releaseAt === undefined) {
+            const direct = (this.cpu.cpu.pc & 0xffff) < 0xc000;
+            head.releaseAt = this.cycles + (direct ? ARROW_HOLD_CYCLES : 0);
+          }
+        }
+      }
     };
     this.conout = symbols.get("BCONOUT");
     // The buffer of the BDOS 10 line input in progress, -1 for none: set at
@@ -532,6 +550,9 @@ export class Machine {
       // EXPAND 1 in, the byte there is the bank's, so the key stays down.
       if (!this.classicBankIn) return;
       if (!head.up && this.read(kblast) === head.key) {
+        if (head.key >= 3 && head.key <= 6) {
+          if (head.releaseAt !== undefined && this.cycles < head.releaseAt) return;
+        }
         this.tec1g.applyMatrixKey(head.combo.row, head.combo.col, false);
         if (head.mod !== undefined) this.tec1g.applyMatrixKey(0, head.mod, false);
         head.up = true;

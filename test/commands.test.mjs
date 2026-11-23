@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
+import { execFile as executableService } from "./lib/mon3.mjs";
 import { at as shellAt } from "./lib/shell.mjs";
 import { AREA_COM, PUT_COM, ROOT, TEST_CLOCK, abiDeclarations, boot, marked, putBytes, service, romFor, standardCard, startupFile, volume, withMarks, withShell } from "./lib/fixtures.mjs";
 
@@ -134,6 +135,93 @@ test("bare and explicit COM still execute while shell CMD selects the script", a
   assert.match(out, /SCRIPT_OK/);
   assert.doesNotMatch(out, /\r\nC\r\n/);
   assert.deepEqual(shell.violations, []);
+});
+
+test("a ROM built-in name is never shadowed by a same-named script: TYPE, ERA, REN, CON and UNLOAD", async () => {
+  for (const name of ["TYPE", "ERA", "REN", "CON", "UNLOAD"]) {
+    const m = await machine({ [`${name}.CMD`]: startupFile("ECHO SCRIPT_RAN") }, { shell: true });
+    assert.match(shellAt(m, `${name}.CMD`), /SCRIPT_RAN/, `${name}.CMD still names the script`);
+    assert.doesNotMatch(shellAt(m, name.toLowerCase()), /SCRIPT_RAN/, `${name.toLowerCase()} in lower case reaches the ROM's built-in`);
+    assert.doesNotMatch(shellAt(m, name), /SCRIPT_RAN/, `${name} typed bare reaches the ROM's built-in (UNLOAD removes the shell, so it goes last)`);
+    assert.deepEqual(m.violations, []);
+  }
+});
+
+test("bare names search COM then SVC then shell CMD and preserve explicit types", async () => {
+  const svc = await executableService();
+  const script = startupFile("ECHO SCRIPT_OK");
+  for (const shell of [false, true]) {
+    const run = (m, line) => shell ? shellAt(m, line) : m.command(line);
+    const com = await machine({ "JOB.COM": SAY, "JOB.SVC": svc, "JOB.CMD": script }, { shell });
+    assert.match(run(com, "job"), /C\r\n/);
+    assert.doesNotMatch(run(com, "JOB.COM"), /EXEC|SCRIPT_OK/);
+    assert.match(run(com, "JOB.SVC P"), /EXEC/);
+    const serviceOnly = await machine({ "JOB.SVC": svc, "JOB.CMD": script }, { shell });
+    assert.match(run(serviceOnly, "job P"), /EXEC/);
+    assert.match(run(serviceOnly, "JOB.COM"), /JOB\.COM\?/);
+    assert.match(run(serviceOnly, "JOB."), /JOB\.\?/);
+    const cmd = await machine({ "JOB.CMD": script }, { shell });
+    const output = run(cmd, "job");
+    assert.match(output, shell ? /SCRIPT_OK/ : /JOB\?/);
+    assert.deepEqual([com.violations, serviceOnly.violations, cmd.violations], [[], [], []]);
+  }
+});
+
+test("bare search preserves named drives and COM fallback to A before SVC", async () => {
+  const svc = await executableService();
+  for (const shell of [false, true]) {
+    const m = await machine({ "JOB.COM": SAY }, { shell });
+    volume(m.sdImage, "B").write("JOB.SVC", svc);
+    const run = line => shell ? shellAt(m, line) : m.command(line);
+    run("B:");
+    assert.match(run("JOB"), /C\r\n/, "A COM precedes current SVC");
+    assert.match(run("B:JOB P"), /EXEC/, "explicit drive prevents A fallback");
+    assert.match(run("B:MISSING"), /B:MISSING\?/);
+    const local = await machine({}, { shell });
+    volume(local.sdImage, "B").write("LOCAL.SVC", svc);
+    if (shell) shellAt(local, "B:"); else local.command("B:");
+    assert.equal(local.read(4) & 15, 1, "B: remains a drive command");
+    const out = shell ? shellAt(local, "LOCAL P") : local.command("LOCAL P");
+    assert.match(out, /EXEC/, "missing A COM restores current drive before SVC");
+    assert.deepEqual([m.violations, local.violations], [[], []]);
+  }
+});
+
+test("bare search retains resident execution precedence after the SVC file is removed", async () => {
+  const m = await machine({ "JOB.SVC": await executableService(), "JOB.CMD": startupFile("ECHO WRONG_SCRIPT") }, { shell: true });
+  assert.match(shellAt(m, "JOB"), /EXEC/);
+  shellAt(m, "ERA JOB.SVC");
+  const again = shellAt(m, "JOB P");
+  assert.match(again, /EXEC/);
+  assert.doesNotMatch(again, /WRONG_SCRIPT/);
+  assert.deepEqual(m.violations, []);
+});
+
+test("bare CMD search keeps explicit drives and rejects wildcards", async () => {
+  const m = await machine({ "JOB.CMD": startupFile("ECHO WRONG_A") }, { shell: true });
+  volume(m.sdImage, "B").write("JOB.CMD", startupFile("ECHO SCRIPT_B"));
+  const out = shellAt(m, "B:job");
+  assert.match(out, /SCRIPT_B/);
+  assert.doesNotMatch(out, /WRONG_A/);
+  for (const bad of ["JO*", "JOB?", "B:JO*"]) {
+    const refused = shellAt(m, bad);
+    assert.doesNotMatch(refused, /WRONG_A|SCRIPT_B/);
+    assert.equal(word(m, m.sym("PRGCODE")), 0xff00);
+  }
+  assert.deepEqual(m.violations, []);
+});
+
+test("bare lookup never substitutes CMD after unloadable COM or malformed SVC", async () => {
+  for (const bad of ["COM", "SVC"]) {
+    const files = { "JOB.CMD": startupFile("ECHO WRONG_SCRIPT"), ["JOB." + bad]: bad === "COM" ? Buffer.alloc(0xc000) : Buffer.alloc(128) };
+    if (bad === "COM") files["JOB.SVC"] = await executableService();
+    const m = await machine(files, { shell: true });
+    const out = shellAt(m, "JOB");
+    assert.match(out, /JOB\?/);
+    assert.doesNotMatch(out, /EXEC|WRONG_SCRIPT/);
+    assert.equal(word(m, m.sym("PRGCODE")), 0xff00);
+    assert.deepEqual(m.violations, []);
+  }
 });
 
 test("REN takes one drive from either name, and a name on another drive is refused", async () => {
@@ -278,8 +366,8 @@ test("SH1 rom figure", () => {
   assert.equal(second.hash, first.hash, "two builds, one image");
   const { used, free, regions } = first.rom;
   // The ROM figure includes buffered line
-  // navigation and explicit type checks.
-  assert.deepEqual([used, free], [15814, 570], "the ROM's bytes used and free");
+  // navigation and bare-name search.
+  assert.deepEqual([used, free], [15878, 506], "the ROM's bytes used and free");
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   assert.ok(first.ram.tpa.bytes >= 47240, `TPA ${first.ram.tpa.bytes} with nothing loaded`);

@@ -20,15 +20,15 @@ Every other command it hands back to the ROM to run. The starter card's
 `STARTUP.CMD` starts with `SHELL.SVC`, so the shell is in after every reset.
 A key held through reset skips `STARTUP.CMD`, and the bare prompt comes back.
 
-`SHELL.SVC` occupies 17 pages: a 4,352-byte allocation containing its image
+`SHELL.SVC` occupies 18 pages: a 4,608-byte allocation containing its image
 and extra RAM. Its history is a 256-byte ring in its own last page. Its own stack
 is 48 bytes, of which the census's workload uses 16 and the deepest path, the
 prompt's reading of the volume labels with every cache line changed and
 kept, 34 (`test/shell.test.mjs` and `test/shell2.test.mjs`, which read a guard
 pattern laid under it); no path may use more than 36. It declares 6 bytes of
 the BDOS's stack and none of the BIOS's or the CCP's, so `GLCD.SVC` and
-`MON3.SVC` install beside it. With the shell alone the word at 0006h is A500h
-on the starter card, a TPA of 41,984 bytes.
+`MON3.SVC` install beside it. With the shell alone the word at 0006h is A400h
+on the starter card, a TPA of 41,728 bytes.
 
 ## With no shell
 
@@ -38,8 +38,15 @@ The bare prompt behaves as a CP/M 2.2 CCP:
   `DIR!TYPE?`.
 - `COPY`, `DEL` and `SERVICES` are names like any other: `NAME?` with FF00h,
   unless a `.COM` of the name exists.
-- A bare `NAME` selects `NAME.COM`. An explicit `.COM` or `.SVC` selects
-  that executable type. Other explicit extensions produce `NAME.EXT?` with
+- A bare `NAME` tries `NAME.COM` then `NAME.SVC`. COM searches the current
+  drive then A: unless a drive was named. SVC uses the named or current
+  drive. With the shell, a missing executable also allows `NAME.CMD`.
+  A built-in always wins: `TYPE`, `ERA`, `REN`, `CON` and `UNLOAD` go to the
+  ROM, `COPY`, `DEL`, `SERVICES`, `CD`, `DIR`, `CLS`, `ECHO` and `PAUSE` to
+  the shell, and a script of the same name runs only as `NAME.CMD`.
+  A found but unloadable executable stops the search. `NAME.` retains its
+  COM-only meaning. An explicit `.COM` or `.SVC` selects only that type.
+  Other explicit extensions produce `NAME.EXT?` with
   FF00h before any COM load. `NAME.CMD` requires the shell script reader
   and cannot run `NAME.COM` at the bare prompt.
 - A function 47 line is echoed after the prompt and runs whole, as one
@@ -100,7 +107,13 @@ A line is split into pieces at separators, and each piece runs in turn:
 
 ## `.CMD` scripts
 
-Typed with the shell, `NAME.CMD` runs a script:
+Typed with the shell, `NAME.CMD` runs a script. Bare `NAME` also selects it
+when neither COM nor SVC has priority. A ready resident service retains its
+priority even after its source file is removed. For example, `MON3` starts
+`MON3.SVC` when no `MON3.COM` exists. Explicit `NAME.CMD` always selects the
+script, even alongside `NAME.COM` and `NAME.SVC`.
+
+Script handling follows these rules:
 
 1. The file is read from the drive named, else the current one, with no
    fallback to A:. With no file the shell says `NAME.CMD?`, with FF00h.

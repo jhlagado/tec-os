@@ -185,7 +185,7 @@ STARTUP.CMD?
 B:WORK>
 ```
 
-A bare program name selects COM. An explicit extension selects that type:
+A bare name tries COM, then SVC, then CMD, and a built-in command keeps precedence over all three. An explicit extension selects that type:
 `TAS.COM` selects `TAS.COM` but `TAS.TXT` produces `TAS.TXT?` before any COM
 load. The shell treats an explicit `.CMD` as a script on the named or current
 drive. Script lookup stays on that drive. B has no STARTUP.CMD in this example,
