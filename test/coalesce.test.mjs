@@ -23,7 +23,7 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 // the census's BDOS deepest, BDOS 11 with nothing waiting and BDOS 11 after
 // each of 32 records, in cycles from the stub.
 // abi is the digest of abi.inc's declarations, its comment lines left out.
-const LANDING = { used: 14769, tpa: 47273, abi: "254a794dd99a0c7a189b06bff0b219671cf0eec5a5249ddd9bcacb3e54c43504", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
+const LANDING = { used: 14769, tpa: 47273, abi: "0f708a65ce53bf85a9379416217bfb57b48e2c52d716cd5e43c226f93a1a1f35", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
 const INTEGRITY = { used: 15878, tpa: 47240, starter: 46536, entry: 0xb6c8 };
 
 // Qualified control's costs in this exact returned-input fixture: one empty
@@ -37,11 +37,11 @@ const STARTER_COST = { bounceB: 102_662_703, bounceA: 102_405_719 };
 
 test("AC12 version fields", () => {
   const inc = readText("src/abi.inc");
-  assert.equal(sha(Buffer.from(abiDeclarations(inc), "utf8")), LANDING.abi, "abi.inc's declarations as at the shell's landing");
+  assert.equal(sha(Buffer.from(abiDeclarations(inc), "utf8")), LANDING.abi, "abi.inc's declarations as at the packed font's landing (ABI 5.2)");
   assert.match(inc, /^SVCFMT EQU 4$/m);
-  assert.equal(ABI.TNCOUNT, 17);
+  assert.equal(ABI.TNCOUNT, 18);
   const { rom } = romFor();
-  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 1], "TNA 5.1: ABIMIN unchanged");
+  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 2], "TNA 5.2: GLYPH added, FONT retired");
   assert.match(readText("tools/build.mjs"), /^const VERSION = \{ major: 0, minor: 1 \};$/m);
   assert.deepEqual([...SHELL_SVC.subarray(25, 28)], [0x45, 0x58, 1], "the execution record's version byte stays 1");
 });
@@ -778,8 +778,8 @@ function onStarter(command, { logged = "B" } = {}) {
   if (put) {
     assert.equal(file.length, 4096); assert.deepEqual(file, putBytes(16), "all sixteen pages hold PUT's known bytes");
   } else {
-    assert.match(text, /COM written\r\n/); assert.equal(file.length, 16000);
-    assert.equal(sha(file), "68d9e9a1a3e327f94e9632bf827e66bd51f14ef715d7bf1d2a104007d349c0f0", "the complete pinned compiler result");
+    assert.match(text, /COM written\r\n/); assert.equal(file.length, 16128);
+    assert.equal(sha(file), "c1ca182508a4ebff20b502b7680af1d40497d5806058f77be0742659085c723d", "the complete pinned compiler result (BOUNCE.BAS lines 40, 50 and 170 call GLYPH)");
   }
   for (const c of t.commits) {
     assert.ok(c.published.length <= file.length);
@@ -801,13 +801,13 @@ function onStarter(command, { logged = "B" } = {}) {
 function checkBounceWrites(b) {
   const data = b.writes.map((block, i) => [block, b.fn[i]]).filter(([block]) => !b.dir.has(block));
   const times = data.reduce((n, [block]) => n.set(block, (n.get(block) ?? 0) + 1), new Map());
-  // The independently hash-checked 16,000-byte COM has 125 CP/M records:
-  // 31 complete 512-byte blocks and one final single-record block.
+  // The independently hash-checked 16,128-byte COM has 126 CP/M records:
+  // 31 complete 512-byte blocks and one final two-record block.
   assert.equal(times.size, 32);
-  assert.deepEqual([...times.values()].sort((a,b)=>a-b), [1,...Array(31).fill(4)],
-    "full blocks progress four acknowledged versions; the final block progresses once");
+  assert.deepEqual([...times.values()].sort((a,b)=>a-b), [2,...Array(31).fill(4)],
+    "full blocks progress four acknowledged versions; the final block progresses twice");
   // One CP/M extent requires three directory commits; larger output used two.
-  assert.equal(data.length, 125); assert.equal(b.writes.length - data.length, 3);
+  assert.equal(data.length, 126); assert.equal(b.writes.length - data.length, 3);
   assert.ok(b.writes.length <= 168, `${b.writes.length} BOUNCE card writes`);
 }
 

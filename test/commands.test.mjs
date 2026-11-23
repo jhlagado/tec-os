@@ -366,8 +366,8 @@ test("SH1 rom figure", () => {
   assert.equal(second.hash, first.hash, "two builds, one image");
   const { used, free, regions } = first.rom;
   // The ROM figure includes buffered line
-  // navigation and bare-name search.
-  assert.deepEqual([used, free], [15878, 506], "the ROM's bytes used and free");
+  // navigation and bare-name search, and the packed font (-329).
+  assert.deepEqual([used, free], [15549, 835], "the ROM's bytes used and free");
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   assert.ok(first.ram.tpa.bytes >= 47240, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
