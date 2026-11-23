@@ -10,18 +10,18 @@ text {fill:currentColor;font:15px ui-monospace,monospace}
 .arrow {fill:var(--accent);font:bold 22px system-ui,sans-serif}
 </style>
 <rect x="18.0" y="8" width="209.33333333333334" height="117" rx="7"/>
-<text class="head" x="31.0" y="34">Cycle with M</text>
-<text x="31.0" y="61">Registers → Stack</text>
-<text x="31.0" y="88">Stack → Code</text>
-<text x="31.0" y="115">Code → Registers</text>
+<text class="head" x="31.0" y="34">Cycle with Tab</text>
+<text x="31.0" y="61">Registers → Code</text>
+<text x="31.0" y="88">Code → Stack</text>
+<text x="31.0" y="115">Shift+Tab goes back</text>
 <rect x="255.33333333333334" y="8" width="209.33333333333334" height="117" rx="7"/>
-<text class="head" x="268.33333333333337" y="34">Open Memory</text>
-<text x="268.33333333333337" y="61">P opens Memory</text>
+<text class="head" x="268.33333333333337" y="34">Memory</text>
+<text x="268.33333333333337" y="61">Follows a register</text>
 <text x="268.33333333333337" y="88">← / → pick pointer</text>
 <text x="268.33333333333337" y="115">↑ / ↓ scroll bytes</text>
 <rect x="492.6666666666667" y="8" width="209.33333333333334" height="117" rx="7"/>
-<text class="head" x="505.6666666666667" y="34">Open Symbols</text>
-<text x="505.6666666666667" y="61">Code + → opens</text>
+<text class="head" x="505.6666666666667" y="34">Symbols</text>
+<text x="505.6666666666667" y="61">With TAS symbols</text>
 <text x="505.6666666666667" y="88">↑ / ↓ pick symbol</text>
-<text x="505.6666666666667" y="115">← returns to Code</text>
+<text x="505.6666666666667" y="115">B marks a label</text>
 </svg>

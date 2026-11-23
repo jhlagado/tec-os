@@ -11,12 +11,12 @@ text {fill:currentColor;font:15px ui-monospace,monospace}
 </style>
 <rect x="18.0" y="8" width="209.33333333333334" height="90" rx="7"/>
 <text class="head" x="31.0" y="34">Select in Code</text>
-<text x="31.0" y="61">0104:&gt;POP DE</text>
+<text x="31.0" y="61">&gt; 0104 POP DE</text>
 <text x="31.0" y="88">Press B</text>
 <text class="arrow" text-anchor="middle" x="241.33333333333334" y="60.0">→</text>
 <rect x="255.33333333333334" y="8" width="209.33333333333334" height="90" rx="7"/>
 <text class="head" x="268.33333333333337" y="34">Breakpoint set</text>
-<text class="mark" x="268.33333333333337" y="61">0104:*POP DE</text>
+<text class="mark" x="268.33333333333337" y="61">&gt;*0104 POP DE</text>
 <text x="268.33333333333337" y="88">Press R</text>
 <text class="arrow" text-anchor="middle" x="478.6666666666667" y="60.0">→</text>
 <rect x="492.6666666666667" y="8" width="209.33333333333334" height="90" rx="7"/>
