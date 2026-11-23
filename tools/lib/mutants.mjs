@@ -692,11 +692,11 @@ export const MUTANTS_KD434 = [
 // KS36c: one mutant a part (KG44).
 const CPM3 = ["test/cpm3.test.mjs"];
 export const MUTANTS_KS36C = [
-  { name: "the font: FNTGLY one glyph out", ...ks34("src/services.asm", ["ADD A,LOW(FONT)"], ["ADD A,LOW(FONT+4)"], ["test/compact-display.test.mjs"]) },
-  { name: "the font: the last wide glyph's fifth column lost", ...ks34("src/services.asm", ["LD BC,4", "CPIR"], ["LD BC,3", "CPIR"], ["test/compact-display.test.mjs"]) },
-  { name: "the font: no complement for 80h to FFh", ...ks34("src/services.asm", ["RLA", "SBC A,A"], ["RLA", "XOR A"], ["test/pico.test.mjs", "test/hwsvc.test.mjs"]) },
+  { name: "the font: FNTGLY one glyph out", edits: [text("src/services.asm", "  add a,LOW(FONT)\n", "  add a,LOW(FONT+4)\n")], tests: ["test/compact-display.test.mjs"] },
+  { name: "the font: the last wide glyph's fifth column lost", edits: [text("src/services.asm", "  ld bc,4        ; four wide glyphs\n", "  ld bc,3        ; four wide glyphs\n")], tests: ["test/compact-display.test.mjs"] },
+  { name: "the font: no complement for 80h to FFh", edits: [text("src/services.asm", "  sbc a,a        ; FFh complements\n", "  xor a          ; FFh complements\n")], tests: ["test/pico.test.mjs", "test/hwsvc.test.mjs"] },
   { name: "the font: service 15 succeeds, HL as the caller left it", ...ks34("src/tables.asm", ["DW SVLST,HWSNO"], ["DW SVLST,RETZERO"], ["test/hwsvc.test.mjs"]) },
-  { name: "the font: TNGLYPH a housekeeping point again, so a depth-0 GLCD redraw with a failing write pending never returns", ...ks34("src/services.asm", ["LD A,C", "CP TNGLYPH", "JP Z,FNTGLY"], [], ["test/housekeeping.test.mjs"]) },
+  { name: "the font: TNGLYPH a housekeeping point again, so a depth-0 GLCD redraw with a failing write pending never returns", edits: [text("src/services.asm", "  ld a,c\n  cp TNGLYPH\n  jp z,FNTGLY    ; no maintenance here\n", "")], tests: ["test/housekeeping.test.mjs"] },
   { name: "the startup rule: quiet for TNEBAD, not TNENODV", ...ks34(CCPF, ["AND H", "XOR TNENODV"], ["AND H", "XOR TNEBAD"], ["test/startup.test.mjs"]) },
   { name: "the startup rule: quiet typed too, STFLAG not read", ...ks34(CCPF, ["LD A,(STFLAG)", "AND H"], ["LD A,$FF", "AND H"], ["test/startup.test.mjs"]) },
   { name: "CON's aliases: GLCD taken for CRT:", ...ks34(CCPF, ["CPL", "ADD A,12"], ["CPL", "ADD A,10"], ["test/console.test.mjs"]) },
