@@ -21,6 +21,6 @@ text {fill:currentColor;font:15px ui-monospace,monospace}
 <text class="arrow" text-anchor="middle" x="478.6666666666667" y="60.0">→</text>
 <rect x="492.6666666666667" y="8" width="209.33333333333334" height="90" rx="7"/>
 <text class="head" x="505.6666666666667" y="34">Program stopped</text>
-<text class="mark" x="505.6666666666667" y="61">PC: 0104     BP</text>
+<text class="mark" x="505.6666666666667" y="61">&gt;PC 0104  BP</text>
 <text x="505.6666666666667" y="88">POP DE is next</text>
 </svg>

@@ -26,8 +26,8 @@ A>TBG.SVC DEMO
 ```
 
 For about half a second the LCD shows `TBG  Tab Next H Help`, then the
-registers. Look for `PC: 0100`. The program is loaded and has yet to execute
-its first instruction. `PC` is the address of the next instruction, and `SP`
+registers. Look for `>PC 0100` on the top row, with `SP` beside it. The
+program is loaded and has yet to execute its first instruction. `PC` is the address of the next instruction, and `SP`
 points to the top of the program's stack. The numbers on these screens are
 hexadecimal.
 
