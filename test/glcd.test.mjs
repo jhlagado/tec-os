@@ -336,7 +336,7 @@ test("a GLCD that stops coming ready is sent nothing: GLCC and GLCDW drop a byte
 // FL-11, FL-12 and FL-14 (Origo KD-436): GLCD.SVC draws a word's glyphs at a
 // time through TNGLYPH. At 782b007, from the table: a character 34,354 T, a row
 // of text 174,161 T, and 767 bytes in 3 pages.
-test("GLCD.SVC's time: a character no slower than from the table, a row within 210,000 T, a row of 21 # within 215,000", { timeout: 1_800_000 }, async () => {
+test("GLCD.SVC's time: a character no slower than from the table, a row within 210,000 T, a row of 21 # within 215,000", { timeout: 1_800_000 }, async (t) => {
   const image = standardCard();
   const a = volume(image, "A");
   a.write("LINES.TXT", Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i + 1} of the text file\r\n`).join("") + "\x1a", "latin1"));
@@ -354,9 +354,12 @@ test("GLCD.SVC's time: a character no slower than from the table, a row within 2
   const mean = put.reduce((x, y) => x + y, 0) / put.length;
   assert.ok(put.length > 700 && mean <= 34_354, `${put.length} characters, mean ${Math.round(mean)} T`);
   assert.ok(row.length > 400 && Math.max(...row) <= 210_000, `${row.length} rows of text, at most ${Math.max(...row)} T`);
+  t.diagnostic(`measured: ${row.length} rows of text, at most ${Math.max(...row)} T`);
   row.length = 0;
   runLine(m, "TYPE HASH.TXT");
+  t.diagnostic(`measured: rows of 21 #, at most ${Math.max(...row)} T`);
   assert.ok(row.length > 0 && Math.max(...row) <= 215_000, `rows of #, at most ${Math.max(...row)} T`);
   const bytes = GLCD_SVC[6] | (GLCD_SVC[7] << 8);
+  t.diagnostic(`measured: ${put.length} characters, mean ${Math.round(mean)} T; GLCD.SVC ${bytes} bytes`);
   assert.ok(bytes <= 768, `GLCD.SVC's header and image ${bytes} bytes, within 3 pages`);
 });

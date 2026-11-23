@@ -896,13 +896,14 @@ test("the web host: a full directory leaves the card as it was, and it boots (KE
 
 // FL-10 (Origo KD-436): the pattern load goes glyph by glyph through FNTGLY.
 // 146,793 T at 782b007, from the 768-byte table; each load here within 240,000.
-test("the pattern load through FNTGLY takes at most 240,000 T at each width", () => {
+test("the pattern load through FNTGLY takes at most 240,000 T at each width", (t) => {
   const m = boot(standardCard(), { tms: true, matrix: true, width: 40 });
   const calls = callTimes(m, () => m.sym("TMSSET"));
   for (const w of [80, 40, 32]) {
     calls.length = 0;
     runLine(m, `CON PICO ${w}`);
     assert.equal(calls.length, 1, `CON PICO ${w}: one pattern load`);
+    t.diagnostic(`measured: CON PICO ${w} pattern load ${calls[0]} T`);
     assert.ok(calls[0] <= 240_000, `CON PICO ${w}: ${calls[0]} T`);
   }
 });
