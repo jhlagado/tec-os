@@ -31,6 +31,10 @@ else is the arrows, Tab, Space, Enter and Esc, with Shift and Ctrl.
 Space and R wait until you let the key go before the program runs, so the
 program never sees the key. The arrows repeat when held.
 
+When the view changes, its name shows on the top row for about half a
+second, such as `CODE`, and then the view's own top row returns. A key
+pressed while the name shows clears it and acts at once.
+
 | View | Arrow keys |
 | --- | --- |
 | Registers | The arrows move the `>` selection around the grid. |
