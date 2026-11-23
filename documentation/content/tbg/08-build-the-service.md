@@ -1,11 +1,11 @@
 ---
 title: Build the service if you need a copy
 parent: TBG
-nav_order: 9
+nav_order: 8
 nav_group: Reference
 ---
 
-# 9. Build the service if you need a copy
+# 8. Build the service if you need a copy
 
 TBG has its own repository. Clone it beside your Thorium and TEC-OS
 checkouts, run `npm ci` in Thorium, then run `npm run build` in the TBG

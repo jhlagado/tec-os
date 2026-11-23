@@ -25,19 +25,18 @@ A>TAS STEP
 A>TBG.SVC STEP
 ```
 
-A matching `STEP.TBG` from TAS adds `SY` beside the PC on the register display.
 
-1. Press **S**, or **Space**, once. The PC moves to `0103` and HL becomes
+1. Press **Space** once. The PC moves to `0103` and HL becomes
    `1234`.
 2. Press **Tab** twice, through Code, to see the Stack view. Each view's
    name shows for a moment as you arrive. Note the address on the top row.
-3. Press **S** while still looking at the stack. Its top address moves down
+3. Press **Space** while still looking at the stack. Its top address moves down
    by two bytes, and the word `1234` appears there.
 4. Press **Shift+Tab** to go back to Code. The `@` marks PC at `0104`, and
-   the next instruction is `POP DE`. Press **S**, then **Shift+Tab** to return to
+   the next instruction is `POP DE`. Press **Space**, then **Shift+Tab** to return to
    Registers. DE is now `1234` and SP is back at its starting value.
 5. Press **R** to let `RET` finish the program. The register display shows
-   `EX`. Press **Q**, then **Enter** when the LCD asks, to return to CP/M.
+   `EX`. Press **Esc**, then **Enter** when the LCD asks, to return to CP/M.
 
 ![S executes PUSH HL, which moves SP down two bytes. Another S executes POP DE, which restores SP and leaves DE holding 1234h.](/images/tbg/stack-step.svg)
 
