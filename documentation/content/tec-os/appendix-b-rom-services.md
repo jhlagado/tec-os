@@ -116,10 +116,11 @@ results as destroyed (`b95b2a9:src/abi.inc:35-69`).
 | 12 | `DRVR` | `TNDRVR` | `B` = 3 `UC1:`, `HL` = a driver's table | 4 | |
 | 13 | `FIND` | `TNFIND` | `DE` → a record's name, `B` = the least version | 8 | |
 | 14 | `LIST` | `TNLIST` | `B` = an index | 8 | |
-| 15 | `FONT` | `TNFONT` | nothing | 4 | 184 |
+| 15 | `FONT` | `TNFONT` | retired: returns status 1 | 4 | |
 | 16 | `SHELL` | `TNSHELL` | `HL` = a shell's table or 0 | 4 | |
+| 17 | `GLYPH` | `TNGLYPH` | `B` = character, `HL` → 8 bytes | 4 | |
 
-The names and bounds are defined in `b95b2a9:src/abi.inc:65-234`. The build's ABI
+The names and bounds are defined in `6c31d32:src/abi.inc:52-251`, ABI 5.2. The build's ABI
 check verifies the fixed table bytes, code locations of service entries and
 INFO's bits. Passing that check does not prove every routine's contract.
 Media generation publishes the include as `dist/abi.inc`
@@ -599,28 +600,18 @@ directly still claims it before writing its ports.
 
 ### 15 FONT
 
-Returns HL = the ROM console font address. Status is always 0. Stack bound: 4
-bytes
-(`b95b2a9:src/services.asm:521-528`, `b95b2a9:src/abi.inc:208-213`).
+Retired at ABI 5.2. The ROM's font is packed and has no eight-byte table to
+point at, so FONT returns `TNEBAD`, status 1, with carry and HL unchanged. It
+was added in ABI 5.1 and returned the table's address
+(`6c31d32:src/abi.inc:208-214`, `6c31d32:src/services.asm:633-638`). A program that
+draws text uses GLYPH, service 17.
 
-Historical `57a8c38` call-cost receipt: 184 T-states and a depth of 4 bytes (`57a8c38:src/services.asm:510-517`). This does not price
-the current outer call with entry maintenance.
-
-The selected font is TEC Compact from `format/font5x7.txt`. It contains 96
-characters from `20h`, eight bytes each, top row first. Each row's five pixels
-occupy bits 7–3 (`b95b2a9:tools/lib/font.mjs:9-35`). The source package checks the
-selected font and retained notices (`b95b2a9:tools/lib/font-package.mjs:8-21`).
-
-The retained sources and modifications are recorded in
-`format/FONT-NOTICES.txt`. The original TEC-OS bitmap's upstream authorship
-remains unresolved (`b95b2a9:format/FONT-NOTICES.txt:33-47`).
-
-Programs obtain the font's address from this call instead of embedding the
-historical `57a8c38` build's `C198h`. The PICO console uses the FONT label. GLCD.SVC
-calls FONT during INIT and stores the returned address
-(`b95b2a9:src/pico.asm:235-277`, `b95b2a9:drivers/glcd.asm:60-64`). ABI 5.0 has no such
-service number and returns status 1, so this GLCD driver rejects
-installation there.
+The selected font is TEC Compact from `format/font5x7.txt`, 96 characters
+from `20h`. The source package checks the selected font and retained notices
+(`b95b2a9:tools/lib/font-package.mjs:8-21`). The retained sources and
+modifications are recorded in `format/FONT-NOTICES.txt`. The original TEC-OS
+bitmap's upstream authorship remains unresolved
+(`b95b2a9:format/FONT-NOTICES.txt:33-47`).
 
 ## The shell hook
 
@@ -634,6 +625,30 @@ at most `F8h`. Any other nonzero HL returns `TNEBAD`, status 1, with carry and
 the hook unchanged. Otherwise it returns HL = the table it replaced, 0 for
 none, with A = 0 and carry clear. BC, IX and IY are kept and DE changes. It
 makes no BDOS call (`b95b2a9:src/services.asm:577-612`, `b95b2a9:src/abi.inc:226`,
-`b95b2a9:docs/shell.md:280-292`). Numbers from `TNCOUNT`, 17, upwards return status 1
-(`b95b2a9:src/abi.inc:228-236`). Chapter 21 describes the hook's use, and
+`b95b2a9:docs/shell.md:280-292`). Numbers from `TNCOUNT`, 18, upwards return status 1
+(`6c31d32:src/abi.inc:243-251`). Chapter 21 describes the hook's use, and
 `SHELL.SVC` is its one caller on the starter card.
+
+### 17 GLYPH
+
+`TNGLYPH` gives one character's rows. B is the character and HL points to
+eight writable bytes. GLYPH writes the rows, top first, with the five pixels
+in bits 7–3, and returns HL advanced by eight, A = 0 and carry clear. Bit 7
+of B complements all eight rows, for inverse text. Codes whose low seven bits
+are below `20h` give a space. DE is kept and BC changes. Stack bound: 4 bytes
+(`6c31d32:src/abi.inc:229-241`, `6c31d32:src/services.asm:528-613`).
+
+GLYPH is never a housekeeping point. The dispatcher sends service 17 to the
+glyph routine before any maintenance, so a driver drawing at depth 0 is not
+interrupted by the worker printing a notice through that same driver
+(`6c31d32:src/services.asm:32-41`). It is a foreground call: an interrupt or NMI
+handler must not use it.
+
+The ROM holds the font packed, four bytes a glyph with two rows a byte and
+the upper row in the high nibble: 384 bytes at `FONT`. The four glyphs that
+light a fifth column, `#`, `$`, `+` and `7Fh`, are listed with those rows in
+the eight-byte `FONTW` table (`6c31d32:tools/lib/font.mjs:40-76`). The PICO
+console's pattern load and `GLCD.SVC` both take their glyphs through this
+routine (`6c31d32:src/pico.asm:246-259`, `6c31d32:drivers/glcd.asm:59-66`). ABI 5.1
+and earlier have no service 17 and return status 1, so this GLCD driver
+refuses to install there.

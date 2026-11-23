@@ -115,8 +115,9 @@ mount, unmount and describe volumes as explained in Chapter 18. Call 12
 registers a GLCD display table. Calls 13 and 14 find and enumerate registry
 records described in Chapter 14. They return a generation in A on success, so
 test carry for registry calls rather than treating A as hardware status. Call
-15 supplies the font and was added in ABI 5.1. Call 16, `TNSHELL`, installs
-the shell hook described in Chapter 21 (`b95b2a9:src/abi.inc:208-236`).
+15, the font's address in ABI 5.1, is retired in ABI 5.2. Call 16, `TNSHELL`,
+installs the shell hook described in Chapter 21. Call 17, `TNGLYPH`, gives a
+character's rows (`6c31d32:src/abi.inc:208-251`).
 
 Hardware calls run on the caller's stack. PUTAT's bound is the largest at 22
 bytes below the CALL return address. That fits Chapter 11's inherited 30-byte
@@ -770,10 +771,12 @@ internal ROM addresses. Appendix B lists the table. Its register, fill, write
 and read entries require a claim. Record version 4 retains version 3's width
 entry, which requires the display to be unclaimed.
 
-FONT, service 15 added in ABI 5.1, returns the font address in HL. TEC Compact
-has 96 characters beginning at `20h`, each represented by eight bytes from the
-top row down. Five pixels occupy bits 7–3 in each row. Both display drivers
-use it. Obtain its address from the result instead of embedding a ROM address.
+GLYPH, service 17 added in ABI 5.2, writes one character's eight rows, top
+row first, into eight bytes at HL. Five pixels occupy bits 7–3 in each row,
+and bit 7 of the character gives inverse rows. TEC Compact has 96 characters
+beginning at `20h`. Both display drivers draw through it. The ROM keeps the
+font packed, so there is no table address to take; FONT, service 15, is
+retired and returns status 1 (`6c31d32:src/abi.inc:208-241`).
 
 
 ## Text at a screen position

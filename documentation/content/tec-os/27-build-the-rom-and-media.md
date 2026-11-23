@@ -134,8 +134,10 @@ They do not make ROM and host validation identical, as
 [Chapter 18](18-card-blocks-and-volumes.md) explains.
 
 `FONT` comes from the selected TEC Compact data in `format/font5x7.txt`.
-Its 96 characters from `20h` through `7Fh` have eight rows each, for 768 bytes.
-Each row has five pixels in bits 7–3. The parser requires a unique header
+Its 96 characters from `20h` through `7Fh` have eight rows each. Each row has
+five pixels in bits 7–3. The build packs them into 384 bytes, four a glyph and
+two rows a byte, with an eight-byte `FONTW` table for the four glyphs that
+use the fifth column (`6c31d32:tools/lib/font.mjs:40-76`). The parser requires a unique header
 for every code from `20h` through `7Fh`. It requires eight rows per character
 and rejects malformed or misplaced pixel data before generating `DB` lines
 (`b95b2a9:tools/lib/font.mjs:9-47`).
@@ -145,11 +147,11 @@ retained original inputs and the complete `format/FONT-NOTICES.txt`
 sources, edits and limits of the original glyph attribution
 (`b95b2a9:format/FONT-NOTICES.txt:1-47`).
 
-In the historical `57a8c38` ROM account, the font occupies
-`C198h–C497h`. PICO accesses
-`FONT` by label and GLCD obtains its address through numbered service 15
-(`57a8c38:src/pico.asm:253-260`, `57a8c38:src/services.asm:510-517`,
-`57a8c38:drivers/glcd.asm:60-64`). The tests use the same font parser
+In the `6c31d32` build the packed font occupies `C18Ch–C30Bh` and `FONTW`
+follows at `C30Ch`. The PICO console's pattern load calls `FNTGLY` directly and
+GLCD takes each glyph through numbered service 17
+(`6c31d32:src/pico.asm:246-259`, `6c31d32:drivers/glcd.asm:377-390`). The historical
+`57a8c38` ROM kept the 768-byte table at `C198h–C497h`. The tests use the same font parser
 (`57a8c38:test/lib/machine.mjs:10-11`).
 
 ## Source order and reserved RAM

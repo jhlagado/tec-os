@@ -327,10 +327,15 @@ HL and `REG("CY")` reads carry. A routine's failure result needs an
 explicit `REG` check because `CALL` raises no error itself
 (`Baza 5f6b58d:docs/call.md:51-64`, `Baza 5f6b58d:docs/call.md:72-82`).
 
-Line 170 gets the font address and uses `vw` to copy 768 bytes to
-PICO9918 memory. Line 90 defines `vw` as `"PICO", 3, 10`, entry 10
-of the PICO console record for copying RAM to VRAM
-(`Baza 5f6b58d:examples/BOUNCE.BAS:10`, `Baza 5f6b58d:docs/call.md:24-25`).
+Line 170 copies the font to PICO9918 memory one character at a time.
+For each code from 32 to 127 it calls `gl`, ROM service 17, which writes
+that character's eight rows into `g$`, then uses `vw` to copy those eight
+bytes into the pattern table. Line 90 defines `vw` as `"PICO", 3, 10`,
+entry 10 of the PICO console record for copying RAM to VRAM
+(`Baza 5f6b58d:docs/call.md:24-25`). Baza's own `examples/BOUNCE.BAS` at
+`5f6b58d` still calls the retired service 15 there. The starter card's copy
+takes lines 40, 50 and 170 through service 17 instead
+(`TEC-OS 6c31d32:tools/lib/bounce-source.mjs:1-12`).
 
 Ordinary BAZA numbers use 32-bit floating point. An addition takes
 about 3,000 T-states on the Z80, close to a millisecond at 4 MHz. A

@@ -266,5 +266,6 @@ of the next five 2s reaches the next word's high byte. None of the 69 gaps is
 255 so all 69 mark fixups. The last reaches file offset 563. A bitmap with one
 bit for each of the 742 image bytes would take 93 bytes.
 
-The driver contains no font. Its `INIT` obtains the ROM font address through
-service 15 and stores it for drawing (`b95b2a9:drivers/glcd.asm:60-64`).
+The driver contains no font. It takes each character's rows from the ROM
+through service 17, `GLYPH`, and its `INIT` checks for that service first
+(`6c31d32:drivers/glcd.asm:59-66`, `6c31d32:drivers/glcd.asm:377-390`).

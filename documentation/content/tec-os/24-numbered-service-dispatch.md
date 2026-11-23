@@ -260,22 +260,27 @@ expires or the right edge is reached (`b95b2a9:src/services.asm:338-371`).
 
 ## The ROM font
 
-Display drivers share the ROM font (`57a8c38:src/pico.asm:253-275`,
-`57a8c38:drivers/glcd.asm:527-555`). Service 15, `FONT`, returns its address in
-`HL` and clears `A` (`57a8c38:src/services.asm:510-517`). The data contains 96
-characters starting at code `20h`, eight bytes each in top-to-bottom row
-order (`57a8c38:src/abi.inc:208-213`). Its 768 bytes are separate from the
-five-byte access routine counted above.
+Display drivers share the ROM font through service 17, `GLYPH`. It writes a
+character's eight rows into the caller's eight bytes at HL, top row first, and
+returns HL advanced by eight (`6c31d32:src/abi.inc:229-241`). The ROM holds the
+font packed in 384 bytes, four a glyph, two rows a byte, plus an eight-byte
+`FONTW` table for the four glyphs that light a fifth column; `FNTGLY`
+rebuilds the rows (`6c31d32:src/services.asm:528-613`, `6c31d32:tools/lib/font.mjs:40-76`).
+Packing saves 376 ROM bytes over the 768-byte table, less the routine that
+unpacks it.
 
-The selected font is TEC Compact from `format/font5x7.txt`. Parsing
-places five row pixels in bits 7–3 and requires eight rows per character
-(`b95b2a9:tools/lib/font.mjs:9-35`). The package check verifies the selected font's
-identity (`b95b2a9:tools/lib/font-package.mjs:8-16`).
+The dispatcher tests for service 17 before anything else and jumps straight
+to `FNTGLY`, so GLYPH is never a housekeeping point. A driver drawing at
+depth 0 cannot have the worker print through it in the middle of a draw
+(`6c31d32:src/services.asm:27-41`). Service 15, `FONT`, which returned the old
+table's address in ABI 5.1, now returns status 1.
 
-GLCD installation depends on this service. `INIT` calls FONT first and
-stores its pointer. Before ABI 5.1, service 15 is outside the table and
-returns carry. INIT then exits before probing the controller
-(`b95b2a9:drivers/glcd.asm:60-68`).
+The selected font is TEC Compact from `format/font5x7.txt`. The package check
+verifies the selected font's identity (`b95b2a9:tools/lib/font-package.mjs:8-16`).
+
+GLCD installation depends on service 17. `INIT` calls it first, for a space.
+Before ABI 5.2 the number is outside the table and returns carry, and INIT
+exits before probing the controller (`6c31d32:drivers/glcd.asm:59-66`).
 
 ## Space on the caller's stack
 

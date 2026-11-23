@@ -331,10 +331,10 @@ use COM search (`b95b2a9:src/cpm/ccp.asm:431-468`).
 
 `SVCGO` calls `LOADCOM` and `SVCLOAD`, returning carry on either failure
 (`b95b2a9:src/loader.asm:901-907`). Within `GLCD.SVC`, `INIT` first calls
-`FONT`, service 15. A pre-5.1 ROM rejects that number and the driver
-returns with carry. Next it calls `GLCWAIT`. An unanswered controller
-returns `TNENODV`. Finally it passes its table through `DRVR`, service
-12, with `B` at 3 for `UC1:` (`b95b2a9:drivers/glcd.asm:60-73`).
+`GLYPH`, service 17, for a space. A ROM before ABI 5.2 rejects that number
+and the driver returns with carry. Next it calls `GLCWAIT`. An unanswered
+controller returns `TNENODV`. Finally it passes its table through `DRVR`,
+service 12, with `B` at 3 for `UC1:` (`6c31d32:drivers/glcd.asm:59-75`).
 [Chapter 25](25-loading-and-removing-services.md) covers the loader's
 other checks and rollback.
 
