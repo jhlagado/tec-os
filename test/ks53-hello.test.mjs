@@ -72,8 +72,12 @@ async function slice(consoleKind, file) {
     // MON3>; the serial console reads no key, and doesn't wait. AD is held
     // on past the return, then let go.
     m.runUntil(() => m.pc === 0x0049, 10_000_000, "the return after AD");
-    runFor(m, 2_000_000);
+    // Up to 10,000,000 cycles held: without the wait the packed font's GLCD
+    // shows MON3> at about 2,250,000; with it, never while AD is down.
+    let shown = 0;
+    for (let n = 0; n < 40 && !MON3.test(m.text(from)); n++) { runFor(m, 250_000); shown = n + 1; }
     out.heldPrompt = MON3.test(m.text(from));
+    out.shownAfter = out.heldPrompt ? shown * 250_000 : null;
     key(KEYAD, false);
     m.runUntil(() => MON3.test(m.text(from)), 10_000_000, "MON3> after AD");
     out.back = true;
