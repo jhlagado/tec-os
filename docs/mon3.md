@@ -20,6 +20,22 @@ example, from `test/programs/hello3.asm`. First run `TAS HELLO3 HELLO3.BIN`
 on the card to build the image that MON-3 loads at 4000h
 (`test/starter.test.mjs`).
 
+## What the service is for
+
+Use `MON3.SVC` to run finished MON-3 programs on TEC-OS. For example,
+enter `MON3.SVC`, then type `LOAD SNAKE9.BIN` and `GO` at `MON3>` on
+the Viewer starter card. A BIN normally loads at 4000h. The load
+commands below also cover explicit addresses and Intel HEX files.
+Use the original MON-3 ROM when you need to develop or single-step
+a MON-3 program.
+
+The Viewer build at `tec-os-viewer de0b8d0` carries the same lean
+MON3.SVC in its preview card. Its Snake9 binary was loaded at 4000h
+and exercised in the headless TEC-1G emulator with MON3.SVC as the
+sole resident service. The 6,204 loaded bytes matched the file and
+the game produced 4,096 writes to the 8×8 display ports during the
+smoke test.
+
 ## Install and enter
 
 ```text
