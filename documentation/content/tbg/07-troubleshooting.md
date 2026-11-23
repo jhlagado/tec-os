@@ -1,11 +1,11 @@
 ---
 title: If something does not work
 parent: TBG
-nav_order: 7
+nav_order: 8
 nav_group: Reference
 ---
 
-# 7. If something does not work
+# 8. If something does not work
 
 | Symptom | What to check |
 | --- | --- |
@@ -22,4 +22,6 @@ nav_group: Reference
 | Memory does not move when a register changes | It shows `FIX`: it has an address of its own. Open it from the register in Registers with **Enter**. |
 | Step out runs for a long time | Press any key to stop it. A routine that loops before returning takes many steps. |
 | Ctrl+Esc does not stop the program | It stops at the program's next system call. A program that never calls the operating system needs a breakpoint instead. |
+| `SY` does not show and Code has no labels | Load `TBGSYM.SVC` after `TBG.SVC`, and rebuild with TAS so the `.TBG` file matches the COM. |
+| CP/M prints `TBGSYM.SVC?` | Load `TBG.SVC` first. The extension also needs five pages of memory above `8000`. |
 | The LCD says `TBG: no COM` and a name | Check the program's name and drive. TBG returns to CP/M with the command marked as failed. |

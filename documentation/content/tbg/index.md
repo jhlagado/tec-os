@@ -19,5 +19,6 @@ keyboard. The program can keep using the 9918 display.
 4. [Follow data in memory](04-follow-data.md)
 5. [Controls at a glance](04-controls.md)
 6. [Break in or catch the next launch](06-save-and-catch.md)
-7. [If something does not work](07-troubleshooting.md)
-8. [Build the service if you need a copy](08-build-the-service.md)
+7. [Name the code with symbols](06b-symbols.md)
+8. [If something does not work](07-troubleshooting.md)
+9. [Build the service if you need a copy](08-build-the-service.md)

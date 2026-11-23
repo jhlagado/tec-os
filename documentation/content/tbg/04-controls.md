@@ -14,7 +14,7 @@ else is the arrows, Tab, Space, Enter and Esc, with Shift and Ctrl.
 
 | Key | What it does |
 | --- | --- |
-| **Tab** | Go to the next view: Registers, Code, Stack, then Memory. |
+| **Tab** | Go to the next view: Registers, Code, Stack, then Memory, and Symbols when TBGSYM has loaded the program's labels. |
 | **Shift+Tab** | Go back to the view before. |
 | **Space** | Step one instruction. A call into the program stops at its first instruction. |
 | **Shift+Space** | Step over: a call runs to the instruction after it. |
@@ -39,7 +39,7 @@ program never sees the key. The arrows repeat when held.
 | Memory | **Up/Down** move a row of four bytes, and with **Ctrl** a page of sixteen. **Left/Right** move the `>` cursor from byte to byte. Memory stops at `0000` and `FFFF` instead of wrapping. |
 
 Registers shows PC and SP on the top row, then AF, BC, DE, HL, IX and IY,
-with `ST`, `BP` or `EX` for how the program stopped. The last two columns of
+with `ST`, `BP` or `EX` for how the program stopped, and `SY` when symbols are loaded. The last two columns of
 rows 2 and 3 show the Z, C, S and P/V flags as letters, or `.` when clear.
 Stack shows four words from SP, the top one marked `SP`.
 
