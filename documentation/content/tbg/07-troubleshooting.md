@@ -1,11 +1,11 @@
 ---
 title: If something does not work
 parent: TBG
-nav_order: 7
+nav_order: 8
 nav_group: Reference
 ---
 
-# 7. If something does not work
+# 8. If something does not work
 
 | Symptom | What to check |
 | --- | --- |

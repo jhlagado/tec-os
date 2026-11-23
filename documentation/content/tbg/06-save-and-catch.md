@@ -1,11 +1,11 @@
 ---
 title: Save a snapshot or catch the next launch
 parent: TBG
-nav_order: 6
+nav_order: 7
 nav_group: Using TBG
 ---
 
-# 6. Save a snapshot or catch the next launch
+# 7. Save a snapshot or catch the next launch
 
 At an ordinary stop, press **W** to write `TBGSTATE.BIN` to the current
 drive and user area. The last LCD row reports the result. This binary file

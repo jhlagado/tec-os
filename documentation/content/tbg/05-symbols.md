@@ -1,11 +1,11 @@
 ---
 title: Use symbols from TAS
 parent: TBG
-nav_order: 5
+nav_order: 6
 nav_group: Using TBG
 ---
 
-# 5. Use symbols from TAS
+# 6. Use symbols from TAS
 
 TAS writes a `.TBG` file named after the source. With the usual
 `TAS STEP` invocation, `STEP.COM` and `STEP.TBG` already have matching

@@ -1,11 +1,11 @@
 ---
 title: Controls at a glance
 parent: TBG
-nav_order: 4
+nav_order: 5
 nav_group: Using TBG
 ---
 
-# 4. Controls at a glance
+# 5. Controls at a glance
 
 ![Tab moves through Registers, Code, Stack, Memory and Symbols, and Shift+Tab goes back. Memory follows a register. Symbols appears when a matching sidecar is available.](/images/tbg/views.svg)
 
@@ -24,8 +24,9 @@ nav_group: Using TBG
 | **Enter** | Open the selection: in Registers, PC opens Code, SP opens Stack, AF opens the flags and any other pair opens Memory following it; in Stack, Memory at the slot; in Memory, Code at the cursor; in Code, the selected instruction's bytes, with **Follow target** for a jump or call and **Open Memory**. |
 | **E** | Edit: in Registers, type a new value for the selected register; in Memory, type hex digits and each pair writes a byte at the cursor and moves on. **Esc** ends the edit. |
 | **F** | In Memory, freeze an address that follows a register where it is. |
+| **L** | In Memory, load a file at an address after showing the range it fills. |
+| **W** | In Memory, write a range of bytes to a file, asking before it replaces one. In Registers, save a register snapshot. |
 | **Esc** | Go back to where Enter, a followed target or G came from. |
-| **W** | Save a register snapshot at a normal stop. |
 | **H** | Show help for the current view. **Left/Right** turn its pages and **Esc** or **H** goes back. |
 | **Q** | Leave the debugger. Press **Enter** when the LCD asks, or any other key to stay. |
 
