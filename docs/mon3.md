@@ -34,7 +34,8 @@ MON3.SVC in its preview card. Its Snake9 binary was loaded at 4000h
 and exercised in the headless TEC-1G emulator with MON3.SVC as the
 sole resident service. The 6,204 loaded bytes matched the file and
 the game produced 4,096 writes to the 8×8 display ports during the
-smoke test.
+smoke test. The GO key advanced through the menus, and keypad 6
+started gameplay.
 
 ## Install and enter
 
