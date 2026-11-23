@@ -237,9 +237,8 @@ test("KG60 mutant: the return without its key-up wait gives MON3> while Esc is h
 test("KG60 mutant: EXIT's restore skipping 0041h-004Fh leaves page zero changed", { skip }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, (b, at) => {
-    const i = find(b, at("REST"), [0x11, 0x41, 0x00, 0x01, 0x0f, 0x00, 0xed, 0xb0], 48);
-    b[i + 6] = 0x09; // ADD HL,BC: past the saved bytes, none copied
-    b[i + 7] = 0x00;
+    const i = find(b, at("PZTAB"), [0x0f, 0x41, 0x00], 16);
+    b[i + 1] = 0x80; // 0080h's 15 bytes in its place: 0041h-004Fh never put back
   });
   const s = await slice("serial", file);
   assert.throws(() => checkExit(s));

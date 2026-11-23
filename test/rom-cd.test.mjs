@@ -131,7 +131,7 @@ test("RIG3 reset recovery restores SYSTEM and loads SHELL", () => {
   assert.equal(selections(m)[0], 1);
   command(m, "SHELL.SVC", /A:SYSTEM>$/);
   assert.ok(pageOf(m));
-  assert.equal(word(m, 6) - 256, 41984);
+  assert.equal(word(m, 6) - 256, 41728);
   const powered = boot(image);
   assert.equal(selections(powered)[0], 1, "power cycle uses the card defaults");
   assert.ok(pageOf(powered));

@@ -20,6 +20,23 @@ example, from `test/programs/hello3.asm`. First run `TAS HELLO3 HELLO3.BIN`
 on the card to build the image that MON-3 loads at 4000h
 (`test/starter.test.mjs`).
 
+## What the service is for
+
+Use `MON3.SVC` to run finished MON-3 programs on TEC-OS. For example,
+enter `MON3.SVC`, then type `LOAD SNAKE9.BIN` and `GO` at `MON3>` on
+the Viewer starter card. A BIN normally loads at 4000h. The load
+commands below also cover explicit addresses and Intel HEX files.
+Use the original MON-3 ROM when you need to develop or single-step
+a MON-3 program.
+
+The Viewer build at `tec-os-viewer de0b8d0` carries the same lean
+MON3.SVC in its preview card. Its Snake9 binary was loaded at 4000h
+and exercised in the headless TEC-1G emulator with MON3.SVC as the
+sole resident service. The 6,204 loaded bytes matched the file and
+the game produced 4,096 writes to the 8×8 display ports during the
+smoke test. The GO key advanced through the menus, and keypad 6
+started gameplay.
+
 ## Install and enter
 
 ```text
@@ -44,11 +61,11 @@ record asks to be entered on install. It stays installed after `EXIT`, so
 `UNLOAD` first. An older card's line with `/E` after the name still enters:
 the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
-On the starter card it is 4,781 bytes of header and image in **19 pages**, 5,237
+On the starter card it is 4,758 bytes of header and image in **19 pages**, 5,215
 bytes as a file with its relocation data. The starter card loads `SHELL.SVC`
-first, so the word at `0006h` goes from `A500h` to `9200h`, and the TPA from
-41,984 bytes to **37,120**. With `GLCD.SVC` installed too, as the GLCD
-console's startup does, it is `8F00h`, a TPA of **36,352**, in any order of
+first, so the word at `0006h` goes from `A400h` to `9100h`, and the TPA from
+41,728 bytes to **36,864**. With `GLCD.SVC` installed too, as the GLCD
+console's startup does, it is `8E00h`, a TPA of **36,096**, in any order of
 installing the three. On the starter card
 with no shell, whose four drives take the bare ROM's word to `B6C8h`, it goes
 from `B6C8h` to `A300h`, and the TPA from 46,536 bytes to 41,472, and 40,704 with

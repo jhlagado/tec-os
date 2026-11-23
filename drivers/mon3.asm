@@ -149,19 +149,8 @@ ENT1:
   ld l,a
   djnz ENT1      ; six slots
   ld sp,MSTK     ; our own stack
-  ld hl,IOBYTE   ; and the drive
-  ld de,SAVE0    ; saved first
-  ld bc,2
-  ldir
-  ld hl,$0008    ; the seven slots
-  ld bc,$38
-  ldir           ; into SAVEV
-  ld hl,STUB     ; 0041h-004Fh
-  ld bc,15
-  ldir           ; into SAVEZ
-  ld hl,NMIV     ; the NMI entry
-  ld bc,6
-  ldir           ; into SAVEN
+  or a           ; NC: save
+  call PZCOPY    ; page zero saved
   call FORMS     ; page zero taken
   call WSINIT    ; MON-3's variables
   call HOOKIN    ; warm boot hooked
@@ -874,25 +863,51 @@ CEXIT:
   out (SDIG),a   ; TX idle
   jp 0           ; the real warm boot
 
-; Put back the saved IOBYTE and drive,
-; 0008h-003Fh, 0041h-004Fh and the NMI
-; entry. Clobbers BC, DE and HL.
+; Put PZTAB's ranges back from SAVE0.
+; Clobbers AF, BC, DE and HL.
 
 REST:
-  ld hl,SAVE0
-  ld de,IOBYTE   ; and the drive
-  ld bc,2
+  scf            ; CY: put back
+
+PZCOPY:
+  ld hl,PZTAB
+  ld de,SAVE0    ; NC: out, CY: back
+
+PZC1:
+  ld c,(hl)      ; the length
+  inc c
+  dec c
+  ret z          ; the end
+  inc hl
+  ld a,(hl)
+  inc hl
+  push hl        ; at its top
+  ld h,(hl)
+  ld l,a         ; the range
+  ld b,0
+  jr nc,PZC2
+  ex de,hl       ; CY: into page zero
+
+PZC2:
   ldir
-  ld de,$0008    ; the slots
-  ld bc,$38
-  ldir
-  ld de,STUB     ; HL at SAVEZ
-  ld bc,15
-  ldir
-  ld de,NMIV     ; HL at SAVEN
-  ld bc,6
-  ldir
-  ret
+  jr nc,PZC3
+  ex de,hl
+
+PZC3:
+  pop hl         ; the table
+  inc hl
+  jr PZC1
+
+PZTAB:
+  DB 2
+  DW IOBYTE
+  DB $38
+  DW $0008
+  DB 15
+  DW STUB
+  DB 6
+  DW NMIV
+  DB 0
 
 ; The warm-boot hook, on the RAM BIOS
 ; table's warm-boot entry. In a

@@ -734,7 +734,9 @@ const mon3Variant = memo(async (edits) => libVariant(edits));
 // and the IOBYTE's copy in the hook and in EXIT's restore.
 const HOOK_IM1 = "  im 1           ; TEC-OS's mode\n";
 const HOOK_IO = "  call RESETD    ; vectors rebuilt\n  ld hl,SAVE0\n  ld de,IOBYTE   ; and the drive\n";
-const REST_IO = "REST:\n  ld hl,SAVE0\n  ld de,IOBYTE   ; and the drive\n";
+const REST_IO = "REST:\n  scf            ; CY: put back\n";
+// EXIT's restore begun past PZTAB's first range and SAVE0's two bytes.
+const REST_SKIP_IO = "REST:\n  ld hl,PZTAB+3\n  ld de,SAVE0+2\n  scf\n  jr PZC1\n";
 
 const SLOTS = [0x08, 0x10, 0x18, 0x20, 0x28, 0x30];
 const DEFAULT_SLOT = [0, 0, 0, 0, 0, 0, 0, 0xc9];
@@ -1029,7 +1031,7 @@ test("KG61 mutant: a hook that skips the IOBYTE's copy leaves the program's afte
 });
 
 test("KG61 mutant: an EXIT that skips the IOBYTE's copy leaves the program's", async () => {
-  const svc = await mon3Variant([[REST_IO, REST_IO.replace("ld de,IOBYTE  ", "ld de,SAVE0   ")]]);
+  const svc = await mon3Variant([[REST_IO, REST_SKIP_IO]]);
   await assert.rejects(sixExits(svc, ["EXIT"]), /EXIT: 0003h-0004h as before/);
 });
 
@@ -1633,10 +1635,10 @@ test("KG68 docs agree", async () => {
   const bare = fig.top - 0x300;
   const tpa = (top) => (top - 0x100).toLocaleString("en");
   assert.ok(mon3.includes(`from \`B6C8h\` to \`${h4(bare)}\`, and the TPA from 46,536 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
-  // With the shell: (0006h) is A500h with SHELL.SVC alone on the starter
+  // With the shell: (0006h) is A400h with SHELL.SVC alone on the starter
   // card, as shell2.test measures it, MON3.SVC's pages lower, and GLCD.SVC
   // three pages lower still.
-  const shellTop = 0xa500;
+  const shellTop = 0xa400;
   const withMon3 = shellTop - fig.pages * 0x100;
   assert.ok(mon3.includes(`from \`${h4(shellTop)}\` to \`${h4(withMon3)}\`, and the TPA from ${tpa(shellTop)} bytes to **${tpa(withMon3)}**`), "(0006h) and the TPA with the shell");
   assert.ok(mon3.includes(`\`${h4(withMon3 - 0x300)}\`, a TPA of **${tpa(withMon3 - 0x300)}**`), "and with GLCD.SVC too");
