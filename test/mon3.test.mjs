@@ -137,8 +137,8 @@ const leave = (m, r) => {
 
 // The ROM's size, hash and ABI against the baseline.
 
-// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back).
-const BASELINE = { used: 16077, cap: 171, tpa: 47273, abi: "254a794dd99a0c7a189b06bff0b219671cf0eec5a5249ddd9bcacb3e54c43504" };
+// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back), restated at ABI 5.2 for TNGLYPH (17) and TNCOUNT 18.
+const BASELINE = { used: 16077, cap: 171, tpa: 47273, abi: "0f708a65ce53bf85a9379416217bfb57b48e2c52d716cd5e43c226f93a1a1f35" };
 
 test("KG58 rom cap", () => {
   const census = () => JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
@@ -158,7 +158,7 @@ test("KG58 rom cap", () => {
   assert.equal(sha(Buffer.from(abiDeclarations(abi.toString("utf8")), "utf8")), BASELINE.abi, "abi.inc's declarations as they were");
   assert.match(abi.toString("latin1"), /^SVCFMT EQU 4\b/m, "SVCFMT 4");
   const { rom, symbols } = romFor();
-  assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 1], "ABI 5.1");
+  assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 2], "ABI 5.2");
   const m = machine(card());
   assert.equal(word(m, 6) - 0x100, 47240, "TPA 47,240 with the shared recovery allocation");
   console.log(`ROM ${used} used, ${free} free, ${used - BASELINE.used} over the baseline, ${first.hash}`);

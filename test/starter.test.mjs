@@ -133,8 +133,8 @@ function bounceRound(card) {
   assert.match(m.text(mark), /COM written\r\n/);
   const com = Buffer.from(volume(card, "A").read("BOUNCE.COM"));
   // The adapted source's compiled length and hash, retaken from the build.
-  assert.equal(com.length, 16000, "adapted BOUNCE.COM's length");
-  assert.equal(sha(com), "68d9e9a1a3e327f94e9632bf827e66bd51f14ef715d7bf1d2a104007d349c0f0", "adapted BOUNCE.COM as the pinned BAZA compiles it");
+  assert.equal(com.length, 16128, "adapted BOUNCE.COM's length");
+  assert.equal(sha(com), "c1ca182508a4ebff20b502b7680af1d40497d5806058f77be0742659085c723d", "adapted BOUNCE.COM as the pinned BAZA compiles it");
   m.enqueueInput("bounce\r", "matrix");
   m.runUntil(() => (m.pumpInput(), !m.pending?.length), 50_000_000, "the command line");
   run(150_000_000);
