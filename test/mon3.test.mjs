@@ -734,7 +734,9 @@ const mon3Variant = memo(async (edits) => libVariant(edits));
 // and the IOBYTE's copy in the hook and in EXIT's restore.
 const HOOK_IM1 = "  im 1           ; TEC-OS's mode\n";
 const HOOK_IO = "  call RESETD    ; vectors rebuilt\n  ld hl,SAVE0\n  ld de,IOBYTE   ; and the drive\n";
-const REST_IO = "REST:\n  ld hl,SAVE0\n  ld de,IOBYTE   ; and the drive\n";
+const REST_IO = "REST:\n  scf            ; CY: put back\n";
+// EXIT's restore begun past PZTAB's first range and SAVE0's two bytes.
+const REST_SKIP_IO = "REST:\n  ld hl,PZTAB+3\n  ld de,SAVE0+2\n  scf\n  jr PZC1\n";
 
 const SLOTS = [0x08, 0x10, 0x18, 0x20, 0x28, 0x30];
 const DEFAULT_SLOT = [0, 0, 0, 0, 0, 0, 0, 0xc9];
@@ -1029,7 +1031,7 @@ test("KG61 mutant: a hook that skips the IOBYTE's copy leaves the program's afte
 });
 
 test("KG61 mutant: an EXIT that skips the IOBYTE's copy leaves the program's", async () => {
-  const svc = await mon3Variant([[REST_IO, REST_IO.replace("ld de,IOBYTE  ", "ld de,SAVE0   ")]]);
+  const svc = await mon3Variant([[REST_IO, REST_SKIP_IO]]);
   await assert.rejects(sixExits(svc, ["EXIT"]), /EXIT: 0003h-0004h as before/);
 });
 

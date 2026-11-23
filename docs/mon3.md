@@ -61,7 +61,7 @@ record asks to be entered on install. It stays installed after `EXIT`, so
 `UNLOAD` first. An older card's line with `/E` after the name still enters:
 the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
-On the starter card it is 4,781 bytes of header and image in **19 pages**, 5,237
+On the starter card it is 4,758 bytes of header and image in **19 pages**, 5,215
 bytes as a file with its relocation data. The starter card loads `SHELL.SVC`
 first, so the word at `0006h` goes from `A400h` to `9100h`, and the TPA from
 41,728 bytes to **36,864**. With `GLCD.SVC` installed too, as the GLCD
