@@ -137,8 +137,8 @@ const leave = (m, r) => {
 
 // The ROM's size, hash and ABI against the baseline.
 
-// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back), restated at ABI 5.2 for TNGLYPH (17) and TNCOUNT 18.
-const BASELINE = { used: 16077, cap: 171, tpa: 47273, abi: "0f708a65ce53bf85a9379416217bfb57b48e2c52d716cd5e43c226f93a1a1f35" };
+// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back), restated at ABI 5.2 for TNGLYPH (17) and TNCOUNT 18. The ROM figure is the packed-font build's 15,549; the cap is a ceiling on growth from it.
+const BASELINE = { used: 15549, cap: 64, tpa: 47273, abi: "0f708a65ce53bf85a9379416217bfb57b48e2c52d716cd5e43c226f93a1a1f35" };
 
 test("KG58 rom cap", () => {
   const census = () => JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));

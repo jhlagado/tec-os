@@ -18,7 +18,9 @@
 // Up recalls history; Down restores empty input before its pixel capture.
 // KS48 keeps this historical oracle on its original-font input. Only the
 // historical pixel workload serves the original font's rows at FNTGLY, the
-// ROM's one reader of its packed font. Other GLCD tests and Compact
+// ROM's one reader of its packed font. So this oracle checks the driver
+// against the font contract; hwsvc.test.mjs covers the ROM's unpacker.
+// Other GLCD tests and Compact
 // alias/rendering tests use the unmodified production ROM.
 
 import { test } from "node:test";
@@ -361,5 +363,7 @@ test("GLCD.SVC's time: a character no slower than from the table, a row within 2
   assert.ok(row.length > 0 && Math.max(...row) <= 215_000, `rows of #, at most ${Math.max(...row)} T`);
   const bytes = GLCD_SVC[6] | (GLCD_SVC[7] << 8);
   t.diagnostic(`measured: ${put.length} characters, mean ${Math.round(mean)} T; GLCD.SVC ${bytes} bytes`);
-  assert.ok(bytes <= 768, `GLCD.SVC's header and image ${bytes} bytes, within 3 pages`);
+  assert.equal(bytes, 768, "GLCD.SVC's header and image: exactly its three pages (767 before the glyph service)");
+  assert.equal(GLCD_SVC.length, 836, "the file: the image and 68 bytes of relocation data");
+  assert.equal(GLCD_SVC[10] | (GLCD_SVC[11] << 8), 68, "the relocation data's length");
 });
