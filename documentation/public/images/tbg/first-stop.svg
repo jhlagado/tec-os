@@ -16,6 +16,6 @@ text {fill:currentColor;font:15px ui-monospace,monospace}
 <text class="arrow" text-anchor="middle" x="360.0" y="60.0">→</text>
 <rect x="374.0" y="8" width="328.0" height="90" rx="7"/>
 <text class="head" x="387.0" y="34">At the first LCD stop</text>
-<text class="mark" x="387.0" y="61">PC: 0100</text>
+<text class="mark" x="387.0" y="61">&gt;PC 0100</text>
 <text x="387.0" y="88">Focus the LCD to step</text>
 </svg>

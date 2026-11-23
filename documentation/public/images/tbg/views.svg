@@ -16,9 +16,9 @@ text {fill:currentColor;font:15px ui-monospace,monospace}
 <text x="31.0" y="115">Shift+Tab goes back</text>
 <rect x="255.33333333333334" y="8" width="209.33333333333334" height="117" rx="7"/>
 <text class="head" x="268.33333333333337" y="34">Memory</text>
-<text x="268.33333333333337" y="61">Follows a register</text>
-<text x="268.33333333333337" y="88">← / → pick pointer</text>
-<text x="268.33333333333337" y="115">↑ / ↓ scroll bytes</text>
+<text x="268.33333333333337" y="61">Fixed or following</text>
+<text x="268.33333333333337" y="88">← / → move cursor</text>
+<text x="268.33333333333337" y="115">↑ / ↓ scroll rows</text>
 <rect x="492.6666666666667" y="8" width="209.33333333333334" height="117" rx="7"/>
 <text class="head" x="505.6666666666667" y="34">Symbols</text>
 <text x="505.6666666666667" y="61">With TAS symbols</text>

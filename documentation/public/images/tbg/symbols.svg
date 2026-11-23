@@ -23,7 +23,7 @@ text {fill:currentColor;font:15px ui-monospace,monospace}
 <text class="arrow" text-anchor="middle" x="478.6666666666667" y="73.5">→</text>
 <rect x="492.6666666666667" y="8" width="209.33333333333334" height="117" rx="7"/>
 <text class="head" x="505.6666666666667" y="34">Debug</text>
-<text class="mark" x="505.6666666666667" y="61">PC: 0100SY</text>
+<text class="mark" x="505.6666666666667" y="61">&gt;PC 0100  SY</text>
 <text x="505.6666666666667" y="88">Shift+Tab</text>
 <text x="505.6666666666667" y="115">Select TAKE</text>
 </svg>

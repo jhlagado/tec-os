@@ -18,6 +18,8 @@ nav_group: Reference
 | B says `Not in the COM` | Breakpoints and Ctrl+R need an address inside the loaded program. |
 | B says `BP FULL (8)` | Eight breakpoints are set. Press **B** on one of them to remove it first. |
 | Code shows `?` beside an address | TBG could not be sure that row starts an instruction. Press **G** and type a known address, or step to it. |
+| E in Memory says `Not writable` or `End of range` | Only the program's memory, `0100` up to TBG, can be edited. |
+| Memory does not move when a register changes | It shows `FIX`: it has an address of its own. Open it from the register in Registers with **Enter**. |
 | Step out or Until runs for a long time | Press any key to stop it. A routine that loops before returning takes many steps. |
 | The LCD says `TBG: no COM` and a name | Check the program's name and drive. TBG returns to CP/M with the command marked as failed. |
 | Ctrl-X has no effect | Use the experimental ROM and try while a debugged program is waiting for matrix input through BDOS. The chord is checked during that wait. |
