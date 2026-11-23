@@ -17,6 +17,14 @@ user area as the COM.
 
 TBG checks the sidecar against the loaded program. When it matches, Symbols
 joins the Tab order after Memory, and Shift+Tab from Registers reaches it in
-one step. If there is no matching sidecar, Symbols is left out, and you can
+one step. It lists the program's labels in address order. **Left** and
+**Right** switch to its equates, and **F** finds a symbol by typing the start
+of its name. **B** sets a breakpoint only at a label in code.
+
+Breakpoints last between sessions of the same program. Press **Q**, edit and
+assemble again, then start the program with `TBG.SVC`: each breakpoint at a
+label comes back at that label, wherever it has moved. One with no label comes
+back only when the program is unchanged. TBG says `BP dropped:` and a count
+for any it could not place. If there is no matching sidecar, Symbols is left out, and you can
 still step, inspect memory, and set breakpoints by browsing Code. If `SY` is missing, check the filename and user area, then assemble
 again to make sure the files are from the same build.

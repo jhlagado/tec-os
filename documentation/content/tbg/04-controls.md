@@ -46,7 +46,12 @@ including partway through and inside a recursive call.
 | Stack | **Up/Down** select a slot. When SP moves, the selection goes back to the top. |
 | Code | **Up/Down** move the `>` selection, then scroll. Browsing reaches any address, before PC too. **Left** returns to PC. |
 | Memory | **Up/Down** move a row of four bytes, and with **Ctrl** a page of sixteen. **Left/Right** move the `>` cursor from byte to byte. Memory stops at `0000` and `FFFF` instead of wrapping. |
-| Symbols | **Up/Down** browse globals. Labels in the loaded program can be used as breakpoint addresses. |
+| Symbols | **Up/Down** move the `>` selection through the labels in address order. **Left/Right** switch to the equates, shown as `NAME = value`, and back. **F** finds by a name's first letters as you type them; **Backspace** widens the find and **Esc** leaves it. **Enter** opens a code label in Code and a data label in Memory. |
+
+With a matching sidecar, Code shows each global label on a row of its own,
+`NAME:`, above its instruction, and names jump, call and memory operands by
+their labels. Text, words and bytes show as `DB "..."`, `DW` and `DB` rows
+instead of being decoded as instructions, and stepping back is exact.
 
 Code marks each row in its second column: `@` for PC, `*` for a breakpoint,
 `#` for both, and `?` for a row before PC that TBG could not be sure starts an

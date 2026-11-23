@@ -16,6 +16,8 @@ nav_group: Reference
 | B or Ctrl+R says `Select in Code first` | Press **Tab** to reach Code, select the instruction, then press the key again. |
 | Code does not show the stopped instruction | Press **Left** to return to PC. |
 | B says `Not in the COM` | Breakpoints and Ctrl+R need an address inside the loaded program. |
+| B in Symbols says `B: not code` | The label is data or an equate. Breakpoints go on instructions. |
+| A breakpoint is gone after assembling again | It had no label and the program changed. Put a label on the line to keep it. |
 | B says `BP FULL (8)` | Eight breakpoints are set. Press **B** on one of them to remove it first. |
 | Code shows `?` beside an address | TBG could not be sure that row starts an instruction. Press **G** and type a known address, or step to it. |
 | E in Memory says `Not writable` or `End of range` | Only the program's memory, `0100` up to TBG, can be edited. |
