@@ -46,7 +46,7 @@ Node.js 20 or later.
   else
     tas_stage=$(mktemp -d "$PWD/.inputs/.tas-host.XXXXXX")
     git clone https://github.com/jhlagado/thorium.git "$tas_stage"
-    git -C "$tas_stage" checkout --detach e5b72f498cd4b1be60d3ae2889fc7d96f90d7ad7
+    git -C "$tas_stage" checkout --detach cf5460c3ffb988e96fcc7fbb0aaf7039bb9a611f
     (cd "$tas_stage" && npm ci)
     TECOS_TAS_HOST="$tas_stage" node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
     mv "$tas_stage" .inputs/tas-host
@@ -179,7 +179,7 @@ Enter retry before normal commands resume
 ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
-`TED X.ASM!TAS X &X`. TED, from Thorium `e5b72f4` (`TED.COM`
+`TED X.ASM!TAS X &X`. TED, from Thorium `cf5460c` (`TED.COM`
 `81b9ff24`, 12,335 bytes), stops a file name and `THOR.PRJ`'s `ARGS` at the
 same `!` and `&`, so a project's `ARGS X &Y` gives ^T R's program the tail
 ` X` and runs nothing after it.
