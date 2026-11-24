@@ -19,6 +19,7 @@ import { PROFILES } from "./build.mjs";
 import { pageZeroDeclarations } from "./lib/media-source.mjs";
 import { tasAssembler, traceRom } from "./lib/tas-rom.mjs";
 import { bounceSource } from "./lib/bounce-source.mjs";
+import { compileBasic } from "./lib/games.mjs";
 
 import { assembleDistributionCom, assembleGlcd, assembleMon3, assembleShell } from "./lib/tas-distribution.mjs";
 
@@ -31,6 +32,18 @@ const sha = (b) => createHash("sha256").update(b).digest("hex");
 // Programs assembled from the tree onto the card: none, since SHELL.SVC's
 // CD puts a volume on a drive and lists them.
 const PROGRAMS = [];
+
+// Every A: volume carries the core set, so the shell, the editor and the
+// debugger are there whichever volume is on A:, plus the files of its theme.
+// B: is the WORK disk and C: a spare drive for any of them.
+const CORE = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBG.SVC", "TBGSYM.SVC", "TBG.HLP"];
+const THEMES = [
+  { label: "SYSTEM", files: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"] },
+  { label: "ASM", files: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"] },
+  { label: "BASIC", files: ["BAZA.COM", "BAZA.RTL", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"] },
+  { label: "MON3", files: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"] },
+  { label: "GAMES", files: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"] },
+];
 
 /** The pinned NAME's bytes, which the card holds: a file missing or not as pinned is refused. */
 function pinnedBytes(name) {
@@ -265,6 +278,17 @@ async function main() {
   const snake = await assembleProgram(resolve(ROOT, "programs/SNAKE9.ASM"), { base: 0x4000 });
   files.push({ name: "SNAKE9.ASM", description: "Tutankhamen's Snake source: TAS SNAKE9 SNAKE9.BIN rebuilds the game", bytes: text("SNAKE9.ASM") });
   files.push({ name: "SNAKE9.BIN", description: "Tutankhamen's Snake on the 8×8 RGB matrix: MON3.SVC, LOAD SNAKE9.BIN, GO", bytes: snake.bytes });
+  for (const name of ["TBG.SVC", "TBGSYM.SVC", "TBG.HLP"]) {
+    const description = { "TBG.SVC": "TBG, the debugger on the LCD: TBG.SVC NAME debugs NAME.COM", "TBGSYM.SVC": "labels for TBG from the NAME.TBG file TAS writes: load it after TBG.SVC", "TBG.HLP": "the help pages H shows in TBG" }[name];
+    files.push({ name, description, bytes: pinnedBytes(name) });
+  }
+
+  // The GAMES volume's finished programs, compiled by the pinned BAZA from
+  // the sources on the BASIC volume, on this ROM.
+  const tecos = builds.find(({ profile }) => profile === "tecos");
+  const compiled = (name) => compileBasic({ rom: tecos.rom, map: JSON.parse(tecos.mapBytes), baza, rtl, name, source: files.find((f) => f.name === `${name}.BAS`).bytes });
+  files.push({ name: "CAVERNS.COM", description: "Caverns, the adventure: CAVERNS to play; TYPE CAVERNS.TXT for instructions", bytes: compiled("CAVERNS") });
+  files.push({ name: "BOUNCE.COM", description: "a game with sprites on the PICO9918: BOUNCE; W/A/S/D or the arrow keys steer, Q quits", bytes: compiled("BOUNCE") });
 
   // A recipe's revision rises when its set of files changes, not when a
   // pinned file's bytes change. It is above both the starter's and the
@@ -272,25 +296,31 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "18",
+    revision: "19",
     name: "TEC-OS starter",
-    instruction: "Type BAZA CAVERNS to compile the adventure, then CAVERNS to play, or TYPE CAVERNS.TXT for instructions. At A:SYSTEM>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, first type TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A:SYSTEM>. For Snake9, enter MON3.SVC, LOAD SNAKE9.BIN, then GO. Click the RGB panel for matrix arrow controls. TAS SNAKE9 SNAKE9.BIN rebuilds it at the TEC-OS prompt. The card has four drives: CD ? lists its volumes, CD NAME puts one on the drive you are on and CD D:NAME on another; B: (WORK) is an empty work disk. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. After CD A: to a volume without SHELL.SVC, a reset keeps it; at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC to restore the shell. Power off (Power cycle on the page) gives the card's own drives again.",
+    instruction: "A: holds SYSTEM, the volume for the first chapters. CD ? lists the volumes; CD A:ASM, CD A:BASIC, CD A:MON3 or CD A:GAMES puts another on A:, and CD A:SYSTEM brings this one back. Every A: volume has the shell, TED, GLCD.SVC and the TBG debugger. B: (WORK) is your work disk: type B:, copy an example there (COPY A:SAMPLE.ASM B:) and build and run it there; programs come from A:. C: is a spare drive: CD C:NAME puts a volume on it. At A:SYSTEM>, TAS SAMPLE then SAMPLE builds and runs a first program, BAZA TIMES then TIMES one in BASIC, and TED SAMPLE.ASM or TED TIMES.BAS reads one. On GAMES, CAVERNS plays the adventure (TYPE CAVERNS.TXT for instructions), BOUNCE plays a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), and MON3.SVC, LOAD SNAKE9.BIN, then GO plays Snake9; click the RGB panel for matrix arrow controls. On BASIC, BAZA CAVERNS and BAZA BOUNCE rebuild them. On ASM, TAS DEMO then DEMO shows the hardware (TED DEMO.ASM to read it). On MON3, TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO runs a MON-3 program on the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to the prompt; TAS SNAKE9 SNAKE9.BIN rebuilds Snake9. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. Power off (Power cycle on the page) gives the card's own drives again.",
     profile: "tecos",
-    drives: 4,
+    drives: 3,
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
       { geometry: "G8M", label: "WORK", mount: "B" },
-      { geometry: "G1M", label: "PROJECTS", mount: "C" },
-      { geometry: "G1M", label: "GAMES" },
-      { geometry: "G1M", label: "SPARE" },
+      ...THEMES.slice(1).map(({ label }) => ({ geometry: "G1M", label })),
     ],
-    components: files.map((f) => ({
-      id: f.name.toLowerCase().replace(/\W/g, "-"),
-      name: f.name,
-      description: f.description,
-      files: [{ name: f.name, url: `files/${f.name}`, drive: "A", bytes: f.bytes.length, sha256: sha(f.bytes) }],
+    // One component for each file on each volume, placed by the volume's
+    // label: the same bytes, under one URL, on every volume that holds them.
+    components: THEMES.flatMap(({ label, files: theme }) => [...CORE, ...theme].map((name) => {
+      const f = files.find((file) => file.name === name);
+      if (!f) throw new Error(`${label}: no card file ${name}`);
+      return {
+        id: `${label}-${name}`.toLowerCase().replace(/\W/g, "-"),
+        name: f.name,
+        description: f.description,
+        files: [{ name: f.name, url: `files/${f.name}`, drive: label, bytes: f.bytes.length, sha256: sha(f.bytes) }],
+      };
     })),
   };
+  const placed = new Set(recipe.components.map((c) => c.name));
+  for (const f of files) if (!placed.has(f.name)) throw new Error(`${f.name} is on no volume`);
   const buffers = new Map(files.map(f => [`files/${f.name}`, f.bytes]));
   const starter = await buildRecipe(recipe, ref => buffers.get(ref));
   const figures = romServicesFigures(builds.find(({ profile }) => profile === "tecos").census);

@@ -202,9 +202,9 @@ function check(condition, message) {
   if (!condition) throw new Error(`placement check failed: ${message}`);
 }
 
-// Allocation-vector sizes by drive. The starter reserves four full slots,
-// including its empty drive; the two-volume card is the reference layout.
-const CARDS = { twoVolume: [511, 2047], starter: [2047, 2047, 2047, 2047], fourG8M: [2047, 2047, 2047, 2047] };
+// Allocation-vector sizes by drive. The starter reserves three full slots,
+// including its spare drive C:; the two-volume card is the reference layout.
+const CARDS = { twoVolume: [511, 2047], starter: [2047, 2047, 2047], fourG8M: [2047, 2047, 2047, 2047] };
 
 /** ALVINIT's layout for a card: vectors packed down from WSBASE, the BDOS
  *  entry jump directly below them. */
