@@ -29,7 +29,7 @@ TBG keeps letter commands to five keys: `R`, `B`, `G`, `E` and `H`. Everything e
 | `Esc` | Step back one view. At the top level, displays `Quit? Enter yes` (any other key stays). |
 | `H` | Open context-sensitive help from `TBG.HLP`. `Left`/`Right` turn pages and `Esc` or `H` returns. |
 
-`Space` and `R` wait for key release before resuming the program so the keypress never reaches the program, while arrow keys repeat when held. In the browser Viewer, click the LCD to focus TBG (`Tab` stays captured there) and press `F6` to return focus to the console.
+`Space` and `R` wait for key release before resuming the program so the keypress never reaches the program, while arrow keys repeat when held.
 
 ## Arrow keys by view
 
@@ -62,8 +62,6 @@ TBG keeps letter commands to five keys: `R`, `B`, `G`, `E` and `H`. Everything e
 | Symptom | Cause and fix |
 | --- | --- |
 | CP/M prints `TBG?` or `TBG.SVC?` | Install `TBG` from drive A (where `TBG.SVC` lives), or free RAM above `8000h`. `TBG.SVC` needs about 7.5 KiB (capped at 8 KiB). Run `UNLOAD` to remove `SHELL.SVC` or other services. |
-| Viewer shows Registers but keys do nothing | Click the character LCD to focus it, then press and release the key. |
-| `Tab` moves browser focus off the LCD | Use a Viewer build with LCD `Tab` capture. `F6` returns focus to the console. |
 | `H` prints `No help: TBG.HLP` | Copy `TBG.HLP` beside `TBG.SVC` or onto drive A. |
 | `B` prints `Select in Code first` | Switch to Code (or Symbols), move `>` onto an instruction and press `B`. |
 | Code does not show the stopped instruction | Press `Left` in Code to snap `>` back to `PC`. |
@@ -90,5 +88,4 @@ TBG lives in its own repository alongside Thorium and TEC-OS. Clone `jhlagado/tb
 Copy all three files to your TEC-OS disk. Any standard TEC-OS ROM supports direct launches and every exercise in this book. `TBG ARM` requires ABI 5.3 or later.
 
 [TBG source](https://github.com/jhlagado/tbg) ·
-[Viewer build source](https://github.com/jhlagado/tec-os-viewer) ·
 [Origo P8 test evidence](https://github.com/jhlagado/origo/tree/main/studies/p8-tbg/evidence)

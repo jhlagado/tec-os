@@ -26,7 +26,7 @@ By itself, TBG works in raw hexadecimal addresses. Whenever you want your own as
 
 You should be comfortable at the TEC-OS prompt, able to enter a short file in `TED` and able to read basic Z80 instructions and hexadecimal. Every chapter works through a concrete program rather than listing controls in isolation. You write or reuse a small `.ASM` file, run it normally to see what it does, then bring it under TBG so each control turns up beside the problem that calls for it.
 
-Everything here works on a physical TEC-1G and in the browser [TEC-OS Viewer](https://jhlagado.github.io/tec-os-viewer/). Addresses and bytes use hexadecimal with a trailing `h`, such as `0100h`, and sizes use KiB or decimal bytes.
+Addresses and bytes use hexadecimal with a trailing `h`, such as `0100h`, and sizes use KiB or decimal bytes.
 
 ## Chapters
 

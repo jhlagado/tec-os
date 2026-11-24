@@ -77,8 +77,6 @@ Three details jump out on those four lines:
 - **Named jumps, calls and indirects:** Branch targets (`DJNZ FILL`), calls and bracketed addresses (`(nn)`) show label names when a match exists. Immediate 16-bit loads like `LD HL,010A` stay numeric because a 16-bit literal could be a plain constant like `$1234` rather than an address.
 - **Data still disassembles:** On row 4, `010A INC B` sits right under `BUF:`. The `04h` you just stored in `BUF` happens to be the Z80 opcode for `INC B`. Seeing `BUF:` directly above `010A` tells you at once that those bytes are your data buffer, not code.
 
-![TBGSYM.SVC active on FILL.COM in the TEC-OS Viewer: the console stays at the launch prompt while Code on the LCD shows DJNZ FILL and the BUF: label row.](/images/tbg/viewer-tbgsym-code.png)
-
 ## The fifth view: Symbols
 
 Whenever `TBGSYM` matches a `.TBG` file, a fifth view called **Symbols** joins the `Tab` ring right after Memory (and one `Shift+Tab` backward from Registers). Tab to it on `FILL`:

@@ -71,8 +71,6 @@ Ordinary `.COM` programs load at `0100h` and grow upwards into free RAM. Residen
 
 Once resident, TBG survives warm boots and works transparently alongside the rest of the computer. Whenever a debugged program stops, TBG draws on the 20 × 4 character LCD and reads the matrix keyboard. Your console stays untouched, so any text or graphics your program draws remains exactly where the program put it.
 
-On a physical TEC-1G, the LCD and matrix keyboard sit right in front of you. In the browser Viewer, one keyboard feeds both displays, so you click the console screen to type commands and click the character LCD once TBG stops the program. While the LCD has focus, `Tab` stays inside TBG instead of jumping through browser controls. `F6` hands keyboard focus back to the console.
-
 ## Install TBG and catch the first stop
 
 For a command with no file extension, TEC-OS looks for `.COM` first and then `.SVC`. At the `A>` prompt, type `TBG` on its own to install the service:
@@ -120,7 +118,7 @@ A 20 × 4 LCD gives you eighty character cells, so every column earns its keep:
 
 ## Step `HELLO.COM` by hand
 
-Click the LCD if you are in the Viewer, then tap `Space` once and let it go. The Z80 executes `LD DE,MSG` at `0100h` and halts again before `0103h`. On the LCD, `PC` advances to `0103` and `DE` becomes `0109`, the address of `"Hello from TEC-OS"`. Over on the console, nothing has moved.
+Tap `Space` once and let it go. The Z80 executes `LD DE,MSG` at `0100h` and halts again before `0103h`. On the LCD, `PC` advances to `0103` and `DE` becomes `0109`, the address of `"Hello from TEC-OS"`. Over on the console, nothing has moved.
 
 Tap `Space` a second time. `LD C,9` runs, moving `PC` to `0105` and setting the low byte of `BC` to `09`:
 
