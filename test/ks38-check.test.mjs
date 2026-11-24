@@ -1,6 +1,6 @@
 // KS38's checkers, each shown to pass where it should and to fail on a
-// deliberate difference: the image byte for byte, label by label with
-// relocation masked when two files trade places, and the old names in src/.
+// deliberate difference: the image byte for byte, label by label given
+// renames (and, with source lines, relocation masked), and the old names in src/.
 // Each variant is this tree copied, edited and built, one at a time.
 
 import { test } from "node:test";
@@ -37,11 +37,6 @@ async function variant(name, edits) {
   return built(dir);
 }
 
-// lcd.asm and the file included just before it, read from rom.asm, traded,
-// whatever spaces or tabs lay the include lines out.
-const LCDPAIR = readFileSync(resolve(ROOT, "src/rom.asm"), "latin1").match(/^([ \t]*%INCLUDE[ \t]+"[^"]+")\n([ \t]*%INCLUDE[ \t]+"lcd\.asm")$/m);
-const SWAP = ["src/rom.asm", LCDPAIR[0], `${LCDPAIR[2]}\n${LCDPAIR[1]}`];
-
 test("the image check passes on the same image and finds one byte changed", () => {
   assert.equal(sameImage(base.image, base.image).same, true);
   const changed = Buffer.from(base.image);
@@ -64,23 +59,12 @@ test("a label renamed: the image is the same, and the label check passes given t
   assert.deepEqual(kinds.sort(), ["extra RESETIN", "missing RSTENT"]);
 });
 
-test("two files trade places: the image check fails, the label check passes with addresses taken by their labels", async () => {
-  const swapped = await variant("swap", [SWAP]);
-  assert.equal(sameImage(base.image, swapped.image).same, false, "the image reordered");
-  assert.notEqual(at(base, "LCDINIT"), at(swapped, "LCDINIT"));
-  const r = compareLabels(base, swapped);
-  assert.deepEqual(r.differences, []);
-  assert.ok(r.masked > 10, `${r.masked} addresses masked`);
-});
-
-test("with the files traded, the label check finds an operand changed and a jump retargeted", async () => {
-  const operand = await variant("swap-operand", [SWAP, ["src/boot.asm", "cp HIGH(RSTENT)", "cp HIGH(RSTENT)+1"]]);
-  const named = (r) => r.differences.map((d) => [d.kind, d.label.split("/").includes("RSTENT")]);
-  assert.deepEqual(named(compareLabels(base, operand)), [["bytes", true]], "RSTENT's group");
-  const retarget = await variant("swap-jump", [SWAP, ["src/boot.asm", "jp nz,WBOOTR", "jp nz,COLD"]]);
-  assert.deepEqual(named(compareLabels(base, retarget)), [["bytes", true]], "RSTENT's group");
-  rmSync(WORK, { recursive: true, force: true });
-});
+// The two tests of files trading places in a real tree went when TAS stopped
+// writing the statement stream (Thorium cf5460c, the owner's decision of
+// 24 November 2026): without source lines in the ROM's map, a LOW( or HIGH(
+// operand can't be told from an unrelated byte, so a move is checked by the
+// image and the rename check only. The synthetic case below still covers
+// compareLabels' masking when segments are given.
 
 test("the names search finds old names as whole words in src/, and nothing in history or generated files", () => {
   assert.ok(searchNames(ROOT, ["PIVEC"]).some((h) => h.file.startsWith("src/")), "PIVEC is in src/");
