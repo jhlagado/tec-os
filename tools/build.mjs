@@ -143,7 +143,7 @@ GEOESZ  EQU     6
 function checkAbi(at, rom) {
   const byte = (a) => rom[a - 0xc000];
   check(String.fromCharCode(byte(at("ABITAB")), byte(at("ABITAB") + 1), byte(at("ABITAB") + 2)) === "TNA", "the signature at ABITAB");
-  check(byte(at("ABIMAJ")) === 5 && byte(at("ABIMIN")) === 2, "ABI 5.2 at ABIMAJ and ABIMIN");
+  check(byte(at("ABIMAJ")) === 5 && byte(at("ABIMIN")) === 3, "ABI 5.3 at ABIMAJ and ABIMIN");
   check(byte(at("ABICALL")) === 0xc3 && (byte(at("ABICALL") + 1) | (byte(at("ABICALL") + 2) << 8)) === at("SVCDSP"), "ABICALL is JP SVCDSP");
   check(at("ABIEND") === at("ABICALL") + 3 && at("ABIEND") - at("ABITAB") === 8, "the table is 8 bytes");
   check(at("SVCFMT") === FORMAT, `abi.inc's SVCFMT is ${at("SVCFMT")}, tools/lib/svc-format.mjs has ${FORMAT}`);

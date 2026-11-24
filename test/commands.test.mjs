@@ -371,11 +371,12 @@ test("SH1 rom figure", () => {
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   assert.ok(first.ram.tpa.bytes >= 47238, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
-  // abi.inc differs from before the hook by TNSHELL's and TNGLYPH's blocks and TNCOUNT alone.
+  // abi.inc differs from before the hook by TNSHELL's, TNGLYPH's and COMVEC's blocks and TNCOUNT alone.
   const abi = readText("src/abi.inc");
   const block = abi.match(/; SHELL: [\s\S]*?\nTNSHELL EQU 16\n\n/)[0];
   const glyph = abi.match(/; GLYPH: [\s\S]*?\nTNGLYPH EQU 17\n\n/)[0];
-  assert.equal(sha(Buffer.from(abiDeclarations(abi.replace(block, "").replace(glyph, "").replace("TNCOUNT EQU 18", "TNCOUNT EQU 16")), "utf8")), ABI_BASE, "abi.inc's declarations changed only by TNSHELL, TNGLYPH and TNCOUNT");
+  const comvec = abi.match(/\n; The armed COM launch[\s\S]*?\nCOMVEC EQU \$[0-9A-F]+\n/)[0];
+  assert.equal(sha(Buffer.from(abiDeclarations(abi.replace(block, "").replace(glyph, "").replace(comvec, "").replace("TNCOUNT EQU 18", "TNCOUNT EQU 16")), "utf8")), ABI_BASE, "abi.inc's declarations changed only by TNSHELL, TNGLYPH, COMVEC and TNCOUNT");
   console.log(`ROM ${used} used, ${free} free, TPA ${first.ram.tpa.bytes}, ${first.hash.slice(0, 16)}`);
 });
 

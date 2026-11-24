@@ -8,7 +8,7 @@
 
   DB "TNA"
   DB 5
-  DB 2           ; C007h ABIMIN, the
+  DB 3           ; C007h ABIMIN, the
                  ; minor version: 2 adds
-                 ; TNGLYPH
+                 ; TNGLYPH, 3 COMVEC
   jp SVCDSP

@@ -1,4 +1,4 @@
-; Public TEC-OS ABI 5.2: eight bytes at
+; Public TEC-OS ABI 5.3: eight bytes at
 ; C003h..C00Ah, containing TNA, major,
 ; minor and JP SVCDSP. Test TNA at
 ; ABITAB and major 5 at ABIMAJ before
@@ -20,7 +20,7 @@ ABITAB EQU $C003
 
 ABIMAJ EQU $C006
 
-; minor version, 2
+; minor version, 3
 
 ABIMIN EQU $C007
 
@@ -346,7 +346,9 @@ KBLAST EQU $BFEF
 ; when it takes the launch, when the arm
 ; is cancelled and at REMOVE. Warm boot
 ; and page release clear it when its
-; page is freed.
+; page is freed. Added at ABI minor 3:
+; test ABIMIN 3 or above before using
+; it.
 
 COMVEC EQU $BF62
 LCDCMD EQU $04   ; command write, busy
