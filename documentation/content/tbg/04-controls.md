@@ -38,7 +38,7 @@ pressed while the name shows clears it and acts at once.
 | View | Arrow keys |
 | --- | --- |
 | Registers | The arrows move the `>` selection around the grid. |
-| Code | **Up/Down** move the `>` selection, then scroll. Browsing reaches any address, before PC too. **Left** returns to PC. An instruction too long for the row ends in `>` at the right edge; **Shift+Right** moves the selected row's text along to show the rest, with `<` before it, and **Shift+Left** moves it back. |
+| Code | **Up/Down** move the `>` selection, then scroll. Browsing reaches any address, before PC too. **Left** returns to PC. An instruction too long for the row ends in `>` at the right edge; **Shift+Right** moves the selected row's text along to show the rest, with `<` before it, and **Shift+Left** moves it back. **Up** and **Down** keep that position from line to line; any other key puts the text back. |
 | Stack | **Up/Down** select a slot. When SP moves, the selection goes back to the top. |
 | Memory | **Up/Down** move a row of four bytes, and with **Ctrl** a page of sixteen. **Left/Right** move the `>` cursor from byte to byte. Memory stops at `0000` and `FFFF` instead of wrapping. |
 
@@ -47,8 +47,8 @@ with `ST`, `BP` or `EX` for how the program stopped, and `SY` when symbols are l
 rows 2 and 3 show the Z, C, S and P/V flags as letters, or `.` when clear.
 Stack shows four words from SP, the top one marked `SP`.
 
-Code marks each row in its second column: `@` for PC, `*` for a breakpoint
-and `#` for both. Numbers in Code are hexadecimal and have no `$`. Stepping
+Code marks each row in its second column: `→` for PC, `□` for a breakpoint
+and `█` for PC stopped on a breakpoint. Numbers in Code are hexadecimal and have no `$`. Stepping
 back is exact when PC is close below; further back, TBG works out the
 instruction start from the bytes before it.
 

@@ -10,8 +10,8 @@ nav_group: First session
 Start `TBG.SVC STEP` again. This time stop at `TAKE`, just before the POP.
 
 **From Code.** Press **Tab** to see Code. The `>` in the first column is the
-selection and the `@` beside it marks PC. Press **Down** twice to move the
-`>` to `0104 POP DE`. Press **B**. A `*` marks that address, and the bottom
+selection and the `→` beside it marks PC. Press **Down** twice to move the
+`>` to `0104 POP DE`. Press **B**. A `□` marks that address, and the bottom
 row says `BP SET 0104`. Browsing moves the selection and leaves the
 program's PC where it stopped.
 

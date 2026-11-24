@@ -32,7 +32,7 @@ A>TBG.SVC STEP
    name shows for a moment as you arrive. Note the address on the top row.
 3. Press **Space** while still looking at the stack. Its top address moves down
    by two bytes, and the word `1234` appears there.
-4. Press **Shift+Tab** to go back to Code. The `@` marks PC at `0104`, and
+4. Press **Shift+Tab** to go back to Code. The `→` marks PC at `0104`, and
    the next instruction is `POP DE`. Press **Space**, then **Shift+Tab** to return to
    Registers. DE is now `1234` and SP is back at its starting value.
 5. Press **R** to let `RET` finish the program. The register display shows
