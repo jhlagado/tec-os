@@ -290,7 +290,7 @@ function hello3Round(card) {
   assert.match(m.text(from), /\r\nMON3>$/, "nothing after MON3>");
   assert.deepEqual(lcdRows(m), HELLO3_ROWS, "the LCD as HELLO3 left it");
   const exit = line(m, "EXIT");
-  assert.equal(exit.out, "EXIT\r\r\n\r\nA:SYSTEM>", "EXIT, the first line typed, goes to A>");
+  assert.equal(exit.out, "EXIT\r\r\n\r\nA:MON3>", "EXIT, the first line typed, goes to A>, MON3 on it");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
   assert.deepEqual(m.violations, []);
 }
@@ -337,7 +337,7 @@ function hello3OnTty(card) {
   m.runUntilChecked(() => (m.pumpInput(), m.waitingForInput() && m.text(from).includes("MON3>")), 20_000_000, "MON3> after Esc on TTY");
   assert.match(m.text(from), /\r\nMON3>$/, "nothing after MON3>");
   const exit = line(m, "EXIT");
-  assert.equal(exit.out, "EXIT\r\r\n\r\nA:SYSTEM>", "EXIT, the first line typed, goes to A>");
+  assert.equal(exit.out, "EXIT\r\r\n\r\nA:MON3>", "EXIT, the first line typed, goes to A>, MON3 on it");
   assert.deepEqual(m.violations, []);
 }
 
@@ -379,7 +379,7 @@ function hello3KeyThenEsc(card) {
   m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.text(from).includes("MON3>")), 50_000_000, "MON3> after 1 and Esc");
   assert.match(m.text(from), /\r\nMON3>$/, "nothing after MON3>");
   const exit = line(m, "EXIT");
-  assert.equal(exit.out, "EXIT\r\r\n\r\nA:SYSTEM>", "EXIT, the first line typed, goes to A>");
+  assert.equal(exit.out, "EXIT\r\r\n\r\nA:MON3>", "EXIT, the first line typed, goes to A>, MON3 on it");
   assert.deepEqual(m.violations, []);
 }
 
@@ -443,7 +443,7 @@ test("on the card at 40 columns, TED BOUNCE.BAS scrolls sideways along its longe
   assert.equal(view()[n - top], source[n].slice(len - 40), "the longest line's last 40 columns");
   keys("\x1b[D".repeat(len - 1), "column 1", () => at(1).test(status()));
   assert.deepEqual(view(), cut(0, top), "back to the view from column 1");
-  keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A:SYSTEM>")));
+  keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A:BASIC>")));
   assert.deepEqual(m.violations, []);
 });
 
