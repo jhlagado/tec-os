@@ -778,8 +778,8 @@ function onStarter(command, { logged = "B" } = {}) {
   if (put) {
     assert.equal(file.length, 4096); assert.deepEqual(file, putBytes(16), "all sixteen pages hold PUT's known bytes");
   } else {
-    assert.match(text, /COM written\r\n/); assert.equal(file.length, 16128);
-    assert.equal(sha(file), "c1ca182508a4ebff20b502b7680af1d40497d5806058f77be0742659085c723d", "the complete pinned compiler result (BOUNCE.BAS lines 40, 50 and 170 call GLYPH)");
+    assert.match(text, /COM written\r\n/); assert.equal(file.length, 16000);
+    assert.equal(sha(file), "fa7c30104ea434e3f10c5bc0f350980f887e038d86a13f5fe8dba8ffc90d48ef", "the complete pinned compiler result (BOUNCE.BAS lines 40, 50 and 170 call GLYPH)");
   }
   for (const c of t.commits) {
     assert.ok(c.published.length <= file.length);
@@ -801,13 +801,13 @@ function onStarter(command, { logged = "B" } = {}) {
 function checkBounceWrites(b) {
   const data = b.writes.map((block, i) => [block, b.fn[i]]).filter(([block]) => !b.dir.has(block));
   const times = data.reduce((n, [block]) => n.set(block, (n.get(block) ?? 0) + 1), new Map());
-  // The independently hash-checked 16,128-byte COM has 126 CP/M records:
-  // 31 complete 512-byte blocks and one final two-record block.
+  // The independently hash-checked 16,000-byte COM has 125 CP/M records:
+  // 31 complete 512-byte blocks and one final single-record block.
   assert.equal(times.size, 32);
-  assert.deepEqual([...times.values()].sort((a,b)=>a-b), [2,...Array(31).fill(4)],
-    "full blocks progress four acknowledged versions; the final block progresses twice");
+  assert.deepEqual([...times.values()].sort((a,b)=>a-b), [1,...Array(31).fill(4)],
+    "full blocks progress four acknowledged versions; the final block progresses once");
   // One CP/M extent requires three directory commits; larger output used two.
-  assert.equal(data.length, 126); assert.equal(b.writes.length - data.length, 3);
+  assert.equal(data.length, 125); assert.equal(b.writes.length - data.length, 3);
   assert.ok(b.writes.length <= 168, `${b.writes.length} BOUNCE card writes`);
 }
 
