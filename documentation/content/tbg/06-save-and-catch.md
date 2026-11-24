@@ -20,7 +20,8 @@ chord as you press **Enter**, and the program stops at its next call. A
 program that loops without calling the operating system cannot be broken in
 this way; set a breakpoint and run again.
 
-**Stop on the next launch.** With the experimental TEC-OS ROM, enter
-`TBG.SVC ARM` at the CP/M prompt, then run the COM as usual, for example
-`STEP`. TBG stops it at its first instruction. A direct `TBG.SVC NAME` while
-armed cancels the arm and says so.
+**Stop on the next launch.** Enter `TBG.SVC ARM` at the CP/M prompt, then
+run the COM as usual, for example `STEP`. TBG stops it at its first
+instruction. A direct `TBG.SVC NAME` while armed cancels the arm and says so.
+The arm needs TEC-OS ABI 5.3 or later; on an older ROM, `ARM` says
+`ARM needs ABI 5.3` and arms nothing.

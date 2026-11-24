@@ -24,4 +24,5 @@ nav_group: Reference
 | Ctrl+Esc does not stop the program | It stops at the program's next system call. A program that never calls the operating system needs a breakpoint instead. |
 | `SY` does not show and Code has no labels | Load `TBGSYM.SVC` after `TBG.SVC`, and rebuild with TAS so the `.TBG` file matches the COM. |
 | CP/M prints `TBGSYM.SVC?` | Load `TBG.SVC` first. The extension also needs five pages of memory above `8000`. |
+| `TBG.SVC ARM` says `ARM needs ABI 5.3` | The ROM is older than TEC-OS ABI 5.3. Start the program with `TBG.SVC NAME` instead, or update the ROM. |
 | The LCD says `TBG: no COM` and a name | Check the program's name and drive. TBG returns to CP/M with the command marked as failed. |
