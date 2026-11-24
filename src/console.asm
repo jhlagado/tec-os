@@ -249,7 +249,8 @@ CINME:
 ; tail's next byte, at KBTP, in RXCHAR,
 ; step KBTP, decrement KBTN and leave
 ; RXFULL set for the next byte.
-; Preserve BC/DE/HL. F changes.
+; Preserve BC/DE. F and HL change, as
+; BCONIN, the only caller, allows.
 
 CINTAKE:
   ld a,(KBTN)
@@ -264,13 +265,11 @@ CINTAIL:
   ld (KBTN),a
   ld a,(RXCHAR)
   push af
-  push hl
   ld hl,(KBTP)
   ld a,(hl)      ; the tail's next byte
   inc hl
   ld (KBTP),hl
   ld (RXCHAR),a
-  pop hl
   pop af
   ret
 
