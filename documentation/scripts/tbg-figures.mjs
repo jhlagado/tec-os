@@ -83,7 +83,7 @@ add('first-stop', 'TBG in high memory with separate console and LCD paths',
     arrow(326, 101, 412, 95),
     arrow(326, 152, 412, 169),
     box(416, 62, '20 × 4 LCD', ['Matrix keyboard'], 264, 66, 'highlight'),
-    box(416, 140, 'Main console', ['9918 / TTY / GLCD'], 264, 66),
+    box(416, 140, 'Console', ['Default display'], 264, 66),
     note(248, 'TBG is loaded at the top of RAM, below the ROM. Program memory ends where TBG begins (0006h).')
   ]);
 

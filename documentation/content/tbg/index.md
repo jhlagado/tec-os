@@ -6,27 +6,27 @@ nav_exclude: true
 
 # Using T-Bug (TBG)
 
-TEC-OS is a CP/M-compatible disk operating system for the TEC-1G. You write assembly source in `TED` and assemble a `.COM` program with `TAS`. Typing its name at the prompt loads the binary at `0100h`, runs it to completion and returns to the prompt. When a program works, you see its output on the console and move on.
+On TEC-OS, ordinary development follows a short loop. You write Z80 assembly in `TED`, assemble a `.COM` program with `TAS` and run it by typing its name at the prompt. TEC-OS loads the file at `0100h`, runs it and drops you back to the prompt. When the output looks right, you carry on.
 
-When a program prints wrong text, corrupts a buffer or hangs, that normal cycle gives you little evidence. The Z80 executes hundreds of thousands of instructions a second. By the time a fault appears on screen, the instruction behind it has long since passed. Adding print statements changes the program's size, alters its registers and clutters the display you are trying to check.
+When something goes wrong, that loop gives you almost nothing to work with. A Z80 at 4 MHz executes hundreds of thousands of instructions a second, so by the time garbled text hits the screen or the machine hangs, the broken instruction is long gone. Stuffing print calls into the source shifts addresses, clobbers registers and muddies the very console output you are trying to read.
 
-TBG, pronounced T-Bug, puts a debugger directly inside TEC-OS. It loads into high memory as a resident service and stops a `.COM` program before its first instruction at `0100h`. From that stop you can inspect the Z80's registers and read disassembled instructions. You can also watch the stack and memory change byte by byte, stepping one instruction at a time or running at full speed between breakpoints.
+TBG, pronounced T-Bug, puts a resident debugger right inside TEC-OS. It sits at the top of RAM below the ROM and catches a `.COM` program before its first instruction at `0100h`. From there you can read the CPU's registers, step through disassembled instructions, watch the stack and memory change byte by byte and run at full speed between breakpoints.
 
-## Two screens on one machine
+## Transparent to the console
 
-TBG operates entirely through the TEC-1G's 20 × 4 character LCD and matrix keyboard. It writes nothing to the main console. Whether your session uses the PICO9918 display, a serial terminal or the graphics LCD, the program under test runs on that console as usual. From the program's perspective, nothing sits between it and its screen. You watch its output on the main display while controlling execution on the LCD.
+TBG runs through the TEC-1G's 20 × 4 character LCD and matrix keyboard, treating the LCD as a second display dedicated to the debugger. Nothing TBG draws ever touches your normal console. Whatever display or terminal your session uses, the program under test writes to it undisturbed and behaves as if no debugger were present. You watch the program on the console and steer it from the LCD.
 
-## Memory and optional symbols
+## Small core, optional symbols
 
-Every resident service reduces the transient program area available below it. TBG's core service, `TBG.SVC`, fits within 8 KiB and uses about 7.5 KiB. That compact footprint leaves room for substantial `.COM` programs alongside registers, disassembly, stack, memory inspection, breakpoints and live editing.
+Every resident service reduces the memory available to your program. `TBG.SVC` stays within 8 KiB and uses about 7.5 KiB, leaving plenty of room for real `.COM` programs alongside registers, disassembly, stack, memory inspection, breakpoints and live editing.
 
-On its own, TBG displays hexadecimal addresses. You can load a second optional service, `TBGSYM.SVC`, whenever you want your own assembly labels in the disassembly and a browsable list of symbols. It reads the `.TBG` file that `TAS` writes beside each `.COM` file and attaches to TBG through a resident hook. Because `TBGSYM.SVC` takes another 1.25 KiB of memory, it stays separate from the core. Load it when named labels help. Leave it unloaded when your program needs the extra memory.
+By itself, TBG works in raw hexadecimal addresses. Whenever you want your own assembly labels in the disassembly and a browsable list of names, you can load a second resident service, `TBGSYM.SVC`, on top of TBG. It reads the `.TBG` symbol file that `TAS` writes beside each `.COM` file and takes about another 1.25 KiB of RAM. Keeping symbols in a separate service makes that memory a choice: load `TBGSYM` when names save time, and leave it out when a large program needs the space.
 
-## The intended reader
+## Before you start
 
-This book is a guided tour rather than a pure reference manual. It assumes you can use the TEC-OS prompt, enter a short file in `TED` and read basic Z80 instructions, registers and hexadecimal numbers. Each chapter builds a small program or reuses an earlier one, runs it and then inspects it under TBG. Every control appears beside the problem it solves.
+You should be comfortable at the TEC-OS prompt, able to enter a short file in `TED` and able to read basic Z80 instructions and hexadecimal. Every chapter works through a concrete program rather than listing controls in isolation. You write or reuse a small `.ASM` file, run it normally to see what it does, then bring it under TBG so each control turns up beside the problem that calls for it.
 
-The examples run on a physical TEC-1G and in the browser [TEC-OS Viewer](https://jhlagado.github.io/tec-os-viewer/). The text notes the Viewer's extra focus step between the console display and the character LCD alongside the hardware behaviour. Addresses and bytes use hexadecimal with a trailing `h`, as in `0100h`, and sizes in bytes are decimal.
+Everything here works on a physical TEC-1G and in the browser [TEC-OS Viewer](https://jhlagado.github.io/tec-os-viewer/). Addresses and bytes use hexadecimal with a trailing `h`, such as `0100h`, and sizes use KiB or decimal bytes.
 
 ## Chapters
 
