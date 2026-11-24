@@ -1,26 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 106" role="img" aria-labelledby="title">
-<title id="title">Set a breakpoint in Code and run to it</title>
-<style>
-svg {color:#233333;--panel:#edf4ee;--edge:#648479;--accent:#155c48}
-@media(prefers-color-scheme:dark) {svg {color:#eef4ef;--panel:#172c27;--edge:#739888;--accent:#a3dfbd}}
-rect {fill:var(--panel);stroke:var(--edge)}
-text {fill:currentColor;font:15px ui-monospace,monospace}
-.head {fill:var(--accent);font:bold 16px system-ui,sans-serif}
-.mark {fill:var(--accent);font-weight:bold}
-.arrow {fill:var(--accent);font:bold 22px system-ui,sans-serif}
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="242" viewBox="0 0 720 242" role="img" aria-labelledby="title desc">
+<title id="title">Software breakpoint patch and restore using RST 30h</title>
+<desc id="desc">Pressing B in Code registers a breakpoint at 0104h (POP DE, opcode D1h). While the program runs, TBG patches 0104h with F7h (RST 30h) and saves D1h. When the CPU hits F7h, TBG restores D1h, stops at PC 0104 with BP and keeps the breakpoint registered.</desc>
+<defs><style>
+svg {color:#233333;--panel:#edf4ee;--edge:#648479;--accent:#155c48;--paper:#fff}
+@media(prefers-color-scheme:dark) {svg {color:#eef4ef;--panel:#172c27;--edge:#739888;--accent:#a3dfbd;--paper:#1c1f22}}
+rect {fill:var(--panel);stroke:var(--edge);stroke-width:1.3}
+text {fill:currentColor;font:14px ui-monospace,monospace}
+.head {fill:var(--accent);font:bold 15px system-ui,sans-serif}
+.note {font:14px system-ui,sans-serif}
+.small {font:12px ui-monospace,monospace}
+.accent {fill:var(--accent);font-weight:bold}
+.arrow {fill:none;stroke:var(--accent);stroke-width:1.6}
+.highlight {stroke:var(--accent);stroke-width:2.5}
 </style>
-<rect x="18.0" y="8" width="209.33333333333334" height="90" rx="7"/>
-<text class="head" x="31.0" y="34">Select in Code</text>
-<text x="31.0" y="61">&gt; 0104 POP DE</text>
-<text x="31.0" y="88">Press B</text>
-<text class="arrow" text-anchor="middle" x="241.33333333333334" y="60.0">→</text>
-<rect x="255.33333333333334" y="8" width="209.33333333333334" height="90" rx="7"/>
-<text class="head" x="268.33333333333337" y="34">Breakpoint set</text>
-<text class="mark" x="268.33333333333337" y="61">&gt;□0104 POP DE</text>
-<text x="268.33333333333337" y="88">Press R</text>
-<text class="arrow" text-anchor="middle" x="478.6666666666667" y="60.0">→</text>
-<rect x="492.6666666666667" y="8" width="209.33333333333334" height="90" rx="7"/>
-<text class="head" x="505.6666666666667" y="34">Program stopped</text>
-<text class="mark" x="505.6666666666667" y="61">&gt;PC 0104  BP</text>
-<text x="505.6666666666667" y="88">POP DE is next</text>
+<marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L8 4 L0 8 Z" fill="var(--accent)"/></marker></defs>
+<rect class="" x="24" y="20" width="200" height="92" rx="4"/>
+<text class="head" x="124" y="45" text-anchor="middle" xml:space="preserve">1 · Mark in Code</text>
+<text class="" x="124" y="70" text-anchor="middle" xml:space="preserve">&gt;□0104 POP DE</text>
+<text class="" x="124" y="90" text-anchor="middle" xml:space="preserve">Saved byte: D1h</text>
+<path class="arrow" d="M226 66 L254 66" marker-end="url(#arrow)"/>
+<rect class="" x="260" y="20" width="200" height="92" rx="4"/>
+<text class="head" x="360" y="45" text-anchor="middle" xml:space="preserve">2 · Patch on Run</text>
+<text class="" x="360" y="70" text-anchor="middle" xml:space="preserve">0104h ← F7h (RST 30h)</text>
+<text class="" x="360" y="90" text-anchor="middle" xml:space="preserve">CPU runs full speed</text>
+<path class="arrow" d="M462 66 L490 66" marker-end="url(#arrow)"/>
+<rect class="" x="496" y="20" width="200" height="92" rx="4"/>
+<text class="head" x="596" y="45" text-anchor="middle" xml:space="preserve">3 · Trap and restore</text>
+<text class="" x="596" y="70" text-anchor="middle" xml:space="preserve">0104h ← D1h restored</text>
+<text class="" x="596" y="90" text-anchor="middle" xml:space="preserve">&gt;PC 0104   SP 98FCBP</text>
+
+<rect class="" x="24" y="138" width="672" height="72" rx="4"/>
+<text class="head" x="360" y="163" text-anchor="middle" xml:space="preserve">Code column marks</text>
+<text class="" x="360" y="188" text-anchor="middle" xml:space="preserve">&gt;  selected row    →  program counter</text>
+<text class="" x="360" y="208" text-anchor="middle" xml:space="preserve">□  user breakpoint    █  PC on breakpoint</text>
+<text class="note" x="360" y="230" text-anchor="middle" xml:space="preserve">Up to eight user breakpoints can be active inside the loaded COM image.</text>
 </svg>
