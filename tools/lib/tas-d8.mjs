@@ -18,7 +18,9 @@ export function decodeImage(dbg, raw, expectedOrigin) {
   assert.equal(header[5], 0, 'TDBG flags');
   const origin = header.readUInt16LE(6), end = header.readUInt16LE(8) || 0x10000;
   const globalsAt = header.readUInt16LE(12) * 128, count = header.readUInt16LE(14);
-  assert.ok(globalsAt > 0 && globalsAt + count * 8 <= dbg.length - 128, 'TDBG global extent');
+  // Format 2 with a statement stream puts the globals after it; without one
+  // they start at record 0.
+  assert.ok(globalsAt >= 0 && globalsAt + count * 8 <= dbg.length - 128, 'TDBG global extent');
   assert.equal(origin, expectedOrigin, 'wrong TDBG origin');
   assert.ok(end > origin && end <= 0x10000, 'TDBG image extent');
   const len = end - origin;
@@ -206,7 +208,10 @@ export function tasImage(dbg, raw, staged, pin, source, entry, expectedOrigin) {
   const diagnostic = entry === 'diag.asm';
   assert.ok(origin < romBase && end > romBase && end <= (diagnostic ? 0xfff6 : 0x10000), 'ROM image extent');
   assert.ok(raw.subarray(0, romBase - origin).every(b => b === 0), 'nonzero reservation bytes before ROM');
-  const { statements, regions, parts } = decodeStatements(dbg, staged, end, globalsAt);
+  // TAS from Thorium cf5460c writes no statement stream: the map then has the
+  // symbols and the ROM's one segment, and no per-line placement check.
+  const stream = globalsAt > 0;
+  const { statements, regions, parts } = stream ? decodeStatements(dbg, staged, end, globalsAt) : { statements: [], regions: [], parts: [] };
   const { perFile, definitions, fileList } = source;
   const files = Object.fromEntries(fileList.map(f => [f, {}]));
   const symbols = [];
@@ -255,7 +260,7 @@ export function tasImage(dbg, raw, staged, pin, source, entry, expectedOrigin) {
     // D8 classifies emitted DS fills as code. TAS encodes them as byte regions.
     ranges.get(file).push({ start: s.address, end: endAt, line: s.line, kind: source.filled ? 'code' : kind });
   }
-  assert.equal(unplaced.size, 0, 'missing emitting source lines');
+  if (stream) assert.equal(unplaced.size, 0, 'missing emitting source lines');
   let cursor;
   for (const [i, s] of perFile.get(ramFile).entries()) {
     if (!s.op) continue;
