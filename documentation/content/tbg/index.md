@@ -18,9 +18,9 @@ TBG operates entirely through the TEC-1G's 20 × 4 character LCD and matrix keyb
 
 ## Memory and optional symbols
 
-Every resident service reduces the transient program area available below it. TBG's core service, `TBG.SVC`, fits within 32 pages (8,192 bytes) and currently uses 30 pages (7,522 bytes). That compact footprint leaves room for substantial `.COM` programs alongside registers, disassembly, stack, memory inspection, breakpoints and live editing.
+Every resident service reduces the transient program area available below it. TBG's core service, `TBG.SVC`, fits within 8 KiB and uses about 7.5 KiB. That compact footprint leaves room for substantial `.COM` programs alongside registers, disassembly, stack, memory inspection, breakpoints and live editing.
 
-On its own, TBG displays hexadecimal addresses. You can load a second optional service, `TBGSYM.SVC`, whenever you want your own assembly labels in the disassembly and a browsable list of symbols. It reads the `.TBG` file that `TAS` writes beside each `.COM` file and attaches to TBG through a resident hook. Because `TBGSYM.SVC` claims another five pages of memory (1,142 bytes), it stays separate from the core. Load it when named labels help. Leave it unloaded when your program needs the extra memory.
+On its own, TBG displays hexadecimal addresses. You can load a second optional service, `TBGSYM.SVC`, whenever you want your own assembly labels in the disassembly and a browsable list of symbols. It reads the `.TBG` file that `TAS` writes beside each `.COM` file and attaches to TBG through a resident hook. Because `TBGSYM.SVC` takes another 1.25 KiB of memory, it stays separate from the core. Load it when named labels help. Leave it unloaded when your program needs the extra memory.
 
 ## The intended reader
 

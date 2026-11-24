@@ -13,15 +13,15 @@ By the time a program grows past a few routines, hexadecimal addresses slow you 
 
 ## Symbols as a separate service
 
-Every byte of resident debugger code comes directly out of the transient program area below it. TBG's core service uses 30 pages (7,522 bytes) within a hard 8 KiB ceiling. Folding symbol loading, checksum verification, label lookup and a fifth view into that core would push every session past that limit. You would pay that memory cost even when debugging a raw `.COM` with no source or testing a large program that needs every free page.
+Every byte of resident debugger code comes directly out of the transient program area below it. TBG's core service uses about 7.5 KiB within a hard 8 KiB ceiling. Folding symbol loading, checksum verification, label lookup and a fifth view into that core would push every session past that limit. You would pay that memory cost even when debugging a raw `.COM` with no source or testing a large program that needs every free kilobyte.
 
 Keeping symbols in `TBGSYM.SVC` makes that memory cost a choice:
 
-- **`TBG.SVC`** (30 pages, 7,522 bytes) publishes a named registry record called `TBGHOOK` containing a table of extension hooks.
-- **`TBGSYM.SVC`** (5 pages, 1,142 bytes) declares `TBGHOOK` as a dependency, claims five pages below `TBG.SVC` at `INIT` and installs its symbol callbacks into that table.
+- **`TBG.SVC`** (about 7.5 KiB) publishes a named registry record called `TBGHOOK` containing a table of extension hooks.
+- **`TBGSYM.SVC`** (about 1.25 KiB) declares `TBGHOOK` as a dependency, loads directly below `TBG.SVC` at `INIT` and installs its symbol callbacks into that table.
 - `TBG.SVC` places the program ceiling below the lowest resident service, so `TBGSYM.SVC` sits safely above the program being debugged.
 
-![TBG.SVC publishes TBGHOOK in 30 pages. TBGSYM.SVC loads below it in 5 pages, checks NAME.TBG at each launch and peels off cleanly with UNLOAD.](/images/tbg/tbgsym-hook.svg)
+![TBG.SVC publishes TBGHOOK in about 7.5 KiB. TBGSYM.SVC loads below it in about 1.25 KiB, checks NAME.TBG at each launch and peels off cleanly with UNLOAD.](/images/tbg/tbgsym-hook.svg)
 
 That layered design keeps the workflow simple. Load `TBG` first and `TBGSYM` second, once per session:
 
@@ -31,7 +31,7 @@ A>TBGSYM
 A>TBG B:FILL
 ```
 
-CP/M prints `TBGSYM?` (or `TBGSYM.SVC?`) if `TBG.SVC` is not already resident. It also refuses the load when fewer than five pages remain above `8000h`. Type `UNLOAD` at the prompt whenever you want those five pages back. TEC-OS always removes the newest resident service first. `UNLOAD` therefore runs `TBGSYM.SVC`'s removal routine, restores `TBGHOOK` and leaves `TBG.SVC` resident without symbols.
+CP/M prints `TBGSYM?` (or `TBGSYM.SVC?`) if `TBG.SVC` is not already resident. It also refuses the load when fewer than 1.25 KiB remain free above `8000h`. Type `UNLOAD` at the prompt whenever you want that memory back. TEC-OS always removes the newest resident service first. `UNLOAD` therefore runs `TBGSYM.SVC`'s removal routine, restores `TBGHOOK` and leaves `TBG.SVC` resident without symbols.
 
 You can also combine `TBGSYM.SVC` with an armed launch from Chapter 3:
 

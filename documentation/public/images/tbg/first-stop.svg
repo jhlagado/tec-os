@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="318" viewBox="0 0 720 318" role="img" aria-labelledby="title desc">
-<title id="title">TBG in high TPA with separate console and LCD paths</title>
-<desc id="desc">ROM occupies C000h to FFFFh above upper RAM. Resident workspace and the BDOS stub sit at the top of upper RAM, with TBG.SVC (30 pages) below them. A COM program loads at 0100h below (0006h) and uses the main console (PICO9918, serial TTY or GLCD), while TBG uses only the 20x4 character LCD and matrix keyboard.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="266" viewBox="0 0 720 266" role="img" aria-labelledby="title desc">
+<title id="title">TBG in high memory with separate console and LCD paths</title>
+<desc id="desc">TEC-OS ROM sits at C000h to FFFFh. TBG.SVC (about 7.5 KiB) loads at the top of RAM below the ROM. The program runs from 0100h up to the address at 0006h where TBG begins, above page zero. TBG uses the 20x4 LCD and matrix keyboard while the program keeps the main console.</desc>
 <defs><style>
 svg {color:#233333;--panel:#edf4ee;--edge:#648479;--accent:#155c48;--paper:#fff}
 @media(prefers-color-scheme:dark) {svg {color:#eef4ef;--panel:#172c27;--edge:#739888;--accent:#a3dfbd;--paper:#1c1f22}}
@@ -14,33 +14,28 @@ text {fill:currentColor;font:14px ui-monospace,monospace}
 .highlight {stroke:var(--accent);stroke-width:2.5}
 </style>
 <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L8 4 L0 8 Z" fill="var(--accent)"/></marker></defs>
-<text class="head" x="198" y="24" text-anchor="middle" xml:space="preserve">Memory layout (not to scale)</text>
-<text class="head" x="544" y="24" text-anchor="middle" xml:space="preserve">Separate human interfaces</text>
-<rect class="" x="82" y="40" width="236" height="36" rx="4"/>
-<text class="" x="200" y="63" text-anchor="middle" xml:space="preserve">C000h–FFFFh · TEC-OS ROM</text>
-<rect class="" x="82" y="76" width="236" height="36" rx="4"/>
-<text class="" x="200" y="99" text-anchor="middle" xml:space="preserve">Resident workspace (upper RAM)</text>
-<rect class="highlight" x="82" y="112" width="236" height="52" rx="4"/>
-<text class="head" x="200" y="134" text-anchor="middle" xml:space="preserve">TBG.SVC (30 pages)</text>
-<text class="" x="200" y="154" text-anchor="middle" xml:space="preserve">Resident debugger in RAM</text>
-<rect class="" x="82" y="164" width="236" height="68" rx="4"/>
-<text class="head" x="200" y="190" text-anchor="middle" xml:space="preserve">Program at 0100h</text>
-<text class="" x="200" y="213" text-anchor="middle" xml:space="preserve">Code, data and stack</text>
-<rect class="" x="82" y="232" width="236" height="34" rx="4"/>
-<text class="" x="200" y="254" text-anchor="middle" xml:space="preserve">Page zero (0000h–00FFh)</text>
-<text class="small" x="74" y="80" text-anchor="end" xml:space="preserve">C000h</text>
-<text class="accent" x="74" y="170" text-anchor="end" xml:space="preserve">(0006h)</text>
-<text class="small" x="74" y="236" text-anchor="end" xml:space="preserve">0100h</text>
-<path class="arrow" d="M320 138 L396 118" marker-end="url(#arrow)"/>
-<path class="arrow" d="M320 198 L396 212" marker-end="url(#arrow)"/>
-<rect class="highlight" x="400" y="68" width="296" height="94" rx="4"/>
-<text class="head" x="548" y="93" text-anchor="middle" xml:space="preserve">20 × 4 LCD + matrix keys</text>
-<text class="" x="548" y="118" text-anchor="middle" xml:space="preserve">&gt;PC 0100   SP 98FEST</text>
-<text class="" x="548" y="138" text-anchor="middle" xml:space="preserve">TBG stays off the console</text>
-<rect class="" x="400" y="174" width="296" height="84" rx="4"/>
-<text class="head" x="548" y="199" text-anchor="middle" xml:space="preserve">Main console (9918 / TTY / GLCD)</text>
-<text class="" x="548" y="224" text-anchor="middle" xml:space="preserve">A&gt;TBG B:HELLO</text>
-<text class="" x="548" y="244" text-anchor="middle" xml:space="preserve">Hello from TEC-OS</text>
-<text class="note" x="360" y="292" text-anchor="middle" xml:space="preserve">ROM is read-only at C000h–FFFFh; resident workspace and TBG sit in upper RAM below it.</text>
-<text class="note" x="360" y="312" text-anchor="middle" xml:space="preserve">TBG writes nothing to the main console. Focus the LCD in the Viewer; F6 returns to 9918.</text>
+<text class="head" x="204" y="24" text-anchor="middle" xml:space="preserve">Memory (not to scale)</text>
+<text class="head" x="548" y="24" text-anchor="middle" xml:space="preserve">Separate displays</text>
+<rect class="" x="84" y="42" width="240" height="36" rx="4"/>
+<text class="head" x="204" y="65" text-anchor="middle" xml:space="preserve">TEC-OS ROM</text>
+<rect class="highlight" x="84" y="78" width="240" height="46" rx="4"/>
+<text class="head" x="204" y="106" text-anchor="middle" xml:space="preserve">TBG.SVC (~7.5 KiB)</text>
+<rect class="" x="84" y="124" width="240" height="56" rx="4"/>
+<text class="head" x="204" y="157" text-anchor="middle" xml:space="preserve">Program (TPA)</text>
+<rect class="" x="84" y="180" width="240" height="36" rx="4"/>
+<text class="" x="204" y="203" text-anchor="middle" xml:space="preserve">Page zero</text>
+<text class="small" x="76" y="48" text-anchor="end" xml:space="preserve">FFFFh</text>
+<text class="small" x="76" y="82" text-anchor="end" xml:space="preserve">C000h</text>
+<text class="accent" x="76" y="128" text-anchor="end" xml:space="preserve">(0006h)</text>
+<text class="small" x="76" y="184" text-anchor="end" xml:space="preserve">0100h</text>
+<text class="small" x="76" y="216" text-anchor="end" xml:space="preserve">0000h</text>
+<path class="arrow" d="M326 101 L412 95" marker-end="url(#arrow)"/>
+<path class="arrow" d="M326 152 L412 169" marker-end="url(#arrow)"/>
+<rect class="highlight" x="416" y="62" width="264" height="66" rx="4"/>
+<text class="head" x="548" y="87" text-anchor="middle" xml:space="preserve">20 × 4 LCD</text>
+<text class="" x="548" y="112" text-anchor="middle" xml:space="preserve">Matrix keyboard</text>
+<rect class="" x="416" y="140" width="264" height="66" rx="4"/>
+<text class="head" x="548" y="165" text-anchor="middle" xml:space="preserve">Main console</text>
+<text class="" x="548" y="190" text-anchor="middle" xml:space="preserve">9918 / TTY / GLCD</text>
+<text class="note" x="360" y="248" text-anchor="middle" xml:space="preserve">TBG is loaded at the top of RAM, below the ROM. Program memory ends where TBG begins (0006h).</text>
 </svg>

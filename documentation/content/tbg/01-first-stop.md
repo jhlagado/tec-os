@@ -58,11 +58,11 @@ The greeting appears on the main console and the prompt returns immediately. Ins
 
 A CP/M `.COM` program loads at `0100h` and grows upwards into the transient program area (TPA). A resident service loads from the top of the TPA downwards. Installation lowers the ceiling word at `0006h` so transient programs stay below the service.
 
-`TBG.SVC` occupies 30 pages (7,522 bytes) of that high memory and is capped at 32 pages (8,192 bytes). On the standard starter card, `SHELL.SVC` is already loaded at boot (`SERVICES` reports `SHELL 18`), leaving too little room above `8000h` for TBG. Running `UNLOAD` at the prompt removes the newest resident service one at a time until you return to the bare `A>` CP/M prompt. Remove or omit any other boot services when you need space for TBG.
+`TBG.SVC` takes about 7.5 KiB of that high memory and is capped at 8 KiB. On the standard starter card, `SHELL.SVC` is already loaded at boot, leaving too little room above `8000h` for TBG. Running `UNLOAD` at the prompt removes the newest resident service one at a time until you return to the bare `A>` CP/M prompt. Remove or omit any other boot services when you need space for TBG.
 
 Once installed, TBG stays resident across warm boots. Whenever a debugged program stops, TBG claims the 20 × 4 character LCD and the matrix keyboard. It writes nothing to the main console. Your program keeps using the PICO9918 display, a serial terminal or a graphics LCD without TBG overwriting a single character of its output.
 
-![TBG sits in 30 pages at the top of the TPA and uses only the 20 × 4 character LCD and matrix keyboard while the program keeps the main console.](/images/tbg/first-stop.svg)
+![TBG is loaded at the top of RAM below the ROM and uses only the 20 × 4 character LCD and matrix keyboard while the program keeps the main console.](/images/tbg/first-stop.svg)
 
 On physical hardware, the character LCD and matrix keyboard are always in front of you. In the browser Viewer, one PC keyboard feeds both displays so you switch focus explicitly:
 

@@ -61,7 +61,7 @@ TBG limits letter commands to five keys: `R`, `B`, `G`, `E` and `H`. Every other
 
 | Symptom | Cause and fix |
 | --- | --- |
-| CP/M prints `TBG.SVC?` | Check the filename and drive, or free memory above `8000h`. `TBG.SVC` needs 30 resident pages (up to 32). Run `UNLOAD` to remove `SHELL.SVC` or other services. |
+| CP/M prints `TBG.SVC?` | Check the filename and drive, or free memory above `8000h`. `TBG.SVC` needs about 7.5 KiB (capped at 8 KiB). Run `UNLOAD` to remove `SHELL.SVC` or other services. |
 | Viewer shows Registers but keys do nothing | Click the character LCD to focus it, then press and release the key. |
 | `Tab` moves browser focus off the LCD | Use a Viewer build with LCD `Tab` capture. `F6` returns focus to the 9918 display. |
 | `H` prints `No help: TBG.HLP` | Copy `TBG.HLP` beside `TBG.SVC` or onto drive A. |
@@ -75,17 +75,17 @@ TBG limits letter commands to five keys: `R`, `B`, `G`, `E` and `H`. Every other
 | `Ctrl+Space` runs for a long time | Press any key to stop the trace. A routine with a long loop before `RET` takes many steps. |
 | `Ctrl+Esc` does not stop a running program | It breaks at the next BDOS call (`0005h`). A tight loop that never calls the OS needs a breakpoint. During a line read, hold `Ctrl+Esc` as you press `Enter`. |
 | `SY` is absent and Code shows no labels | Load `TBGSYM.SVC` after `TBG.SVC`, and reassemble with `TAS` so `.TBG` matches `.COM`. |
-| CP/M prints `TBGSYM.SVC?` | Load `TBG.SVC` first and ensure five free pages remain above `8000h`. |
+| CP/M prints `TBGSYM.SVC?` | Load `TBG.SVC` first and ensure at least 1.25 KiB remains free above `8000h`. |
 | `TBG.SVC ARM` prints `ARM needs ABI 5.3` | The ROM lacks `COMVEC`. Use `TBG.SVC NAME` or update to TEC-OS ABI 5.3 or later. |
 | LCD prints `TBG: no COM` or `Too big:` | Check the program name, drive and available TPA. TBG returns failure code `FF00h` to CP/M. |
 
 ## Building TBG from source
 
-TBG lives in its own repository alongside Thorium and TEC-OS. Clone `jhlagado/tbg` beside your `thorium` and `tec-os` checkouts, run `npm ci` in `thorium`, then run `npm run build` in `tbg`. The build checks that the core footprint stays within 32 pages and writes three files:
+TBG lives in its own repository alongside Thorium and TEC-OS. Clone `jhlagado/tbg` beside your `thorium` and `tec-os` checkouts, run `npm ci` in `thorium`, then run `npm run build` in `tbg`. The build checks that the core footprint stays within 8 KiB and writes three files:
 
-- `build/TBG.SVC`: the core resident LCD debugger (30 pages, 7,522 resident bytes)
+- `build/TBG.SVC`: the core resident LCD debugger (about 7.5 KiB)
 - `build/TBG.HLP`: the context-sensitive help pages opened by `H`
-- `build/TBGSYM.SVC`: the optional symbols extension (5 pages, 1,142 resident bytes)
+- `build/TBGSYM.SVC`: the optional symbols extension (about 1.25 KiB)
 
 Copy all three files to your TEC-OS disk. Any standard TEC-OS ROM supports direct launches and every exercise in this book. `TBG.SVC ARM` requires ABI 5.3 or later.
 
