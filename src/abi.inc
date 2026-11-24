@@ -331,6 +331,24 @@ LATCHV EQU $0040
 ; writes that key here.
 
 KBLAST EQU $BFEF
+
+; The armed COM launch, a word, 0 when
+; none. A resident service sets it to a
+; callback in its own pages; CMDRUN
+; calls it for a COM entered at 0100h,
+; after page zero is prepared, with
+; HL=0100h, DE=the image's end, BC=the
+; closed loader FCB (drive and name) and
+; A=the user the COM was loaded from. A
+; return leaves the launch to the CCP;
+; an owner never returns, and the COM's
+; exit warm boots. The service clears it
+; when it takes the launch, when the arm
+; is cancelled and at REMOVE. Warm boot
+; and page release clear it when its
+; page is freed.
+
+COMVEC EQU $BF62
 LCDCMD EQU $04   ; command write, busy
                  ; flag and address read
 LCDDAT EQU $84   ; character data

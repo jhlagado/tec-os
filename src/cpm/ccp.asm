@@ -534,6 +534,10 @@ CMDRN1:
   ld a,(CMDFCB)  ; source FCB drive byte
   ld (PZLDRV),a  ; publish loaded drive
   pop de         ; the entry
+  ld hl,(CVSLOT) ; an armed launch
+  ld a,h
+  or l
+  call nz,COMHOOK
 
 ; The transient's two-byte return word
 ; is outside default DMA (0080h..00FFh).
@@ -723,6 +727,32 @@ LOADOK:
                  ; descriptor
   DB 16*2+0      ; 16: CMDFCB
   or a           ; ignore close result
+  ret
+
+; COMVEC's callback, for entry 0100h
+; only, with HL=0100h, DE=LOADTOP,
+; BC=CMDFCB and A=the loading user. A
+; return leaves the launch to the CCP;
+; an owner never returns.
+
+COMHOOK:
+  ld a,d
+  dec a
+  or e
+  ret nz         ; a service's entry
+  push bc
+  push de
+  call COMHID
+  pop de
+  pop bc
+  ret
+
+COMHID:
+  push hl        ; the callback
+  ld hl,TPA
+  ld de,(LOADTOP)
+  ld bc,CMDFCB
+  ld a,(USERNO)
   ret
 
 ; Return a non-EOF read failure: input

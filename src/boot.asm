@@ -319,9 +319,10 @@ PZINIT:
   ld (hl),HIGH(BENTRY)
 
 ; Sweep after warm boot or service-page
-; release. First drop the shell hook if
-; its table lies below PZTOP's page,
-; where pages were freed. RST 1 to 6 are
+; release. First drop the COM launch
+; vector and the shell hook if each lies
+; below PZTOP's page, where pages were
+; freed. RST 1 to 6 are
 ; programs' and the debugger's: each
 ; becomes seven zeros and RET. 0038h
 ; keeps a JP whose target is strictly
@@ -332,6 +333,15 @@ PZINIT:
 ; carry clear. Change AF/BC/HL.
 
 PZSWP:
+  ld hl,PZTOP+1  ; freed pages drop
+  ld a,(CVSLOT+1) ; the launch vector
+  cp (hl)
+  jr nc,PZSWV
+  xor a
+  ld (CVSLOT),a
+  ld (CVSLOT+1),a
+
+PZSWV:
   ld a,(SHOWN+1)
   ld hl,PZTOP+1  ; the table's page
   cp (hl)

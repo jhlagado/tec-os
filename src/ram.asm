@@ -128,6 +128,15 @@ VSBOT: DS 1
 VCLAIM: DS 1     ; CDCLM while claimed
 CONMOD: DS 1     ; effective mode
 
+; On SVCLOAD failure (carry set):
+; SVCRC: 0 refused, 1 failed with pages
+; removed, 2 failed with pages retained.
+; For 1, SVCRA gives INIT's A or 0 after
+; registry validation failure.
+
+SVCRC: DS 1
+SVCRA: DS 1
+
 ; Warm boot's BIOS stack, outside
 ; CCPCLR..BDOSRME. Cold boot and DIAG
 ; use STKTOP (KE-173).
@@ -383,14 +392,14 @@ SVCHEAD:
 SVCGEN: DS 1     ; removal generation
 SHOWN: DS 2      ; the shell's table, 0
 
-; On SVCLOAD failure (carry set):
-; SVCRC: 0 refused, 1 failed with pages
-; removed, 2 failed with pages retained.
-; For 1, SVCRA gives INIT's A or 0 after
-; registry validation failure.
+; The armed COM launch: 0, or a
+; resident service's callback, entered
+; by CMDRUN for a COM at 0100h. abi.inc
+; publishes it as COMVEC. Warm boot and
+; page release clear it when its page
+; is below PZTOP's.
 
-SVCRC: DS 1
-SVCRA: DS 1
+CVSLOT: DS 2
 
 ; Startup and chaining state. Chained
 ; pieces inherit STFLAG. STBOOT marks

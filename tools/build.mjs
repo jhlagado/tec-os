@@ -152,6 +152,7 @@ function checkAbi(at, rom) {
   const bits = { HWBMTX: "CDMTX", HWBPICO: "CDTMS", HWBGLCD: "CDGLC", HWBRTC: "CDRTC", HWBCLM: "CDCLM", HWBWRD: "CDWRD" };
   for (const [n, cd] of Object.entries(bits)) check(at(n) === at(cd), `abi.inc: ${n} is not ${cd}`);
   check(at("KBLAST") === at("KBSLOT"), `abi.inc's KBLAST is ${hex(at("KBLAST"))}, the workspace's byte is at ${hex(at("KBSLOT"))}`);
+  check(at("COMVEC") === at("CVSLOT"), `abi.inc's COMVEC is ${hex(at("COMVEC"))}, the workspace's word is at ${hex(at("CVSLOT"))}`);
 }
 
 /** abi.inc's PICOREG to PICOWID, and the places a debugger reads, against the
