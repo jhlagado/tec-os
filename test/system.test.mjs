@@ -188,7 +188,7 @@ const G1M = (mount, label) => ({ geometry: "G1M", label, mount });
 const G8M = (mount, label) => ({ geometry: "G8M", label, mount });
 const CARDS = [
   { name: "the two-volume reference card", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK")], entry: 0xb986 },
-  { name: "the reference card with C:", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK"), G1M("C", "MORE")], entry: 0xb948 },
+  { name: "the reference card with C:", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK"), G1M("C", "MORE")], entry: 0xb946 },
   { name: "four 8 MiB volumes", volumes: ["A", "B", "C", "D"].map((d) => G8M(d, `VOL${d}`)), entry: 0xb6c6 },
 ];
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
