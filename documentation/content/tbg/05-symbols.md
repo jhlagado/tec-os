@@ -7,47 +7,49 @@ nav_group: Using TBG
 
 # 5. Debugging with source symbols
 
-By the time a program grows past a few routines, hexadecimal addresses slow you down. Every time you insert an instruction near the top of your source and reassemble with `TAS`, every label below it shifts by a few bytes. Checking `014Dh` against your listing breaks your concentration just when you are trying to follow a bug.
+Hexadecimal addresses are fine on a ten-byte loop. Once a program grows past a few routines, every edit near the top of your source shifts every address below it after reassembly, and checking `014Dh` against a listing breaks your stride right when you are closing in on a bug.
 
-`TAS` already writes a symbol file called `NAME.TBG` beside every `NAME.COM` it assembles. To display those labels on the LCD, you load a second resident service, `TBGSYM.SVC`, on top of `TBG.SVC`.
+`TAS` already writes a companion `NAME.TBG` symbol file beside every `NAME.COM`. Loading a second resident service, `TBGSYM.SVC`, brings those labels onto the LCD.
 
-## Symbols as a separate service
+## Symbols as an optional service
 
-Every byte of resident debugger code comes directly out of the transient program area below it. TBG's core service uses 30 pages (7,522 bytes) within a hard 8 KiB ceiling. Folding symbol loading, checksum verification, label lookup and a fifth view into that core would push every session past that limit. You would pay that memory cost even when debugging a raw `.COM` with no source or testing a large program that needs every free page.
+Every kilobyte of resident debugger code comes out of the TPA below it. `TBG.SVC` stays inside an 8 KiB cap and uses about 7.5 KiB. Baking symbol loading, checksum checks, label lookup and a fifth view into the core would push every session past that cap, even when you are debugging a bare `.COM` with no source or testing a big program that needs all the RAM it can get.
 
-Keeping symbols in `TBGSYM.SVC` makes that memory cost a choice:
+Splitting symbols into `TBGSYM.SVC` leaves the trade in your hands:
 
-- **`TBG.SVC`** (30 pages, 7,522 bytes) publishes a named registry record called `TBGHOOK` containing a table of extension hooks.
-- **`TBGSYM.SVC`** (5 pages, 1,142 bytes) declares `TBGHOOK` as a dependency, claims five pages below `TBG.SVC` at `INIT` and installs its symbol callbacks into that table.
-- `TBG.SVC` places the program ceiling below the lowest resident service, so `TBGSYM.SVC` sits safely above the program being debugged.
+- **`TBG.SVC`** (~7.5 KiB) publishes a registry record called `TBGHOOK` holding a table of extension hooks.
+- **`TBGSYM.SVC`** (~1.25 KiB) requires `TBGHOOK`, loads directly beneath `TBG.SVC` and plugs its symbol routines into that table.
+- Because TBG places the program ceiling below the lowest resident service, `TBGSYM.SVC` sits safely above the program under test.
 
-![TBG.SVC publishes TBGHOOK in 30 pages. TBGSYM.SVC loads below it in 5 pages, checks NAME.TBG at each launch and peels off cleanly with UNLOAD.](/images/tbg/tbgsym-hook.svg)
+![TBG.SVC publishes TBGHOOK in about 7.5 KiB. TBGSYM.SVC loads below it in about 1.25 KiB, checks NAME.TBG at each launch and peels off cleanly with UNLOAD.](/images/tbg/tbgsym-hook.svg)
 
-That layered design keeps the workflow simple. Load `TBG` first and `TBGSYM` second, once per session:
+Install `TBG` first and `TBGSYM` second on drive A, once per session, then switch back to drive B:
 
 ```text
 A>TBG
 A>TBGSYM
-A>TBG B:FILL
+A>B:
+B>TBG FILL
 ```
 
-CP/M prints `TBGSYM?` (or `TBGSYM.SVC?`) if `TBG.SVC` is not already resident. It also refuses the load when fewer than five pages remain above `8000h`. Type `UNLOAD` at the prompt whenever you want those five pages back. TEC-OS always removes the newest resident service first. `UNLOAD` therefore runs `TBGSYM.SVC`'s removal routine, restores `TBGHOOK` and leaves `TBG.SVC` resident without symbols.
+CP/M prints `TBGSYM?` if `TBG.SVC` is not yet resident or if less than 1.25 KiB remains free above `8000h`. Whenever you want that 1.25 KiB back, run `UNLOAD`. TEC-OS always removes the newest resident service first, so `UNLOAD` detaches `TBGSYM.SVC`, restores `TBGHOOK` and leaves `TBG.SVC` resident without symbols.
 
-You can also combine `TBGSYM.SVC` with an armed launch from Chapter 3:
+You can also pair `TBGSYM` with an armed launch from Chapter 3:
 
 ```text
 A>TBG ARM
 A>TBGSYM
-A>B:FILL
+A>B:
+B>FILL
 ```
 
 ## Verifying `.TBG` symbol files
 
-Stale symbols are worse than no symbols at all. Suppose you edit `FILL.ASM` and rebuild `FILL.COM` on another machine without copying the new `FILL.TBG`. Labels at old addresses would point straight into the middle of the wrong instructions.
+Stale symbols are worse than none. Edit `FILL.ASM` and copy over a fresh `FILL.COM` without updating `FILL.TBG`, and old labels would land in the middle of the wrong instructions.
 
-Each time TBG launches a program with `TBGSYM.SVC` resident, `TBGSYM` looks for the `.TBG` file beside the `.COM` file and reads its trailing header record. That header records the image's end address and a 16-bit modular checksum of every byte in the assembled `.COM` image. `TBGSYM` sums the loaded image in memory and compares both values.
+Each time TBG starts a program while `TBGSYM` is resident, `TBGSYM` opens the `.TBG` file beside the `.COM` and reads its trailing header record. That header holds the image's end address and a 16-bit checksum of every byte in the assembled image. `TBGSYM` sums the loaded image in RAM and checks both numbers.
 
-- **Exact match:** Symbols activate for the session and `SY` appears at the right end of row 2 in Registers:
+When both match, symbols turn on and `SY` lights up at the right end of row 2 in Registers:
 
 ```text
 >PC 0100   SP 98FEST
@@ -56,11 +58,11 @@ Each time TBG launches a program with `TBGSYM.SVC` resident, `TBGSYM` looks for 
  IX 0000   IY 0000..
 ```
 
-- **Missing or mismatched `.TBG`:** `TBGSYM` ignores the file silently, `SY` stays absent and TBG debugs normally with raw hex addresses. Reassembling the source with `TAS` writes a fresh matching pair of `.COM` and `.TBG` files.
+When the `.TBG` file is absent or stale, `TBGSYM` ignores it quietly, `SY` stays off and TBG works in raw hex until you reassemble with `TAS`.
 
-## Working with labels on the LCD
+## Labels in Code
 
-Launch `TBG B:FILL` with `TBGSYM.SVC` loaded and step four times with `Space` (`LD HL,BUF`, `LD B,4`, `LD (HL),B`, `INC HL`) so `PC` reaches `0107h`. Pressing `Tab` opens Code with your own labels inline:
+Start `TBG FILL` with `TBGSYM` loaded and tap `Space` four times (`LD HL,BUF`, `LD B,4`, `LD (HL),B`, `INC HL`) so `PC` lands on `0107h`. Press `Tab` to open Code:
 
 ```text
 >→0107 DJNZ FILL
@@ -69,17 +71,15 @@ BUF:
   010A INC B
 ```
 
-Three details stand out on those four lines:
+Three details jump out on those four lines:
 
-- **Label rows:** A label defined at an address sits on its own row immediately above that address, such as `START:`, `FILL:` and `BUF:`. The instruction below retains its hexadecimal address.
-- **Named branch and indirect operands:** Jump targets (`DJNZ FILL`), call targets and bracketed addresses (`(nn)`) show label names wherever a match exists. Immediate 16-bit loads such as `LD HL,010A` stay numeric because a raw 16-bit constant could be a number like `$1234` rather than an address.
-- **Data still disassembles in Code:** The last line reads `010A INC B`. That address is `BUF:`, where `LD (HL),B` just wrote `04h`, and `04h` happens to be the Z80 opcode for `INC B`. Seeing `BUF:` right above `010A` tells you immediately that those bytes belong to your data buffer rather than executable code.
-
-![TBGSYM.SVC active on FILL.COM in the TEC-OS Viewer: the 9918 console stays at the launch prompt while Code on the LCD shows DJNZ FILL and the BUF: label row.](/images/tbg/viewer-tbgsym-code.png)
+- **Label rows:** Any label defined at an address sits on its own row right above it (`START:`, `FILL:`, `BUF:`), while the instruction below keeps its hex address.
+- **Named jumps, calls and indirects:** Branch targets (`DJNZ FILL`), calls and bracketed addresses (`(nn)`) show label names when a match exists. Immediate 16-bit loads like `LD HL,010A` stay numeric because a 16-bit literal could be a plain constant like `$1234` rather than an address.
+- **Data still disassembles:** On row 4, `010A INC B` sits right under `BUF:`. The `04h` you just stored in `BUF` happens to be the Z80 opcode for `INC B`. Seeing `BUF:` directly above `010A` tells you at once that those bytes are your data buffer, not code.
 
 ## The fifth view: Symbols
 
-When `TBGSYM.SVC` matches a `.TBG` file, a fifth view called **Symbols** joins the `Tab` ring right after Memory (and one `Shift+Tab` backward from Registers). Press `Tab` from Memory to open it on `FILL.COM`:
+Whenever `TBGSYM` matches a `.TBG` file, a fifth view called **Symbols** joins the `Tab` ring right after Memory (and one `Shift+Tab` backward from Registers). Tab to it on `FILL`:
 
 ```text
 >0100 START
@@ -87,10 +87,4 @@ When `TBGSYM.SVC` matches a `.TBG` file, a fifth view called **Symbols** joins t
  010A BUF
 ```
 
-Symbols lists the program's global labels in ascending address order:
-
-- **`Up` / `Down`** move `>` through the list.
-- **`Enter`** jumps directly to Code at the selected label without moving `PC`. Pressing `Esc` returns to your place in Symbols.
-- **`B`** toggles a breakpoint at the selected label's address directly from Symbols, saving a trip through Code when you already have a routine name in mind.
-
-You now have the complete TBG workbench: building a baseline in `TED` and `TAS`, inspecting all four core views on the LCD, stopping full-speed programs four ways, editing live RAM and loading source symbols on demand. Chapter 6 gathers every key, indicator, troubleshooting check and build command into one quick reference.
+Symbols lists global labels in ascending address order. `Up` and `Down` move `>` through the list. Hit `Enter` to open Code at that label without disturbing `PC` (`Esc` brings you back to Symbols), or press `B` to toggle a breakpoint straight on that label's address without visiting Code first.

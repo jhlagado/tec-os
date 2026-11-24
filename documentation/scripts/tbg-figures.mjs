@@ -63,31 +63,28 @@ function add(name, title, desc, height, parts) {
 }
 
 // Chapter 1: Two-screen workbench and TPA layout
-add('first-stop', 'TBG in high TPA with separate console and LCD paths',
-  'ROM occupies C000h to FFFFh above upper RAM. Resident workspace and the BDOS stub sit at the top of upper RAM, with TBG.SVC (30 pages) below them. A COM program loads at 0100h below (0006h) and uses the main console (PICO9918, serial TTY or GLCD), while TBG uses only the 20x4 character LCD and matrix keyboard.', 318, [
-    text(198, 24, 'Memory layout (not to scale)', 'head', 'middle'),
-    text(544, 24, 'Separate human interfaces', 'head', 'middle'),
-    rect(82, 40, 236, 36),
-    text(200, 63, 'C000h–FFFFh · TEC-OS ROM', '', 'middle'),
-    rect(82, 76, 236, 36),
-    text(200, 99, 'Resident workspace (upper RAM)', '', 'middle'),
-    rect(82, 112, 236, 52, 'highlight'),
-    text(200, 134, 'TBG.SVC (30 pages)', 'head', 'middle'),
-    text(200, 154, 'Resident debugger in RAM', '', 'middle'),
-    rect(82, 164, 236, 68),
-    text(200, 190, 'Program at 0100h', 'head', 'middle'),
-    text(200, 213, 'Code, data and stack', '', 'middle'),
-    rect(82, 232, 236, 34),
-    text(200, 254, 'Page zero (0000h–00FFh)', '', 'middle'),
-    text(74, 80, 'C000h', 'small', 'end'),
-    text(74, 170, '(0006h)', 'accent', 'end'),
-    text(74, 236, '0100h', 'small', 'end'),
-    arrow(320, 138, 396, 118),
-    arrow(320, 198, 396, 212),
-    box(400, 68, '20 × 4 LCD + matrix keys', ['>PC 0100   SP 98FEST', 'TBG stays off the console'], 296, 94, 'highlight'),
-    box(400, 174, 'Main console (9918 / TTY / GLCD)', ['A>TBG B:HELLO', 'Hello from TEC-OS'], 296, 84),
-    note(292, 'ROM is read-only at C000h–FFFFh; resident workspace and TBG sit in upper RAM below it.'),
-    note(312, 'TBG writes nothing to the main console. Focus the LCD in the Viewer; F6 returns to 9918.')
+add('first-stop', 'TBG in high memory with separate console and LCD paths',
+  'TEC-OS ROM sits at C000h to FFFFh. TBG.SVC (about 7.5 KiB) loads at the top of RAM below the ROM. The program runs from 0100h up to the address at 0006h where TBG begins, above page zero. TBG uses the 20x4 LCD and matrix keyboard while the program keeps the main console.', 266, [
+    text(204, 24, 'Memory (not to scale)', 'head', 'middle'),
+    text(548, 24, 'Separate displays', 'head', 'middle'),
+    rect(84, 42, 240, 36),
+    text(204, 65, 'TEC-OS ROM', 'head', 'middle'),
+    rect(84, 78, 240, 46, 'highlight'),
+    text(204, 106, 'TBG.SVC (~7.5 KiB)', 'head', 'middle'),
+    rect(84, 124, 240, 56),
+    text(204, 157, 'Program (TPA)', 'head', 'middle'),
+    rect(84, 180, 240, 36),
+    text(204, 203, 'Page zero', '', 'middle'),
+    text(76, 48, 'FFFFh', 'small', 'end'),
+    text(76, 82, 'C000h', 'small', 'end'),
+    text(76, 128, '(0006h)', 'accent', 'end'),
+    text(76, 184, '0100h', 'small', 'end'),
+    text(76, 216, '0000h', 'small', 'end'),
+    arrow(326, 101, 412, 95),
+    arrow(326, 152, 412, 169),
+    box(416, 62, '20 × 4 LCD', ['Matrix keyboard'], 264, 66, 'highlight'),
+    box(416, 140, 'Console', ['Default display'], 264, 66),
+    note(248, 'TBG is loaded at the top of RAM, below the ROM. Program memory ends where TBG begins (0006h).')
   ]);
 
 // Chapter 2: View cycle, drill-down and stepping scopes
@@ -132,24 +129,24 @@ add('stack-step', 'PUSH HL in Stack view and in little-endian Memory',
 
 // Chapter 3: Breakpoint patch-and-restore lifecycle
 add('breakpoint', 'Software breakpoint patch and restore using RST 30h',
-  'Pressing B in Code registers a breakpoint at 0104h (POP DE, opcode D1h). While the program runs, TBG patches 0104h with F7h (RST 30h) and saves D1h. When the CPU hits F7h, TBG restores D1h, stops at PC 0104 with BP and keeps the breakpoint registered.', 242, [
-    row(20, [
-      ['1 · Mark in Code', '>□0104 POP DE', 'Saved byte: D1h'],
-      ['2 · Patch on Run', '0104h ← F7h (RST 30h)', 'CPU runs full speed'],
-      ['3 · Trap and restore', '0104h ← D1h restored', '>PC 0104   SP 98FCBP']
-    ], 92),
-    box(24, 138, 'Code column marks', ['>  selected row    →  program counter', '□  user breakpoint    █  PC on breakpoint'], 672, 72),
-    note(230, 'Up to eight user breakpoints can be active inside the loaded COM image.')
+  'Pressing B in Code registers a breakpoint at 0104h (POP DE, opcode D1h). While the program runs, TBG patches 0104h with F7h (RST 30h) and saves D1h. When the CPU hits F7h, TBG restores D1h, stops at PC 0104 with BP and keeps the breakpoint registered.', 252, [
+    box(16, 20, '1 · Mark in Code', ['>□0104 POP DE', 'Saved byte: D1h'], 212, 92),
+    arrow(230, 66, 250, 66),
+    box(254, 20, '2 · Patch on Run', ['0104h ← F7h (RST 30h)', 'CPU runs full speed'], 212, 92),
+    arrow(468, 66, 488, 66),
+    box(492, 20, '3 · Trap and restore', ['0104h ← D1h restored', '>PC 0104   SP 98FCBP'], 212, 92),
+    box(16, 136, 'Code column marks', ['>  selected row    →  program counter', '□  user breakpoint    █  PC on breakpoint'], 688, 82),
+    note(240, 'Up to eight user breakpoints can be active inside the loaded COM image.')
   ]);
 
 // Chapter 3: Four ways to stop a running program
 add('stop-paths', 'Four ways to stop a program at full speed',
-  'Comparison of four stop methods: R in Code with selection off PC runs once with no breakpoint left behind; B sets a persistent RST 30h breakpoint; holding Ctrl+Esc breaks at the next BDOS call (0005h); TBG ARM catches the next COM launch via ABI 5.3 COMVEC.', 256, [
-    box(24, 20, 'R off PC (one-shot)', ['Temporary stop at selection', 'No □ left behind', 'Ideal for loop exits'], 324, 96),
-    box(372, 20, 'B in Code (persistent)', ['Up to 8 RST 30h traps', 'Stays set across runs', 'Needs address inside COM'], 324, 96, 'highlight'),
-    box(24, 134, 'Ctrl+Esc held (break in)', ['Stops at next CALL 0005h', 'Return address sits on stack', 'Needs OS calls to trigger'], 324, 96),
-    box(372, 134, 'TBG ARM (next launch)', ['Hooks next CCP COM via COMVEC', 'Stops at 0100h with normal tail', 'Requires TEC-OS ABI 5.3+'], 324, 96),
-    note(248, 'Every stop lands in the same TBG inspection loop, where you can step, inspect or press R.')
+  'Comparison of four stop methods: R in Code with selection off PC runs once with no breakpoint left behind; B sets a persistent RST 30h breakpoint; holding Ctrl+Esc breaks at the next BDOS call (0005h); TBG ARM catches the next COM launch via ABI 5.3 COMVEC.', 224, [
+    box(24, 18, 'R off PC (one-shot)', ['Temporary stop at selection', 'No □ left behind'], 324, 82),
+    box(372, 18, 'B in Code (persistent)', ['Up to 8 RST 30h traps', 'Needs address inside COM'], 324, 82, 'highlight'),
+    box(24, 114, 'Ctrl+Esc held (break in)', ['Stops at next CALL 0005h', 'Return address sits on stack'], 324, 82),
+    box(372, 114, 'TBG ARM (next launch)', ['Catches next COM via COMVEC', 'Requires TEC-OS ABI 5.3+'], 324, 82),
+    note(216, 'Every stop lands in the same TBG inspection loop, where you can step, inspect or press R.')
   ]);
 
 // Chapter 4: Fixed vs register-following Memory and writable range
@@ -172,34 +169,34 @@ add('memory-follow', 'Following HL across the FILL.COM buffer in Memory',
       ['010E', '00', false]
     ], 80, 44),
     text(536, 120, '010B>00 00 00 00 HL', 'accent', 'middle'),
-    rect(24, 148, 120, 48),
-    text(84, 177, '0000h–00FFh', 'small', 'middle'),
-    rect(144, 148, 356, 48, 'highlight'),
-    text(322, 169, 'Writable with E (0100h to lowest service)', 'head', 'middle'),
-    text(322, 188, 'Program code, data and stack · EDT mode', 'small', 'middle'),
-    rect(500, 148, 196, 48),
-    text(598, 177, 'TBG / ROM (protected)', 'small', 'middle'),
+    rect(24, 148, 112, 48),
+    text(80, 177, '0000h–00FFh', 'small', 'middle'),
+    rect(136, 148, 376, 48, 'highlight'),
+    text(324, 169, 'Writable with E (0100h to lowest service)', 'head', 'middle'),
+    text(324, 188, 'Program code, data and stack · EDT mode', 'small', 'middle'),
+    rect(512, 148, 184, 48),
+    text(604, 177, 'TBG / ROM (protected)', 'small', 'middle'),
     note(226, 'Scrolling while following a register shows HL+. Opening via Tab or G uses FIX.'),
     note(252, 'Editing refuses addresses below 0100h or inside resident services so TBG stays intact.')
   ]);
 
 // Chapter 5: Two-service hook architecture (TBG.SVC + TBGSYM.SVC)
 add('tbgsym-hook', 'How TBGSYM.SVC attaches to TBG.SVC through TBGHOOK',
-  'TBG.SVC sits in 30 pages of high TPA and publishes a TBGHOOK record. Loading TBGSYM.SVC claims five pages below it, fills the hook table at INIT and verifies each program against its .TBG file checksum. UNLOAD removes TBGSYM.SVC first and restores TBGHOOK, leaving TBG.SVC resident.', 276, [
-    text(196, 26, 'Resident service stack', 'head', 'middle'),
-    text(532, 26, 'At each program launch', 'head', 'middle'),
-    rect(48, 42, 296, 62, 'highlight'),
-    text(196, 66, 'TBG.SVC (30 pages · 7,522 B)', 'head', 'middle'),
-    text(196, 88, 'Publishes TBGHOOK registry record', '', 'middle'),
-    arrow(196, 128, 196, 108),
-    rect(48, 130, 296, 66, 'highlight'),
-    text(196, 154, 'TBGSYM.SVC (5 pages · 1,142 B)', 'head', 'middle'),
-    text(196, 176, 'Hooks TBGHOOK · UNLOAD peels off', '', 'middle'),
-    rect(48, 196, 296, 44),
-    text(196, 223, 'Program TPA below TBGSYM', '', 'middle'),
-    box(392, 42, '1 · Read NAME.TBG', ['Check end address', 'Check image checksum'], 296, 84),
-    arrow(540, 128, 540, 150),
-    box(392, 154, '2 · Match enables symbols', ['SY on Registers · labels in Code', '5th Symbols view in Tab cycle'], 296, 86, 'highlight'),
+  'TBG.SVC sits in about 7.5 KiB at the top of RAM and publishes a TBGHOOK record. Loading TBGSYM.SVC takes about 1.25 KiB below it, fills the hook table at INIT and verifies each program against its .TBG file checksum. UNLOAD removes TBGSYM.SVC first and restores TBGHOOK, leaving TBG.SVC resident.', 276, [
+    text(184, 26, 'Resident service stack', 'head', 'middle'),
+    text(536, 26, 'At each program launch', 'head', 'middle'),
+    rect(24, 42, 320, 62, 'highlight'),
+    text(184, 66, 'TBG.SVC (~7.5 KiB)', 'head', 'middle'),
+    text(184, 88, 'Publishes TBGHOOK record', '', 'middle'),
+    arrow(184, 128, 184, 108),
+    rect(24, 130, 320, 66, 'highlight'),
+    text(184, 154, 'TBGSYM.SVC (~1.25 KiB)', 'head', 'middle'),
+    text(184, 176, 'Hooks TBGHOOK · UNLOAD removes', '', 'middle'),
+    rect(24, 196, 320, 44),
+    text(184, 223, 'Program TPA below TBGSYM', '', 'middle'),
+    box(376, 42, '1 · Read NAME.TBG', ['Check end address', 'Check image checksum'], 320, 84),
+    arrow(536, 128, 536, 150),
+    box(376, 154, '2 · Match enables symbols', ['SY badge · labels in Code', '5th Symbols view in Tab cycle'], 320, 86, 'highlight'),
     note(264, 'If NAME.TBG is missing or stale after a rebuild, TBG runs cleanly without symbols.')
   ]);
 

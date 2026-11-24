@@ -43,13 +43,13 @@ text {fill:currentColor;font:14px ui-monospace,monospace}
 <rect class="" x="616" y="54" width="80" height="44" rx="4"/>
 <text class="" x="656" y="83" text-anchor="middle" xml:space="preserve">00</text>
 <text class="accent" x="536" y="120" text-anchor="middle" xml:space="preserve">010B&gt;00 00 00 00 HL</text>
-<rect class="" x="24" y="148" width="120" height="48" rx="4"/>
-<text class="small" x="84" y="177" text-anchor="middle" xml:space="preserve">0000h–00FFh</text>
-<rect class="highlight" x="144" y="148" width="356" height="48" rx="4"/>
-<text class="head" x="322" y="169" text-anchor="middle" xml:space="preserve">Writable with E (0100h to lowest service)</text>
-<text class="small" x="322" y="188" text-anchor="middle" xml:space="preserve">Program code, data and stack · EDT mode</text>
-<rect class="" x="500" y="148" width="196" height="48" rx="4"/>
-<text class="small" x="598" y="177" text-anchor="middle" xml:space="preserve">TBG / ROM (protected)</text>
+<rect class="" x="24" y="148" width="112" height="48" rx="4"/>
+<text class="small" x="80" y="177" text-anchor="middle" xml:space="preserve">0000h–00FFh</text>
+<rect class="highlight" x="136" y="148" width="376" height="48" rx="4"/>
+<text class="head" x="324" y="169" text-anchor="middle" xml:space="preserve">Writable with E (0100h to lowest service)</text>
+<text class="small" x="324" y="188" text-anchor="middle" xml:space="preserve">Program code, data and stack · EDT mode</text>
+<rect class="" x="512" y="148" width="184" height="48" rx="4"/>
+<text class="small" x="604" y="177" text-anchor="middle" xml:space="preserve">TBG / ROM (protected)</text>
 <text class="note" x="360" y="226" text-anchor="middle" xml:space="preserve">Scrolling while following a register shows HL+. Opening via Tab or G uses FIX.</text>
 <text class="note" x="360" y="252" text-anchor="middle" xml:space="preserve">Editing refuses addresses below 0100h or inside resident services so TBG stays intact.</text>
 </svg>
