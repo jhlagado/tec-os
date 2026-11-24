@@ -38,7 +38,7 @@ pressed while the name shows clears it and acts at once.
 | View | Arrow keys |
 | --- | --- |
 | Registers | The arrows move the `>` selection around the grid. |
-| Code | **Up/Down** move the `>` selection, then scroll. Browsing reaches any address, before PC too. **Left** returns to PC. |
+| Code | **Up/Down** move the `>` selection, then scroll. Browsing reaches any address, before PC too. **Left** returns to PC. An instruction too long for the row ends in `>` at the right edge; **Shift+Right** moves the selected row's text along to show the rest, with `<` before it, and **Shift+Left** moves it back. |
 | Stack | **Up/Down** select a slot. When SP moves, the selection goes back to the top. |
 | Memory | **Up/Down** move a row of four bytes, and with **Ctrl** a page of sixteen. **Left/Right** move the `>` cursor from byte to byte. Memory stops at `0000` and `FFFF` instead of wrapping. |
 
