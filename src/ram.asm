@@ -329,9 +329,10 @@ CIFF: DS 1
 CANY: DS 1
 CPEND: DS 1
 
-; Matrix scan state and pending arrow
-; bytes. Arrow input returns ESC first
-; then queues [ and direction.
+; Matrix scan state and the pending tail
+; of an escape sequence. An arrow or Fn
+; key returns ESC first; KBTP then points
+; at the rest in ROM, KBTN bytes of it.
 
 KBMASK: DS 1     ; next row, one bit low
 KBBASE: DS 1     ; row's first key
@@ -339,9 +340,8 @@ KBBASE: DS 1     ; row's first key
 KBE: DS 1        ; last scan key, FFh
                  ; none
 KBD: DS 1        ; prior key, FFh none
-KBTN: DS 1       ; pending arrow bytes
-KBT1: DS 1       ; queued [ + direction
-KBT2: DS 1
+KBTN: DS 1       ; pending tail bytes
+KBTP: DS 2       ; next tail byte, ROM
 
 ; Console table pointers. PIVEC points
 ; to the ROM console's PIBLK in RAM, 0

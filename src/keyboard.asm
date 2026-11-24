@@ -3,7 +3,9 @@
 ; is row k/8, bit k%8. One low address
 ; bit in the high byte picks the row.
 ; Keys 0-2 are Shift, Ctrl and Fn. Key 7
-; toggles Caps Lock. A held key does not
+; toggles Caps Lock. Fn with a digit key
+; sends F1-F9 (Fn+1-9) and F10 (Fn+0) as
+; xterm sends them. A held key does not
 ; repeat.
 
 ; Poll up to eight rows for a new key.
@@ -100,18 +102,41 @@ KBMOD:
   cp 7           ; Caps Lock key
   jr z,KBCAPS
   jr nc,KBNOARR  ; Keys 3-6: ESC [ A-D
-  ld hl,KBARROW-3
-  call KBIDX     ; keys 3-6: A-D
-  ld hl,KBT2     ; KBTN,KBT1,KBT2
-  ld (hl),a      ; queue arrow letter
-  dec hl
-  ld (hl),'['    ; queue '[' first
-  dec hl
-  ld (hl),2      ; CINTAKE reads both
+  sub 3          ; keys 3-6: [A-[D
+  add a,a
+  ld hl,KBARROW
+  call KBIDX     ; HL: the arrow's tail
+  ld c,2
+
+; Queue the C-byte tail at HL and send
+; ESC. CINTAKE gives the tail after it.
+
+KBTAIL:
+  ld (KBTP),hl
+  ld a,c
+  ld (KBTN),a
   ld a,$1B       ; deliver ESC now
   jr KBDELIV
 
 KBNOARR:
+  ld a,d
+  cp 2           ; Fn held?
+  jr nz,KBPLAIN
+  ld a,e
+  sub $13        ; digit keys 13h-1Ch
+  cp 10
+  jr nc,KBPLAIN  ; Fn with another key
+  add a,a
+  add a,a
+  ld hl,KBFKEY
+  call KBIDX     ; HL: the key's tail
+  ld c,2
+  cp 'O'
+  jr z,KBTAIL    ; F1-F4: ESC O P-S
+  ld c,4
+  jr KBTAIL      ; F5-F10: ESC [ nn ~
+
+KBPLAIN:
   call KBASCII
   or a
   jr z,KBNONE    ; no character

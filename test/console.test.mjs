@@ -245,6 +245,45 @@ test("matrix arrow keys arrive as ANSI cursor sequences", async () => {
   assert.match(m.expect(/A(:\S*)?>$/), /1B 5B 41 1B 5B 44 /);
 });
 
+/** Press Fn and digit key D (0-9) together on M's matrix until TEC-OS takes it. */
+function fnDigit(m, d) {
+  const key = 0x13 + d, kblast = m.sym("KBLAST");
+  m.tec1g.applyMatrixKey(0, 2, true);
+  m.tec1g.applyMatrixKey(key >> 3, key & 7, true);
+  m.runUntil(() => m.read(kblast) === key, 50_000_000, `Fn+${d}`);
+  m.tec1g.applyMatrixKey(key >> 3, key & 7, false);
+  m.tec1g.applyMatrixKey(0, 2, false);
+  m.runUntil(() => m.read(kblast) === 0xff, 50_000_000, `release of Fn+${d}`);
+}
+
+test("Fn with a digit key sends F1 to F10 as xterm does, and Fn with another key its plain character", async () => {
+  const image = standardCard();
+  volume(image, "A").write("KEYS.COM", (await program("keys")).bytes);
+  const m = boot(image, { tms: true, matrix: true });
+  const run = (keys) => {
+    m.mark = m.output.length;
+    m.typeMatrix("keys\r");
+    keys();
+    return m.expect(/A(:\S*)?>$/);
+  };
+  assert.match(run(() => { fnDigit(m, 1); m.typeMatrix("\x03"); }), /1B 4F 50 1B 5B 41 /, "F1 is ESC O P, then up");
+  assert.match(run(() => { fnDigit(m, 4); fnDigit(m, 4); }), /1B 4F 53 1B 4F 53 /, "F4 is ESC O S");
+  assert.match(run(() => { fnDigit(m, 5); m.typeMatrix("x"); }), /1B 5B 31 35 7E 78 /, "F5 is ESC [ 1 5 ~");
+  assert.match(run(() => { fnDigit(m, 7); m.typeMatrix("x"); }), /1B 5B 31 38 7E 78 /, "F7 is ESC [ 1 8 ~");
+  assert.match(run(() => { fnDigit(m, 9); m.typeMatrix("x"); }), /1B 5B 32 30 7E 78 /, "F9 is ESC [ 2 0 ~");
+  assert.match(run(() => {
+    const a = 0x24, kblast = m.sym("KBLAST");
+    m.tec1g.applyMatrixKey(0, 2, true);
+    m.tec1g.applyMatrixKey(a >> 3, a & 7, true);
+    m.runUntil(() => m.read(kblast) === a, 50_000_000, "Fn+A");
+    m.tec1g.applyMatrixKey(a >> 3, a & 7, false);
+    m.tec1g.applyMatrixKey(0, 2, false);
+    m.runUntil(() => m.read(kblast) === 0xff, 50_000_000, "release of Fn+A");
+    fnDigit(m, 0);
+  }), /61 1B 5B 32 31 7E /, "Fn+A is a, and F10 is ESC [ 2 1 ~");
+  assert.deepEqual(m.violations, []);
+});
+
 test("the default console is the PICO9918's 80 x 24 text mode", () => {
   const image = standardCard();
   const a = volume(image, "A");

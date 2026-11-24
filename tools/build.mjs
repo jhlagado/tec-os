@@ -256,7 +256,6 @@ async function buildProfile(name, assemble) {
   const runs = [
     ["PENDING", "PENDCHR"], // GETCHAR
     ["KBE", "KBD"], // KBSBIT's word store
-    ["KBTN", "KBT1", "KBT2"], // the arrow queue, written down from KBT2
     ["PITPD", "PITPS", "PIMV"], // TMSW's reset
     ["VSTOP", "VSBOT"], // CSI r's word store, VTLFS
     ["VROW", "VCOL"], // VTHOME's word store

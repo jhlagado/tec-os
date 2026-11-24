@@ -245,9 +245,10 @@ CINME:
   ret
 
 ; Take the pending RXCHAR in A. With no
-; arrow tail, clear RXFULL. Otherwise
-; shift KBT1/KBT2, decrement KBTN and
-; leave RXFULL set for the next byte.
+; tail, clear RXFULL. Otherwise put the
+; tail's next byte, at KBTP, in RXCHAR,
+; step KBTP, decrement KBTN and leave
+; RXFULL set for the next byte.
 ; Preserve BC/DE/HL. F changes.
 
 CINTAKE:
@@ -263,10 +264,13 @@ CINTAIL:
   ld (KBTN),a
   ld a,(RXCHAR)
   push af
-  ld a,(KBT1)
+  push hl
+  ld hl,(KBTP)
+  ld a,(hl)      ; the tail's next byte
+  inc hl
+  ld (KBTP),hl
   ld (RXCHAR),a
-  ld a,(KBT2)
-  ld (KBT1),a
+  pop hl
   pop af
   ret
 

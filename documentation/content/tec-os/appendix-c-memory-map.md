@@ -331,7 +331,7 @@ holds them. `CPEND` holds the single pending-block boundary outside the logged d
 | `BF3Eh–BF40h` | 3 | `CNEXT` to `CIFF` | Replacement index, BIOS write type and saved interrupt flags | Cold boot |
 | `BF41h` | 1 | `CANY` | Nonzero when a data line may be held behind on the logged drive | Cold boot |
 | `BF42h` | 1 | `CPEND` | The coalesced pending block: its cache line plus one, 0 for none | Cold boot |
-| `BF43h–BF49h` | 7 | `KBMASK` to `KBT2` | Matrix scan and pending arrow-sequence state | Cold boot |
+| `BF43h–BF49h` | 7 | `KBMASK` to `KBTP` | Matrix scan state and the pending arrow or function-key tail: its length and its address in ROM | Cold boot |
 | `BF4Ah–BF4Dh` | 4 | `PIVEC`, `GLVEC` | Console-table pointers, `PIBLK` for PICO or 0 when absent, and GLCD's table | Cold boot |
 | `BF4Eh–BF51h` | 4 | `XMDST` to `MVREST` | MVCOPY source/destination banks and remaining byte count | Cold boot |
 | `BF52h–BF53h` | 2 | `PZTOP` | Committed top restored to `0006h` by warm boot | Cold boot |

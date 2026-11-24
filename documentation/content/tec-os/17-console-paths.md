@@ -386,12 +386,22 @@ tab `^I` at `09h`. Each arrow instead produces three bytes:
 | Right | `ESC [ C` |
 | Left | `ESC [ D` |
 
-For an arrow the keyboard puts ESC in RXCHAR, its following bytes in KBT1 and
-KBT2 and count 2 in KBTN. Successive CINTAKE reads advance the sequence while
-retaining RXFULL until the last byte (`b95b2a9:src/keyboard.asm:100-124`,
-`b95b2a9:src/console.asm:253-271`, `b95b2a9:src/tables.asm:38-40`). An editor therefore
-receives matrix characters and arrow sequences through the ordinary console
-byte interface.
+Fn with a digit key gives a function key, with the bytes xterm sends:
+
+| Keys | Key | Bytes |
+| --- | --- | --- |
+| Fn+1 to Fn+4 | F1 to F4 | `ESC O P` to `ESC O S` |
+| Fn+5 | F5 | `ESC [ 1 5 ~` |
+| Fn+6 to Fn+9 | F6 to F9 | `ESC [ 1 7 ~` to `ESC [ 2 0 ~` |
+| Fn+0 | F10 | `ESC [ 2 1 ~` |
+
+Fn with any other key gives that key's plain character. For an arrow or a
+function key the keyboard puts ESC in RXCHAR, the address of the rest of the
+sequence, in a ROM table, in KBTP and its length, 2 or 4, in KBTN. Each
+CINTAKE read takes the next byte from KBTP and keeps RXFULL set until the
+last (`src/keyboard.asm`, `src/console.asm` and `KBARROW` and `KBFKEY` in
+`src/tables.asm`). An editor therefore receives matrix characters, arrow
+sequences and function keys through the ordinary console byte interface.
 
 ## Bytes to display cells
 
