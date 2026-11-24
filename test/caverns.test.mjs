@@ -5,11 +5,12 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
-import {ROOT,boot,volume} from './lib/fixtures.mjs';
+import {ROOT,boot,starterOn,volume} from './lib/fixtures.mjs';
 const read=p=>readFileSync(resolve(ROOT,p));
 const json=p=>JSON.parse(read(p));
 const sha=b=>createHash('sha256').update(b).digest('hex');
-const card=()=>new Uint8Array(read('dist/starter.img'));
+// The BASIC volume holds the source, BAZA and its runtime: on A:, as CD A:BASIC leaves it.
+const card=()=>starterOn('BASIC');
 const reference=json('test/caverns-route.json');
 const map=json('test/caverns-map.json');
 const basic=json('test/caverns-basic.json');
@@ -44,14 +45,16 @@ function basicGame(){const image=card();volume(image,'A').write('CAVERNS.COM',co
 function noDeath(out){assert.doesNotMatch(out,/Another adventure|ERROR IN|killed|smashes your skull/i);}
 const tour=[['galar',16],['east',17],['look',17],['west',33],['north',29],['east',26],['east',25],['west',26],['south',27],['east',28],['get rope',28],['down with rope',35],['east',36],['north',39],['west',38],['north',43],['east',44]];
 
-test('revised map and source-only starter match the author-approved release',()=>{
+test('revised map, the BASIC volume\'s source and GAMES\'s CAVERNS.COM match the author-approved release',()=>{
  const source=read('programs/CAVERNS.BAS').toString(),revised=json('test/caverns-refined-map.json');
  const labels=json('programs/caverns/source-map.json').labels;
  const exits=source.split('\n').filter(l=>Number(l.split(' ')[0])>=labels.EXIT_DATA&&Number(l.split(' ')[0])<labels.OBJECT_DATA).flatMap(l=>l.split('DATA ')[1].split(',').map(Number));
  assert.deepEqual(exits,revised.exits);assert.equal(exits.length,216);
  const files=volume(card(),'A').list().map(x=>x.name);
- assert.ok(!files.includes('CAVERNS.COM'));assert.ok(!files.includes('CAVERNS.COM'));
+ assert.ok(!files.includes('CAVERNS.COM'));
  assert.ok(files.includes('CAVERNS.BAS'));
+ const games=volume(card(),'GAMES').read('CAVERNS.COM');
+ assert.equal(sha(games),basic.comSha256,'GAMES holds what BAZA compiles from the source');assert.equal(games.length,basic.comBytes);
  const gates={'-1':11,'-2':19,'-3':38,'-4':43,'-5':39,'-6':49};
  const open=revised.exits.map(d=>gates[d]??d),unpaired=[];
  for(let r=1;r<=54;r++)for(let i=0;i<4;i++){

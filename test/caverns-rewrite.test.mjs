@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
-import {ROOT,boot,startupFile,volume} from './lib/fixtures.mjs';
+import {ROOT,boot,startupFile,starterOn,volume} from './lib/fixtures.mjs';
 import {buildLauncher,encodeScenario,scalarNames,layout} from '../tools/caverns-scenario.mjs';
 const read=p=>readFileSync(ROOT+'/'+p),json=p=>JSON.parse(read(p));
 const basic=json('test/caverns-basic.json'),old=json('test/fixtures/caverns-baseline/fixture.json');
@@ -161,7 +161,7 @@ test('long-input resource behaviour is recorded separately from gameplay equival
 });
 
 test('a reader can insert a BASIC line in the ten-step gap and compile without renumbering',{timeout:120000},()=>{
- const image=new Uint8Array(read('dist/starter.img')),a=volume(image,'A');
+ const image=starterOn('BASIC'),a=volume(image,'A');
  const source=read('programs/CAVERNS.BAS').toString(),number=sourceMap.banner;
  const banner=source.split('\n').find(l=>l.startsWith(number+' '));
  const experiment=source.replace(banner,banner+'\n'+(number+1)+' PRINT "An inserted experiment works."');

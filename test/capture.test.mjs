@@ -8,11 +8,11 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, standardCard } from "./lib/fixtures.mjs";
 
-test("capture follows named prompts after a drive change and CD A:, then a bare prompt after reset", () => {
-  const out = execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--", "C:", "A:", "CD A:GAMES", "@reset"], { encoding: "utf8", timeout: 120_000 });
-  assert.match(out, /C:PROJECTS>A:/);
+test("capture follows named prompts after a drive change and CD A:, then GAMES's own startup after reset", () => {
+  const out = execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--", "B:", "A:", "CD A:GAMES", "@reset"], { encoding: "utf8", timeout: 120_000 });
+  assert.match(out, /B:WORK>A:/);
   assert.match(out, /A:GAMES>\n/);
-  assert.match(out, /A>\n$/);
+  assert.match(out, /A: GAMES *\n[^]*A>SHELL\.SVC\n[^]*A:GAMES>\n$/, "the reset keeps GAMES on A:, whose STARTUP.CMD loads the shell");
 });
 
 test("@press sends a key and goes on without a prompt: D, I, R, then Return run DIR (KB-25)", () => {

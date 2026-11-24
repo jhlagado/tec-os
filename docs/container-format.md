@@ -52,8 +52,8 @@ its drive's flags only the read-only bit. `tecvol create` refuses `:wb` as an
 unknown flag, and `createContainer` refuses a volume that names
 `writeBehind`.
 
-The starter card is 1.1 and asks for four drives, so that `CD` can put any
-of its volumes on any drive (below, "Allocation vectors").
+The starter card is 1.1 and asks for three drives, so that `CD` can put any
+of its six volumes on A:, B: or the spare C: (below, "Allocation vectors").
 
 ## The volume table beyond block 0 (1.1)
 

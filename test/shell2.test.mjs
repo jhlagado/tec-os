@@ -1180,12 +1180,12 @@ test("S2-11 ted cost", { skip: TED.skip, timeout: 900_000 }, (t) => {
 const starterImage = () => new Uint8Array(readFileSync(new URL("../dist/starter.img", import.meta.url)));
 const starterRecipe = () => JSON.parse(readFileSync(new URL("../dist/starter.recipe.json", import.meta.url), "utf8"));
 
-test("S2-12 four drives", () => {
+test("S2-12 three drives", () => {
   const card = starterImage();
   const info = parseContainer(card);
-  assert.deepEqual([info.minor, info.drives], [1, 4], "container 1.1, the drives field 4");
-  assert.equal(card.length, 13_631_488);
-  assert.equal(starterRecipe().drives, 4, "the recipe asks for them");
+  assert.deepEqual([info.minor, info.drives], [1, 3], "container 1.1, the drives field 3");
+  assert.equal(card.length, 14_680_064);
+  assert.equal(starterRecipe().drives, 3, "the recipe asks for them");
 });
 
 test("S2-12 volumes", () => {
@@ -1194,12 +1194,25 @@ test("S2-12 volumes", () => {
   assert.deepEqual(info.volumes.map((v) => [v.label, v.g.name, v.drive]), [
     ["SYSTEM", "G1M", "A"],
     ["WORK", "G8M", "B"],
-    ["PROJECTS", "G1M", "C"],
+    ["ASM", "G1M", null],
+    ["BASIC", "G1M", null],
+    ["MON3", "G1M", null],
     ["GAMES", "G1M", null],
-    ["SPARE", "G1M", null],
   ]);
-  for (let i = 0; i < 5; i += 1) assert.equal(card[descriptorAt(i) + 15], 0, `volume ${i}'s byte 15`);
-  for (const d of ["B", "C"]) assert.deepEqual(volume(card, d).list(), [], `${d}: empty`);
+  assert.equal(info.drives, 3, "three drives: A:, B: and the spare C:");
+  for (let i = 0; i < 6; i += 1) assert.equal(card[descriptorAt(i) + 15], 0, `volume ${i}'s byte 15`);
+  assert.deepEqual(volume(card, "B").list(), [], "B: empty");
+  // Every A: volume holds the core set, and each its theme.
+  const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBG.SVC", "TBGSYM.SVC", "TBG.HLP"];
+  const theme = {
+    SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
+    ASM: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
+    BASIC: ["BAZA.COM", "BAZA.RTL", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
+    MON3: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
+    GAMES: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"],
+  };
+  for (const [label, files] of Object.entries(theme))
+    assert.deepEqual(volume(card, label).list().map((f) => f.name).sort(), [...core, ...files].sort(), `${label}'s files`);
 });
 
 test("S2-12 no mount.com", () => {
@@ -1207,18 +1220,18 @@ test("S2-12 no mount.com", () => {
   assert.ok(!names.includes("MOUNT.COM"));
   assert.ok(!starterRecipe().components.some((c) => c.name === "MOUNT.COM"));
   for (const n of ["SHELL.SVC", "STARTUP.CMD", "TED.COM", "TAS.COM", "BAZA.COM", "MON3.SVC"]) assert.ok(names.includes(n), `A: still holds ${n}`);
-  assert.ok(names.includes("HELLO3.ASM"));
-  assert.ok(!names.includes("HELLO3.BIN"));
-  assert.ok(names.includes("CAVERNS.BAS"));
-  assert.ok(!names.includes("CAVERNS.COM"), "readers compile the supplied source");
-  assert.ok(names.includes("SNAKE9.ASM"));
-  assert.ok(names.includes("SNAKE9.BIN"));
-  assert.equal(names.length, 17);
+  for (const label of ["ASM", "MON3"]) {
+    const on = volume(starterImage(), label).list().map((f) => f.name);
+    assert.ok(on.includes("HELLO3.ASM") && !on.includes("HELLO3.BIN"), `${label}: HELLO3 as source only`);
+  }
+  const basic = volume(starterImage(), "BASIC").list().map((f) => f.name);
+  assert.ok(basic.includes("CAVERNS.BAS") && !basic.includes("CAVERNS.COM"), "BASIC: readers compile the supplied source");
+  assert.equal(names.length, 13);
 });
 
 test("S2-12 instruction", () => {
   const t = starterRecipe().instruction;
-  for (const s of ["A:SYSTEM>", "CD ?", "CD NAME", "CD D:NAME", "Pending block writes get priority at OS calls and key waits.", "Acknowledged data stays in RAM for retry if its card write fails.", "Follow the program’s normal Save workflow and resolve write errors; browser saving is separate.", "After CD A:", "at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC", "Power cycle"]) assert.ok(t.includes(s), `the instruction says ${s}`);
+  for (const s of ["A:SYSTEM>", "CD ?", "CD NAME", "CD A:NAME", "CD A:SYSTEM", "B: (WORK) is your work disk", "C: is a spare drive", "Pending block writes get priority at OS calls and key waits.", "Acknowledged data stays in RAM for retry if its card write fails.", "Follow the program’s normal Save workflow and resolve write errors; browser saving is separate.", "Power cycle"]) assert.ok(t.includes(s), `the instruction says ${s}`);
   assert.doesNotMatch(t, /whenever TEC-OS waits for a key everything is on the card/, "a key wait must not promise persistence after a refused write");
   assert.doesNotMatch(t, /MOUNT/, "and teaches no MOUNT");
   assert.doesNotMatch(t, /(B:|WORK)[^.]*written behind/, "nor that B: or WORK is written behind");
@@ -1229,9 +1242,9 @@ test("S2-12 tpa", () => {
   const card = starterImage();
   volume(card, "A").write("STARTUP.CMD", Buffer.from("\x1a", "latin1"));
   const bare = shellMachine(card);
-  assert.equal(word(bare, 6) - 0x100, 46_534, "bare: four drives' vectors");
+  assert.equal(word(bare, 6) - 0x100, 46_790, "bare: three drives' vectors");
   const m = shellMachine(starterImage());
-  assert.equal(word(m, 6) - 0x100, 41_728, "with the shell, the starter card's STARTUP.CMD");
+  assert.equal(word(m, 6) - 0x100, 41_984, "with the shell, the starter card's STARTUP.CMD");
 });
 
 /** A card of the drives field's absence, built from the starter recipe without it: its machine under the shell. */
@@ -1314,16 +1327,16 @@ test("S2-13 docs", () => {
   assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
   for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
-    "a TPA of 41,728 bytes"])
+    "a TPA of 41,984 bytes"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);
   const container = flat("docs/container-format.md");
   assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
   assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
   const compat = flat("docs/compatibility.md");
-  for (const s of ["46,534 bytes", "41,728", "40,960"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  for (const s of ["46,790 bytes", "41,984", "41,216"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
-  assert.match(flat("docs/mon3.md"), /from `A400h` to `9100h`, and the TPA from 41,728 bytes to \*\*36,864\*\*/);
-  assert.match(flat("docs/mon3.md"), /it is `8E00h`, a TPA of \*\*36,096\*\*/);
+  assert.match(flat("docs/mon3.md"), /from `A500h` to `9200h`, and the TPA from 41,984 bytes to \*\*37,120\*\*/);
+  assert.match(flat("docs/mon3.md"), /it is `8F00h`, a TPA of \*\*36,352\*\*/);
   // The figures are measured ones: no doc speaks of a projection or of a qualification still to come.
   for (const n of ["README.md", "docs/shell.md", "docs/compatibility.md", "docs/memory-map.md", "docs/mon3.md"])
     assert.doesNotMatch(flat(n), /\bprojects? (word|A400h|text|41,|these)|projected|projections?\b|pending (current )?runtime|qualification must confirm|to be confirmed/i, `${n}: measured figures, stated plainly`);

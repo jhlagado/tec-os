@@ -2,10 +2,10 @@
 
 TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
-46,534 bytes (`0100h–B6C5h`) on the starter card with nothing loaded, and at
+46,790 bytes (`0100h–B7C5h`) on the starter card with nothing loaded, and at
 least 46,534 on any card, since cold boot places the BDOS entry below the
 allocation vectors of the drives the card asks for: the starter card asks for
-four, each with a vector for an 8 MiB volume. A card of two volumes and no
+three, each with a vector for an 8 MiB volume, and a card can ask for four. A card of two volumes and no
 drives field gives 47,240. A board with a PICO9918 has the same: its console
 is in the ROM and its RAM in the BIOS's state (KS39). The GLCD's driver takes
 three pages under the stub's page, leaving 45,568 on the starter card. The
@@ -268,8 +268,8 @@ and run.
   ^C, Esc and Q do.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
   more than 46,534 bytes of TPA, may fail; how much a card gives depends on
-  its drives and what is loaded. Measured on the starter card: 46,534 bare,
-  41,728 with the shell, and 40,960 with the shell and the GLCD's driver.
+  its drives and what is loaded. Measured on the starter card: 46,790 bare,
+  41,984 with the shell, and 41,216 with the shell and the GLCD's driver.
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
   that does not go through it is the check for `^S` while the BDOS writes,

@@ -13,17 +13,21 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
   `BOUNCE.BAS` sprite game, steered by W, A, S and D or the arrow keys,
   and TED from Thorium `e5b72f4`, whose language table builds a `.BAS`
   with BAZA.
-- One card (KD-278): the starter card is the Viewer's card too. It has four
-  drives and five volumes, SYSTEM on A:, WORK on B:, PROJECTS on C:, and
-  GAMES and SPARE on none, and A: holds thirteen files: `BAZA.COM`,
-  `BAZA.RTL`, `BOUNCE.BAS`, `DEMO.ASM`, `GLCD.SVC`, `HELLO3.ASM`,
-  `MON3.SVC`, `SAMPLE.ASM`, `SHELL.SVC`, `STARTUP.CMD`,
-  `TAS.COM`, `TED.COM` and `TIMES.BAS`. `TAS DEMO` builds `DEMO.ASM` into the demo, and
-  `TAS HELLO3 HELLO3.BIN` builds the source-only example, then
-  `MON3.SVC`, `LOAD HELLO3.BIN` and `GO` run a MON-3 program that
-  writes the LCD (KD-277).
+- One card (KD-278): the starter card is the Viewer's card too. It has three
+  drives and six volumes (the card volumes proposal, approved 24 November
+  2026): SYSTEM on A:, WORK (8 MiB) on B:, and the themed volumes ASM, BASIC,
+  MON3 and GAMES for A:, with C: a spare. Every A: volume holds the core set,
+  `STARTUP.CMD`, `SHELL.SVC`, `GLCD.SVC`, `TED.COM`, `TBG.SVC`, `TBGSYM.SVC`
+  and `TBG.HLP`. SYSTEM adds `TAS.COM`, `BAZA.COM`, `BAZA.RTL`, `MON3.SVC`,
+  `SAMPLE.ASM` and `TIMES.BAS`; ASM adds `DEMO.ASM` and `HELLO3.ASM`; BASIC
+  adds `BOUNCE.BAS`, `CAVERNS.BAS` and `CAVERNS.TXT`; MON3 adds `SNAKE9.ASM`
+  and `SNAKE9.BIN`; and GAMES holds `CAVERNS.COM` and `BOUNCE.COM`, compiled
+  when the card is built, with `SNAKE9.BIN` and `MON3.SVC`. `TAS DEMO` builds
+  `DEMO.ASM` into the demo, and `TAS HELLO3 HELLO3.BIN` builds the
+  source-only example, then `MON3.SVC`, `LOAD HELLO3.BIN` and `GO` run a
+  MON-3 program that writes the LCD (KD-277).
 - Drives and volumes (KD-298, KD-299): `CD` selects a named directory on any
-  of the four drives, including at the bare ROM prompt; the shell prompt shows
+  of the three drives, including at the bare ROM prompt; the shell prompt shows
   that selection; `DIR` gives each file's
   size, and `CLS`, `ECHO` and `PAUSE` are built in. The drive you are on is
   written behind, every other volume coalesces, and every key wait writes the

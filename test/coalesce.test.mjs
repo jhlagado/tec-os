@@ -10,7 +10,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ABI, PUT_COM, ROOT, SHELL_SVC, abiDeclarations, boot, putBytes, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { ABI, PUT_COM, ROOT, SHELL_SVC, abiDeclarations, boot, putBytes, romFor, standardCard, starterOn, volume, withShell } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 import { recoveryInput } from "./lib/public-caller.mjs";
 import { BUF, DMA, FCB, FCB2, FCB3, MUTANTS, backlog, card, closed8, dirBlocks, flushRun, pat, rig, same, three } from "./lib/coalesce.mjs";
@@ -24,7 +24,7 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 // each of 32 records, in cycles from the stub.
 // abi is the digest of abi.inc's declarations, its comment lines left out.
 const LANDING = { used: 14769, tpa: 47273, abi: "1581bbf69f49b6fdb2f6b81d5221f5364ff1a7e421f0db7a8fc23b263d7934c2", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
-const INTEGRITY = { used: 15878, tpa: 47238, starter: 46534, entry: 0xb6c6 };
+const INTEGRITY = { used: 15878, tpa: 47238, starter: 46790, entry: 0xb7c6 };
 
 // Qualified control's costs in this exact returned-input fixture: one empty
 // status call, and 32 write/status pairs on each logged drive. The integrity
@@ -60,7 +60,7 @@ test("AC1 rom and tpa", () => {
   assert.equal(census.ram.tpa.bytes, INTEGRITY.tpa, "the shared recovery allocation");
   assert.equal(census.ram.tpa.card, "twoVolume", "the coalescing reference remains explicit");
   assert.equal(census.ram.cards.twoVolume.tpa, INTEGRITY.tpa);
-  assert.equal(census.ram.cards.starter.tpa, INTEGRITY.starter, "the four-drive starter has its own figure");
+  assert.equal(census.ram.cards.starter.tpa, INTEGRITY.starter, "the three-drive starter has its own figure");
   assert.equal(census.ram.cards.starter.entry, INTEGRITY.entry);
   const m = boot(standardCard());
   assert.equal(word(m, 6) - 0x100, INTEGRITY.tpa, "(0006h) on the card");
@@ -702,7 +702,8 @@ let starter;
 const starterCard = () => {
   if (!starter) {
     execFileSync(process.execPath, ["tools/media.mjs"], { cwd: ROOT, stdio: "ignore" });
-    starter = readFileSync(resolve(ROOT, "dist/starter.img"));
+    // BOUNCE.BAS, BAZA and its runtime are on the BASIC volume: on A:, as CD A:BASIC leaves it.
+    starter = starterOn("BASIC", new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))));
   }
   return new Uint8Array(starter);
 };

@@ -12,9 +12,9 @@ ROM table at `C003h`.
   addresses.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
-  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,534 bytes on the
-  starter card with nothing loaded, its four drives' vectors taken; the card's
-  `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 41,728, and 40,960
+  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,790 bytes on the
+  starter card with nothing loaded, its three drives' vectors taken; the card's
+  `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 41,984, and 41,216
   with the GLCD's driver too.
   EXPAND 1 is TEC-OS's own: its block cache. TEC-OS says so at boot and stops if either half
   is missing.
@@ -167,11 +167,14 @@ and `UNLOAD`, which removes the last service loaded. The starter card loads the
 shell, `SHELL.SVC` ([docs/shell.md](docs/shell.md)), which adds the history (^W
 and ^N), `COPY`, `DEL` (another name for `ERA`), `SERVICES`, which lists the
 services loaded, `[more]` in `TYPE` and `DIR`, `DIR` with each file's size,
-`CLS`, `ECHO`, `PAUSE` and `.CMD` scripts. The starter card has four drives:
-`CD ?` lists its named directories, `CD NAME` selects one on the current
-drive and `CD D:NAME` on another. These commands work at the bare ROM prompt
-too, so `CD A:SYSTEM` followed by `SHELL.SVC` restores the shell after
-resetting with GAMES selected on A:. The shell prompt shows the selection,
+`CLS`, `ECHO`, `PAUSE` and `.CMD` scripts. The starter card has three drives:
+A: holds a themed system volume, SYSTEM at boot or ASM, BASIC, MON3 or GAMES,
+each with the shell, `GLCD.SVC`, TED and the TBG debugger; B: holds WORK, the
+8 MiB work disk; and C: is a spare. `CD ?` lists the volumes, `CD NAME`
+selects one on the current drive and `CD A:NAME` on another. A bare command
+name tries the current drive, then A:, for a COM file, so programs on A: run
+from B:. These commands work at the bare ROM prompt too, and each themed
+volume's `STARTUP.CMD` loads the shell after a reset. The shell prompt shows the selection,
 `A:SYSTEM>`. OS calls prioritise pending writes; required input drains them
 before waiting, with failed data retained and reported for retry. If disk
 state cannot be rebuilt, `Disk reset failed` / `Enter retries` waits for an

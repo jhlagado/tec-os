@@ -28,7 +28,7 @@ kept, 34 (`test/shell.test.mjs` and `test/shell2.test.mjs`, which read a guard
 pattern laid under it); no path may use more than 36. It declares 6 bytes of
 the BDOS's stack and none of the BIOS's or the CCP's, so `GLCD.SVC` and
 `MON3.SVC` install beside it. With the shell alone the word at 0006h is A400h
-on the starter card, a TPA of 41,728 bytes.
+on the starter card, a TPA of 41,984 bytes.
 
 ## With no shell
 

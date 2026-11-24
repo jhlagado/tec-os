@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
-import {ROOT,boot,volume} from './lib/fixtures.mjs';
+import {ROOT,boot,starterOn,volume} from './lib/fixtures.mjs';
 
 const source=readFileSync(resolve(ROOT,'programs/CAVERNS.BAS'),'utf8');
 const original='DREAMCARDS presents...',replacement='TEC-OS Book presents';
@@ -20,7 +20,7 @@ function keys(m,s,what,done){
  m.runUntilChecked(()=>{m.pumpInput();return !m.pending?.length&&m.waitingForInput()&&done();},800_000_000,what);
 }
 test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen after power cycle',{timeout:300_000},()=>{
- const image=new Uint8Array(readFileSync(resolve(ROOT,'dist/starter.img'))),a=volume(image,'A');
+ const image=starterOn('BASIC'),a=volume(image,'A');
  const originalSource=sha(a.read('CAVERNS.BAS')),originalCom=sha(readFileSync(resolve(ROOT,'programs/CAVERNS.COM')));
  let m=boot(image,{tms:true,matrix:true,width:80});
  const status=()=>m.screen()[23];

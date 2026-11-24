@@ -110,6 +110,23 @@ export function standardCard(extra = []) {
   ]);
 }
 
+/**
+ * The starter card (or IMAGE) with LABEL's volume on A: in SYSTEM's place,
+ * as CD A:LABEL leaves it, but as the card's own mounts: what a test of a
+ * themed volume's files boots. Every volume keeps its files.
+ */
+export function starterOn(label, image = new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img")))) {
+  const info = parseContainer(image);
+  if (!info.volumes.some((v) => v.label === label)) throw new Error(`the card has no volume ${label}`);
+  const out = createContainer(info.volumes.map((v) => ({
+    geometry: v.g.name, label: v.label, readOnly: v.readOnly,
+    mount: v.label === label ? "A" : v.drive === "A" ? "-" : (v.drive ?? "-"),
+  })), { drives: info.drives });
+  const target = parseContainer(out);
+  info.volumes.forEach((v, i) => volumePayload(out, target.volumes[i]).set(volumePayload(image, v)));
+  return out;
+}
+
 export function volume(image, drive) {
   const info = parseContainer(image);
   const v = findVolume(info, drive);

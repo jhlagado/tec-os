@@ -10,7 +10,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GLCD_SVC, ROOT, boot, volume, SHELL_SVC } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, boot, starterOn, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 import { fontBytes } from "../tools/lib/font.mjs";
 import { bounceSource } from "../tools/lib/bounce-source.mjs";
@@ -24,7 +24,8 @@ const TAS = pinned("TAS.COM");
 const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
 const BOUNCE = pinned("BOUNCE.BAS");
-const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip;
+const TBG = ["TBG.SVC", "TBGSYM.SVC", "TBG.HLP"].map(pinned);
+const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip || TBG.some((p) => p.skip);
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 const text = (name) => textAt(`programs/${name}`);
@@ -41,47 +42,76 @@ function starter() {
     built = {
       card: new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))),
       recipe: JSON.parse(readFileSync(resolve(ROOT, "dist/starter.recipe.json"), "utf8")),
+      // A copy of the card with the themed volume LABEL on A:, as CD A:LABEL leaves it.
+      on: (label) => starterOn(label, Uint8Array.from(built.card)),
     };
   }
   return built;
 }
 
-test("the starter card holds exactly seventeen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("each A: volume holds the core set and its theme's files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   check(BAZA);
   check(RTL);
   check(BOUNCE);
+  for (const p of TBG) check(p);
   const { card, recipe } = starter();
   const snake = await assembleProgram(resolve(ROOT, "programs/SNAKE9.ASM"), { base: 0x4000 });
   assert.equal(sha(snake.bytes), "c1fa08cc2e19f13a56b41a484a56d9c9d1876ffa2d9ec4a82cdb780b962c3c5d", "the published Snake9 binary is preserved");
+  const caverns = JSON.parse(readFileSync(resolve(ROOT, "test/caverns-basic.json"), "utf8"));
   const want = {
-    "STARTUP.CMD": Buffer.from("SHELL.SVC\r\nGLCD.SVC\r\n\x1a", "latin1"),
-    "SHELL.SVC": SHELL_SVC,
-    "GLCD.SVC": GLCD_SVC,
-    "TAS.COM": readFileSync(TAS.path),
-    "TED.COM": readFileSync(TED.path),
-    "BAZA.COM": readFileSync(BAZA.path),
-    "BAZA.RTL": readFileSync(RTL.path),
-    "SAMPLE.ASM": text("SAMPLE.ASM"),
-    "TIMES.BAS": text("TIMES.BAS"),
-    "BOUNCE.BAS": bounceText(),
-    "CAVERNS.BAS": text("CAVERNS.BAS"),
-    "CAVERNS.TXT": text("CAVERNS.TXT"),
-    "DEMO.ASM": text("DEMO.ASM"),
-    "MON3.SVC": (await mon3Svc()).file,
-    "HELLO3.ASM": textAt("test/programs/hello3.asm"),
-    "SNAKE9.ASM": text("SNAKE9.ASM"),
-    "SNAKE9.BIN": snake.bytes,
+    "STARTUP.CMD": sha(Buffer.from("SHELL.SVC\r\nGLCD.SVC\r\n\x1a", "latin1")),
+    "SHELL.SVC": sha(SHELL_SVC),
+    "GLCD.SVC": sha(GLCD_SVC),
+    "TED.COM": sha(readFileSync(TED.path)),
+    "TBG.SVC": sha(readFileSync(TBG[0].path)),
+    "TBGSYM.SVC": sha(readFileSync(TBG[1].path)),
+    "TBG.HLP": sha(readFileSync(TBG[2].path)),
+    "TAS.COM": sha(readFileSync(TAS.path)),
+    "BAZA.COM": sha(readFileSync(BAZA.path)),
+    "BAZA.RTL": sha(readFileSync(RTL.path)),
+    "SAMPLE.ASM": sha(text("SAMPLE.ASM")),
+    "TIMES.BAS": sha(text("TIMES.BAS")),
+    "BOUNCE.BAS": sha(bounceText()),
+    "CAVERNS.BAS": sha(text("CAVERNS.BAS")),
+    "CAVERNS.TXT": sha(text("CAVERNS.TXT")),
+    "DEMO.ASM": sha(text("DEMO.ASM")),
+    "MON3.SVC": sha((await mon3Svc()).file),
+    "HELLO3.ASM": sha(textAt("test/programs/hello3.asm")),
+    "SNAKE9.ASM": sha(text("SNAKE9.ASM")),
+    "SNAKE9.BIN": sha(snake.bytes),
+    // Compiled by the pinned BAZA as the card is built: the Caverns record's, and Bounce's.
+    "CAVERNS.COM": caverns.comSha256,
+    "BOUNCE.COM": "fa7c30104ea434e3f10c5bc0f350980f887e038d86a13f5fe8dba8ffc90d48ef",
   };
-  const a = volume(card, "A");
+  const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBG.SVC", "TBGSYM.SVC", "TBG.HLP"];
+  const themes = {
+    SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
+    ASM: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
+    BASIC: ["BAZA.COM", "BAZA.RTL", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
+    MON3: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
+    GAMES: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"],
+  };
   assert.equal(sha(bounceText()), "9d9092748d11be539c86e79ba591849191540812c4342f601ac9c1de065fc0d6", "the adapted CP/M source pin");
-  assert.deepEqual(a.list().map((f) => f.name).sort(), Object.keys(want).sort());
-  assert.deepEqual(recipe.components.map((c) => c.name).sort(), Object.keys(want).sort());
-  for (const [name, bytes] of Object.entries(want)) {
-    assert.equal(sha(a.read(name).subarray(0, bytes.length)), sha(bytes), `${name} on the card`);
-    assert.equal(recipe.components.find((c) => c.name === name).files[0].sha256, sha(bytes), `${name} in the recipe`);
+  assert.equal(volume(card, "A").list().length, core.length + themes.SYSTEM.length, "SYSTEM is on A:");
+  const placed = [];
+  for (const [label, theme] of Object.entries(themes)) {
+    const v = volume(card, label);
+    const names = [...core, ...theme];
+    assert.deepEqual(v.list().map((f) => f.name).sort(), [...names].sort(), `${label}'s files`);
+    for (const name of names) {
+      const bytes = v.read(name);
+      const c = recipe.components.find((x) => x.files[0].name === name && x.files[0].drive === label);
+      assert.ok(c, `${name} on ${label} in the recipe`);
+      assert.equal(c.id, `${label}-${name}`.toLowerCase().replace(/\W/g, "-"));
+      assert.equal(sha(bytes.subarray(0, c.files[0].bytes)), want[name], `${name} on ${label}`);
+      assert.equal(c.files[0].sha256, want[name], `${name} on ${label} in the recipe`);
+      placed.push(c.id);
+    }
   }
+  assert.deepEqual(recipe.components.map((c) => c.id).sort(), placed.sort(), "the recipe places nothing else");
+  assert.deepEqual(Object.keys(want).sort(), [...new Set(recipe.components.map((c) => c.name))].sort(), "every card file on some volume");
   assert.deepEqual(volume(card, "B").list(), [], "B: is empty");
   assert.equal(recipe.widths, undefined, "no drivers' widths in the recipe");
   for (const name of ["PICO.SVC", "PICO40.SVC", "PICO32.SVC"]) assert.equal(existsSync(resolve(ROOT, "dist/files", name)), false, `no ${name} in dist/files`);
@@ -89,7 +119,7 @@ test("the starter card holds exactly seventeen files, each by its hash, the PICO
 
 test("the starter card boots, and CD ? lists its volumes", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
   const m = boot(Uint8Array.from(starter().card));
-  assert.match(m.command("CD ?"), /\r\nSYSTEM +A:\r\nWORK +B:\r\nPROJECTS +C:\r\nGAMES *\r\nSPARE *\r\nA:SYSTEM>$/);
+  assert.match(m.command("CD ?"), /\r\nSYSTEM +A:\r\nWORK +B:\r\nASM *\r\nBASIC *\r\nMON3 *\r\nGAMES *\r\nA:SYSTEM>$/);
   assert.deepEqual(m.violations, []);
 });
 
@@ -99,17 +129,19 @@ async function pageCard() {
   return buildRecipe(recipe, fileFetcher(resolve(ROOT, "dist")));
 }
 
-test("the web page's card is the starter card, byte for byte, its instruction naming each program and no DEMO.COM on it", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the web page's card is the starter card, byte for byte, its instruction naming each program and no DEMO.COM on any volume", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   const { card, recipe } = starter();
   assert.equal(existsSync(resolve(ROOT, "dist/page.recipe.json")), false, "no second recipe");
   assert.equal(sha(await pageCard()), sha(card), "the recipe's card is dist/starter.img");
-  assert.deepEqual(readdirSync(resolve(ROOT, "dist/files")).sort(), recipe.components.map((c) => c.name).sort(), "dist/files holds the recipe's files");
+  assert.deepEqual(readdirSync(resolve(ROOT, "dist/files")).sort(), [...new Set(recipe.components.map((c) => c.name))].sort(), "dist/files holds the recipe's files");
   assert.match(recipe.instruction, /TAS DEMO then DEMO/);
-  assert.match(recipe.instruction, /BAZA BOUNCE then BOUNCE for a game on the PICO9918/);
+  assert.match(recipe.instruction, /BOUNCE plays a game on the PICO9918/);
+  assert.match(recipe.instruction, /BAZA CAVERNS and BAZA BOUNCE rebuild them/);
   assert.match(recipe.instruction, /TAS HELLO3 HELLO3\.BIN, then MON3\.SVC, LOAD HELLO3\.BIN and GO/);
   assert.match(recipe.instruction, /tap W\/A\/S\/D or the arrow keys, Q to quit/);
   assert.doesNotMatch(recipe.instruction, /CHAIN/);
-  assert.ok(!volume(card, "A").list().some((f) => f.name === "DEMO.COM"), "no DEMO.COM: TAS DEMO makes it");
+  for (const label of ["SYSTEM", "ASM", "BASIC", "MON3", "GAMES"])
+    assert.ok(!volume(card, label).list().some((f) => f.name === "DEMO.COM"), `no DEMO.COM on ${label}: TAS DEMO makes it`);
 });
 
 // BOUNCE.BAS, Baza's CALL demonstration, on a card as the Viewer runs it: the
@@ -192,13 +224,13 @@ function bounceRound(card) {
 
 test("on the card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with sprites, W/A/S/D and the arrow keys move the ship, ESC [ Z moves nothing, and Q gives the display back at A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
   check(BOUNCE);
-  bounceRound(Uint8Array.from(starter().card));
+  bounceRound(starter().on("BASIC"));
 });
 
 // The card holds the demo as source only: TAS DEMO makes the pinned
 // 1,191-byte DEMO.COM, and DEMO runs it.
 test("on the card, TAS DEMO builds DEMO.COM and DEMO runs it until a key", { skip: PAGE_SKIP, timeout: 1_800_000 }, async () => {
-  const card = Uint8Array.from(starter().card);
+  const card = starter().on("ASM");
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   let mark = m.output.length;
   const keys = (s, what, done) => {
@@ -264,7 +296,7 @@ function hello3Round(card) {
 }
 
 test("on the card, MON3.SVC, LOAD HELLO3.BIN and GO write HELLO3's four lines on the LCD, Esc returns to MON3> and EXIT to A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
-  hello3Round(Uint8Array.from(starter().card));
+  hello3Round(starter().on("MON3"));
 });
 
 /** The service's matrix scan without its LD (KBLAST),A: TEC-OS's held-key byte left as it was. */
@@ -283,7 +315,7 @@ test("mutant: a MON3.SVC that doesn't wait for release or record keys delivers E
     b[i + 4] = 0x18; // JR: no wait, whatever the keys
     noRecord(b, at);
   });
-  const card = Uint8Array.from(starter().card);
+  const card = starter().on("MON3");
   volume(card, "A").write("MON3.SVC", file);
   assert.throws(() => hello3Round(card), /no held Escape reaches monitor line input/);
 });
@@ -310,7 +342,7 @@ function hello3OnTty(card) {
 }
 
 test("on the card after CON TTY, Esc held as the page holds it returns to MON3> and EXIT to A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
-  hello3OnTty(Uint8Array.from(starter().card));
+  hello3OnTty(starter().on("MON3"));
 });
 
 // The wait's own scan records the key, so the page lets it go and the wait
@@ -323,7 +355,7 @@ test("mutant: a MON3.SVC that waits for the keys whatever the console, and doesn
     b[i + 5] = 0x00;
     noRecord(b, at);
   });
-  const card = Uint8Array.from(starter().card);
+  const card = starter().on("MON3");
   volume(card, "A").write("MON3.SVC", file);
   assert.throws(() => hello3OnTty(card), /no MON3> after Esc on TTY/);
 });
@@ -352,20 +384,20 @@ function hello3KeyThenEsc(card) {
 }
 
 test("on the card, a key and then Esc, held as the page holds them, reach HELLO3, which shows the key and returns to MON3>, and EXIT to A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
-  hello3KeyThenEsc(Uint8Array.from(starter().card));
+  hello3KeyThenEsc(starter().on("MON3"));
 });
 
 test("mutant: a MON3.SVC whose matrix scan doesn't record the key leaves the 1 held, and the Esc never comes", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, noRecord);
-  const card = Uint8Array.from(starter().card);
+  const card = starter().on("MON3");
   volume(card, "A").write("MON3.SVC", file);
   assert.throws(() => hello3KeyThenEsc(card), /no key 1 on HELLO3's digits, and let go/);
 });
 
 // The starter holds only the source; the card's assembler makes the image.
 test("on the card, TAS HELLO3 HELLO3.BIN builds the source-only example", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
-  const card = Uint8Array.from(starter().card);
+  const card = starter().on("ASM");
   const want = await hello3();
   const m = boot(card);
   assert.ok(!volume(card, "A").list().some((f) => f.name === "HELLO3.BIN"), "no prebuilt image");
@@ -383,7 +415,7 @@ test("on the card, TAS HELLO3 HELLO3.BIN builds the source-only example", { skip
 // sideways would keep the first 40 columns in view and fail the check at the line's end.
 test("on the card at 40 columns, TED BOUNCE.BAS scrolls sideways along its longest line and back", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
   check(BOUNCE);
-  const card = Uint8Array.from(starter().card);
+  const card = starter().on("BASIC");
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   const keys = (s, what, done) => {
     m.enqueueInput(s, "matrix");

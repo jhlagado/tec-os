@@ -1629,15 +1629,15 @@ test("KG68 docs agree", async () => {
   const fig = figures(svc);
   const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
   assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **${fig.pages} pages**`), "the size");
-  // The starter card asks for four drives, whose vectors take the bare
-  // ROM's word from B986h to B6C6h: MON3.SVC's pages go below page B6h.
-  const bare = fig.top - 0x300;
+  // The starter card asks for three drives, whose vectors take the bare
+  // ROM's word from B986h to B7C6h: MON3.SVC's pages go below page B7h.
+  const bare = fig.top - 0x200;
   const tpa = (top) => (top - 0x100).toLocaleString("en");
-  assert.ok(mon3.includes(`from \`B6C6h\` to \`${h4(bare)}\`, and the TPA from 46,534 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
+  assert.ok(mon3.includes(`from \`B7C6h\` to \`${h4(bare)}\`, and the TPA from 46,790 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
   // With the shell: (0006h) is A400h with SHELL.SVC alone on the starter
   // card, as shell2.test measures it, MON3.SVC's pages lower, and GLCD.SVC
   // three pages lower still.
-  const shellTop = 0xa400;
+  const shellTop = 0xa500;
   const withMon3 = shellTop - fig.pages * 0x100;
   assert.ok(mon3.includes(`from \`${h4(shellTop)}\` to \`${h4(withMon3)}\`, and the TPA from ${tpa(shellTop)} bytes to **${tpa(withMon3)}**`), "(0006h) and the TPA with the shell");
   assert.ok(mon3.includes(`\`${h4(withMon3 - 0x300)}\`, a TPA of **${tpa(withMon3 - 0x300)}**`), "and with GLCD.SVC too");
@@ -1658,7 +1658,7 @@ test("KG68 docs agree", async () => {
   const listedIn = (head) => [...mon3.slice(mon3.indexOf(head)).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
   assert.deepEqual(listedIn("calls implemented, 42 of them:"), built.filter((i) => !(i in TRANSLATED)), "the implemented calls");
   assert.deepEqual(listedIn("Translated, on TEC-OS's resources, 4 of them:"), Object.keys(TRANSLATED).map(Number), "the translated calls");
-  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes from the bare BDOS entry through BFFFh \(`B6C6h` on the starter, `B986h` on the two-volume reference card\)/);
+  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes from the bare BDOS entry through BFFFh \(`B7C6h` on the starter, `B986h` on the two-volume reference card\)/);
   // The refused calls the doc lists are those the table sends to the error display, and RTCAPI.
   const refusedCalls = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [i] : []));
   const notBuilt = mon3.slice(mon3.indexOf("Not built, and refused:")).split(". Each")[0];
