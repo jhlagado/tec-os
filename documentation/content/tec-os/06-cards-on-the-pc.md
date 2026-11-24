@@ -161,8 +161,8 @@ project and session files:
  0 STARTUP.CMD       128
  0 TAS.COM         11136
  0 TED.COM         12416
- 0 THOR.PRJ          128
- 0 THOR.SES          128
+ 0 TED.PRJ          128
+ 0 TED.SES          128
  0 TIMES.BAS         640
 ```
 

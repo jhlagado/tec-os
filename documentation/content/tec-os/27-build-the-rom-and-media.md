@@ -521,8 +521,8 @@ Press a key
 
 A key restores TED at line 7 and `^Q` exits. DIR lists five B files.
 TAS has written `HELLO.COM` and `HELLO.DBG` beside the source. After the
-first successful build, `THOR.PRJ` supplies the source for build keys.
-`THOR.SES` retains the work file and editing position. These are program
+first successful build, `TED.PRJ` supplies the source for build keys.
+`TED.SES` retains the work file and editing position. These are program
 editing artifacts, separate from the ROM D8 map.
 
 ## HELLO assembled on the PC

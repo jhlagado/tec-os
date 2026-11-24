@@ -153,7 +153,7 @@ function round({ drive = "A", tms = true }) {
 
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
   mark = m.output.length;
-  keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(since()) && /THOR\.PRJ: HELLO\.ASM/.test(status()));
+  keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(since()) && /TED\.PRJ: HELLO\.ASM/.test(status()));
   assert.match(since(), /HELLO\.COM written/);
   assert.equal(text(image, drive, "HELLO.ASM"), FIXED, "^T B saves first");
   assert.equal(word(m, CURSOR), 13);
@@ -166,7 +166,7 @@ function round({ drive = "A", tms = true }) {
   keys(m, "\x11", "the prompt", () => new RegExp(`${drive}(:\\S*)?>$`).test(since()));
   assert.deepEqual(m.violations, []);
   const names = volume(image, drive).list().map((f) => f.name);
-  for (const n of ["HELLO.COM", "HELLO.TBG", "THOR.PRJ", "THOR.SES"]) assert.ok(names.includes(n), `${n} on ${drive}:`);
+  for (const n of ["HELLO.COM", "HELLO.TBG", "TED.PRJ", "TED.SES"]) assert.ok(names.includes(n), `${n} on ${drive}:`);
 }
 
 test("the round on A: with the PICO9918: ^T B at the error, the fix, ^T R", { skip: TED.skip || TAS.skip, timeout: 1_800_000 }, () => {
@@ -303,7 +303,7 @@ PUT: PUSH HL
  RET
 `;
 
-// THOR.PRJ's ARGS goes on ^T R's run line. The shell splits a line at an &
+// TED.PRJ's ARGS goes on ^T R's run line. The shell splits a line at an &
 // after a blank, so TED stops ARGS there; an & inside a word is text.
 for (const [args, tail, what] of [
   ["X &HELLO Z", " X", "stops at the & after a blank: the program runs once with X"],
@@ -317,7 +317,7 @@ for (const [args, tail, what] of [
     a.write("TED.COM", tedBytes());
     a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
     a.write("HELLO.ASM", Buffer.from(ECHO), { text: true });
-    a.write("THOR.PRJ", Buffer.from(`MAIN   HELLO.ASM\nARGS   ${args}\n`), { text: true });
+    a.write("TED.PRJ", Buffer.from(`MAIN   HELLO.ASM\nARGS   ${args}\n`), { text: true });
     const m = boot(withShell(image), { tms: true, matrix: true });
     const status = () => m.screen()[23];
     keys(m, "ted hello.asm\r", "TED", () => /TED +HELLO\.ASM/.test(status()));

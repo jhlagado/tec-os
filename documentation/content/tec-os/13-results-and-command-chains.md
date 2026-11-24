@@ -471,7 +471,7 @@ TED uses function 47 after its `^T` prefix. A build saves the editor state and
 supplies a line that runs the build tool followed by TED. The `!` separator
 reopens TED whether the build succeeds or fails. The new invocation restores
 the file and position. `.ASM` selects TAS and `.BAS` selects BAZA. For another
-type the build keys use the source named by `THOR.PRJ`, if present. The prefix
+type the build keys use the source named by `TED.PRJ`, if present. The prefix
 commands include the build and run operations from Chapters 2 and 3:
 
 | Keys | Effect |
@@ -489,7 +489,7 @@ These sequences require the shell. Without it the ROM passes the entire rest
 of the line as the build tool's tail. The tool still builds but the prompt
 returns instead of TED.
 
-TED places file names and `THOR.PRJ`'s `ARGS` value on the command line. It
+TED places file names and `TED.PRJ`'s `ARGS` value on the command line. It
 truncates either at a shell separator: any `!` or an `&` following a blank.
 Thus `ARGS X &Y` makes `^T R` run once with tail ` X` and nothing afterwards.
 An embedded `&` in `/M:&HE000` remains literal
@@ -503,9 +503,9 @@ drives and each return to the editor is a new invocation through the command
 processor.
 
 TAS writes `.DBG` and `.COM` beside the source, giving `HELLO.DBG` and
-`HELLO.COM` for Chapter 27's example. In this setup TED also stores `THOR.PRJ`
-and `THOR.SES` there. After the first successful compilation and project
-update THOR.PRJ identifies the source for later build keys. THOR.SES retains
+`HELLO.COM` for Chapter 27's example. In this setup TED also stores `TED.PRJ`
+and `TED.SES` there. After the first successful compilation and project
+update TED.PRJ identifies the source for later build keys. TED.SES retains
 the file and position from the preceding exit. Chapter 27 contains the full
 error, repair and run capture and its recipe.
 

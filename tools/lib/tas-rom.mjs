@@ -7,8 +7,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inputsDir, pinnedBytes } from './pins.mjs';
 import { decodeImage, scanSource, tasImage } from './tas-d8.mjs';
 
-const runnerPin = 'cf5460c3ffb988e96fcc7fbb0aaf7039bb9a611f';
-const tasPin = 'cf5460c3ffb988e96fcc7fbb0aaf7039bb9a611f';
+const runnerPin = 'fdd21f53c9fa13742eccc9f30339403c080ccfd1'; // jhlagado/tas
+const tasPin = 'fdd21f53c9fa13742eccc9f30339403c080ccfd1';
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const include = /^([ \t]*%INCLUDE[ \t]+")([^"\r\n]+)(")/gim;
 
@@ -78,7 +78,7 @@ export async function tasAssembler() {
   const root = fileURLToPath(new URL('../../', import.meta.url));
   const entry = JSON.parse(readFileSync(join(root, 'test/inputs.json'), 'utf8')).inputs['TAS.COM'];
   assert.equal(entry.commit, tasPin, 'unsupported TAS manifest commit');
-  assert.equal(entry.sha256, 'ed6c00ca8f18ce112bee6657cb505c0a3bcdf711e995a03e8f9fcc81ff5049a7', 'unsupported TAS manifest hash');
+  assert.equal(entry.sha256, '78541bbd3a66b8a832bba1f04ed48c3b174c98322fe8aabd57a2079bf1564ab1', 'unsupported TAS manifest hash');
   assert.equal(entry.bytes, 10725, 'unsupported TAS manifest byte count');
   const override = process.env.TECOS_TAS_HOST;
   assert.ok(override !== '', 'TECOS_TAS_HOST is empty: unset it or select the prepared pinned host');
@@ -86,15 +86,15 @@ export async function tasAssembler() {
   assert.ok(readdirSyncSafe(host), 'no TAS host at ' + host + ': prepare .inputs/tas-host as described in README.md or set TECOS_TAS_HOST');
   const com = pinnedBytes(root, 'TAS.COM');
   const runner = join(host, 'tools/tas.mjs');
-  assert.equal(sha(readFileSync(runner)), '8f818e2ed02f4e896742c0041ab99cd80048746795de9b2c2c59997d515d1f37', 'Thorium runner pin mismatch');
-  assert.equal(sha(readFileSync(join(host, 'package-lock.json'))), 'fc8bcae3046fa185048627e0df26c602772cfb3b190a54089e2fe6764839bf2a', 'Thorium lock pin mismatch');
+  assert.equal(sha(readFileSync(runner)), '8f818e2ed02f4e896742c0041ab99cd80048746795de9b2c2c59997d515d1f37', 'TAS runner pin mismatch');
+  assert.equal(sha(readFileSync(join(host, 'package-lock.json'))), 'fc8bcae3046fa185048627e0df26c602772cfb3b190a54089e2fe6764839bf2a', 'TAS lock pin mismatch');
   const runtime = join(host, 'node_modules/@jhlagado/debug80-runtime');
   const hash = createHash('sha256');
   const runtimeFiles = readdirSync(join(runtime, 'dist/z80')).filter(f => f.endsWith('.js')).sort();
   for (const file of ['package.json', ...runtimeFiles.map(f => 'dist/z80/' + f)]) {
     hash.update(file + '\0').update(createHash('sha256').update(readFileSync(join(runtime, file))).digest());
   }
-  assert.equal(hash.digest('hex'), 'd49287b51d474e5825d68ed4c766cd63632c9da68cded2641e881de00960219c', 'Thorium Z80 runtime pin mismatch');
+  assert.equal(hash.digest('hex'), 'd49287b51d474e5825d68ed4c766cd63632c9da68cded2641e881de00960219c', 'TAS Z80 runtime pin mismatch');
   const { assemble } = await import(pathToFileURL(runner).href);
   // flat: a program whose own ORG sets its addresses, such as the RAM
   // diagnostics at 4000h. Its image starts at the first ORG (`origin`).

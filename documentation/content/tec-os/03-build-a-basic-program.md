@@ -167,7 +167,7 @@ type selects the build tool: TAS for `.ASM` and BAZA for `.BAS`. The
 `^T B` saves TIMES.BAS and runs `A:BAZA TIMES.BAS`. The A prefix is the
 drive that supplied TED. The console displays this command and
 `COM written` before TED reopens the source at your previous position.
-After the first successful build, `THOR.PRJ: TIMES.BAS` appears on the
+After the first successful build, `TED.PRJ: TIMES.BAS` appears on the
 status row. TED has recorded TIMES.BAS as the build source in its project
 file.
 
@@ -228,8 +228,8 @@ A:SYSTEM>A:BAZA TIMES.BAS
 ```
 
 The message names BASIC line 95. TED reopens at file line 10, where that
-BASIC line occurs, and displays the message on its status row. BAZA writes the file position to `THOR.ERR`
-when `THOR.SES` is on the current drive. These examples keep both beside
+BASIC line occurs, and displays the message on its status row. BAZA writes the file position to `TED.ERR`
+when `TED.SES` is on the current drive. These examples keep both beside
 the source. TED reads and removes the error record. Correcting or deleting
 the faulty line allows another build.
 

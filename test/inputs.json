@@ -3,33 +3,33 @@
   "inputs": {
     "TAS.COM": {
       "env": "TAS_COM",
-      "default": "../thorium/dist/TAS.COM",
-      "source": "jhlagado/thorium cf5460c, dist/TAS.COM",
-      "repo": "jhlagado/thorium",
-      "commit": "cf5460c3ffb988e96fcc7fbb0aaf7039bb9a611f",
+      "default": "../tas/dist/TAS.COM",
+      "source": "jhlagado/tas fdd21f5, dist/TAS.COM",
+      "repo": "jhlagado/tas",
+      "commit": "fdd21f53c9fa13742eccc9f30339403c080ccfd1",
       "path": "dist/TAS.COM",
       "bytes": 10725,
-      "sha256": "ed6c00ca8f18ce112bee6657cb505c0a3bcdf711e995a03e8f9fcc81ff5049a7"
+      "sha256": "78541bbd3a66b8a832bba1f04ed48c3b174c98322fe8aabd57a2079bf1564ab1"
     },
     "TED.COM": {
       "env": "TED_COM",
       "default": "../thorium/dist/TED.COM",
-      "source": "jhlagado/thorium d97a5b2, dist/TED.COM",
+      "source": "jhlagado/thorium dc0cd0f, dist/TED.COM",
       "repo": "jhlagado/thorium",
-      "commit": "d97a5b23dcb4a9a828bb7882c94092599b8f843f",
+      "commit": "dc0cd0f991aad439c78ed8b7d541afa88dff16c0",
       "path": "dist/TED.COM",
-      "bytes": 12335,
-      "sha256": "b1764f540d24d35a8552c8c029876376e94a97837a48381b89ed41ede23a6cfa"
+      "bytes": 12328,
+      "sha256": "ae37d995de77a91e875f1b10b7a537fffa63cabacb9f94b4700fe1458200af0c"
     },
     "BAZA.COM": {
       "env": "BAZA_COM",
       "default": "../baza/dist/BAZA.COM",
-      "source": "jhlagado/baza 1785d83 (distribution for a679ea4), dist/BAZA.COM",
+      "source": "jhlagado/baza 4204b18 (distribution for 5732c4c), dist/BAZA.COM",
       "repo": "jhlagado/baza",
-      "commit": "1785d8380ab02ce98067a83cc2f62c03ad635a46",
+      "commit": "4204b18f44f1f87f2eddf624bb53558854f0cc4a",
       "path": "dist/BAZA.COM",
       "bytes": 13440,
-      "sha256": "78641757b0b9c0a478dff432c94889f52c973f7e6f502b04b85f890a1c76cbc6"
+      "sha256": "6af11dc2733468c796079f45368d1678d204177da2a4a08fa852cefb1e50ef72"
     },
     "BAZA.RTL": {
       "env": "BAZA_RTL",

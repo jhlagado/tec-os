@@ -45,8 +45,8 @@ Node.js 20 or later.
     node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
   else
     tas_stage=$(mktemp -d "$PWD/.inputs/.tas-host.XXXXXX")
-    git clone https://github.com/jhlagado/thorium.git "$tas_stage"
-    git -C "$tas_stage" checkout --detach cf5460c3ffb988e96fcc7fbb0aaf7039bb9a611f
+    git clone https://github.com/jhlagado/tas.git "$tas_stage"
+    git -C "$tas_stage" checkout --detach fdd21f53c9fa13742eccc9f30339403c080ccfd1
     (cd "$tas_stage" && npm ci)
     TECOS_TAS_HOST="$tas_stage" node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
     mv "$tas_stage" .inputs/tas-host
@@ -91,7 +91,7 @@ Input setup fetches the pinned local binary when a legacy sibling is stale.
 
 TAS assembles everything: the main ROM, the diagnostics, GLCD.SVC,
 SHELL.SVC, DEMO.COM, MON3.SVC, and the tests' programs and services. It
-runs on the host from Thorium's runner, selected from `TECOS_TAS_HOST`, then
+runs on the host from TAS's runner (jhlagado/tas), selected from `TECOS_TAS_HOST`, then
 `.inputs/tas-host`. The starter holds HELLO3 as source; TAS builds its
 binary on the card.
 
@@ -182,8 +182,8 @@ Enter retry before normal commands resume
 ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
-`TED X.ASM!TAS X &X`. TED, from Thorium `d97a5b2` (`TED.COM`
-`b1764f54`, 12,335 bytes), stops a file name and `THOR.PRJ`'s `ARGS` at the
+`TED X.ASM!TAS X &X`. TED, from Thorium `dc0cd0f` (`TED.COM`
+`ae37d995`, 12,328 bytes), stops a file name and `TED.PRJ`'s `ARGS` at the
 same `!` and `&`, so a project's `ARGS X &Y` gives ^T R's program the tail
 ` X` and runs nothing after it.
 `SAMPLE.ASM` on the starter card is a first program to build and read:

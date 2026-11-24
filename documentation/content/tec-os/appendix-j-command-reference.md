@@ -508,7 +508,7 @@ TED's `^T B` and `^T R` build an `.ASM` file with `TAS NAME.ASM` and a
 file, which fails with `A:TDB?` on the starter card, and shows
 `No debugger` for a `.BAS` file
 (`Thorium 02b63d8:README.md:14-41`, `57a8c38:docs/compatibility.md:223`).
-A file name and `THOR.PRJ`'s `ARGS` end at `!` or at `&` after a blank.
+A file name and `TED.PRJ`'s `ARGS` end at `!` or at `&` after a blank.
 Those are the shell's line separators. `ARGS X &Y` therefore gives the
 program the tail ` X` and runs nothing after it
 (`Thorium 02b63d8:README.md:51-58`).
