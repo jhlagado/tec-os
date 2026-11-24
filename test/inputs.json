@@ -14,22 +14,22 @@
     "TED.COM": {
       "env": "TED_COM",
       "default": "../thorium/dist/TED.COM",
-      "source": "jhlagado/thorium cf5460c, dist/TED.COM",
+      "source": "jhlagado/thorium d97a5b2, dist/TED.COM",
       "repo": "jhlagado/thorium",
-      "commit": "cf5460c3ffb988e96fcc7fbb0aaf7039bb9a611f",
+      "commit": "d97a5b23dcb4a9a828bb7882c94092599b8f843f",
       "path": "dist/TED.COM",
       "bytes": 12335,
-      "sha256": "81b9ff24cb6fac22665215bf8881c08d33dc189a59087f7dd4c3d715a9435c7c"
+      "sha256": "b1764f540d24d35a8552c8c029876376e94a97837a48381b89ed41ede23a6cfa"
     },
     "BAZA.COM": {
       "env": "BAZA_COM",
       "default": "../baza/dist/BAZA.COM",
-      "source": "jhlagado/baza c49f477, dist/BAZA.COM",
+      "source": "jhlagado/baza 1785d83 (distribution for a679ea4), dist/BAZA.COM",
       "repo": "jhlagado/baza",
-      "commit": "c49f477e0e2138c46fa6e84f0bb158874733d692",
+      "commit": "1785d8380ab02ce98067a83cc2f62c03ad635a46",
       "path": "dist/BAZA.COM",
       "bytes": 13440,
-      "sha256": "a2da18abb31f2b79e33e3d9d84173d746c3fdbf24cb07c8508afbcaf91689664"
+      "sha256": "78641757b0b9c0a478dff432c94889f52c973f7e6f502b04b85f890a1c76cbc6"
     },
     "BAZA.RTL": {
       "env": "BAZA_RTL",

@@ -182,8 +182,8 @@ Enter retry before normal commands resume
 ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
-`TED X.ASM!TAS X &X`. TED, from Thorium `cf5460c` (`TED.COM`
-`81b9ff24`, 12,335 bytes), stops a file name and `THOR.PRJ`'s `ARGS` at the
+`TED X.ASM!TAS X &X`. TED, from Thorium `d97a5b2` (`TED.COM`
+`b1764f54`, 12,335 bytes), stops a file name and `THOR.PRJ`'s `ARGS` at the
 same `!` and `&`, so a project's `ARGS X &Y` gives ^T R's program the tail
 ` X` and runs nothing after it.
 `SAMPLE.ASM` on the starter card is a first program to build and read:

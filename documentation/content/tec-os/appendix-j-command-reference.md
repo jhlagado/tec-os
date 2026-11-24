@@ -480,7 +480,7 @@ and HELLO3.BIN is built from HELLO3.ASM before loading it at `MON3>`
 | --- | --- |
 | `TED.COM` | `TED [NAME.EXT [LINE]]` edits a text file, opening it at `LINE` when one is given. With no name it opens the project's file |
 | `TAS.COM` | `TAS NAME [OUT.TYP]` assembles `NAME.ASM` to `NAME.COM` and `NAME.DBG`, or to `OUT.TYP`, where a type of `SVC` makes a service and an explicit `HEX` writes genuine Intel HEX. A line may hold several statements with `\` between them |
-| `BAZA.COM` | `BAZA NAME` compiles `NAME.BAS`, or `NAME.BAZ` when there is no `.BAS`, to `NAME.COM` on the same drive |
+| `BAZA.COM` | `BAZA NAME` compiles `NAME.BAS` to `NAME.COM` on the same drive; `BAZA NAME.TYP` compiles that file as named |
 | `BAZA.RTL` | BAZA's runtime library, read from the current drive or from the drive `BAZA.COM` was loaded from |
 | `SAMPLE.ASM` | Assembly source for `TAS SAMPLE`, then `SAMPLE` |
 | `TIMES.BAS` | BASIC source for `BAZA TIMES`, then `TIMES` |
