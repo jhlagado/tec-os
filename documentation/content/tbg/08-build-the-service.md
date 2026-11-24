@@ -15,5 +15,5 @@ The standard Viewer ROM supports the direct-launch exercises in this manual.
 Armed launch requires the experimental ROM.
 
 [TBG source](https://github.com/jhlagado/tbg) ·
-[Viewer build source](https://github.com/jhlagado/tec-os-viewer/tree/tbg-lcd-workflow) ·
+[Viewer build source](https://github.com/jhlagado/tec-os-viewer) ·
 [Origo P8 test evidence](https://github.com/jhlagado/origo/tree/main/studies/p8-tbg/evidence)
