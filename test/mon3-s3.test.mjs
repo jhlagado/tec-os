@@ -374,7 +374,7 @@ test("KG67 glcd-3d", { timeout: 600_000 }, async () => {
 });
 
 // After glcd-text and glcd-demo, which never return, a reset: the card's
-// files as before GO, no service, and (0006h) B988h.
+// files as before GO, no service, and (0006h) B986h.
 
 test("KG67 reset after", async () => {
   // Each program runs here, to the end its own test reaches.
@@ -387,7 +387,7 @@ test("KG67 reset after", async () => {
     const a = volume(m.image, "A");
     assert.deepEqual(Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))])), before, `${name}: the card's files as before GO`);
     assert.deepEqual(services(m), [], `${name}: no service after the reset`);
-    assert.equal(word(m, 6), 0xb988, `${name}: (0006h) B988h`);
+    assert.equal(word(m, 6), 0xb986, `${name}: (0006h) B986h`);
   }
 });
 

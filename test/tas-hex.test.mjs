@@ -143,14 +143,14 @@ test("pinned TAS HEX preserves 1024 gaps on the real OS with resident services",
 
 test("pinned TAS HEX arena refusal on the real OS keeps old output/debug and removes work files", { skip: TAS.skip, timeout: 900_000 }, async () => {
   const { m, image } = await target(holes(8192), "HUGE", true, {
-    "HUGE.HEX": Buffer.from(":00000001FF\r\n"), "HUGE.DBG": Buffer.from("previous debug"),
+    "HUGE.HEX": Buffer.from(":00000001FF\r\n"), "HUGE.TBG": Buffer.from("previous debug"),
   });
   const a = volume(image, "A");
-  const before = [Buffer.from(a.read("HUGE.HEX")), Buffer.from(a.read("HUGE.DBG"))];
+  const before = [Buffer.from(a.read("HUGE.HEX")), Buffer.from(a.read("HUGE.TBG"))];
   assert.match(compile(m, "TAS HUGE HUGE.HEX"), /out of memory/);
   assert.equal(word(m, m.sym("PRGCODE")), 0xff00);
   assert.deepEqual(Buffer.from(volume(image, "A").read("HUGE.HEX")), before[0]);
-  assert.deepEqual(Buffer.from(volume(image, "A").read("HUGE.DBG")), before[1]);
+  assert.deepEqual(Buffer.from(volume(image, "A").read("HUGE.TBG")), before[1]);
   assert.ok(volume(image, "A").list().every(f => !/\.\$\$[H$D]$/.test(f.name)), "no assembler work file remains");
   assert.deepEqual(m.violations, []);
 });

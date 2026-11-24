@@ -126,8 +126,7 @@ test("a byte TED refuses stops it with EDIT error 03 and the byte's line and col
 });
 
 /**
- * The round on DRIVE: ^T B fails and opens at the error, ^T D chains TDB, which
- * isn't there, so TDB? and !TED bring TED back; the fix, ^T B again, ^T R runs
+ * The round on DRIVE: ^T B fails and opens at the error; the fix, ^T B again, ^T R runs
  * the program, and a key brings TED back at the same place. TED and TAS are on
  * DRIVE: the CCP looks for a command on the current drive only.
  */
@@ -152,12 +151,6 @@ function round({ drive = "A", tms = true }) {
   assert.equal(word(m, CURSOR), 12, "at line 2, column 2: the error's place");
   assert.equal(volume(image, drive).list().some((f) => f.name === "HELLO.COM"), false, "a failed build leaves no HELLO.COM");
 
-  mark = m.output.length;
-  keys(m, "\x14d", "TED after TDB?", () => /TED\r\n/.test(since()) && /L2 C2/.test(status()));
-  // Item E: each tool on the line names the load drive, the current one here
-  assert.match(since(), new RegExp(`${drive}(:\\S*)?>${drive}:TDB HELLO\\r\\n${drive}:TDB\\?\\r\\n\\r\\n${drive}(:\\S*)?>${drive}:TED\\r\\n`), "the chain's line taken, TDB? and !TED");
-  assert.equal(word(m, CURSOR), 12, "the same place");
-
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
   mark = m.output.length;
   keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(since()) && /THOR\.PRJ: HELLO\.ASM/.test(status()));
@@ -173,10 +166,10 @@ function round({ drive = "A", tms = true }) {
   keys(m, "\x11", "the prompt", () => new RegExp(`${drive}(:\\S*)?>$`).test(since()));
   assert.deepEqual(m.violations, []);
   const names = volume(image, drive).list().map((f) => f.name);
-  for (const n of ["HELLO.COM", "HELLO.DBG", "THOR.PRJ", "THOR.SES"]) assert.ok(names.includes(n), `${n} on ${drive}:`);
+  for (const n of ["HELLO.COM", "HELLO.TBG", "THOR.PRJ", "THOR.SES"]) assert.ok(names.includes(n), `${n} on ${drive}:`);
 }
 
-test("the round on A: with the PICO9918: ^T B at the error, ^T D's TDB? and back, the fix, ^T R", { skip: TED.skip || TAS.skip, timeout: 1_800_000 }, () => {
+test("the round on A: with the PICO9918: ^T B at the error, the fix, ^T R", { skip: TED.skip || TAS.skip, timeout: 1_800_000 }, () => {
   round({ drive: "A" });
 });
 

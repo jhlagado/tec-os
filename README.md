@@ -12,7 +12,7 @@ ROM table at `C003h`.
   addresses.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
-  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,536 bytes on the
+  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,534 bytes on the
   starter card with nothing loaded, its four drives' vectors taken; the card's
   `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 41,728, and 40,960
   with the GLCD's driver too.
@@ -46,7 +46,7 @@ Node.js 20 or later.
   else
     tas_stage=$(mktemp -d "$PWD/.inputs/.tas-host.XXXXXX")
     git clone https://github.com/jhlagado/thorium.git "$tas_stage"
-    git -C "$tas_stage" checkout --detach 1e8b77afc9553db0f4714289e6de44ad583ce64a
+    git -C "$tas_stage" checkout --detach e5b72f498cd4b1be60d3ae2889fc7d96f90d7ad7
     (cd "$tas_stage" && npm ci)
     TECOS_TAS_HOST="$tas_stage" node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
     mv "$tas_stage" .inputs/tas-host
@@ -179,8 +179,8 @@ Enter retry before normal commands resume
 ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
-`TED X.ASM!TAS X &X`. TED, from Thorium `02b63d8` (`TED.COM`
-`c6c8374a`, 12,335 bytes), stops a file name and `THOR.PRJ`'s `ARGS` at the
+`TED X.ASM!TAS X &X`. TED, from Thorium `e5b72f4` (`TED.COM`
+`81b9ff24`, 12,335 bytes), stops a file name and `THOR.PRJ`'s `ARGS` at the
 same `!` and `&`, so a project's `ARGS X &Y` gives ^T R's program the tail
 ` X` and runs nothing after it.
 `SAMPLE.ASM` on the starter card is a first program to build and read:

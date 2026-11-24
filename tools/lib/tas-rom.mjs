@@ -7,8 +7,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inputsDir, pinnedBytes } from './pins.mjs';
 import { decodeImage, scanSource, tasImage } from './tas-d8.mjs';
 
-const runnerPin = '1e8b77afc9553db0f4714289e6de44ad583ce64a';
-const tasPin = '1e8b77afc9553db0f4714289e6de44ad583ce64a';
+const runnerPin = 'e5b72f498cd4b1be60d3ae2889fc7d96f90d7ad7';
+const tasPin = 'e5b72f498cd4b1be60d3ae2889fc7d96f90d7ad7';
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const include = /^([ \t]*%INCLUDE[ \t]+")([^"\r\n]+)(")/gim;
 

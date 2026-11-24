@@ -1531,7 +1531,7 @@ test("KG63 warm boot and reset", async () => {
   m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after a reset");
   assert.deepEqual(services(m), [], "a reset removes it");
-  assert.equal(word(m, 6), 0xb988);
+  assert.equal(word(m, 6), 0xb986);
 });
 
 async function unloads(svc) {
@@ -1542,7 +1542,7 @@ async function unloads(svc) {
     exitBy(m, how);
     m.command("UNLOAD");
     assert.deepEqual(services(m), [], `after ${how}: UNLOAD takes the pages`);
-    assert.equal(word(m, 6), 0xb988, `after ${how}: (0006h) back at B988h`);
+    assert.equal(word(m, 6), 0xb986, `after ${how}: (0006h) back at B986h`);
     assert.equal(warmTarget(m), m.sym("WBOOTR"), `after ${how}: the hook is out`);
     assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A(:\S*)?>$/, `after ${how}: a .COM exits to the prompt`);
   }
@@ -1563,7 +1563,7 @@ const INACTIVE = {
   "test/svc.test.mjs": ["a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h"],
   "test/times.test.mjs": ["with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it compiles and gives the JP back before it exits, TIMES runs, and the GLCD is still the console"],
   "test/ted-baza.test.mjs": [
-    "TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No debugger, ^T R runs TIMES, and a syntax error brings TED back on its line",
+    "TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T R runs TIMES, and a syntax error brings TED back on its line",
     "a project on B: builds with A:'s BAZA, which finds BAZA.RTL on its load drive",
   ],
 };
@@ -1630,10 +1630,10 @@ test("KG68 docs agree", async () => {
   const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
   assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **${fig.pages} pages**`), "the size");
   // The starter card asks for four drives, whose vectors take the bare
-  // ROM's word from B988h to B6C8h: MON3.SVC's pages go below page B6h.
+  // ROM's word from B986h to B6C6h: MON3.SVC's pages go below page B6h.
   const bare = fig.top - 0x300;
   const tpa = (top) => (top - 0x100).toLocaleString("en");
-  assert.ok(mon3.includes(`from \`B6C8h\` to \`${h4(bare)}\`, and the TPA from 46,536 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
+  assert.ok(mon3.includes(`from \`B6C6h\` to \`${h4(bare)}\`, and the TPA from 46,534 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
   // With the shell: (0006h) is A400h with SHELL.SVC alone on the starter
   // card, as shell2.test measures it, MON3.SVC's pages lower, and GLCD.SVC
   // three pages lower still.
@@ -1658,7 +1658,7 @@ test("KG68 docs agree", async () => {
   const listedIn = (head) => [...mon3.slice(mon3.indexOf(head)).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
   assert.deepEqual(listedIn("calls implemented, 42 of them:"), built.filter((i) => !(i in TRANSLATED)), "the implemented calls");
   assert.deepEqual(listedIn("Translated, on TEC-OS's resources, 4 of them:"), Object.keys(TRANSLATED).map(Number), "the translated calls");
-  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes from the bare BDOS entry through BFFFh \(`B6C8h` on the starter, `B988h` on the two-volume reference card\)/);
+  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes from the bare BDOS entry through BFFFh \(`B6C6h` on the starter, `B986h` on the two-volume reference card\)/);
   // The refused calls the doc lists are those the table sends to the error display, and RTCAPI.
   const refusedCalls = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [i] : []));
   const notBuilt = mon3.slice(mon3.indexOf("Not built, and refused:")).split(". Each")[0];

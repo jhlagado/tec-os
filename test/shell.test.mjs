@@ -318,7 +318,7 @@ test("SH5 cold boot clears", () => {
 
 test("SH5 mutant: without the sweep in PZSWP, a REMOVE that leaves the hook runs freed pages", () => {
   const mut = romMutant((b, s) => {
-    const i = find(b, s("PZSWP"), [0x30, null], 12); // JR NC,PZSW1
+    const i = find(b, s("PZSWV"), [0x30, null], 12); // JR NC,PZSW1, after COMVEC's check
     b[i] = 0x18;
   });
   const m = shellMachine(bareCard(), mut);
@@ -1243,7 +1243,7 @@ test("SH12 mutant: the give-back unguarded hands the prompt to HOOK2", async () 
 
 test("SH12 mutant: the last UNLOAD with the sweep removed, under the overwriting mutant, jumps to a freed table", async () => {
   const mut = await shellVariant([OVERWRITE]);
-  const sweep = romMutant((b, s) => { b[find(b, s("PZSWP"), [0x30, null], 12)] = 0x18; });
+  const sweep = romMutant((b, s) => { b[find(b, s("PZSWV"), [0x30, null], 12)] = 0x18; });
   const m = shellMachine(shellCard({ "HOOK.SVC": HOOKZ.file }, { startup: ["SHELL.SVC"], shell: mut.file }), sweep);
   at(m, "HOOK.SVC", { re: S });
   at(m, "SHELL.SVC");

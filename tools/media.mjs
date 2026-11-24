@@ -137,8 +137,8 @@ ${rows(census.rom.regions)}
 
 RST 1 to RST 5 are any program's: one that takes a vector saves the three
 bytes it replaces and puts them back on every exit. RST 6 is kept for the
-debugger's breakpoints; \`BAZA.COM\` takes it, with RST 1 to RST 5, while it
-compiles, an accepted exception that stays open. RST 7 is the interrupt
+debugger's breakpoints, and no one else's: \`BAZA.COM\` takes only RST 1 to
+RST 5 while it compiles. RST 7 is the interrupt
 vector, and the only one a service may claim (Origo KD-434). Every warm boot,
 unload and failed \`INIT\` gives RST 1 to RST 6 seven zeros and a RET,
 whatever they hold, and 0038h EI, RETI and zeros unless it holds a jump above

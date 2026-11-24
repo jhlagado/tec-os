@@ -1,6 +1,6 @@
 // TED and BAZA on the starter card's files: TED opens TIMES.BAS and
-// ^T B builds it with BAZA and comes back clean, ^T D says No debugger and
-// chains nothing, ^T R runs TIMES and comes back after a key, and a line with
+// ^T B builds it with BAZA and comes back clean, ^T R runs TIMES and comes
+// back after a key, and a line with
 // a syntax error brings TED back on that line from BAZA's THOR.ERR, with the
 // last TIMES.COM kept byte for byte; a project on B: builds with A:'s BAZA,
 // which finds BAZA.RTL on the drive it was loaded from. Emulator evidence. TED.COM,
@@ -59,7 +59,7 @@ function card(drive) {
   return withShell(image);
 }
 
-test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No debugger, ^T R runs TIMES, and a syntax error brings TED back on its line", { skip: SKIP, timeout: 1_800_000 }, () => {
+test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T R runs TIMES, and a syntax error brings TED back on its line", { skip: SKIP, timeout: 1_800_000 }, () => {
   const image = card("A");
   const m = boot(image, { tms: true, matrix: true });
   let mark = m.output.length;
@@ -75,12 +75,6 @@ test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No
   assert.ok(!names(image, "A").includes("THOR.ERR"), "no THOR.ERR");
   assert.equal(word(m, CURSOR), 0, "back at the start");
 
-  const files = names(image, "A");
-  mark = m.output.length;
-  keys(m, "\x14d", "^T D", () => /No debugger/.test(status()));
-  assert.doesNotMatch(since(), /A(:\S*)?>/, "nothing chained: no prompt");
-  assert.deepEqual(names(image, "A"), files, "nothing written");
-  assert.equal(word(m, CURSOR), 0, "the same place");
 
   mark = m.output.length;
   keys(m, "\x14r", "TIMES's first question", () => /WHAT IS YOUR NAME\? $/.test(since()));

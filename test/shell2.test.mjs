@@ -1229,7 +1229,7 @@ test("S2-12 tpa", () => {
   const card = starterImage();
   volume(card, "A").write("STARTUP.CMD", Buffer.from("\x1a", "latin1"));
   const bare = shellMachine(card);
-  assert.equal(word(bare, 6) - 0x100, 46_536, "bare: four drives' vectors");
+  assert.equal(word(bare, 6) - 0x100, 46_534, "bare: four drives' vectors");
   const m = shellMachine(starterImage());
   assert.equal(word(m, 6) - 0x100, 41_728, "with the shell, the starter card's STARTUP.CMD");
 });
@@ -1320,7 +1320,7 @@ test("S2-13 docs", () => {
   assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
   assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
   const compat = flat("docs/compatibility.md");
-  for (const s of ["46,536 bytes", "41,728", "40,960"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  for (const s of ["46,534 bytes", "41,728", "40,960"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
   assert.match(flat("docs/mon3.md"), /from `A400h` to `9100h`, and the TPA from 41,728 bytes to \*\*36,864\*\*/);
   assert.match(flat("docs/mon3.md"), /it is `8E00h`, a TPA of \*\*36,096\*\*/);

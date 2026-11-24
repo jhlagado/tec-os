@@ -4,9 +4,9 @@
     "TAS.COM": {
       "env": "TAS_COM",
       "default": "../thorium/dist/TAS.COM",
-      "source": "jhlagado/thorium 1e8b77a, dist/TAS.COM",
+      "source": "jhlagado/thorium e5b72f4, dist/TAS.COM",
       "repo": "jhlagado/thorium",
-      "commit": "1e8b77afc9553db0f4714289e6de44ad583ce64a",
+      "commit": "e5b72f498cd4b1be60d3ae2889fc7d96f90d7ad7",
       "path": "dist/TAS.COM",
       "bytes": 11131,
       "sha256": "343526f04800206d53df6aedc5706e7efb85e64cc313832eeb0946810299dc46"
@@ -14,32 +14,32 @@
     "TED.COM": {
       "env": "TED_COM",
       "default": "../thorium/dist/TED.COM",
-      "source": "jhlagado/thorium 02b63d8, dist/TED.COM",
+      "source": "jhlagado/thorium e5b72f4, dist/TED.COM",
       "repo": "jhlagado/thorium",
-      "commit": "02b63d870d72c50820402f58853fb9d36c2076f0",
+      "commit": "e5b72f498cd4b1be60d3ae2889fc7d96f90d7ad7",
       "path": "dist/TED.COM",
       "bytes": 12335,
-      "sha256": "c6c8374a8f3499e974503083e543738db4ad13aff96a7ae3c52c717d220a5573"
+      "sha256": "81b9ff24cb6fac22665215bf8881c08d33dc189a59087f7dd4c3d715a9435c7c"
     },
     "BAZA.COM": {
       "env": "BAZA_COM",
       "default": "../baza/dist/BAZA.COM",
-      "source": "jhlagado/baza eee4ee6, dist/BAZA.COM",
+      "source": "jhlagado/baza c49f477, dist/BAZA.COM",
       "repo": "jhlagado/baza",
-      "commit": "eee4ee6846add13c0ea120fbf2de8be0ec08c0b1",
+      "commit": "c49f477e0e2138c46fa6e84f0bb158874733d692",
       "path": "dist/BAZA.COM",
       "bytes": 13440,
-      "sha256": "f8d4b8944be95451faa7aa0bc99e611f6793b7d4a8e413344e951e26ede07498"
+      "sha256": "a2da18abb31f2b79e33e3d9d84173d746c3fdbf24cb07c8508afbcaf91689664"
     },
     "BAZA.RTL": {
       "env": "BAZA_RTL",
       "default": "../baza/dist/BAZA.RTL",
-      "source": "jhlagado/baza eee4ee6, dist/BAZA.RTL",
+      "source": "jhlagado/baza c49f477, dist/BAZA.RTL",
       "repo": "jhlagado/baza",
-      "commit": "eee4ee6846add13c0ea120fbf2de8be0ec08c0b1",
+      "commit": "c49f477e0e2138c46fa6e84f0bb158874733d692",
       "path": "dist/BAZA.RTL",
       "bytes": 13056,
-      "sha256": "29c07740630069921f93581c8527d5db057c63a073a95b37c7a020df92ae5e38"
+      "sha256": "421a43b94ef6b1ac2c0024ee5ef5317e0eb56428a40472c39f28f670b80111a8"
     },
     "BOUNCE.BAS": {
       "env": "BOUNCE_BAS",

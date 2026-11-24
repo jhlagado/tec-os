@@ -32,7 +32,7 @@ test("TAS assembles a program on TEC-OS and the program runs", { skip: TAS.skip,
   const m = boot(image, { tms: true, matrix: true });
   m.command("TAS HELLO", LONG);
   const names = volume(image, "A").list().map((f) => f.name);
-  assert.ok(names.includes("HELLO.COM") && names.includes("HELLO.DBG"), names.join(" "));
+  assert.ok(names.includes("HELLO.COM") && names.includes("HELLO.TBG"), names.join(" "));
   assert.match(m.command("HELLO"), /HELLO FROM TAS/);
   assert.deepEqual(m.violations, []);
 });

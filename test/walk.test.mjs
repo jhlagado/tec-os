@@ -35,7 +35,7 @@ export function walk(source) {
   m.runUntilChecked(() => m.ready() && m.read(m.sym("CHPOS")) === 0, 3_000_000_000, "the prompt after the line", 200_000);
   assert.deepEqual(m.violations, []);
   const names = volume(image, "A").list().map((f) => f.name);
-  return { screen: m.screen().filter((l) => l), text: m.text(from), xCom: names.includes("X.COM"), xDbg: names.includes("X.DBG") };
+  return { screen: m.screen().filter((l) => l), text: m.text(from), xCom: names.includes("X.COM"), xDbg: names.includes("X.TBG") };
 }
 
 test("the walk with a source that fails: the prompt comes back with TAS's message, and x doesn't run", { skip: TAS.skip || TED.skip, timeout: 1_800_000 }, () => {

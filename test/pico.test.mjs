@@ -230,7 +230,7 @@ test("the starter card boots the shell and the ROM's console on a board with bot
   assert.deepEqual(files.map((f) => f.name), ["SHELL.SVC", "GLCD.SVC", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
-  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, TPA_NONE - 136 - 0x1200], "GLCD.SVC out, the ROM's console the console (KE-150, KE-200), the shell's eighteen pages under the stub's page");
+  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 42496], "GLCD.SVC out, the ROM's console the console (KE-150, KE-200), the shell's eighteen pages under the stub's page, A700h");
   assert.equal(start(set, { tms: false }).read(3) & 3, UC1);
 });
 

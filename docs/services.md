@@ -467,7 +467,7 @@ The eight restart vectors are shared out (Origo KD-434):
 | Vector | Whose |
 | --- | --- |
 | `RST 1` to `RST 5`, `0008h` to `0028h` | Any program's. A program that takes one saves the three bytes it replaces and puts them back on every exit; warm boot does not keep them |
-| `RST 6`, `0030h` | The debugger's breakpoints. `BAZA.COM` takes it, with `RST 1` to `RST 5`, while it compiles: an accepted exception for a system tool, since debugging `BAZA.COM` under the debugger isn't planned, and open, to be revisited if it is |
+| `RST 6`, `0030h` | The debugger's breakpoints, and no one else's: `BAZA.COM` from Baza `c49f477` takes only `RST 1` to `RST 5` while it compiles |
 | `RST 7`, `0038h` | The interrupt vector, and the only one a service may claim |
 
 Memory above the TPA is of three kinds: service resident memory, the workspace with

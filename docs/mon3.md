@@ -67,8 +67,8 @@ first, so the word at `0006h` goes from `A400h` to `9100h`, and the TPA from
 41,728 bytes to **36,864**. With `GLCD.SVC` installed too, as the GLCD
 console's startup does, it is `8E00h`, a TPA of **36,096**, in any order of
 installing the three. On the starter card
-with no shell, whose four drives take the bare ROM's word to `B6C8h`, it goes
-from `B6C8h` to `A300h`, and the TPA from 46,536 bytes to 41,472, and 40,704 with
+with no shell, whose four drives take the bare ROM's word to `B6C6h`, it goes
+from `B6C6h` to `A300h`, and the TPA from 46,534 bytes to 41,472, and 40,704 with
 `GLCD.SVC`. The monitor, its line buffer, its FCB, its saved page
 zero and its stack are all in those pages, above anything a MON-3 program may
 load into. MON-3's graphics buffer and variables are not: they are MON-3's
@@ -221,7 +221,7 @@ records. Successive origins before bytes or reservations select the start;
 later origins move forward only. Unfilled DS and ALIGN leave holes, while
 explicit fill, including zero, is data. An empty HEX has only EOF and MON3
 refuses it because there is nothing to load. Other TAS output types and the
-logical addresses in `NAME.DBG` retain their usual behavior. The debug
+logical addresses in `NAME.TBG` retain their usual behavior. The debug
 checksum describes the logical image, not the ASCII HEX text.
 
 The actual compiler/load/run path is tested on the emulator in
@@ -465,7 +465,7 @@ its two `LD A,R` on both sides. The console's return is tested with
   and starts nothing while a write is pending, so no earlier write is lost
   with a hung program.
 - **The accepted disk hazard.** A MON-3 program that writes from the bare
-  BDOS entry through BFFFh (`B6C8h` on the starter, `B988h` on the two-volume
+  BDOS entry through BFFFh (`B6C6h` on the starter, `B986h` on the two-volume
   reference card) can damage the allocation vectors, workspace and RAM BIOS
   table. It can
   damage TEC-OS's disk tables. The protections are the flush before `GO`,
