@@ -24,7 +24,7 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 // each of 32 records, in cycles from the stub.
 // abi is the digest of abi.inc's declarations, its comment lines left out.
 const LANDING = { used: 14769, tpa: 47273, abi: "0f708a65ce53bf85a9379416217bfb57b48e2c52d716cd5e43c226f93a1a1f35", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
-const INTEGRITY = { used: 15878, tpa: 47240, starter: 46536, entry: 0xb6c8 };
+const INTEGRITY = { used: 15878, tpa: 47238, starter: 46534, entry: 0xb6c6 };
 
 // Qualified control's costs in this exact returned-input fixture: one empty
 // status call, and 32 write/status pairs on each logged drive. The integrity

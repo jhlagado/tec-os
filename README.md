@@ -46,7 +46,7 @@ Node.js 20 or later.
   else
     tas_stage=$(mktemp -d "$PWD/.inputs/.tas-host.XXXXXX")
     git clone https://github.com/jhlagado/thorium.git "$tas_stage"
-    git -C "$tas_stage" checkout --detach 9752fde15349861e5b3caaff3fefe58dbdae8fc7
+    git -C "$tas_stage" checkout --detach 1e8b77afc9553db0f4714289e6de44ad583ce64a
     (cd "$tas_stage" && npm ci)
     TECOS_TAS_HOST="$tas_stage" node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
     mv "$tas_stage" .inputs/tas-host

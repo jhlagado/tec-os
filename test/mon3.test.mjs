@@ -160,7 +160,7 @@ test("KG58 rom cap", () => {
   const { rom, symbols } = romFor();
   assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 2], "ABI 5.2");
   const m = machine(card());
-  assert.equal(word(m, 6) - 0x100, 47240, "TPA 47,240 with the shared recovery allocation");
+  assert.equal(word(m, 6) - 0x100, 47238, "TPA 47,238 with the shared recovery allocation and COMVEC");
   console.log(`ROM ${used} used, ${free} free, ${used - BASELINE.used} over the baseline, ${first.hash}`);
 });
 

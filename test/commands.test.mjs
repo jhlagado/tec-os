@@ -366,11 +366,11 @@ test("SH1 rom figure", () => {
   assert.equal(second.hash, first.hash, "two builds, one image");
   const { used, free, regions } = first.rom;
   // The ROM figure includes buffered line
-  // navigation and bare-name search, and the packed font (-329).
-  assert.deepEqual([used, free], [15549, 835], "the ROM's bytes used and free");
+  // navigation and bare-name search, the packed font (-329) and COMVEC (+51).
+  assert.deepEqual([used, free], [15600, 784], "the ROM's bytes used and free");
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
-  assert.ok(first.ram.tpa.bytes >= 47240, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
+  assert.ok(first.ram.tpa.bytes >= 47238, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
   // abi.inc differs from before the hook by TNSHELL's and TNGLYPH's blocks and TNCOUNT alone.
   const abi = readText("src/abi.inc");
   const block = abi.match(/; SHELL: [\s\S]*?\nTNSHELL EQU 16\n\n/)[0];
