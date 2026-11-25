@@ -34,7 +34,7 @@ function readLine({ leak = false, tbg } = {}) {
     m.type("TBUG.SVC BDOSLINE\r");
     m.runUntil(() => /^.PC 0100/.test(lcd()), 45_000_000, "TBUG entry stop");
     runFor(m, 150_000);
-    press(m, 0x35);
+    setKey(m, 2, true); press(m, 24); setKey(m, 2, false); runFor(m, 100_000); // F5: Fn+5.
   } else {
     m.type("BDOSLINE\r");
   }
