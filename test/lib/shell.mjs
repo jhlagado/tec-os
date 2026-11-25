@@ -12,13 +12,13 @@ import { Machine } from "./machine.mjs";
 import { ROOT, TEST_CLOCK, program, romFor, standardCard, startupFile, volume } from "./fixtures.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
-const SOURCES = ["shell.asm", "shellcmd.asm", "shellio.asm", "shellcd.asm", "shelldir.asm"];
+const SOURCES = ["shell.asm", "shellcmd.asm", "shellio.asm", "shellcd.asm", "shelldir.asm", "shellovl.asm"];
 
 /** SHELL.SVC from drivers/shell.asm: { file, symbols (offsets from the header), image }. */
 export const shellSvc = () => makeSvc(resolve(ROOT, "drivers/shell.asm"), { work: resolve(ROOT, "build/svc") });
 
 /**
- * SHELL.SVC with EDITS, each [old, new] standing once in the three sources
+ * SHELL.SVC with EDITS, each [old, new] standing once in the shell's sources
  * together: a mutant, built beside the build.
  */
 export async function shellVariant(edits) {

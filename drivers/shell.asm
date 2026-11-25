@@ -95,8 +95,8 @@ IN1:
   ld bc,CLRLEN
   ld (hl),0      ; all zero
   ldir
-  ld a,LOW(RING) ; the ring's first
-  ld (HHEAD),a   ; byte: the next store
+  ld a,LOW(RING)
+  ld (HHEAD),a   ; the ring's first
   pop af
   ld (OVDRV),a   ; the file's drive
   pop af

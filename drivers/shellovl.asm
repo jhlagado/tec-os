@@ -35,18 +35,11 @@ OVCOPY:
 OVSVC:
   ld a,6         ; SERVICES, entry 6
 
-; Open the file the shell was installed
-; by, on its drive and in its user, as
-; INIT kept them, and read its records
-; from OVREC into OVBASE, as many as
-; the overlay's first record says. The
-; stamp must be the one built with this
-; shell. Then add the shell's page to
-; each byte the relocation list after
-; OVEND marks: a gap of 1 to 254 from
-; the byte before OVBASE, or from the
-; last marked, 255 moving on 254 with
-; nothing marked, 0 ending the list.
+; Read the file the shell was
+; installed by, on the drive and in the
+; user INIT kept, from OVREC into
+; OVBASE, as many records as the first
+; says. Its stamp must be this shell's.
 ; The user and the DMA are put back. A
 ; DIR whose overlay can't be read goes
 ; to the ROM's; COPY and SERVICES fail
@@ -102,15 +95,22 @@ OV1:
   ld hl,128
   add hl,de
   ex de,hl       ; the next 128 bytes
-  ld hl,OVBASE+2 ; the records left
-  dec (hl)
+  ld hl,OVBASE+2
+  dec (hl)       ; the records left
   jr nz,OV1
   call OVBACK    ; user and DMA back
-  ld hl,(OVBASE) ; its stamp
-  ld de,(OVSTMP) ; this shell's
-  or a
+  ld hl,(OVBASE)
+  ld de,(OVSTMP)
+  or a           ; its stamp, ours
   sbc hl,de
   jr nz,OVNO     ; another shell's
+
+; Add the shell's page to each byte the
+; list after OVEND marks: a gap of 1 to
+; 254 from the byte before OVBASE or
+; from the last marked, 255 moving on
+; 254 with nothing marked, 0 ending it.
+
   ld hl,OVBASE-1
   ld de,OVEND    ; the list
 
@@ -130,8 +130,8 @@ OVR1:
 OVR2:
   add hl,bc      ; the gap
   ld a,(hl)
-  add a,HIGH(HDR) ; the shell's page
-  ld (hl),a
+  add a,HIGH(HDR)
+  ld (hl),a      ; its page added
   jr OVR1
 
 OVGO:
@@ -161,7 +161,7 @@ OVBACK:
   pop af         ; the user it was
   push hl
   ld e,a
-  ld c,32
+  ld c,32        ; 32: set it again
   call BDOS
   jp SETDMA
 

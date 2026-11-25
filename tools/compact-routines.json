@@ -917,11 +917,9 @@
     "CPPARSE",
     "ENDCHK",
     "DOSSEQ",
-    "PARSEFCB",
-    "PARFLD",
     "UNAMBIG",
-    "VALIDCHR",
-    "FCBEND"
+    "PUTDEC8",
+    "PUTHEX"
   ],
   "drivers/shellio.asm": [
     "STOPEN",
@@ -935,10 +933,8 @@
     "CRLF",
     "PUTS",
     "PUTZ",
-    "PUTN",
     "PUTTRIM",
-    "PUTDEC8",
-    "PUTHEX",
+    "SETDMA",
     "PGRST",
     "PAGE",
     "PGPUT",
@@ -949,22 +945,19 @@
   ],
   "drivers/shellcd.asm": [
     "CMDCD",
-    "PUTCDN",
     "VWALKQ",
     "LBLADR",
     "DRVLBL",
     "PUTDRV",
-    "LSTNL",
     "CMDCLS",
     "CMDECHO",
     "CMDPAU"
   ],
   "drivers/shelldir.asm": [
     "CMDDIR",
-    "DSRCH",
+    "LSTNL",
     "DRENT",
     "HBIT",
-    "SETDMA",
     "RECB",
     "PUTNT",
     "PUTNUM",
@@ -975,13 +968,17 @@
     "DAGINIT",
     "DAGKEY",
     "DAGREC",
-    "DAGVALID",
-    "DAGBAD",
     "DAGFIND",
     "DAGMAX",
     "DAGADD",
     "DAGGET",
     "DAGWILD"
+  ],
+  "drivers/shellovl.asm": [
+    "PARSEFCB",
+    "OVDIR",
+    "OVLOAD",
+    "OVBACK"
   ],
   "src/cpm/ccpdir.asm": [
     "RCMDCD",
