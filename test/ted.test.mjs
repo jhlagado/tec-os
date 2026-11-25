@@ -17,7 +17,7 @@ import { check, pinned } from "./lib/inputs.mjs";
 const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
 const CURSOR = 0x24ca; // the cursor's offset in the text
-const TEXCAP = 0x2551; // the room for edits in RAM (TED 444cf3e's build/ted/ted.sym)
+const TEXCAP = 0x2551; // the room for edits in RAM (TED 9cbb955's build/ted/ted.sym)
 const NOTES = "hello\nsecond line\n";
 const EDITED = "hello\nYsecond line\n";
 // Line 2 fails: 256 doesn't fit A. A ';' typed at the error's column makes it a comment.

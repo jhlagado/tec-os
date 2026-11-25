@@ -1057,7 +1057,7 @@ function tedCost(selected) {
   m.bootText = m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   assert.equal(createHash("sha256").update(Uint8Array.from({ length: 0x4000 }, (_, i) => m.read(0xc000 + i))).digest("hex"), createHash("sha256").update(selected.rom).digest("hex"));
-  const readLoop = 0x1e59, inputReturn = 0x1e61, wrapperReturn = 0x112, cursor = 0x24ca, length = cursor - 2; // TED 444cf3e: the read loop, REABYTLO, at 1E59h, the cursor at 24CAh (build/ted/ted.sym)
+  const readLoop = 0x1f23, inputReturn = 0x1f2b, wrapperReturn = 0x112, cursor = 0x24ca, length = cursor - 2; // TED 9cbb955: the read loop, REABYTLO, at 1F23h, the cursor at 24CAh (build/ted/ted.sym)
   assert.deepEqual(editor.slice(0xb, 0x17), Uint8Array.from([0xdd, 0xe5, 0xfd, 0xe5, 0xcd, 5, 0, 0xfd, 0xe1, 0xdd, 0xe1, 0xc9]));
   assert.deepEqual(editor.slice(readLoop - 0x100, readLoop - 0x100 + 12), Uint8Array.from([0x11, 0xff, 0, 0x0e, 6, 0xcd, 0x0b, 1, 0xb7, 0x28, 0xf5, 0xc9]));
   const owner = () => {
@@ -1117,9 +1117,9 @@ function tedCost(selected) {
 test("S2-11 ted cost", { skip: TED.skip, timeout: 900_000 }, (t) => {
   const qualified = tedCost(QUALIFIED_POLL), current = tedCost(romFor());
   t.diagnostic(JSON.stringify({ qualified, current }));
-  assert.deepEqual(qualified, { type100: 14_672.73225, down40: 3820.24775, save: 849.96825 }); // TED 444cf3e on the qualified ROM, its document on the card (28d9cc7: 14,308.53575, 3777.948 and 858.9065); its routine heads in RST 1 to RST 5 (70ff3df: 14,246.481, 3742.94325 and 858.75025; dc0cd0f: 14,245.581, 3742.44325 and 858.707; d97a5b2: save 858.5635; e5b72f4 and cf5460c: down40 3742.13325)
+  assert.deepEqual(qualified, { type100: 14_740.1025, down40: 3844.23675, save: 850.48475 }); // TED 9cbb955 on the qualified ROM, its document on the card and its rows moved by ESC [ L and M (444cf3e: 14,672.73225, 3820.24775 and 849.96825; 28d9cc7: 14,308.53575, 3777.948 and 858.9065); its routine heads in RST 1 to RST 5 (70ff3df: 14,246.481, 3742.94325 and 858.75025; dc0cd0f: 14,245.581, 3742.44325 and 858.707; d97a5b2: save 858.5635; e5b72f4 and cf5460c: down40 3742.13325)
   assert.ok(current.type100 / qualified.type100 - 1 <= 0.05, `typing: ${current.type100} ms against qualified ${qualified.type100}`);
-  assert.ok(current.down40 <= 4093.4435, `movement: ${current.down40} ms`); // TED 444cf3e, 45 ms slower over 40 arrows (1.1%), as on the qualified ROM; the ROM's Fn and Shift arrow tests add about 0.4 ms; 4048.42225 before; 4013.4175 before TED 28d9cc7, 35 ms slower over 40 arrows (0.9%), its RST calls; 4012.9175 before TED 70ff3df, 0.5 ms slower on both ROMs; 4012.4675 before TED d97a5b2 (0.31 ms on the qualified ROM) and the Fn tail pointer (0.14 ms over 40 arrows)
+  assert.ok(current.down40 <= 4117.4325, `movement: ${current.down40} ms`); // TED 9cbb955, 69 ms slower over 40 arrows (1.7%) than 28d9cc7, as on the qualified ROM (444cf3e: 4093.4435); the ROM's Fn and Shift arrow tests add about 0.4 ms; 4048.42225 before; 4013.4175 before TED 28d9cc7, 35 ms slower over 40 arrows (0.9%), its RST calls; 4012.9175 before TED 70ff3df, 0.5 ms slower on both ROMs; 4012.4675 before TED d97a5b2 (0.31 ms on the qualified ROM) and the Fn tail pointer (0.14 ms over 40 arrows)
   assert.ok(current.save <= 1683.291, `save: ${current.save} ms`); // 1683.13475 before TED 28d9cc7, 0.16 ms slower; 1683.0915 before TED 70ff3df, 0.043 ms slower on both ROMs; 1682.95425 before TED dc0cd0f, 0.14 ms slower on both ROMs
 });
 
