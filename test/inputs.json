@@ -44,12 +44,12 @@
     "BAZ.COM": {
       "env": "BAZ_COM",
       "default": "../baza/dist/BAZ.COM",
-      "source": "jhlagado/baza ab997bd, dist/BAZ.COM",
+      "source": "jhlagado/baza 8655d81, dist/BAZ.COM",
       "repo": "jhlagado/baza",
-      "commit": "ab997bdb3215501f6b6c511531aefc76c94a2004",
+      "commit": "8655d81392050ef673103e04f888d7e5c34ea2b9",
       "path": "dist/BAZ.COM",
-      "bytes": 19584,
-      "sha256": "4f4eb6039ff2dd03efb112b47eb71b2093fb6bed1fda3ae680f95f4d24caf2ab"
+      "bytes": 20864,
+      "sha256": "b4bceb5b77015082fe5f4549e9648e1bbfc1e365da98b460a0bc75c6f61ef89b"
     },
     "BOUNCE.BAS": {
       "env": "BOUNCE_BAS",
