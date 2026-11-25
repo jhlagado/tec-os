@@ -1170,10 +1170,10 @@ function tedCost(selected) {
 test("S2-11 ted cost", { skip: TED.skip, timeout: 900_000 }, (t) => {
   const qualified = tedCost(QUALIFIED_POLL), current = tedCost(romFor());
   t.diagnostic(JSON.stringify({ qualified, current }));
-  assert.deepEqual(qualified, { type100: 14_245.581, down40: 3742.44325, save: 858.707 }); // TED dc0cd0f on the qualified ROM (d97a5b2: save 858.5635; e5b72f4 and cf5460c: down40 3742.13325)
+  assert.deepEqual(qualified, { type100: 14_246.481, down40: 3742.94325, save: 858.75025 }); // TED 70ff3df on the qualified ROM (dc0cd0f: 14,245.581, 3742.44325 and 858.707; d97a5b2: save 858.5635; e5b72f4 and cf5460c: down40 3742.13325)
   assert.ok(current.type100 / qualified.type100 - 1 <= 0.05, `typing: ${current.type100} ms against qualified ${qualified.type100}`);
-  assert.ok(current.down40 <= 4012.9175, `movement: ${current.down40} ms`); // 4012.4675 before TED d97a5b2 (0.31 ms on the qualified ROM) and the Fn tail pointer (0.14 ms over 40 arrows)
-  assert.ok(current.save <= 1683.0915, `save: ${current.save} ms`); // 1682.95425 before TED dc0cd0f, 0.14 ms slower on both ROMs
+  assert.ok(current.down40 <= 4013.4175, `movement: ${current.down40} ms`); // 4012.9175 before TED 70ff3df, 0.5 ms slower on both ROMs; 4012.4675 before TED d97a5b2 (0.31 ms on the qualified ROM) and the Fn tail pointer (0.14 ms over 40 arrows)
+  assert.ok(current.save <= 1683.13475, `save: ${current.save} ms`); // 1683.0915 before TED 70ff3df, 0.043 ms slower on both ROMs; 1682.95425 before TED dc0cd0f, 0.14 ms slower on both ROMs
 });
 
 // --- S2-12 The starter card ------------------------------------------------------

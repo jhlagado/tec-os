@@ -182,9 +182,9 @@ Enter retry before normal commands resume
 ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
-`TED X.ASM!TAS X &X`. TED, from TED `dc0cd0f` (`TED.COM`
-`ae37d995`, 12,328 bytes), stops a file name and `TED.PRJ`'s `ARGS` at the
-same `!` and `&`, so a project's `ARGS X &Y` gives ^T R's program the tail
+`TED X.ASM!TAS X &X`. TED, from TED `70ff3df` (`TED.COM`
+`3213eb52`, 12,584 bytes), stops a file name and `TED.PRJ`'s `ARGS` at the
+same `!` and `&`, so a project's `ARGS X &Y` gives F5's program the tail
 ` X` and runs nothing after it.
 `SAMPLE.ASM` on the starter card is a first program to build and read:
 `TAS SAMPLE` assembles it and `SAMPLE` runs it, printing the screen's size,
@@ -193,8 +193,10 @@ writing the LCD, lighting the digits and beeping through the ROM's services by
 keywords in capitals and its names in lower case: it asks a name and a number
 and prints that number's times table.
 `BAZA TIMES` compiles it with the card's `BAZA.COM` and `BAZA.RTL` and `TIMES`
-runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
-an `.ASM` with TAS.
+runs it; in `TED TIMES.BAS`, F9 builds it with BAZA as it builds an `.ASM` with
+TAS, and F5 runs the source under `BAZ.COM`, the interpreter, a preview that
+holds about 22 KB of source with the shell resident and stops a statement it
+doesn't run yet with `NOT IMPLEMENTED`.
 
 The starter card also includes the author-refined Caverns BASIC source and
 `CAVERNS.TXT`. Select `CON PICO 80`, compile with `BAZA CAVERNS`, then run

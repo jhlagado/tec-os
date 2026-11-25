@@ -20,7 +20,7 @@ function keys(m,s,what,done){
  m.runUntilChecked(()=>{m.pumpInput();return !m.pending?.length&&m.waitingForInput()&&done();},800_000_000,what);
 }
 function fkey(m,d,what,done){ fnPress(m,d); keys(m,'',what,done); }
-test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen after power cycle',{timeout:300_000},()=>{
+test('Caverns book exercise: copy, TED edit/save/build, run at the prompt, and reopen after power cycle',{timeout:300_000},()=>{
  const image=starterOn('BASIC'),a=volume(image,'A');
  const originalSource=sha(a.read('CAVERNS.BAS')),originalCom=sha(readFileSync(resolve(ROOT,'programs/CAVERNS.COM')));
  let m=boot(image,{tms:true,matrix:true,width:80});
@@ -39,12 +39,13 @@ test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen afte
  fkey(m,9,'TED builds Caverns and returns',()=>/COM written/.test(m.text(mark))&&/CAVBOOK\.BAS/.test(status()));
  assert.notEqual(sha(a.read('CAVBOOK.COM')),originalCom,'modified source produces a distinct executable');
  assert.ok(a.read('CAVBOOK.COM').length<40000);
- mark=m.output.length;
- fkey(m,5,'TED builds and runs Caverns',()=>m.text(mark).includes(replacement)&&m.text(mark).includes('useful-looking compass')&&m.text(mark).endsWith('? '));
- keys(m,'quit\r','quit the modified game',()=>m.text().endsWith('? ')&&m.text().includes('Another adventure?'));
- keys(m,'n\r','leave the game for TED return pause',()=>/Press a key/.test(m.screen().join('\n')));
- keys(m,' ','return to TED',()=>/CAVBOOK\.BAS/.test(status()));
+ // Caverns is too large for BAZ, the interpreter F5 runs, with the shell
+ // resident, so the built CAVBOOK.COM runs from the prompt.
  keys(m,'\x11','leave TED',()=>m.ready());
+ mark=m.output.length;
+ keys(m,'cavbook\r','run the modified Caverns',()=>m.text(mark).includes(replacement)&&m.text(mark).includes('useful-looking compass')&&m.text(mark).endsWith('? '));
+ keys(m,'quit\r','quit the modified game',()=>m.text().endsWith('? ')&&m.text().includes('Another adventure?'));
+ keys(m,'n\r','leave the game',()=>m.ready());
  assert.equal(text(a),expected);
  assert.equal(sha(a.read('CAVERNS.BAS')),originalSource);
  assert.ok(!a.list().some(f=>f.name==='CAVERNS.COM'),'starter keeps Caverns as source only');
