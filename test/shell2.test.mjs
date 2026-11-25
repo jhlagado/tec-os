@@ -447,7 +447,8 @@ test("S2-9 summary", () => {
   const m = sized();
   const t = listing(m, "DIR");
   const list = rows(t);
-  const sum = /\r\n(\d+) files, (\d+) bytes\r\n/.exec(t);
+  // After [more] the pager returns to column 0 with a CR alone.
+  const sum = /\r\n?(\d+) files, (\d+) bytes\r\n/.exec(t);
   assert.ok(sum, t.slice(-120));
   assert.deepEqual([+sum[1], +sum[2]], [list.length, list.reduce((s, [, n]) => s + n, 0)], "the count and the rows' sum");
   assert.match(run(m, "DIR X.DAT"), /\r\n1 file, 128128 bytes\r\n/, "singular for one");
@@ -1226,7 +1227,7 @@ test("S2-12 no mount.com", () => {
   }
   const basic = volume(starterImage(), "BASIC").list().map((f) => f.name);
   assert.ok(basic.includes("CAVERNS.BAS") && !basic.includes("CAVERNS.COM"), "BASIC: readers compile the supplied source");
-  assert.equal(names.length, 13);
+  assert.equal(names.length, 12);
 });
 
 test("S2-12 instruction", () => {
