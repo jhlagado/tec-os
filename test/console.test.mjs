@@ -275,6 +275,12 @@ test("Fn with an arrow sends Page Up, Page Down, Home and End, Shift with one xt
   for (const [key, letter] of [[3, "A"], [4, "B"], [5, "D"], [6, "C"]])
     assert.ok(run(() => chord(0, key)).includes(hex(`\x1b[1;2${letter}`)), `Shift with key ${key} is ESC [ 1 ; 2 ${letter}`);
   assert.match(run(() => { chord(1, 3); m.typeMatrix("\x06"); }), /1B 5B 41 1B 5B 43 /, "Ctrl+up is the plain up, and right alone ESC [ C");
+  // The host's queue, as the page uses it: a queued key held with its modifier.
+  assert.ok(run(() => {
+    m.enqueueKey(4, 2);
+    m.enqueueInput("xy", "matrix");
+    m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length), 100_000_000, "the queued keys");
+  }).includes("1B 5B 36 7E 78 79 "), "enqueueKey(4, 2) is Fn+down, Page Down");
   assert.deepEqual(m.violations, []);
 });
 

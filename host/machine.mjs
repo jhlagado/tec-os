@@ -526,6 +526,16 @@ export class Machine {
     for (const ch of text) this.pending.push({ code: ch.charCodeAt(0) & 0xff, via });
   }
 
+  /**
+   * Queue matrix key KEY (0-63) without blocking, held with modifier key
+   * MOD (0 Shift, 1 Ctrl, 2 Fn) when one is given, as pumpInput() delivers
+   * a queued character: Fn or Shift with an arrow, which no character names.
+   */
+  enqueueKey(key, mod) {
+    this.pending ??= [];
+    this.pending.push({ code: -1, via: "matrix", key, mod, combo: { row: key >> 3, col: key & 7 } });
+  }
+
   pumpInput() {
     const p = this.pending;
     if (!p || p.length === 0) return;
@@ -533,14 +543,17 @@ export class Machine {
     if (head.via === "matrix") {
       const kblast = this.sym("KBLAST");
       if (!head.down) {
-        const combo = getMatrixCombosForAscii(head.code).find((c) => !c.capsLock && c.modifier !== "alt");
-        if (!combo) {
-          head.via = "serial";
-          return;
+        if (!head.combo) {
+          const combo = getMatrixCombosForAscii(head.code).find((c) => !c.capsLock && c.modifier !== "alt");
+          if (!combo) {
+            head.via = "serial";
+            return;
+          }
+          head.key = combo.row * 8 + combo.col;
+          head.combo = combo;
+          head.mod = combo.modifier === undefined ? undefined : MODIFIER_KEY[combo.modifier];
         }
-        head.key = combo.row * 8 + combo.col;
-        head.combo = combo;
-        head.mod = combo.modifier === undefined ? undefined : MODIFIER_KEY[combo.modifier];
+        const combo = head.combo;
         if (head.mod !== undefined) this.tec1g.applyMatrixKey(0, head.mod, true);
         this.tec1g.applyMatrixKey(combo.row, combo.col, true);
         head.down = true;
