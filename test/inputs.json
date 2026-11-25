@@ -14,12 +14,12 @@
     "TED.COM": {
       "env": "TED_COM",
       "default": "../ted/dist/TED.COM",
-      "source": "jhlagado/ted dc0cd0f, dist/TED.COM",
+      "source": "jhlagado/ted 70ff3df, dist/TED.COM",
       "repo": "jhlagado/ted",
-      "commit": "dc0cd0f991aad439c78ed8b7d541afa88dff16c0",
+      "commit": "70ff3df8299d7e61405a4440cbc8644caa3fd8d6",
       "path": "dist/TED.COM",
-      "bytes": 12328,
-      "sha256": "ae37d995de77a91e875f1b10b7a537fffa63cabacb9f94b4700fe1458200af0c"
+      "bytes": 12584,
+      "sha256": "3213eb5204f038d7ae41e1e311076b7dcbba876c1a29a431317f99992fbf2f13"
     },
     "BAZA.COM": {
       "env": "BAZA_COM",
@@ -40,6 +40,16 @@
       "path": "dist/BAZA.RTL",
       "bytes": 13056,
       "sha256": "421a43b94ef6b1ac2c0024ee5ef5317e0eb56428a40472c39f28f670b80111a8"
+    },
+    "BAZ.COM": {
+      "env": "BAZ_COM",
+      "default": "../baza/dist/BAZ.COM",
+      "source": "jhlagado/baza 11af8c3, dist/BAZ.COM",
+      "repo": "jhlagado/baza",
+      "commit": "11af8c3215a86aa0d8186491cfe2e8db66b8e195",
+      "path": "dist/BAZ.COM",
+      "bytes": 18048,
+      "sha256": "7aaa0fcc5946b1d087d92624a9ced4a0da6b9cb3f91de6d9f2bdad5f54f4ba50"
     },
     "BOUNCE.BAS": {
       "env": "BOUNCE_BAS",

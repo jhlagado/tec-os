@@ -1110,7 +1110,7 @@ function tedCost(selected) {
   m.bootText = m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   assert.equal(createHash("sha256").update(Uint8Array.from({ length: 0x4000 }, (_, i) => m.read(0xc000 + i))).digest("hex"), createHash("sha256").update(selected.rom).digest("hex"));
-  const readLoop = 0x2236, inputReturn = 0x223e, wrapperReturn = 0x112, cursor = 0x24ca, length = cursor - 2; // TED dc0cd0f: the read loop at 2236h, the cursor where it was
+  const readLoop = 0x2297, inputReturn = 0x229f, wrapperReturn = 0x112, cursor = 0x25ca, length = cursor - 2; // TED 70ff3df: the read loop at 2297h, the cursor at 25CAh (build/ted/ted.sym)
   assert.deepEqual(editor.slice(0xb, 0x17), Uint8Array.from([0xdd, 0xe5, 0xfd, 0xe5, 0xcd, 5, 0, 0xfd, 0xe1, 0xdd, 0xe1, 0xc9]));
   assert.deepEqual(editor.slice(readLoop - 0x100, readLoop - 0x100 + 12), Uint8Array.from([0x11, 0xff, 0, 0x0e, 6, 0xcd, 0x0b, 1, 0xb7, 0x28, 0xf5, 0xc9]));
   const owner = () => {
@@ -1170,10 +1170,10 @@ function tedCost(selected) {
 test("S2-11 ted cost", { skip: TED.skip, timeout: 900_000 }, (t) => {
   const qualified = tedCost(QUALIFIED_POLL), current = tedCost(romFor());
   t.diagnostic(JSON.stringify({ qualified, current }));
-  assert.deepEqual(qualified, { type100: 14_245.581, down40: 3742.44325, save: 858.707 }); // TED dc0cd0f on the qualified ROM (d97a5b2: save 858.5635; e5b72f4 and cf5460c: down40 3742.13325)
+  assert.deepEqual(qualified, { type100: 14_246.481, down40: 3742.94325, save: 858.75025 }); // TED 70ff3df on the qualified ROM (dc0cd0f: 14,245.581, 3742.44325 and 858.707; d97a5b2: save 858.5635; e5b72f4 and cf5460c: down40 3742.13325)
   assert.ok(current.type100 / qualified.type100 - 1 <= 0.05, `typing: ${current.type100} ms against qualified ${qualified.type100}`);
-  assert.ok(current.down40 <= 4012.9175, `movement: ${current.down40} ms`); // 4012.4675 before TED d97a5b2 (0.31 ms on the qualified ROM) and the Fn tail pointer (0.14 ms over 40 arrows)
-  assert.ok(current.save <= 1683.0915, `save: ${current.save} ms`); // 1682.95425 before TED dc0cd0f, 0.14 ms slower on both ROMs
+  assert.ok(current.down40 <= 4013.4175, `movement: ${current.down40} ms`); // 4012.9175 before TED 70ff3df, 0.5 ms slower on both ROMs; 4012.4675 before TED d97a5b2 (0.31 ms on the qualified ROM) and the Fn tail pointer (0.14 ms over 40 arrows)
+  assert.ok(current.save <= 1683.13475, `save: ${current.save} ms`); // 1683.0915 before TED 70ff3df, 0.043 ms slower on both ROMs; 1682.95425 before TED dc0cd0f, 0.14 ms slower on both ROMs
 });
 
 // --- S2-12 The starter card ------------------------------------------------------
@@ -1206,9 +1206,9 @@ test("S2-12 volumes", () => {
   // Every A: volume holds the core set, and each its theme.
   const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
   const theme = {
-    SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
+    SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
     ASM: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
-    BASIC: ["BAZA.COM", "BAZA.RTL", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
+    BASIC: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
     MON3: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
     GAMES: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"],
   };
@@ -1227,7 +1227,7 @@ test("S2-12 no mount.com", () => {
   }
   const basic = volume(starterImage(), "BASIC").list().map((f) => f.name);
   assert.ok(basic.includes("CAVERNS.BAS") && !basic.includes("CAVERNS.COM"), "BASIC: readers compile the supplied source");
-  assert.equal(names.length, 12);
+  assert.equal(names.length, 13);
 });
 
 test("S2-12 instruction", () => {

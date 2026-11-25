@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { Machine } from "./lib/machine.mjs";
-import { GLCD_SVC, PUT_COM, TEST_CLOCK, boot, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { GLCD_SVC, PUT_COM, TEST_CLOCK, boot, fnDigit, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
 
 /** A standard card with PUT.COM on A:, for a test that writes a file from the prompt. */
@@ -246,15 +246,6 @@ test("matrix arrow keys arrive as ANSI cursor sequences", async () => {
 });
 
 /** Press Fn and digit key D (0-9) together on M's matrix until TEC-OS takes it. */
-function fnDigit(m, d) {
-  const key = 0x13 + d, kblast = m.sym("KBLAST");
-  m.tec1g.applyMatrixKey(0, 2, true);
-  m.tec1g.applyMatrixKey(key >> 3, key & 7, true);
-  m.runUntil(() => m.read(kblast) === key, 50_000_000, `Fn+${d}`);
-  m.tec1g.applyMatrixKey(key >> 3, key & 7, false);
-  m.tec1g.applyMatrixKey(0, 2, false);
-  m.runUntil(() => m.read(kblast) === 0xff, 50_000_000, `release of Fn+${d}`);
-}
 
 test("Fn with a digit key sends F1 to F10 as xterm does, and Fn with another key its plain character", async () => {
   const image = standardCard();
