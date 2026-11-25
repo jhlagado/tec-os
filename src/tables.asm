@@ -30,24 +30,23 @@ BIOSBAS:
   jp HKBI15     ; 2D
   jp HKBI16     ; 30
 
-; Keyboard lookups. Arrow keys 3-6 send
-; ESC and a KBARROW pair. KBSPEC has five
+; Keyboard lookups. KBTAILS holds the
+; tails after ESC: the arrow keys 3-6
+; (up, down, left, right) alone, with
+; Shift, with Ctrl and with Fn (Page Up,
+; Page Down, Home and End), then Fn with
+; digit keys 13h-1Ch (F10, F1-F9). A
+; tail ends at its first byte from 40h
+; after the first. KBSPEC has five
 ; key/plain/shifted triples. KBSHIFT
 ; indexes 18 characters from 2Ch.
 
-KBARROW:
-  DB "[A[B[D[C"  ; up, down, left, right
-KBSARR:
-  DB "[1;2A[1;2B[1;2D[1;2C" ; with Shift
-KBFNAT:
-  DB "[5~[6~[H [F" ; with Fn: PgUp PgDn Home End
-
-; Fn with digit keys 13h-1Ch (0-9): the
-; tail after ESC, four bytes a key. O and
-; a letter (SS3) uses two of them.
-
-KBFKEY:
-  DB "[21~OP  OQ  OR  OS  "
+KBTAILS:
+  DB "[A[B[D[C"
+  DB "[1;2A[1;2B[1;2D[1;2C"
+  DB "[A[B[D[C"
+  DB "[5~[6~[H[F"
+  DB "[21~OPOQOROS"
   DB "[15~[17~[18~[19~[20~"
 KBSPEC: DB $0A,$0D,$0D, $0C,$1B,$1B, $0D,$20,$20, $0E,$27,$22, $3F,$5C,$7C
 KBSHIFT:

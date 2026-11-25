@@ -104,25 +104,35 @@ KBMOD:
   cp 7           ; Caps Lock key
   jr z,KBCAPS
   jr nc,KBNOARR  ; Keys 3-6: ESC [ A-D
-  sub 3          ; B: arrow 0-3
+  sub 2          ; arrow 1-4
   ld b,a
   ld a,d
-  cp 2           ; Fn: the page keys
-  jr z,KBFNAR
-  inc d
-  dec d          ; Z: Shift (D=0)
-  jr z,KBSHAR
-  ld a,b
-  add a,a
-  ld hl,KBARROW
-  call KBIDX     ; HL: the arrow's tail
-  ld c,2
+  inc a          ; 0 none, 1 Shift,
+  add a,a        ; 2 Ctrl, 3 Fn: four
+  add a,a        ; tails each
+  add a,b
+  ld b,a
 
-; Queue the C-byte tail at HL and send
-; ESC. CINTAKE gives the tail after it.
+; Queue tail B (1 the first) of KBTAILS
+; and send ESC. CINTAKE gives the tail
+; after it. A tail ends at its first byte
+; from 40h after the first.
 
-KBTAIL:
+KBTAILN:
+  ld hl,KBTAILS
+
+KBSEEK:
   ld (KBTP),hl
+  ld c,1
+
+KBSEEK1:
+  inc hl
+  inc c
+  ld a,(hl)
+  cp '@'
+  jr c,KBSEEK1   ; C: the tail's length
+  inc hl
+  djnz KBSEEK
   ld a,c
   ld (KBTN),a
   ld a,$1B       ; deliver ESC now
@@ -136,15 +146,9 @@ KBNOARR:
   sub $13        ; digit keys 13h-1Ch
   cp 10
   jr nc,KBPLAIN  ; Fn with another key
-  add a,a
-  add a,a
-  ld hl,KBFKEY
-  call KBIDX     ; HL: the key's tail
-  ld c,2
-  cp 'O'
-  jr z,KBTAIL    ; F1-F4: ESC O P-S
-  ld c,4
-  jr KBTAIL      ; F5-F10: ESC [ nn ~
+  add a,17       ; past the arrows' 16
+  ld b,a
+  jr KBTAILN
 
 KBPLAIN:
   call KBASCII
@@ -170,36 +174,6 @@ KBCAPS:
   out (SYSLAT),a
   xor a          ; Z: no character
   ret
-
-; Shift with an arrow: ESC [ 1 ; 2 and
-; the arrow's letter, as xterm sends it.
-
-KBSHAR:
-  ld a,b
-  add a,a
-  add a,a
-  add a,b        ; five bytes an arrow
-  ld hl,KBSARR
-  call KBIDX
-  ld c,5
-  jr KBTAIL
-
-; Fn with an arrow: Page Up, Page Down,
-; Home and End, ESC [ 5 ~, ESC [ 6 ~,
-; ESC [ H and ESC [ F.
-
-KBFNAR:
-  ld a,b
-  add a,a
-  add a,b        ; three bytes a key
-  ld hl,KBFNAT
-  call KBIDX
-  ld c,3
-  ld a,b
-  cp 2           ; Home and End: two
-  jr c,KBTAIL
-  dec c
-  jr KBTAIL
 
 ; Translate key E to ASCII in A.
 ; D: FFh none, 0 Shift, 1 Ctrl, 2 Fn.
