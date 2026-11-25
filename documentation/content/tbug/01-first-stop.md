@@ -84,7 +84,7 @@ The LCD displays the ready screen and the prompt returns on the console:
 ```text
 TBUG 0.3 ready
 Not armed
-TBUG.SVC NAME debugs
+TBUG.SVC NAME debug
 TBUG.SVC ARM arms
 ```
 
@@ -100,10 +100,10 @@ B>TBUG.SVC HELLO
 `TBUG.SVC HELLO` arms the debugger and hands the command line back to the command processor, which locates and loads `HELLO.COM` at `0100h` itself. TBUG then catches the launch before the first instruction runs. On the console, your launch line sits alone with no greeting underneath it. On the LCD, `TBUG Tab Next H Help` flashes briefly and gives way to the Registers screen:
 
 ```text
->PC 0100   SP 98FEST
- AF 0000   BC 0000SY
- DE 0000   HL 0000..
- IX 0000   IY 0000..
+>PC 0100  SP 98FE ST
+ AF 0000  BC 0000 SY
+ DE 0000  HL 0000 ..
+ IX 0000  IY 0000 ..
 ```
 
 Every number on the LCD is hexadecimal. Your `SP` value depends on what sits above the TPA, and `SY` appears on row 2 because `HELLO.TBG` sits beside `HELLO.COM`.
@@ -125,14 +125,14 @@ Tap `F8` once and let it go. The Z80 executes `LD DE,MSG` at `0100h` and halts a
 Tap `F8` a second time. `LD C,9` runs, moving `PC` to `0105` and setting the low byte of `BC` to `09`:
 
 ```text
->PC 0105   SP 98FEST
- AF 0000   BC 0009SY
- DE 0109   HL 0000..
- IX 0000   IY 0000..
+>PC 0105  SP 98FE ST
+ AF 0000  BC 0009 SY
+ DE 0109  HL 0000 ..
+ IX 0000  IY 0000 ..
 ```
 
 Both arguments for BDOS function 9 are now sitting in the CPU, with `CALL $0005` lined up next at `0105h`.
 
-Now press `F5` to let the program finish at full speed. `CALL $0005` prints `Hello from TEC-OS` onto the console just as it did in your standalone run. Then `RET` pops TBUG's exit return address off the stack, raising `SP` from `98FE` to `9900`. Instead of vanishing back to CP/M, TBUG catches the exit and shows `>PC ----   SP 9900EX` on row 1.
+Now press `F5` to let the program finish at full speed. `CALL $0005` prints `Hello from TEC-OS` onto the console just as it did in your standalone run. Then `RET` pops TBUG's exit return address off the stack, raising `SP` from `98FE` to `9900`. Instead of vanishing back to CP/M, TBUG catches the exit and shows `>PC ----  SP 9900 EX` on row 1.
 
 Press `Q` to leave TBUG. The LCD displays `Quit TBUG? Y/N`. Press `Y` or `Q` to confirm (any other key keeps you inside TBUG). Your `B>` prompt returns on the console, and TBUG stays resident at the top of RAM for the next run.

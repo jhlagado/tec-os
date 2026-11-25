@@ -35,7 +35,10 @@ and exercised in the headless TEC-1G emulator with MON3.SVC as the
 sole resident service. The 6,204 loaded bytes matched the file and
 the game produced 4,096 writes to the 8×8 display ports during the
 smoke test. The GO key advanced through the menus, and keypad 6
-started gameplay.
+started gameplay. `test/snake9.test.mjs` repeats that run on every
+build: the same binary, assembled from `programs/SNAKE9.ASM`, loaded
+and run under MON3.SVC alone, the menus stepped to `PAUSED: move to
+go`, and the 8×8 picture still while paused and moving after keypad 6.
 
 ## Install and enter
 

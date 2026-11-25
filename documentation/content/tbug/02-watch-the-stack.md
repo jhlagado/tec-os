@@ -29,7 +29,7 @@ Launch it under TBUG (if you rebooted since Chapter 1, unload `SHELL.SVC` and ru
 B>TBUG.SVC STEP
 ```
 
-Registers opens on the LCD with `>PC 0100   SP 98FEST` and all six register pairs zeroed.
+Registers opens on the LCD with `>PC 0100  SP 98FE ST` and all six register pairs zeroed.
 
 ## Five views and direct jumps
 
@@ -113,4 +113,4 @@ Tapping `F8` one instruction at a time works on six bytes, not when your code ca
 - **`F7` (Step Over):** Runs a `CALL` at full speed until it returns and stops on the instruction right after the `CALL`. On any other instruction, it acts just like `F8`.
 - **`F6` (Step Out):** Steps over nested calls until a `RET` lifts `SP` above its starting value, counting steps along the bottom row. If a routine loops for a long time before returning, any key interrupts the trace and hands control back.
 
-Both `F8` and `F5` wait for you to release the key before resuming the CPU. That release guard prevents a debugger keypress from leaking into a program polling the matrix keyboard.
+`F5` to `F8` all wait for every key to be released before resuming the CPU. That release guard prevents a debugger keypress from leaking into a program polling the matrix keyboard.

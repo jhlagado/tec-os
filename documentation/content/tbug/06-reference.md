@@ -30,7 +30,7 @@ On the TEC-1G matrix keyboard, `Fn+5` through `Fn+8` send `F5` through `F8`.
 | `Q` | Prompt `Quit TBUG? Y/N`. Press `Y` or `Q` to quit and return to CP/M. |
 | `H` | Open context-sensitive help from `TBUG.HLP`. `Left`/`Right` turn pages and `Esc` or `H` returns. |
 
-`F8` and `F5` wait for key release before resuming the program so the keypress never reaches the program, while arrow keys repeat when held. Each view switch flashes the view's name briefly on the bottom row.
+`F5` to `F8` all wait for every key to be released before resuming the program so the keypress never reaches the program, while arrow keys repeat when held. Each view switch flashes the view's name briefly on the bottom row.
 
 ## Arrow keys by view
 
@@ -71,19 +71,19 @@ On the TEC-1G matrix keyboard, `Fn+5` through `Fn+8` send `F5` through `F8`.
 | `E` in Memory prints `Not writable` or `End of range` | Only program memory (`0100h` up to the lowest resident service) can be edited. |
 | Memory stays still while a register changes | The source tag is `FIX`. Open Memory by pressing `Enter` on that register pair in Registers. |
 | `F6` runs for a long time | Press any key to stop the trace. A routine with a long loop before `RET` takes many steps. |
-| `Ctrl+Esc` does not stop a running program | It breaks at the next BDOS call (`0005h`). A tight loop that never calls the OS needs a breakpoint. During a line read, hold `Ctrl+Esc` as you press `Enter`. |
+| `Ctrl+Esc` does not stop a running program | It breaks at the next BDOS call (`0005h`). A tight loop that never calls the OS needs a breakpoint. During a line read, finish the line with `Enter`, then hold `Ctrl+Esc`, and TBUG stops at the next BDOS call. |
 | `SY` is absent and Code shows no labels | Reassemble with `TAS` so `NAME.TBG` matches `NAME.COM` and sits beside it on the same drive. |
 | `TBUG.SVC ARM` prints `ARM needs ABI 5.3` | The ROM lacks `COMVEC`. Update to TEC-OS ABI 5.3 or later. |
 | Program fails to load | Check the program name, drive and available TPA. |
 
 ## Building TBUG from source
 
-TBUG lives in its own repository (historically named `tbg`) alongside Thorium and TEC-OS. Clone `jhlagado/tbg` beside your `thorium` and `tec-os` checkouts, run `npm ci` in `thorium`, then run `npm run build` in `tbg`. The build writes two files:
+TBUG lives in its own repository, [`jhlagado/tbug`](https://github.com/jhlagado/tbug). Clone it beside `tas` (`jhlagado/tas`), `ted` (`jhlagado/ted`) and `tec-os`, run `npm ci` in `tas`, then run `npm run build` in `tbug`. The build writes two files:
 
 - `build/TBUG.SVC`: the resident LCD debugger with built-in symbol support
 - `build/TBUG.HLP`: the context-sensitive help pages opened by `H`
 
 Copy both files to your TEC-OS disk. `TBUG.SVC ARM` and `TBUG.SVC NAME` require TEC-OS ABI 5.3 or later.
 
-[TBUG source](https://github.com/jhlagado/tbg) ·
+[TBUG source](https://github.com/jhlagado/tbug) ·
 [Origo P8 test evidence](https://github.com/jhlagado/origo/tree/main/studies/p8-tbg/evidence)

@@ -46,10 +46,10 @@ BP SET 0104
 Jump back to Registers with `R` and press `F5`. The Z80 runs `LD HL,$1234` and `PUSH HL` at full speed and halts right before `POP DE`:
 
 ```text
->PC 0104   SP 98FCBP
- AF 0000   BC 0000SY
- DE 0000   HL 1234..
- IX 0000   IY 0000..
+>PC 0104  SP 98FC BP
+ AF 0000  BC 0000 SY
+ DE 0000  HL 1234 ..
+ IX 0000  IY 0000 ..
 ```
 
 `BP` on row 1 confirms a breakpoint hit. `HL` already holds `1234` and `SP` has already dropped to `98FC`, proving `PUSH HL` ran while `POP DE` is still waiting. Press `C` to view Code and column 2 on `0104` now shows a solid block `█`, meaning `PC` is stopped on a user breakpoint.
@@ -77,7 +77,7 @@ TBUG catches the program at its next call to TEC-OS through `0005h` (the BDOS en
 
 Two boundaries limit `Ctrl+Esc`:
 
-- **Buffered line input:** While a program sits inside a BDOS line read (function 10), TEC-OS owns the keyboard and ignores `Ctrl+Esc`. Hold `Ctrl+Esc` as you press `Enter` to submit the line, and TBUG stops at the very next BDOS call.
+- **Buffered line input:** While a program sits inside a BDOS line read (function 10), TEC-OS owns the keyboard and ignores `Ctrl+Esc`. Finish the line with `Enter`, then hold `Ctrl+Esc`, and TBUG stops at the program's next BDOS call.
 - **Tight CPU loops:** Any program printing, reading a file or polling the console hits `0005h` and stops straight away. A pure calculation loop that never calls `0005h` cannot be caught this way. Set a breakpoint inside the loop and run again.
 
 ## Catching a normal launch with `ARM`
@@ -94,7 +94,6 @@ Now run any `.COM` program normally, such as `STEP` or `HELLO`. TEC-OS routes th
 
 A few details keep `ARM` predictable:
 
-- Typing `TBUG.SVC` alone prints `Armed` on row 2 of the ready screen so you can check whether the trap is set.
-- Starting a direct launch like `TBUG.SVC STEP` while armed cancels the old arm, flashes `ARM cancelled` and debugs `STEP`.
+- Typing `TBUG.SVC` alone prints `Next launch: armed` on row 2 of the ready screen so you can check whether the trap is set.
 - Putting `TBUG.SVC ARM` in `STARTUP.CMD` arms every cold boot automatically.
 - On a ROM older than ABI 5.3, `TBUG.SVC ARM` prints `ARM needs ABI 5.3` and arms nothing. Update the ROM to use `ARM`.

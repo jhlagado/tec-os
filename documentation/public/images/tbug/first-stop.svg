@@ -89,7 +89,7 @@
   <rect class="bxs" x="416" y="62" width="264" height="84" rx="5"/>
   <text class="nb on-sig" x="434" y="90" text-anchor="start" xml:space="preserve">20 × 4 LCD</text>
   <text class="ns" x="434" y="113" text-anchor="start" xml:space="preserve">Matrix keyboard · debugger UI</text>
-  <text class="t" x="434" y="132" text-anchor="start" xml:space="preserve">&gt;PC 0100   SP 98FE</text>
+  <text class="t" x="434" y="132" text-anchor="start" xml:space="preserve">&gt;PC 0100  SP 98FE ST</text>
   <rect class="bx" x="416" y="162" width="264" height="76" rx="5"/>
   <text class="nb" x="434" y="190" text-anchor="start" xml:space="preserve">Console</text>
   <text class="ns" x="434" y="213" text-anchor="start" xml:space="preserve">Default display · program I/O</text>
