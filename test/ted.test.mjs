@@ -2,26 +2,29 @@
 // reopens a file at every console's size, opens at a line, and runs the round
 // of F9, ^T D and F5 with TAS. Emulator evidence. TED.COM and TAS.COM are
 // pinned inputs (test/inputs.json). CURSOR and TEXCAP are TED's own words,
-// from the listing of TED's build (build/ted/ted.sym); the workspace at 2400h
+// from the listing of TED's build (build/ted/ted.sym); the workspace at 2500h
 // holds them, and the pin's hash holds the build.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ROOT, boot, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { ROOT, boot, fnPress, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { displayFiles } from "../tools/lib/starter.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
 const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
-const CURSOR = 0x24ca; // the cursor's offset in the text
+const CURSOR = 0x25ca; // the cursor's offset in the text
 // The approved eighteenth shell page
 // reduces the former capacity floors.
 const BARE_SEARCH_PAGE = 256;
+// TED 70ff3df's workspace starts at 2500h, a page above 2400h, so its
+// text starts a page higher.
+const TED_WORKSPACE_PAGE = 256;
 
-const TEXCAP = 0x2551; // the text's room, from the word at 0006h
+const TEXCAP = 0x2651; // the text's room, from the word at 0006h
 const NOTES = "hello\nsecond line\n";
 const EDITED = "hello\nYsecond line\n";
 // Line 2 fails: 256 doesn't fit A. A ';' typed at the error's column makes it a comment.
@@ -42,6 +45,13 @@ function keys(m, s, what, done = () => true) {
     const screen = m.videoConsole() ? m.screen().filter((l) => l.trim()).join("\n") : m.text(0).slice(-600);
     throw new Error(`${what}: no within ${LIMIT} cycles, ${m.pending?.length ?? 0} keys unread, pc ${m.pc.toString(16)}\n${screen}`);
   }
+}
+
+/** Function key F<D> as the console sends it: Fn with the digit on the matrix, the xterm sequence on serial; then as keys. */
+function fkey(m, d, what, done = () => true) {
+  if (!m.videoConsole()) return keys(m, d === 9 ? "\x1b[20~" : d === 5 ? "\x1b[15~" : "\x1bOR", what, done);
+  fnPress(m, d);
+  keys(m, "", what, done);
 }
 
 function editOnTecOs({ tms, cols = 80 }) {
@@ -147,19 +157,19 @@ function round({ drive = "A", tms = true }) {
   keys(m, "ted hello.asm\r", "TED", () => /TED +HELLO\.ASM/.test(status()));
 
   mark = m.output.length;
-  keys(m, "\x1b[20~", "the failed build's return", () => /TED\r\n/.test(since()) && /operands are not valid/.test(status()));
+  fkey(m, 9, "the failed build's return", () => /TED\r\n/.test(since()) && /operands are not valid/.test(status()));
   assert.equal(word(m, CURSOR), 12, "at line 2, column 2: the error's place");
   assert.equal(volume(image, drive).list().some((f) => f.name === "HELLO.COM"), false, "a failed build leaves no HELLO.COM");
 
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
   mark = m.output.length;
-  keys(m, "\x1b[20~", "the good build's return", () => /TED\r\n/.test(since()) && /TED\.PRJ: HELLO\.ASM/.test(status()));
+  fkey(m, 9, "the good build's return", () => /TED\r\n/.test(since()) && /TED\.PRJ: HELLO\.ASM/.test(status()));
   assert.match(since(), /HELLO\.COM written/);
   assert.equal(text(image, drive, "HELLO.ASM"), FIXED, "F9 saves first");
   assert.equal(word(m, CURSOR), 13);
 
   mark = m.output.length;
-  keys(m, "\x1b[15~", "the program and the wait", () => /Press a key/.test(since()));
+  fkey(m, 5, "the program and the wait", () => /Press a key/.test(since()));
   assert.match(since(), new RegExp(`${drive}(:\\S*)?>HELLO\\r\\nHI\\r\\n`), "HELLO ran");
   keys(m, " ", "TED again", () => /L2 C3/.test(status()));
   assert.equal(word(m, CURSOR), 13, "the same place as before F5");
@@ -193,11 +203,11 @@ test("TED B:HELLO.ASM from A: opens B:'s file, and F9 builds it on B: with A:'s 
   const status = () => m.screen()[23];
   keys(m, "ted b:hello.asm\r", "TED on B:'s file", () => /TED .*HELLO\.ASM/.test(status()));
   let mark = m.output.length;
-  keys(m, "\x1b[20~", "the failed build's return", () => /TED\r\n/.test(m.text(mark)) && /operands are not valid/.test(status()));
+  fkey(m, 9, "the failed build's return", () => /TED\r\n/.test(m.text(mark)) && /operands are not valid/.test(status()));
   assert.equal(word(m, CURSOR), 12, "at the error's line and column");
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
   mark = m.output.length;
-  keys(m, "\x1b[20~", "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
+  fkey(m, 9, "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
   keys(m, "\x11", "the prompt", () => /A(:\S*)?>$/.test(m.text(mark)));
   assert.equal(text(image, "B", "HELLO.ASM"), FIXED, "saved on B:");
   const onB = volume(image, "B").list().map((f) => f.name);
@@ -206,13 +216,13 @@ test("TED B:HELLO.ASM from A: opens B:'s file, and F9 builds it on B: with A:'s 
   assert.deepEqual(m.violations, []);
 });
 
-test("TED's text holds at least 27,926 bytes on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
+test("TED's text holds at least 27,670 bytes on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
   check(TED);
   // The starter's display files: on a board with both, GLCD.SVC loads and gives
   // way to the ROM's PICO9918 console, so one driver is loaded (the figures).
   // The starter card's four drives, as its recipe asks for them.
   for (const [board, historicalFloor] of [[{ glcd: false }, 28_182], [{ tms: true, matrix: true, glcd: true }, 28_182]]) {
-    const floor = historicalFloor - BARE_SEARCH_PAGE;
+    const floor = historicalFloor - BARE_SEARCH_PAGE - TED_WORKSPACE_PAGE;
     const image = createContainer(
       [
         { geometry: "G1M", label: "SYSTEM", mount: "A" },
@@ -235,11 +245,11 @@ test("TED's text holds at least 27,926 bytes on the starter's files, SHELL.SVC a
 // The smallest system the starter card teaches: the shell, MON3.SVC
 // installed and left by EXIT, then TED. Its room is below the 24,576-byte
 // source limit, so a source at the limit is edited with MON3.SVC unloaded.
-test("TED's text holds at least 23,062 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 22,294 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
+test("TED's text holds at least 22,806 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 22,038 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
   check(TED);
   const P = /\r\n\d*[A-P](:\S*)?>$/;
   for (const [board, via, historicalFloor] of [[{ glcd: false }, "serial", 23_318], [{ matrix: true, glcd: true }, "matrix", 22_550]]) {
-    const floor = historicalFloor - BARE_SEARCH_PAGE;
+    const floor = historicalFloor - BARE_SEARCH_PAGE - TED_WORKSPACE_PAGE;
     const m = boot(new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))), board);
     const type = (line, done, what) => {
       const mark = m.output.length;
@@ -268,12 +278,12 @@ test("C:TED from B: edits B:'s file, and F9 runs C:'s TAS and comes back to C:'s
   keys(m, "b:\r", "the drive", () => /B(:\S*)?>$/.test(m.text(mark)));
   keys(m, "c:ted hello.asm\r", "C:'s TED on B:'s file", () => /TED .*HELLO\.ASM/.test(status()));
   mark = m.output.length;
-  keys(m, "\x1b[20~", "the failed build's return", () => /TED\r\n/.test(m.text(mark)) && /operands are not valid/.test(status()));
+  fkey(m, 9, "the failed build's return", () => /TED\r\n/.test(m.text(mark)) && /operands are not valid/.test(status()));
   assert.doesNotMatch(m.text(mark), /TAS\?|TED\?/, "both found on C:");
   assert.equal(word(m, CURSOR), 12, "at the error's line and column");
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
   mark = m.output.length;
-  keys(m, "\x1b[20~", "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
+  fkey(m, 9, "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
   keys(m, "\x11", "the prompt", () => /B(:\S*)?>$/.test(m.text(mark)));
   assert.equal(text(image, "B", "HELLO.ASM"), FIXED, "saved on B:");
   assert.ok(volume(image, "B").list().some((f) => f.name === "HELLO.COM"), "HELLO.COM on B:");
@@ -322,7 +332,7 @@ for (const [args, tail, what] of [
     const status = () => m.screen()[23];
     keys(m, "ted hello.asm\r", "TED", () => /TED +HELLO\.ASM/.test(status()));
     const mark = m.output.length;
-    keys(m, "\x1b[15~", "the program and the wait", () => /Press a key/.test(m.text(mark)));
+    fkey(m, 5, "the program and the wait", () => /Press a key/.test(m.text(mark)));
     const out = m.text(mark);
     keys(m, " ", "TED again", () => /TED +HELLO\.ASM/.test(status()));
     const shown = tail.replace(/[/.]/g, "\\$&");

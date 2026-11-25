@@ -1,26 +1,27 @@
 // TED and BAZA on the starter card's files: TED opens TIMES.BAS and
-// F9 builds it with BAZA and comes back clean, F5 runs TIMES and comes
-// back after a key, and a line with
+// F9 builds it with BAZA and comes back clean, F5 runs TIMES.BAS under BAZ,
+// the interpreter, and comes back after a key, and a line with
 // a syntax error brings TED back on that line from BAZA's TED.ERR, with the
 // last TIMES.COM kept byte for byte; a project on B: builds with A:'s BAZA,
 // which finds BAZA.RTL on the drive it was loaded from. Emulator evidence. TED.COM,
 // BAZA.COM and BAZA.RTL are pinned inputs (test/inputs.json), the starter
-// card's bytes (test/starter.test.mjs).
+// card's bytes (test/starter.test.mjs), with BAZ.COM for F5.
 
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ROOT, boot, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { ROOT, boot, fnPress, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
 const TED = pinned("TED.COM");
 const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
-const SKIP = TED.skip || BAZA.skip || RTL.skip;
+const BAZ = pinned("BAZ.COM");
+const SKIP = TED.skip || BAZA.skip || RTL.skip || BAZ.skip;
 const SOURCE = readFileSync(resolve(ROOT, "programs/TIMES.BAS"), "utf8");
-const CURSOR = 0x24ca; // the cursor's offset in TED's text (test/ted.test.mjs)
+const CURSOR = 0x25ca; // the cursor's offset in TED's text (test/ted.test.mjs)
 const LIMIT = 100_000_000; // each step's cycles: a stall fails in seconds, naming the step
 const BAD = "95 PRINT (";
 // TED's text holds CR LF: line 10 starts after nine lines and their ends.
@@ -45,21 +46,29 @@ function keys(m, s, what, done) {
   }
 }
 
+/** Function key F<D> as the console sends it: Fn with the digit on the matrix, the xterm sequence on serial; then as keys. */
+function fkey(m, d, what, done = () => true) {
+  fnPress(m, d);
+  keys(m, "", what, done);
+}
+
 /** A card with the starter's TED, BAZA and BAZA.RTL on A:, and TIMES.BAS on DRIVE; SHELL.SVC holds the prompt, so TED's chained lines come back to it. */
 function card(drive) {
   check(TED);
   check(BAZA);
   check(RTL);
+  check(BAZ);
   const image = standardCard();
   const a = volume(image, "A");
   a.write("TED.COM", bytes(TED));
   a.write("BAZA.COM", bytes(BAZA));
   a.write("BAZA.RTL", bytes(RTL));
+  a.write("BAZ.COM", bytes(BAZ));
   volume(image, drive).write("TIMES.BAS", Buffer.from(SOURCE), { text: true });
   return withShell(image);
 }
 
-test("TED on TIMES.BAS: F9 builds with BAZA and comes back clean, F5 runs TIMES, and a syntax error brings TED back on its line", { skip: SKIP, timeout: 1_800_000 }, () => {
+test("TED on TIMES.BAS: F9 builds with BAZA and comes back clean, F5 runs TIMES.BAS under BAZ, and a syntax error brings TED back on its line", { skip: SKIP, timeout: 1_800_000 }, () => {
   const image = card("A");
   const m = boot(image, { tms: true, matrix: true });
   let mark = m.output.length;
@@ -68,7 +77,7 @@ test("TED on TIMES.BAS: F9 builds with BAZA and comes back clean, F5 runs TIMES,
   keys(m, "ted times.bas\r", "TED", () => /TED +TIMES\.BAS/.test(status()));
 
   mark = m.output.length;
-  keys(m, "\x1b[20~", "the good build's return", () => /TED\r\n/.test(since()) && /TED\.PRJ: TIMES\.BAS/.test(status()));
+  fkey(m, 9, "the good build's return", () => /TED\r\n/.test(since()) && /TED\.PRJ: TIMES\.BAS/.test(status()));
   assert.match(m.text(mark), /A(:\S*)?>A:BAZA TIMES\.BAS\r\n(?:[|\/\\-]\x08)+COM written\r\n/, "BAZA's marks, each covered by the next and the last by its message");
   assert.match(since(), /A(:\S*)?>A:BAZA TIMES\.BAS\r\nCOM written\r\n/, "A:'s BAZA, the drive TED was loaded from");
   assert.ok(names(image, "A").includes("TIMES.COM"), "TIMES.COM on A:");
@@ -77,10 +86,10 @@ test("TED on TIMES.BAS: F9 builds with BAZA and comes back clean, F5 runs TIMES,
 
 
   mark = m.output.length;
-  keys(m, "\x1b[15~", "TIMES's first question", () => /WHAT IS YOUR NAME\? $/.test(since()));
+  fkey(m, 5, "TIMES's first question", () => /WHAT IS YOUR NAME\? $/.test(since()));
   keys(m, "TEC\r7\r", "the table and the wait", () => /Press a key/.test(since()));
-  assert.match(since(), /A(:\S*)?>TIMES\r\nHELLO FROM BASIC ON TEC-OS\.\r\n[^]* 12 X 7  = 84 \r\n[^]*GOODBYE, TEC!\r\n/, "TIMES ran");
-  assert.doesNotMatch(since(), /BAZA TIMES/, "the build was current, so F5 ran TIMES without building it again");
+  assert.match(since(), /A(:\S*)?>A:BAZ TIMES\.BAS\r\nHELLO FROM BASIC ON TEC-OS\.\r\n[^]* 12 X 7  = 84 \r\n[^]*GOODBYE, TEC!\r\n[^]*A(:\S*)?>A:TED\r\n/, "F5 ran TIMES.BAS under A:'s BAZ, then TED");
+  assert.doesNotMatch(since(), /BAZA TIMES/, "F5 interprets the source: no build")
   keys(m, " ", "TED again", () => /L1 C1/.test(status()));
   assert.equal(word(m, CURSOR), 0, "the same place as before F5");
   const good = sha(image, "A", "TIMES.COM");
@@ -90,7 +99,7 @@ test("TED on TIMES.BAS: F9 builds with BAZA and comes back clean, F5 runs TIMES,
   keys(m, "\x04".repeat(9), "line 10", () => /L10 C1/.test(status()));
   keys(m, `${BAD}\r`, "the bad line", () => /L11 C1/.test(status()));
   mark = m.output.length;
-  keys(m, "\x1b[20~", "the failed build's return", () => /TED\r\n/.test(since()) && /\?SYNTAX ERROR IN 95/.test(status()));
+  fkey(m, 9, "the failed build's return", () => /TED\r\n/.test(since()) && /\?SYNTAX ERROR IN 95/.test(status()));
   // The console names BASIC line 95; TED's place, the file's line 10, comes
   // from BAZA's TED.ERR record, TIMES.BAS:10:1:, which TED takes.
   assert.match(since(), /A(:\S*)?>A:BAZA TIMES\.BAS\r\n\?SYNTAX ERROR IN 95\r\n/, "BAZA's message");
@@ -111,7 +120,7 @@ test("a project on B: builds with A:'s BAZA, which finds BAZA.RTL on its load dr
   keys(m, "b:\r", "B:", () => /B(:\S*)?>$/.test(since()));
   keys(m, "ted times.bas\r", "A:'s TED on B:'s file", () => /TED +TIMES\.BAS/.test(status()));
   mark = m.output.length;
-  keys(m, "\x1b[20~", "the build's return", () => /TED\r\n/.test(since()) && /TED\.PRJ: TIMES\.BAS/.test(status()));
+  fkey(m, 9, "the build's return", () => /TED\r\n/.test(since()) && /TED\.PRJ: TIMES\.BAS/.test(status()));
   assert.match(since(), /A:BAZA TIMES\.BAS\r\nCOM written\r\n/, "A:'s BAZA");
   keys(m, "\x11", "the prompt", () => /B(:\S*)?>$/.test(since()));
   const onB = names(image, "B");

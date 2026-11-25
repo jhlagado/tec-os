@@ -198,3 +198,19 @@ export function boot(sdImage, { width = 80, ramFill = 0, highCapacity = true, tm
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   return m;
 }
+
+/** Press Fn with digit D (0 to 9) on M's matrix until TEC-OS reads it, then let both go: F1 to F9, or F10 for 0. */
+export function fnPress(m, d) {
+  const key = 0x13 + d, kblast = m.sym("KBLAST");
+  m.tec1g.applyMatrixKey(0, 2, true);
+  m.tec1g.applyMatrixKey(key >> 3, key & 7, true);
+  m.runUntil(() => m.read(kblast) === key, 50_000_000, `Fn+${d}`);
+  m.tec1g.applyMatrixKey(key >> 3, key & 7, false);
+  m.tec1g.applyMatrixKey(0, 2, false);
+}
+
+/** fnPress, then run until TEC-OS's scan has seen both keys go. */
+export function fnDigit(m, d) {
+  fnPress(m, d);
+  m.runUntil(() => m.read(m.sym("KBLAST")) === 0xff, 50_000_000, `release of Fn+${d}`);
+}

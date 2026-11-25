@@ -1563,7 +1563,7 @@ const INACTIVE = {
   "test/svc.test.mjs": ["a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h"],
   "test/times.test.mjs": ["with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it compiles and gives the JP back before it exits, TIMES runs, and the GLCD is still the console"],
   "test/ted-baza.test.mjs": [
-    "TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T R runs TIMES, and a syntax error brings TED back on its line",
+    "TED on TIMES.BAS: F9 builds with BAZA and comes back clean, F5 runs TIMES.BAS under BAZ, and a syntax error brings TED back on its line",
     "a project on B: builds with A:'s BAZA, which finds BAZA.RTL on its load drive",
   ],
 };

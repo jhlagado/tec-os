@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
-import {ROOT,boot,starterOn,volume} from './lib/fixtures.mjs';
+import {ROOT,boot,fnPress,starterOn,volume} from './lib/fixtures.mjs';
 
 const source=readFileSync(resolve(ROOT,'programs/CAVERNS.BAS'),'utf8');
 const original='DREAMCARDS presents...',replacement='TEC-OS Book presents';
@@ -19,6 +19,7 @@ function keys(m,s,what,done){
  m.enqueueInput(s,'matrix');
  m.runUntilChecked(()=>{m.pumpInput();return !m.pending?.length&&m.waitingForInput()&&done();},800_000_000,what);
 }
+function fkey(m,d,what,done){ fnPress(m,d); keys(m,'',what,done); }
 test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen after power cycle',{timeout:300_000},()=>{
  const image=starterOn('BASIC'),a=volume(image,'A');
  const originalSource=sha(a.read('CAVERNS.BAS')),originalCom=sha(readFileSync(resolve(ROOT,'programs/CAVERNS.COM')));
@@ -35,11 +36,11 @@ test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen afte
  assert.equal(text(a).split('\n').find(l=>l.startsWith(bannerNumber+' ')),expected.split('\n').find(l=>l.startsWith(bannerNumber+' ')));
  assert.equal(text(a),expected);
  let mark=m.output.length;
- keys(m,'\x1b[20~','TED builds Caverns and returns',()=>/COM written/.test(m.text(mark))&&/CAVBOOK\.BAS/.test(status()));
+ fkey(m,9,'TED builds Caverns and returns',()=>/COM written/.test(m.text(mark))&&/CAVBOOK\.BAS/.test(status()));
  assert.notEqual(sha(a.read('CAVBOOK.COM')),originalCom,'modified source produces a distinct executable');
  assert.ok(a.read('CAVBOOK.COM').length<40000);
  mark=m.output.length;
- keys(m,'\x1b[15~','TED builds and runs Caverns',()=>m.text(mark).includes(replacement)&&m.text(mark).includes('useful-looking compass')&&m.text(mark).endsWith('? '));
+ fkey(m,5,'TED builds and runs Caverns',()=>m.text(mark).includes(replacement)&&m.text(mark).includes('useful-looking compass')&&m.text(mark).endsWith('? '));
  keys(m,'quit\r','quit the modified game',()=>m.text().endsWith('? ')&&m.text().includes('Another adventure?'));
  keys(m,'n\r','leave the game for TED return pause',()=>/Press a key/.test(m.screen().join('\n')));
  keys(m,' ','return to TED',()=>/CAVBOOK\.BAS/.test(status()));

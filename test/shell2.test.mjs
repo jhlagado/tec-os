@@ -1110,7 +1110,7 @@ function tedCost(selected) {
   m.bootText = m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   assert.equal(createHash("sha256").update(Uint8Array.from({ length: 0x4000 }, (_, i) => m.read(0xc000 + i))).digest("hex"), createHash("sha256").update(selected.rom).digest("hex"));
-  const readLoop = 0x2236, inputReturn = 0x223e, wrapperReturn = 0x112, cursor = 0x24ca, length = cursor - 2; // TED dc0cd0f: the read loop at 2236h, the cursor where it was
+  const readLoop = 0x2297, inputReturn = 0x229f, wrapperReturn = 0x112, cursor = 0x25ca, length = cursor - 2; // TED 70ff3df: the read loop at 2297h, the cursor at 25CAh (build/ted/ted.sym)
   assert.deepEqual(editor.slice(0xb, 0x17), Uint8Array.from([0xdd, 0xe5, 0xfd, 0xe5, 0xcd, 5, 0, 0xfd, 0xe1, 0xdd, 0xe1, 0xc9]));
   assert.deepEqual(editor.slice(readLoop - 0x100, readLoop - 0x100 + 12), Uint8Array.from([0x11, 0xff, 0, 0x0e, 6, 0xcd, 0x0b, 1, 0xb7, 0x28, 0xf5, 0xc9]));
   const owner = () => {
