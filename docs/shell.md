@@ -8,10 +8,10 @@ has CP/M's built-ins `DIR`, `ERA`, `REN` and `TYPE`, with
 ROM's shell hook. It holds what left the ROM:
 
 - the command history, Up/Down and ^W/^N;
-- the drive's directory selection in the prompt, and `CD` with script-drive
-  protection; the same basic selection commands also work in ROM;
+- the drive's directory selection in the prompt, and script-drive protection
+  for `CD`, which the ROM runs;
 - `DIR` with each file's size, `COPY`, `DEL`, `SERVICES`, `CLS`, `ECHO` and
-  `PAUSE`;
+  `PAUSE`, the first three from the overlay at the back of `SHELL.SVC`;
 - the pager, `[more]` in `TYPE` and `DIR`;
 - lines of several commands joined by `!` and `&`;
 - `.CMD` scripts, and the rest of `STARTUP.CMD`.
@@ -20,15 +20,17 @@ Every other command it hands back to the ROM to run. The starter card's
 `STARTUP.CMD` starts with `SHELL.SVC`, so the shell is in after every reset.
 A key held through reset skips `STARTUP.CMD`, and the bare prompt comes back.
 
-`SHELL.SVC` occupies 18 pages: a 4,608-byte allocation containing its image
-and extra RAM. Its history is a 256-byte ring in its own last page. Its own stack
+`SHELL.SVC` occupies 11 pages: a 2,816-byte allocation containing its image
+and extra RAM. `DIR`, `COPY` and `SERVICES` are its overlay, read into the TPA
+when one runs ([below](#the-overlay)). Its history is a 128-byte ring at the
+end of its memory. Its own stack
 is 48 bytes, of which the census's workload uses 16 and the deepest path, the
 prompt's reading of the volume labels with every cache line changed and
 kept, 34 (`test/shell.test.mjs` and `test/shell2.test.mjs`, which read a guard
 pattern laid under it); no path may use more than 36. It declares 6 bytes of
 the BDOS's stack and none of the BIOS's or the CCP's, so `GLCD.SVC` and
-`MON3.SVC` install beside it. With the shell alone the word at 0006h is A400h
-on the starter card, a TPA of 41,984 bytes.
+`MON3.SVC` install beside it. With the shell alone the word at 0006h is AC00h
+on the starter card, a TPA of 43,776 bytes.
 
 ## With no shell
 
@@ -181,14 +183,14 @@ cache line that the card will not take, is `CD FAILED`, the drive keeping
 its volume. Each refusal sets FF00h. To take a volume off a drive, put
 another there: the drive then frees the first.
 
-`CD` uses the ROM's volume services (`TNMOUNT` and `TNDESC`,
-[rom-services.md](rom-services.md)): the mount writes every changed cache line
-first, puts the volume on the drive and resets it, and on the drive you are on
-selects it again. The shell keeps each drive's label, read at its first prompt
-and by `CD` alone, `CD D:` and `CD ?`, and `CD NAME` writes the new one; a
-prompt reads nothing from the card. A program that calls `TNMOUNT` or
-`TNUNMNT` itself leaves the prompt's label stale until `CD` alone reads the
-card again.
+`CD` is the ROM's, which the shell hands it after its script check: it uses
+the ROM's volume services (`TNMOUNT` and `TNDESC`,
+[rom-services.md](rom-services.md)), and the mount writes every changed cache
+line first, puts the volume on the drive and resets it, and on the drive you
+are on selects it again. `CD ?` lists without the pager. The shell keeps each
+drive's label, read at its first prompt and again at the prompt after any
+`CD`; any other prompt reads nothing from the card. A program that calls
+`TNMOUNT` or `TNUNMNT` itself leaves the prompt's label stale until a `CD`.
 
 The drive you are on is written behind, and logging onto another drive or
 `CD` moves it ([recovery.md](recovery.md)). A program that selects a drive by
@@ -198,9 +200,10 @@ next drive change or warm boot; nothing on the starter card does it.
 
 **`CD` on A:.** The commands found on A: follow its volume: after `CD A:WORK`,
 `SAY` is `SAY?`, and `CD A:SYSTEM` brings them back. A reset keeps the drives'
-selection, so after `CD A:` to a volume with no `SHELL.SVC` (`CD A:GAMES` on
-the starter card) a reset gives the bare `A>` on that volume. The ROM's `CD`
-remains available. Type `CD ?`, `CD A:SYSTEM` and `SHELL.SVC`
+selection, so after `CD A:` to a volume with no `SHELL.SVC` (`CD A:WORK` on
+the starter card) a reset gives the bare `A>` on that volume, and before a
+reset the shell's `DIR` is the ROM's and `COPY` and `SERVICES` are refused, as
+their overlay is read from A:. The ROM's `CD` remains available. Type `CD ?`, `CD A:SYSTEM` and `SHELL.SVC`
 to restore the shell.
 Power off and on gives the card's own drives and the shell again; on the
 web page, Power cycle.
@@ -237,8 +240,9 @@ listing; with no shell, `DIR` is the ROM's listing too.
 **Its cost.** A first search combines each name's extent sizes in a table.
 Two more searches then produce the rows, with no BDOS 35 scan and search
 restart for each large file. The table holds up to 512 names, as many as a
-G1M or G8M directory holds. It takes 8,512 bytes of the TPA, 0100h–223Fh,
-while `DIR` runs, and no resident memory.
+G1M or G8M directory holds, so it never fills. It takes 8,512 bytes of the
+TPA, 0100h–223Fh, while `DIR` runs, and the overlay the TPA from 2300h; a
+service never takes the TPA below 8000h.
 
 `DIR` takes about twice `DIR /W`'s time, its rows holding about twice the
 characters, whatever the files' sizes. On a G8M volume at 4 MHz on the serial
@@ -248,11 +252,7 @@ files, 100 of them of 40 KiB, 32.3 s against 16.9 s; 181 files, 180 of them of
 on a G8M volume, or over 16 KiB on a G1M, which has more than one directory
 entry, no longer slows `DIR`. `DIR /W` is the fast listing, at half the time.
 
-If that workspace is unavailable or its capacity is exhausted, `DIR`
-restarts its original size-and-search engine before printing any filename
-row. This fallback preserves the result and can take longer. Invalid table
-state is reported as `DIR STATE` with FF00h; a missing size is never silently
-reported as zero. Ordinary drive and read errors keep their BDOS handling.
+Ordinary drive and read errors keep their BDOS handling.
 
 ## `CLS`, `ECHO` and `PAUSE`
 
@@ -276,14 +276,37 @@ reported as zero. Ordinary drive and read errors keep their BDOS handling.
 - `CD`, `DIR`, `CLS`, `ECHO` and `PAUSE`, above.
 - The pager pauses `TYPE` and `DIR` one row before a full screen, with the
   geometry `TNINFO` gives (80 by 24 on the serial terminal).
-- The history ring keeps the lines typed at the prompt; ^W shows the one before
-  and ^N the one after. A line equal to the newest is not stored again. A
-  program's line input receives ^W and ^N as characters.
+- The history ring keeps the lines typed at the prompt, 128 bytes of them with
+  a zero after each; ^W shows the one before and ^N the one after. A line equal
+  to the newest is not stored again, nor one of 127 characters, the most a line
+  holds: with its zero it would fill the ring. A program's line input receives
+  ^W and ^N as characters.
 - Plain Up and Down (CSI or SS3) perform the same older/newer history actions
   as ^W and ^N. Recall replaces partial input, with an empty line past the
   newest. Modified arrows and other navigation remain ignored. The bare CCP
   has no history and ignores arrows. Programs reading raw characters can
   handle arrows themselves.
+
+## The overlay
+
+`DIR`, `COPY` and `SERVICES` are not resident. Their code, 1,401 bytes, is
+assembled for the TPA at 2300h and kept at the back of `SHELL.SVC`, from a
+record of its own, after the relocation data the loader reads; the loader
+ignores what follows. When one of them runs, the shell opens the file it was
+installed by, on the drive and in the user area it was read from, reads the
+overlay's 12 records into 2300h, checks that the overlay's stamp is the one
+built with this shell, adds its own page to each byte that holds a resident
+address, and enters it. The user area and the DMA are put back first. Each of
+the three commands reads the file first, so it takes about 12 records' time
+more than a resident command would, and overwrites the TPA from 2300h, as
+`DIR`'s table does from 0100h; a built-in runs only at the prompt.
+
+If the file can't be opened or read, or its overlay is another build's, `DIR`
+goes to the ROM's `DIR`, with no sizes, and `COPY` and `SERVICES` say
+`NO OVERLAY` with FF00h. The build, `packShell` in `tools/lib/svc.mjs`, writes
+the stamp, the record count and the relocation list: a gap of 1 to 254 from the
+byte before 2300h or from the last byte marked, 255 to move on 254 with nothing
+marked, and 0 to end it.
 
 ## Loading, `UNLOAD` and recovery
 
