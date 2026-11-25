@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="276" viewBox="0 0 720 276" role="img" aria-labelledby="title desc">
-<title id="title">Cycling views, following pointers and stepping</title>
-<desc id="desc">Tab cycles forward through Registers, Code, Stack and Memory (and Symbols when TBGSYM is loaded), and Shift+Tab moves back. Enter opens the target of a register, stack slot or branch, and Esc returns one level. Space steps into, Shift+Space steps over and Ctrl+Space steps out.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="278" viewBox="0 0 720 278" role="img" aria-labelledby="title desc">
+<title id="title">Switching views and stepping with F6 to F8</title>
+<desc id="desc">R, C, S, M and Y jump straight to Registers, Code, Stack, Memory and Symbols, and Tab cycles through them. Enter opens the target of a register, stack slot or branch, Esc steps back and Q quits. F8 steps into, F7 steps over and F6 steps out (Fn+8, Fn+7 and Fn+6 on the TEC-1G).</desc>
 <defs><style>
 svg {color:#233333;--panel:#edf4ee;--edge:#648479;--accent:#155c48;--paper:#fff}
 @media(prefers-color-scheme:dark) {svg {color:#eef4ef;--panel:#172c27;--edge:#739888;--accent:#a3dfbd;--paper:#1c1f22}}
@@ -14,40 +14,42 @@ text {fill:currentColor;font:14px ui-monospace,monospace}
 .highlight {stroke:var(--accent);stroke-width:2.5}
 </style>
 <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L8 4 L0 8 Z" fill="var(--accent)"/></marker></defs>
-<text class="head" x="360" y="26" text-anchor="middle" xml:space="preserve">Tab cycles forward  ·  Shift+Tab goes back</text>
-<rect class="highlight" x="24" y="42" width="152" height="82" rx="4"/>
-<text class="head" x="100" y="67" text-anchor="middle" xml:space="preserve">Registers</text>
-<text class="" x="100" y="92" text-anchor="middle" xml:space="preserve">PC, SP, pairs</text>
-<text class="" x="100" y="112" text-anchor="middle" xml:space="preserve">Flags, ST/BP/EX</text>
-<path class="arrow" d="M178 83 L200 83" marker-end="url(#arrow)"/>
-<rect class="" x="204" y="42" width="152" height="82" rx="4"/>
-<text class="head" x="280" y="67" text-anchor="middle" xml:space="preserve">Code</text>
-<text class="" x="280" y="92" text-anchor="middle" xml:space="preserve">Disassembly</text>
-<text class="" x="280" y="112" text-anchor="middle" xml:space="preserve">&gt;, →, □, █</text>
-<path class="arrow" d="M358 83 L380 83" marker-end="url(#arrow)"/>
-<rect class="" x="384" y="42" width="152" height="82" rx="4"/>
-<text class="head" x="460" y="67" text-anchor="middle" xml:space="preserve">Stack</text>
-<text class="" x="460" y="92" text-anchor="middle" xml:space="preserve">4 live words</text>
-<text class="" x="460" y="112" text-anchor="middle" xml:space="preserve">from SP down</text>
-<path class="arrow" d="M538 83 L560 83" marker-end="url(#arrow)"/>
-<rect class="" x="564" y="42" width="132" height="82" rx="4"/>
-<text class="head" x="630" y="67" text-anchor="middle" xml:space="preserve">Memory</text>
-<text class="" x="630" y="92" text-anchor="middle" xml:space="preserve">16 bytes</text>
-<text class="" x="630" y="112" text-anchor="middle" xml:space="preserve">FIX or reg</text>
-<rect class="" x="24" y="154" width="200" height="86" rx="4"/>
-<text class="head" x="124" y="179" text-anchor="middle" xml:space="preserve">Space · Step Into</text>
-<text class="" x="124" y="204" text-anchor="middle" xml:space="preserve">One instruction</text>
-<text class="" x="124" y="224" text-anchor="middle" xml:space="preserve">Enters local CALL</text>
-<path class="arrow" d="M226 197 L254 197" marker-end="url(#arrow)"/>
-<rect class="" x="260" y="154" width="200" height="86" rx="4"/>
-<text class="head" x="360" y="179" text-anchor="middle" xml:space="preserve">Shift+Space · Over</text>
-<text class="" x="360" y="204" text-anchor="middle" xml:space="preserve">Runs a CALL whole</text>
-<text class="" x="360" y="224" text-anchor="middle" xml:space="preserve">Stops after return</text>
-<path class="arrow" d="M462 197 L490 197" marker-end="url(#arrow)"/>
-<rect class="" x="496" y="154" width="200" height="86" rx="4"/>
-<text class="head" x="596" y="179" text-anchor="middle" xml:space="preserve">Ctrl+Space · Out</text>
-<text class="" x="596" y="204" text-anchor="middle" xml:space="preserve">Until SP rises</text>
-<text class="" x="596" y="224" text-anchor="middle" xml:space="preserve">Any key interrupts</text>
-
-<text class="note" x="360" y="264" text-anchor="middle" xml:space="preserve">Enter drills down from a register, stack slot or branch. Esc returns one level.</text>
+<text class="head" x="360" y="26" text-anchor="middle" xml:space="preserve">R · C · S · M · Y jump directly   ·   Tab / Shift+Tab cycle</text>
+<rect class="highlight" x="16" y="42" width="128" height="82" rx="4"/>
+<text class="head" x="80" y="67" text-anchor="middle" xml:space="preserve">R · Registers</text>
+<text class="" x="80" y="92" text-anchor="middle" xml:space="preserve">PC, SP, pairs</text>
+<text class="" x="80" y="112" text-anchor="middle" xml:space="preserve">Flags &amp; stops</text>
+<path class="arrow" d="M146 83 L158 83" marker-end="url(#arrow)"/>
+<rect class="" x="160" y="42" width="124" height="82" rx="4"/>
+<text class="head" x="222" y="67" text-anchor="middle" xml:space="preserve">C · Code</text>
+<text class="" x="222" y="92" text-anchor="middle" xml:space="preserve">Disassembly</text>
+<text class="" x="222" y="112" text-anchor="middle" xml:space="preserve">&gt;, →, □, █</text>
+<path class="arrow" d="M286 83 L298 83" marker-end="url(#arrow)"/>
+<rect class="" x="300" y="42" width="124" height="82" rx="4"/>
+<text class="head" x="362" y="67" text-anchor="middle" xml:space="preserve">S · Stack</text>
+<text class="" x="362" y="92" text-anchor="middle" xml:space="preserve">4 live words</text>
+<text class="" x="362" y="112" text-anchor="middle" xml:space="preserve">from SP down</text>
+<path class="arrow" d="M426 83 L438 83" marker-end="url(#arrow)"/>
+<rect class="" x="440" y="42" width="124" height="82" rx="4"/>
+<text class="head" x="502" y="67" text-anchor="middle" xml:space="preserve">M · Memory</text>
+<text class="" x="502" y="92" text-anchor="middle" xml:space="preserve">16 bytes</text>
+<text class="" x="502" y="112" text-anchor="middle" xml:space="preserve">FIX or reg</text>
+<path class="arrow" d="M566 83 L578 83" marker-end="url(#arrow)"/>
+<rect class="" x="580" y="42" width="124" height="82" rx="4"/>
+<text class="head" x="642" y="67" text-anchor="middle" xml:space="preserve">Y · Symbols</text>
+<text class="" x="642" y="92" text-anchor="middle" xml:space="preserve">Global labels</text>
+<text class="" x="642" y="112" text-anchor="middle" xml:space="preserve">from .TBG</text>
+<rect class="" x="16" y="152" width="212" height="86" rx="4"/>
+<text class="head" x="122" y="177" text-anchor="middle" xml:space="preserve">F8 (Fn+8) · Step Into</text>
+<text class="" x="122" y="202" text-anchor="middle" xml:space="preserve">One instruction</text>
+<text class="" x="122" y="222" text-anchor="middle" xml:space="preserve">Enters local CALL</text>
+<rect class="" x="254" y="152" width="212" height="86" rx="4"/>
+<text class="head" x="360" y="177" text-anchor="middle" xml:space="preserve">F7 (Fn+7) · Step Over</text>
+<text class="" x="360" y="202" text-anchor="middle" xml:space="preserve">Runs a CALL whole</text>
+<text class="" x="360" y="222" text-anchor="middle" xml:space="preserve">Stops after return</text>
+<rect class="" x="492" y="152" width="212" height="86" rx="4"/>
+<text class="head" x="598" y="177" text-anchor="middle" xml:space="preserve">F6 (Fn+6) · Step Out</text>
+<text class="" x="598" y="202" text-anchor="middle" xml:space="preserve">Until SP rises</text>
+<text class="" x="598" y="222" text-anchor="middle" xml:space="preserve">Any key interrupts</text>
+<text class="note" x="360" y="264" text-anchor="middle" xml:space="preserve">Enter drills down from a register, stack slot or branch. Esc steps back and Q quits.</text>
 </svg>

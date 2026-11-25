@@ -9,9 +9,9 @@
   },
   {
     "id": "tbg",
-    "title": "Using T-Bug (TBG)",
-    "label": "TBG book",
-    "parent": "TBG",
+    "title": "Using TBUG",
+    "label": "TBUG book",
+    "parent": "TBUG",
     "description": "Stop a TEC-OS program at 0100h, inspect registers, stack and memory on the 20x4 LCD and step through Z80 code."
   }
 ]

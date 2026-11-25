@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="266" viewBox="0 0 720 266" role="img" aria-labelledby="title desc">
-<title id="title">TBG in high memory with separate console and LCD paths</title>
-<desc id="desc">TEC-OS ROM sits at C000h to FFFFh. TBG.SVC (about 7.5 KiB) loads at the top of RAM below the ROM. The program runs from 0100h up to the address at 0006h where TBG begins, above page zero. TBG uses the 20x4 LCD and matrix keyboard while the program keeps the main console.</desc>
+<title id="title">TBUG in high memory with separate console and LCD paths</title>
+<desc id="desc">TEC-OS ROM sits at C000h to FFFFh. TBUG.SVC loads at the top of RAM below the ROM. The program runs from 0100h up to the address at 0006h where TBUG begins, above page zero. TBUG uses the 20x4 LCD and matrix keyboard while the program keeps the console.</desc>
 <defs><style>
 svg {color:#233333;--panel:#edf4ee;--edge:#648479;--accent:#155c48;--paper:#fff}
 @media(prefers-color-scheme:dark) {svg {color:#eef4ef;--panel:#172c27;--edge:#739888;--accent:#a3dfbd;--paper:#1c1f22}}
@@ -19,7 +19,7 @@ text {fill:currentColor;font:14px ui-monospace,monospace}
 <rect class="" x="84" y="42" width="240" height="36" rx="4"/>
 <text class="head" x="204" y="65" text-anchor="middle" xml:space="preserve">TEC-OS ROM</text>
 <rect class="highlight" x="84" y="78" width="240" height="46" rx="4"/>
-<text class="head" x="204" y="106" text-anchor="middle" xml:space="preserve">TBG.SVC (~7.5 KiB)</text>
+<text class="head" x="204" y="106" text-anchor="middle" xml:space="preserve">TBUG.SVC</text>
 <rect class="" x="84" y="124" width="240" height="56" rx="4"/>
 <text class="head" x="204" y="157" text-anchor="middle" xml:space="preserve">Program (TPA)</text>
 <rect class="" x="84" y="180" width="240" height="36" rx="4"/>
@@ -37,5 +37,5 @@ text {fill:currentColor;font:14px ui-monospace,monospace}
 <rect class="" x="416" y="140" width="264" height="66" rx="4"/>
 <text class="head" x="548" y="165" text-anchor="middle" xml:space="preserve">Console</text>
 <text class="" x="548" y="190" text-anchor="middle" xml:space="preserve">Default display</text>
-<text class="note" x="360" y="248" text-anchor="middle" xml:space="preserve">TBG is loaded at the top of RAM, below the ROM. Program memory ends where TBG begins (0006h).</text>
+<text class="note" x="360" y="248" text-anchor="middle" xml:space="preserve">TBUG is loaded at the top of RAM, below the ROM. Program memory ends where TBUG begins (0006h).</text>
 </svg>
