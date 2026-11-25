@@ -460,6 +460,17 @@ names are the way in.
   TEC-OS has read it lets it go. The build checks that `KBLAST` is the
   workspace's byte.
 
+## The LCD's CGRAM
+
+The character LCD's eight user-defined characters, codes 00h to 07h, are the
+program's. Their contents are undefined at power-on, and TEC-OS never writes or
+reads CGRAM: the ROM's LCD paths set a DDRAM address for every row they write,
+and no service on the card touches it. TEC-OS saves nothing there and restores
+nothing, over a warm boot or a reset, so whatever a program defines stays until
+something else redefines it. A service that writes CGRAM while a program runs,
+such as a debugger on the LCD, saves the program's eight characters first and
+puts them back before the program runs again.
+
 ## Restart vectors and interrupts
 
 The eight restart vectors are shared out (Origo KD-434):
