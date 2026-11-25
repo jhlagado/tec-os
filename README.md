@@ -169,7 +169,7 @@ and ^N), `COPY`, `DEL` (another name for `ERA`), `SERVICES`, which lists the
 services loaded, `[more]` in `TYPE` and `DIR`, `DIR` with each file's size,
 `CLS`, `ECHO`, `PAUSE` and `.CMD` scripts. The starter card has three drives:
 A: holds a themed system volume, SYSTEM at boot or ASM, BASIC, MON3 or GAMES,
-each with the shell, `GLCD.SVC`, TED and the TBG debugger; B: holds WORK, the
+each with the shell, `GLCD.SVC`, TED and the TBUG debugger; B: holds WORK, the
 8 MiB work disk; and C: is a spare. `CD ?` lists the volumes, `CD NAME`
 selects one on the current drive and `CD A:NAME` on another. A bare command
 name tries the current drive, then A:, for a COM file, so programs on A: run

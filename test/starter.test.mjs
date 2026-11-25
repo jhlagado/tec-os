@@ -24,8 +24,8 @@ const TAS = pinned("TAS.COM");
 const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
 const BOUNCE = pinned("BOUNCE.BAS");
-const TBG = ["TBG.SVC", "TBGSYM.SVC", "TBG.HLP"].map(pinned);
-const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip || TBG.some((p) => p.skip);
+const TBUG = ["TBUG.SVC", "TBUG.HLP"].map(pinned);
+const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip || TBUG.some((p) => p.skip);
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 const text = (name) => textAt(`programs/${name}`);
@@ -55,7 +55,7 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
   check(BAZA);
   check(RTL);
   check(BOUNCE);
-  for (const p of TBG) check(p);
+  for (const p of TBUG) check(p);
   const { card, recipe } = starter();
   const snake = await assembleProgram(resolve(ROOT, "programs/SNAKE9.ASM"), { base: 0x4000 });
   assert.equal(sha(snake.bytes), "c1fa08cc2e19f13a56b41a484a56d9c9d1876ffa2d9ec4a82cdb780b962c3c5d", "the published Snake9 binary is preserved");
@@ -65,9 +65,8 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
     "SHELL.SVC": sha(SHELL_SVC),
     "GLCD.SVC": sha(GLCD_SVC),
     "TED.COM": sha(readFileSync(TED.path)),
-    "TBG.SVC": sha(readFileSync(TBG[0].path)),
-    "TBGSYM.SVC": sha(readFileSync(TBG[1].path)),
-    "TBG.HLP": sha(readFileSync(TBG[2].path)),
+    "TBUG.SVC": sha(readFileSync(TBUG[0].path)),
+    "TBUG.HLP": sha(readFileSync(TBUG[1].path)),
     "TAS.COM": sha(readFileSync(TAS.path)),
     "BAZA.COM": sha(readFileSync(BAZA.path)),
     "BAZA.RTL": sha(readFileSync(RTL.path)),
@@ -85,7 +84,7 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
     "CAVERNS.COM": caverns.comSha256,
     "BOUNCE.COM": "fa7c30104ea434e3f10c5bc0f350980f887e038d86a13f5fe8dba8ffc90d48ef",
   };
-  const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBG.SVC", "TBGSYM.SVC", "TBG.HLP"];
+  const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
   const themes = {
     SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
     ASM: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],

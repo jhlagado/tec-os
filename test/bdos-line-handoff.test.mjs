@@ -1,6 +1,6 @@
 // A BDOS line read under a resident: the uninterrupted matrix control, its
-// negative control (an extra keystroke shows), and, with TBG_SVC set to a
-// TBG.SVC, TBG resident leaving a pending read alone.
+// negative control (an extra keystroke shows), and, with TBUG_SVC set to a
+// TBUG.SVC, TBUG resident leaving a pending read alone.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFileSync } from "node:fs";
@@ -25,14 +25,14 @@ function press(m, key, shifted = false) {
 
 function readLine({ leak = false, tbg } = {}) {
   const files = { "BDOSLINE.COM": fixture.bytes };
-  if (tbg) files["TBG.SVC"] = tbg;
+  if (tbg) files["TBUG.SVC"] = tbg;
   const m = machine(card(files), { tms: true, matrix: true });
   function lcd(row = 0) {
     return String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(row * 20, row * 20 + 20));
   }
   if (tbg) {
-    m.type("TBG.SVC BDOSLINE\r");
-    m.runUntil(() => /^.PC 0100/.test(lcd()), 45_000_000, "TBG entry stop");
+    m.type("TBUG.SVC BDOSLINE\r");
+    m.runUntil(() => /^.PC 0100/.test(lcd()), 45_000_000, "TBUG entry stop");
     runFor(m, 150_000);
     press(m, 0x35);
   } else {
@@ -61,13 +61,13 @@ function readLine({ leak = false, tbg } = {}) {
   if (tbg) {
     const screen = [0, 1, 2, 3].map(lcd).join("");
     setKey(m, 1, true); // Ctrl
-    setKey(m, 12, true); // Esc: TBG's break waits for a BDOS call, not a read in progress.
+    setKey(m, 12, true); // Esc: TBUG's break waits for a BDOS call, not a read in progress.
     runFor(m, 400_000);
     setKey(m, 12, false);
     setKey(m, 1, false);
     runFor(m, 100_000);
     assert.equal(m.read(RETURNS), 0, "the line is still being read");
-    assert.equal([0, 1, 2, 3].map(lcd).join(""), screen, "TBG did not stop: the read is the OS's");
+    assert.equal([0, 1, 2, 3].map(lcd).join(""), screen, "TBUG did not stop: the read is the OS's");
   }
   if (leak) press(m, 0x3b, true); // X, an intentionally leaked debugger key
   press(m, 0x26, true); // C
@@ -91,9 +91,9 @@ test("the line comparison detects an extra matrix keystroke", () => {
   assert.equal(readLine({ leak: true }), "ABXC");
 });
 
-// TBG.SVC is TBG's, not a TEC-OS input: the case exists only when TBG_SVC
-// names one, so a strict round without it registers no skip. TBG runs it.
-if (process.env.TBG_SVC) test("TBG resident leaves a pending BDOS read alone, Ctrl+Esc included", () => {
+// TBUG.SVC is TBUG's, not a TEC-OS input: the case exists only when TBUG_SVC
+// names one, so a strict round without it registers no skip. TBUG runs it.
+if (process.env.TBUG_SVC) test("TBUG resident leaves a pending BDOS read alone, Ctrl+Esc included", () => {
     // The line editor takes the Esc typed during the read like any key.
-    assert.match(readLine({ tbg: readFileSync(process.env.TBG_SVC) }), /^AB.?C$/);
+    assert.match(readLine({ tbg: readFileSync(process.env.TBUG_SVC) }), /^AB.?C$/);
   });

@@ -1,5 +1,5 @@
 ; Capture returns and SP around a BDOS
-; buffered line read for the TBG test.
+; buffered line read for the TBUG test.
   ORG $0100
   ld de,DMABUF
   ld c,26

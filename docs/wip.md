@@ -17,8 +17,8 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
   drives and six volumes (the card volumes proposal, approved 24 November
   2026): SYSTEM on A:, WORK (8 MiB) on B:, and the themed volumes ASM, BASIC,
   MON3 and GAMES for A:, with C: a spare. Every A: volume holds the core set,
-  `STARTUP.CMD`, `SHELL.SVC`, `GLCD.SVC`, `TED.COM`, `TBG.SVC`, `TBGSYM.SVC`
-  and `TBG.HLP`. SYSTEM adds `TAS.COM`, `BAZA.COM`, `BAZA.RTL`, `MON3.SVC`,
+  `STARTUP.CMD`, `SHELL.SVC`, `GLCD.SVC`, `TED.COM`, `TBUG.SVC` and
+  `TBUG.HLP`. SYSTEM adds `TAS.COM`, `BAZA.COM`, `BAZA.RTL`, `MON3.SVC`,
   `SAMPLE.ASM` and `TIMES.BAS`; ASM adds `DEMO.ASM` and `HELLO3.ASM`; BASIC
   adds `BOUNCE.BAS`, `CAVERNS.BAS` and `CAVERNS.TXT`; MON3 adds `SNAKE9.ASM`
   and `SNAKE9.BIN`; and GAMES holds `CAVERNS.COM` and `BOUNCE.COM`, compiled

@@ -36,7 +36,7 @@ const PROGRAMS = [];
 // Every A: volume carries the core set, so the shell, the editor and the
 // debugger are there whichever volume is on A:, plus the files of its theme.
 // B: is the WORK disk and C: a spare drive for any of them.
-const CORE = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBG.SVC", "TBGSYM.SVC", "TBG.HLP"];
+const CORE = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
 const THEMES = [
   { label: "SYSTEM", files: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"] },
   { label: "ASM", files: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"] },
@@ -278,8 +278,8 @@ async function main() {
   const snake = await assembleProgram(resolve(ROOT, "programs/SNAKE9.ASM"), { base: 0x4000 });
   files.push({ name: "SNAKE9.ASM", description: "Tutankhamen's Snake source: TAS SNAKE9 SNAKE9.BIN rebuilds the game", bytes: text("SNAKE9.ASM") });
   files.push({ name: "SNAKE9.BIN", description: "Tutankhamen's Snake on the 8×8 RGB matrix: MON3.SVC, LOAD SNAKE9.BIN, GO", bytes: snake.bytes });
-  for (const name of ["TBG.SVC", "TBGSYM.SVC", "TBG.HLP"]) {
-    const description = { "TBG.SVC": "TBG, the debugger on the LCD: TBG.SVC NAME debugs NAME.COM", "TBGSYM.SVC": "labels for TBG from the NAME.TBG file TAS writes: load it after TBG.SVC", "TBG.HLP": "the help pages H shows in TBG" }[name];
+  for (const name of ["TBUG.SVC", "TBUG.HLP"]) {
+    const description = { "TBUG.SVC": "TBUG, the debugger on the LCD: TBUG.SVC NAME debugs NAME.COM, with labels from the NAME.TBG file TAS writes", "TBUG.HLP": "the help pages H shows in TBUG" }[name];
     files.push({ name, description, bytes: pinnedBytes(name) });
   }
 
@@ -296,9 +296,9 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "19",
+    revision: "20",
     name: "TEC-OS starter",
-    instruction: "A: holds SYSTEM, the volume for the first chapters. CD ? lists the volumes; CD NAME puts one on the drive you are on and CD A:NAME on A: (CD A:ASM, CD A:BASIC, CD A:MON3 or CD A:GAMES), and CD A:SYSTEM brings this one back. Every A: volume has the shell, TED, GLCD.SVC and the TBG debugger. B: (WORK) is your work disk: type B:, copy an example there (COPY A:SAMPLE.ASM B:) and build and run it there; programs come from A:. C: is a spare drive: CD C:NAME puts a volume on it. At A:SYSTEM>, TAS SAMPLE then SAMPLE builds and runs a first program, BAZA TIMES then TIMES one in BASIC, and TED SAMPLE.ASM or TED TIMES.BAS reads one. On GAMES, CAVERNS plays the adventure (TYPE CAVERNS.TXT for instructions), BOUNCE plays a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), and MON3.SVC, LOAD SNAKE9.BIN, then GO plays Snake9; click the RGB panel for matrix arrow controls. On BASIC, BAZA CAVERNS and BAZA BOUNCE rebuild them. On ASM, TAS DEMO then DEMO shows the hardware (TED DEMO.ASM to read it). On MON3, TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO runs a MON-3 program on the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to the prompt; TAS SNAKE9 SNAKE9.BIN rebuilds Snake9. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. Power off (Power cycle on the page) gives the card's own drives again.",
+    instruction: "A: holds SYSTEM, the volume for the first chapters. CD ? lists the volumes; CD NAME puts one on the drive you are on and CD A:NAME on A: (CD A:ASM, CD A:BASIC, CD A:MON3 or CD A:GAMES), and CD A:SYSTEM brings this one back. Every A: volume has the shell, TED, GLCD.SVC and the TBUG debugger. B: (WORK) is your work disk: type B:, copy an example there (COPY A:SAMPLE.ASM B:) and build and run it there; programs come from A:. C: is a spare drive: CD C:NAME puts a volume on it. At A:SYSTEM>, TAS SAMPLE then SAMPLE builds and runs a first program, BAZA TIMES then TIMES one in BASIC, and TED SAMPLE.ASM or TED TIMES.BAS reads one. On GAMES, CAVERNS plays the adventure (TYPE CAVERNS.TXT for instructions), BOUNCE plays a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), and MON3.SVC, LOAD SNAKE9.BIN, then GO plays Snake9; click the RGB panel for matrix arrow controls. On BASIC, BAZA CAVERNS and BAZA BOUNCE rebuild them. On ASM, TAS DEMO then DEMO shows the hardware (TED DEMO.ASM to read it). On MON3, TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO runs a MON-3 program on the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to the prompt; TAS SNAKE9 SNAKE9.BIN rebuilds Snake9. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. Power off (Power cycle on the page) gives the card's own drives again.",
     profile: "tecos",
     drives: 3,
     volumes: [
