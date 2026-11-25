@@ -194,6 +194,9 @@ test("the ordinary command path retains warm-prompt bounds and the approved shel
     assert.ok(now[k].warm <= WAS.path[k].warm, `${k}: ${now[k].warm} T-states from a warm boot to the prompt, ${WAS.path[k].warm} before`);
     const allowance = (k === "shell" ? BARE_SEARCH_PRICE.launch : 0) + COMVEC_PRICE.launch;
     assert.ok(now[k].program <= WAS.path[k].program + allowance, `${k}: ${now[k].program} T-states from a typed command to the program, ${WAS.path[k].program} before plus ${allowance} approved`);
-    assert.ok(kept[k].warm > WAS.path[k].warm, `${k}: the ROM kept from before, which sets the area at each entry, is over that figure to the prompt: ${kept[k].warm}`);
   }
+  // The ROM kept from before, which sets the area at each entry, is over the bare figure to the prompt.
+  // It is before ABI 5.4, so it refuses the shell and comes up bare with the file on the card.
+  assert.ok(kept.bare.warm > WAS.path.bare.warm, `the ROM kept from before is over that figure to the prompt: ${kept.bare.warm}`);
+  assert.ok(Math.abs(kept.shell.warm - kept.bare.warm) < 100, `the ROM kept from before refuses the shell: ${kept.shell.warm}`);
 });
