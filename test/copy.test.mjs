@@ -3,7 +3,8 @@
 // boots with the shell holding the prompt, from a fresh card:
 // SYSTEM on A:, WORK on B: as on the starter card, ARCHIVE on C:, read-only.
 // The logged drive is written behind and the others coalesce. The TPA is
-// filled with a pattern before the command and must hold it; then ^C warm
+// filled with a pattern before the command and must hold it, but for the
+// overlay's records, which the shell reads in at 2300h; then ^C warm
 // boots, so every line reaches the card, before the card is read. Emulator
 // evidence.
 
@@ -12,6 +13,10 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createContainer } from "../tools/lib/container.mjs";
 import { boot, program, volume, withShell } from "./lib/fixtures.mjs";
+import { SHELL } from "./lib/shell.mjs";
+
+/** The overlay's records in the TPA: [first, past the last]. */
+const OVERLAY = [SHELL.overlay.base, SHELL.overlay.base + SHELL.overlay.records * 128];
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const pattern = (n, seed) => Uint8Array.from({ length: n }, (_, i) => (i * 7 + seed * 31 + (i >> 7)) & 0xff);
@@ -65,7 +70,7 @@ function trial(line, setup = []) {
   for (let a = TPA[0]; a < TPA[1]; a += 1) m.write(a, tpaByte(a));
   const text = run(m, line);
   let tpaChanged = 0;
-  for (let a = TPA[0]; a < TPA[1]; a += 1) if (m.read(a) !== tpaByte(a)) tpaChanged += 1;
+  for (let a = TPA[0]; a < TPA[1]; a += 1) if ((a < OVERLAY[0] || a >= OVERLAY[1]) && m.read(a) !== tpaByte(a)) tpaChanged += 1;
   run(m, "\x03");
   assert.deepEqual(m.violations, []);
   return { image, text, tpaChanged, unchanged: sha(image) === before };

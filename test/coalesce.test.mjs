@@ -23,7 +23,7 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 // the census's BDOS deepest, BDOS 11 with nothing waiting and BDOS 11 after
 // each of 32 records, in cycles from the stub.
 // abi is the digest of abi.inc's declarations, its comment lines left out.
-const LANDING = { used: 14769, tpa: 47273, abi: "1581bbf69f49b6fdb2f6b81d5221f5364ff1a7e421f0db7a8fc23b263d7934c2", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
+const LANDING = { used: 14769, tpa: 47273, abi: "7aed95f4062b414350385658a87760e175ffa2041f5576f4f0b27c12e16dba99", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
 const INTEGRITY = { used: 15878, tpa: 47238, starter: 46790, entry: 0xb7c6 };
 
 // Qualified control's costs in this exact returned-input fixture: one empty
@@ -37,9 +37,9 @@ const STARTER_COST = { bounceB: 102_662_703, bounceA: 102_405_719 };
 
 test("AC12 version fields", () => {
   const inc = readText("src/abi.inc");
-  assert.equal(sha(Buffer.from(abiDeclarations(inc), "utf8")), LANDING.abi, "abi.inc's declarations as at COMVEC's landing (ABI 5.3)");
+  assert.equal(sha(Buffer.from(abiDeclarations(inc), "utf8")), LANDING.abi, "abi.inc's declarations as at TNPARSE's landing (ABI 5.4)");
   assert.match(inc, /^SVCFMT EQU 4$/m);
-  assert.equal(ABI.TNCOUNT, 18);
+  assert.equal(ABI.TNCOUNT, 19);
   const { rom } = romFor();
   assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 3], "TNA 5.3: COMVEC added");
   assert.match(readText("tools/build.mjs"), /^const VERSION = \{ major: 0, minor: 1 \};$/m);
