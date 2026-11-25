@@ -1,4 +1,4 @@
-; Public TEC-OS ABI 5.3: eight bytes at
+; Public TEC-OS ABI 5.4: eight bytes at
 ; C003h..C00Ah, containing TNA, major,
 ; minor and JP SVCDSP. Test TNA at
 ; ABITAB and major 5 at ABIMAJ before
@@ -240,6 +240,19 @@ TNSHELL EQU 16
 
 TNGLYPH EQU 17
 
+; PARSE: the CCP's name parser. HL = a
+; name, as d:NAME.TYP, DE = a 36-byte
+; FCB, whose drive, name, type and rest
+; are cleared first; * fills a field
+; with ?. Carry for a bad name or
+; drive. Returns HL at the delimiter: a
+; zero, a space, = or a byte the name
+; can't hold. AF, B and DE change; C is
+; the function. Added at ABI minor 4.
+; Stack bound 10.
+
+TNPARSE EQU 18
+
 ; TNCOUNT is the exclusive service
 ; bound, not callable. Failures return
 ; status A with carry:
@@ -248,7 +261,7 @@ TNGLYPH EQU 17
 ; failure does not imply unchanged
 ; workspace, cache or hardware.
 
-TNCOUNT EQU 18
+TNCOUNT EQU 19
 
 TNEBAD EQU 1
 

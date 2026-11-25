@@ -97,7 +97,7 @@ FNTAB:
 FCBMAP: DB %00000000,%10000000,%11111011,%01000000,%00001110,%00000001
 
 ; Services in abi.inc order: TNINFO to
-; TNGLYPH. TNLIST is 14. TNFONT, 15, is
+; TNPARSE. TNLIST is 14. TNFONT, 15, is
 ; refused: the font is packed.
 
 ; 0 and 1
@@ -135,6 +135,10 @@ SVTAB: DW HWSINFO,HWSDIG
 ; 16 and 17
 
   DW SVSHL,FNTGLY
+
+; 18
+
+  DW PARSEFCB
 
 ; Twelve-byte FCB prefixes for CMDFCB:
 ; explicit drive A, eight-byte name and

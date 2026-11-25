@@ -1,4 +1,4 @@
-; Emit ABI 5.2 at abi.inc's
+; Emit ABI 5.4 at abi.inc's
 ; C003h..C00Ah: TNA, major, minor and JP
 ; SVCDSP. The ROM includes the shared
 ; declarations first. Minor 2 adds
@@ -8,7 +8,8 @@
 
   DB "TNA"
   DB 5
-  DB 3           ; C007h ABIMIN, the
+  DB 4           ; C007h ABIMIN, the
                  ; minor version: 2 adds
-                 ; TNGLYPH, 3 COMVEC
+                 ; TNGLYPH, 3 COMVEC,
+                 ; 4 TNPARSE
   jp SVCDSP
