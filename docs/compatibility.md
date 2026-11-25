@@ -329,16 +329,17 @@ The table ends at `C00Bh`. `abi.inc` gives each service's arguments, results, ca
 `PUTAT` returns status 2 on the serial terminal, or while the PICO9918 is claimed and
 is the console: with the console on `UC1:`, a claim leaves it working.
 
-The restart vectors (Origo KD-434): `RST 1` to `RST 5` (`0008h` to `0028h`) are any
-program's, which saves the three bytes it takes and puts them back on every exit;
+The restart vectors (Origo KD-434): `RST 1` to `RST 5` (`0008h` to `0028h`) are the
+running program's, which writes the ones it uses and saves nothing: it starts after a
+warm boot, with them at their defaults, and the warm boot it ends with sweeps them;
 `RST 6` (`0030h`) is kept for the debugger's breakpoints; `RST 7` (`0038h`) is the
 interrupt vector, and the only one a service may claim. At cold boot, every warm boot,
 an unload and a failed `INIT`, a sweep gives `RST 1` to `RST 6` seven zeros and a `RET`
 whatever they hold, and `0038h` `EI; RETI` unless it holds a `JP` above `PZTOP`, so a
 free slot's first byte isn't `C3h`. A service claims `RST 7` in its flags, and the loader
 refuses a file that claims any other, by `docs/services.md`. `BAZA.COM` takes `RST 1` to
-`RST 5` while it compiles and gives them back; from Baza `c49f477` it leaves `RST 6`
-alone, so the exception it once held is closed.
+`RST 5` while it compiles and gives them back, which the rule no longer asks; from Baza
+`c49f477` it leaves `RST 6` alone, so the exception it once held is closed.
 
 ### The BDOS
 
