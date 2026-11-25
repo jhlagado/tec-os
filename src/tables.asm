@@ -136,7 +136,9 @@ SVTAB: DW HWSINFO,HWSDIG
 
   DW SVSHL,FNTGLY
 
-; 18
+; 18: SVCDSP sends TNPARSE straight to
+; the parser, as it sends TNGLYPH; the
+; entry keeps the table whole.
 
   DW PARSEFCB
 

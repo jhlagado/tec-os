@@ -39,6 +39,8 @@ SVCDSP:
   ld a,c
   cp TNGLYPH
   jp z,FNTGLY    ; no maintenance here
+  cp TNPARSE
+  jp z,PARSEFCB  ; nor here: no I/O
   ld a,(HKDEP)
   or a
   jr nz,SVGO

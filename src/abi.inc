@@ -248,8 +248,10 @@ TNGLYPH EQU 17
 ; drive. Returns HL at the delimiter: a
 ; zero, a space, = or a byte the name
 ; can't hold. AF, B and DE change; C is
-; the function. Added at ABI minor 4.
-; Stack bound 10.
+; the function. Never a housekeeping
+; point: it reads and writes memory
+; only. Added at ABI minor 4. Stack
+; bound 10.
 
 TNPARSE EQU 18
 

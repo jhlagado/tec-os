@@ -911,12 +911,21 @@ function bdos11(logged, rom) {
 // card, so they move with the shell's file: the bounds are over that control.
 // The five ROM built-in names in the shell's keyword table add one more walk of
 // the table to the command that launches the program, 1,111 T in the worst case.
+test("S2-11 the shell refuses a ROM before ABI 5.4, the qualified one", () => {
+  const m = shellMachine(shellCard({}), { ...QUALIFIED_POLL, noWait: true });
+  m.runUntil(() => m.ready(), 900_000_000, "the prompt");
+  assert.equal(m.read(0xc007), 1, "the qualified ROM is ABI 5.1");
+  const bare = shellMachine(shellCard({}, { startup: [] }), { ...QUALIFIED_POLL });
+  assert.equal(word(m, 6), word(bare, 6), "nothing installed: the shell refused");
+});
+
 test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
-  const qualifiedB = bdos11("B", QUALIFIED_POLL), qualifiedA = bdos11("A", QUALIFIED_POLL);
+  // The qualified ROM is ABI 5.1, which this shell refuses: it parses with
+  // TNPARSE, ABI 5.4's. Its readings are those taken with the last shell
+  // without it, TEC-OS 787068f's, on that ROM, fixed here.
+  const qualifiedB = { nothing: 4962, worst: 8_798_992 }, qualifiedA = { nothing: 4953, worst: 9_258_862 };
   const b = bdos11("B"), a = bdos11("A");
   t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
-  assert.deepEqual(qualifiedB, { nothing: 4954, worst: 8_734_182 }); // with the 11-page shell, whose file moved them: 4962 and 8,798,992 before
-  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_205_149 }); // 4953 and 9,258,862 before
   for (const [drive, current, qualified] of [["B", b, qualifiedB], ["A", a, qualifiedA]])
     assert.ok(current.nothing - qualified.nothing <= 360, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
   assert.ok(b.worst / qualifiedB.worst - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / qualifiedB.worst - 1) * 100).toFixed(2)} % over qualified`);

@@ -64,12 +64,21 @@ ENTRY0:
 TABLE: DW LINE,PAGE,HREC,HSTO
 
 ; BC points at the eight-byte name the
-; loader read the file by. Keep it in
-; the record, clear the extra RAM and
-; set ready last. Returns no records:
-; HL=0, A=0, NC. Clobbers BC and DE.
+; loader read the file by, the FCB's
+; drive the byte before it. Refuse a
+; ROM before ABI 5.4, which has no
+; TNPARSE: TNEBAD with carry. Keep the
+; name in the record, and the drive and
+; user for the overlay, clear the extra
+; RAM and set ready last. Returns no
+; records: HL=0, A=0, NC. Clobbers BC
+; and DE.
 
 INIT:
+  ld a,(ABIMIN)  ; TNPARSE is at
+  cp 4           ; ABI minor 4
+  ld a,TNEBAD
+  ret c          ; an older ROM: none
   push bc        ; the name
   ld e,$FF
   ld c,32        ; 32: the user

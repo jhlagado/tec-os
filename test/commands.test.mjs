@@ -367,7 +367,7 @@ test("SH1 rom figure", () => {
   const { used, free, regions } = first.rom;
   // The ROM figure includes buffered line
   // navigation and bare-name search, the packed font (-329) and COMVEC (+51).
-  assert.deepEqual([used, free], [15677, 707], "the ROM's bytes used and free"); // TNPARSE's entry in the table, 2 bytes, at ABI 5.4
+  assert.deepEqual([used, free], [15682, 702], "the ROM's bytes used and free"); // TNPARSE at ABI 5.4: its table entry, 2 bytes, and its dispatch past housekeeping, 5
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   assert.ok(first.ram.tpa.bytes >= 47238, `TPA ${first.ram.tpa.bytes} with nothing loaded`);

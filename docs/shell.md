@@ -30,7 +30,8 @@ kept, 34 (`test/shell.test.mjs` and `test/shell2.test.mjs`, which read a guard
 pattern laid under it); no path may use more than 36. It declares 6 bytes of
 the BDOS's stack and none of the BIOS's or the CCP's, so `GLCD.SVC` and
 `MON3.SVC` install beside it. With the shell alone the word at 0006h is AC00h
-on the starter card, a TPA of 43,776 bytes.
+on the starter card, a TPA of 43,776 bytes. It parses names with the ROM's
+`TNPARSE`, service 18 at ABI 5.4, and its `INIT` refuses an older ROM.
 
 ## With no shell
 
