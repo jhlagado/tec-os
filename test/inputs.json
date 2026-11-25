@@ -4,22 +4,22 @@
     "TAS.COM": {
       "env": "TAS_COM",
       "default": "../tas/dist/TAS.COM",
-      "source": "jhlagado/tas bf0c151, dist/TAS.COM",
+      "source": "jhlagado/tas f1e4dbc, dist/TAS.COM",
       "repo": "jhlagado/tas",
-      "commit": "bf0c151f62fe5b0a8cc09a3bf1d7109567948fbd",
+      "commit": "f1e4dbcb3ae48b18b7d06dfd395d19cfa0612d8e",
       "path": "dist/TAS.COM",
-      "bytes": 10788,
-      "sha256": "0ceacfa1d33436a9413bd3469233403bb3355c92aa4631f7188e31f94cef25f3"
+      "bytes": 10976,
+      "sha256": "3bd8a56974a0a9b87b028535eaed484d43d0df15729b340a95d0dfd2ef5ace61"
     },
     "TED.COM": {
       "env": "TED_COM",
       "default": "../ted/dist/TED.COM",
-      "source": "jhlagado/ted 70ff3df, dist/TED.COM",
+      "source": "jhlagado/ted cb9fdbe, dist/TED.COM",
       "repo": "jhlagado/ted",
-      "commit": "70ff3df8299d7e61405a4440cbc8644caa3fd8d6",
+      "commit": "cb9fdbe5a44d4130d04672fe1e8664a4c3b25f37",
       "path": "dist/TED.COM",
-      "bytes": 12584,
-      "sha256": "3213eb5204f038d7ae41e1e311076b7dcbba876c1a29a431317f99992fbf2f13"
+      "bytes": 12636,
+      "sha256": "9a062c8e21f5d6dc6418b8ef0ed66e4239030f3c6fa673e946e483c04500c941"
     },
     "BAZA.COM": {
       "env": "BAZA_COM",
@@ -44,12 +44,12 @@
     "BAZ.COM": {
       "env": "BAZ_COM",
       "default": "../baza/dist/BAZ.COM",
-      "source": "jhlagado/baza 57d1219, dist/BAZ.COM",
+      "source": "jhlagado/baza ab997bd, dist/BAZ.COM",
       "repo": "jhlagado/baza",
-      "commit": "57d12193f96b859cad5929263be3e6e7f6232a4c",
+      "commit": "ab997bdb3215501f6b6c511531aefc76c94a2004",
       "path": "dist/BAZ.COM",
-      "bytes": 18304,
-      "sha256": "6377db51c1cd59a0c7450e360a3c7650c60c1a7cfba68c1afc37388c48d2239a"
+      "bytes": 19584,
+      "sha256": "4f4eb6039ff2dd03efb112b47eb71b2093fb6bed1fda3ae680f95f4d24caf2ab"
     },
     "BOUNCE.BAS": {
       "env": "BOUNCE_BAS",

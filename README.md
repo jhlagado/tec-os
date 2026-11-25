@@ -46,7 +46,7 @@ Node.js 20 or later.
   else
     tas_stage=$(mktemp -d "$PWD/.inputs/.tas-host.XXXXXX")
     git clone https://github.com/jhlagado/tas.git "$tas_stage"
-    git -C "$tas_stage" checkout --detach bf0c151f62fe5b0a8cc09a3bf1d7109567948fbd
+    git -C "$tas_stage" checkout --detach f1e4dbcb3ae48b18b7d06dfd395d19cfa0612d8e
     (cd "$tas_stage" && npm ci)
     TECOS_TAS_HOST="$tas_stage" node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
     mv "$tas_stage" .inputs/tas-host
@@ -182,8 +182,8 @@ Enter retry before normal commands resume
 ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
-`TED X.ASM!TAS X &X`. TED, from TED `70ff3df` (`TED.COM`
-`3213eb52`, 12,584 bytes), stops a file name and `TED.PRJ`'s `ARGS` at the
+`TED X.ASM!TAS X &X`. TED, from TED `cb9fdbe` (`TED.COM`
+`9a062c8e`, 12,636 bytes), stops a file name and `TED.PRJ`'s `ARGS` at the
 same `!` and `&`, so a project's `ARGS X &Y` gives F5's program the tail
 ` X` and runs nothing after it.
 `SAMPLE.ASM` on the starter card is a first program to build and read:

@@ -20,7 +20,7 @@ const CURSOR = 0x25ca; // the cursor's offset in the text
 // The approved eighteenth shell page
 // reduces the former capacity floors.
 const BARE_SEARCH_PAGE = 256;
-// TED 70ff3df's workspace starts at 2500h, a page above 2400h, so its
+// TED's workspace, from 70ff3df, starts at 2500h, a page above 2400h, so its
 // text starts a page higher.
 const TED_WORKSPACE_PAGE = 256;
 
