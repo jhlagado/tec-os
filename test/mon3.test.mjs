@@ -158,7 +158,7 @@ test("KG58 rom cap", () => {
   assert.equal(sha(Buffer.from(abiDeclarations(abi.toString("utf8")), "utf8")), BASELINE.abi, "abi.inc's declarations as they were");
   assert.match(abi.toString("latin1"), /^SVCFMT EQU 4\b/m, "SVCFMT 4");
   const { rom, symbols } = romFor();
-  assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 3], "ABI 5.3");
+  assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 4], "ABI 5.4");
   const m = machine(card());
   assert.equal(word(m, 6) - 0x100, 47238, "TPA 47,238 with the shared recovery allocation and COMVEC");
   console.log(`ROM ${used} used, ${free} free, ${used - BASELINE.used} over the baseline, ${first.hash}`);
@@ -1634,10 +1634,10 @@ test("KG68 docs agree", async () => {
   const bare = fig.top - 0x200;
   const tpa = (top) => (top - 0x100).toLocaleString("en");
   assert.ok(mon3.includes(`from \`B7C6h\` to \`${h4(bare)}\`, and the TPA from 46,790 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
-  // With the shell: (0006h) is A400h with SHELL.SVC alone on the starter
+  // With the shell: (0006h) is AC00h with SHELL.SVC alone on the starter
   // card, as shell2.test measures it, MON3.SVC's pages lower, and GLCD.SVC
   // three pages lower still.
-  const shellTop = 0xa500;
+  const shellTop = 0xac00;
   const withMon3 = shellTop - fig.pages * 0x100;
   assert.ok(mon3.includes(`from \`${h4(shellTop)}\` to \`${h4(withMon3)}\`, and the TPA from ${tpa(shellTop)} bytes to **${tpa(withMon3)}**`), "(0006h) and the TPA with the shell");
   assert.ok(mon3.includes(`\`${h4(withMon3 - 0x300)}\`, a TPA of **${tpa(withMon3 - 0x300)}**`), "and with GLCD.SVC too");

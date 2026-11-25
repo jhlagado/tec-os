@@ -41,7 +41,7 @@ test("AC12 version fields", () => {
   assert.match(inc, /^SVCFMT EQU 4$/m);
   assert.equal(ABI.TNCOUNT, 19);
   const { rom } = romFor();
-  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 3], "TNA 5.3: COMVEC added");
+  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 4], "TNA 5.4: COMVEC, then TNPARSE, added");
   assert.match(readText("tools/build.mjs"), /^const VERSION = \{ major: 0, minor: 1 \};$/m);
   assert.deepEqual([...SHELL_SVC.subarray(25, 28)], [0x45, 0x58, 1], "the execution record's version byte stays 1");
 });

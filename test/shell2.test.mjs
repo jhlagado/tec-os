@@ -915,8 +915,8 @@ test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
   const qualifiedB = bdos11("B", QUALIFIED_POLL), qualifiedA = bdos11("A", QUALIFIED_POLL);
   const b = bdos11("B"), a = bdos11("A");
   t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
-  assert.deepEqual(qualifiedB, { nothing: 4962, worst: 8_798_992 });
-  assert.deepEqual(qualifiedA, { nothing: 4953, worst: 9_258_862 });
+  assert.deepEqual(qualifiedB, { nothing: 4954, worst: 8_734_182 }); // with the 11-page shell, whose file moved them: 4962 and 8,798,992 before
+  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_205_149 }); // 4953 and 9,258,862 before
   for (const [drive, current, qualified] of [["B", b, qualifiedB], ["A", a, qualifiedA]])
     assert.ok(current.nothing - qualified.nothing <= 360, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
   assert.ok(b.worst / qualifiedB.worst - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / qualifiedB.worst - 1) * 100).toFixed(2)} % over qualified`);
@@ -1108,10 +1108,10 @@ function tedCost(selected) {
 test("S2-11 ted cost", { skip: TED.skip, timeout: 900_000 }, (t) => {
   const qualified = tedCost(QUALIFIED_POLL), current = tedCost(romFor());
   t.diagnostic(JSON.stringify({ qualified, current }));
-  assert.deepEqual(qualified, { type100: 14_246.481, down40: 3742.94325, save: 858.75025 }); // TED 70ff3df on the qualified ROM (dc0cd0f: 14,245.581, 3742.44325 and 858.707; d97a5b2: save 858.5635; e5b72f4 and cf5460c: down40 3742.13325)
+  assert.deepEqual(qualified, { type100: 14_308.53575, down40: 3777.948, save: 858.9065 }); // TED 28d9cc7 on the qualified ROM, its routine heads in RST 1 to RST 5 (70ff3df: 14,246.481, 3742.94325 and 858.75025; dc0cd0f: 14,245.581, 3742.44325 and 858.707; d97a5b2: save 858.5635; e5b72f4 and cf5460c: down40 3742.13325)
   assert.ok(current.type100 / qualified.type100 - 1 <= 0.05, `typing: ${current.type100} ms against qualified ${qualified.type100}`);
-  assert.ok(current.down40 <= 4013.4175, `movement: ${current.down40} ms`); // 4012.9175 before TED 70ff3df, 0.5 ms slower on both ROMs; 4012.4675 before TED d97a5b2 (0.31 ms on the qualified ROM) and the Fn tail pointer (0.14 ms over 40 arrows)
-  assert.ok(current.save <= 1683.13475, `save: ${current.save} ms`); // 1683.0915 before TED 70ff3df, 0.043 ms slower on both ROMs; 1682.95425 before TED dc0cd0f, 0.14 ms slower on both ROMs
+  assert.ok(current.down40 <= 4048.42225, `movement: ${current.down40} ms`); // 4013.4175 before TED 28d9cc7, 35 ms slower over 40 arrows (0.9%), its RST calls; 4012.9175 before TED 70ff3df, 0.5 ms slower on both ROMs; 4012.4675 before TED d97a5b2 (0.31 ms on the qualified ROM) and the Fn tail pointer (0.14 ms over 40 arrows)
+  assert.ok(current.save <= 1683.291, `save: ${current.save} ms`); // 1683.13475 before TED 28d9cc7, 0.16 ms slower; 1683.0915 before TED 70ff3df, 0.043 ms slower on both ROMs; 1682.95425 before TED dc0cd0f, 0.14 ms slower on both ROMs
 });
 
 // --- S2-12 The starter card ------------------------------------------------------
