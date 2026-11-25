@@ -286,7 +286,7 @@ add(
       title: '20 × 4 LCD',
       lines: [
         'Matrix keyboard · debugger UI',
-        { text: '>PC 0100   SP 98FE', mono: true },
+        { text: '>PC 0100  SP 98FE ST', mono: true },
       ],
       hi: true,
     }),

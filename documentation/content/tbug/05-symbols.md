@@ -22,10 +22,10 @@ Each time TBUG stops a program at launch, it checks for a `NAME.TBG` file beside
 When both match, symbols turn on and `SY` lights up at the right end of row 2 in Registers:
 
 ```text
->PC 0100   SP 98FEST
- AF 0000   BC 0000SY
- DE 0000   HL 0000..
- IX 0000   IY 0000..
+>PC 0100  SP 98FE ST
+ AF 0000  BC 0000 SY
+ DE 0000  HL 0000 ..
+ IX 0000  IY 0000 ..
 ```
 
 When the `.TBG` file is absent or stale, TBUG ignores it quietly, `SY` stays off and debugging continues in raw hex until you reassemble with `TAS`.
