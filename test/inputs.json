@@ -14,20 +14,10 @@
     "TED.COM": {
       "env": "TED_COM",
       "default": "../ted/dist/TED.COM",
-      "source": "jhlagado/ted 28d9cc7, dist/TED.COM",
+      "source": "jhlagado/ted 444cf3e, dist/TED.COM",
       "repo": "jhlagado/ted",
-      "commit": "28d9cc7718868b06d0a47a77f9b270aebd3af1eb",
+      "commit": "444cf3e2b1af07acd13e086d19e3df005676d5be",
       "path": "dist/TED.COM",
-      "bytes": 12356,
-      "sha256": "6a462b5bb89062f182896eafd2d3e8046f8e89af5b7825e2ffc1582db2f32271"
-    },
-    "TEDP.COM": {
-      "env": "TEDP_COM",
-      "default": "../ted/dist/TEDP.COM",
-      "source": "jhlagado/ted fc2e652, dist/TEDP.COM",
-      "repo": "jhlagado/ted",
-      "commit": "fc2e652438acaade869eb75d4718bde2cc3c537b",
-      "path": "dist/TEDP.COM",
       "bytes": 14919,
       "sha256": "509560a0de3063ee624f957ea172aa1604a73ba371ace0b4f66a54cd3ec41ea7"
     },

@@ -20,14 +20,13 @@ import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
 import { needsStarter, prepareCard } from "../host/card.mjs";
 
 const TED = pinned("TED.COM");
-const TEDP = pinned("TEDP.COM");
 const TAS = pinned("TAS.COM");
 const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
 const BAZ = pinned("BAZ.COM");
 const BOUNCE = pinned("BOUNCE.BAS");
 const TBUG = ["TBUG.SVC", "TBUG.HLP"].map(pinned);
-const PAGE_SKIP = TED.skip || TEDP.skip || TAS.skip || BAZA.skip || RTL.skip || BAZ.skip || BOUNCE.skip || TBUG.some((p) => p.skip);
+const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BAZ.skip || BOUNCE.skip || TBUG.some((p) => p.skip);
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 const text = (name) => textAt(`programs/${name}`);
@@ -53,7 +52,6 @@ function starter() {
 
 test("each A: volume holds the core set and its theme's files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
-  check(TEDP);
   check(TAS);
   check(BAZA);
   check(RTL);
@@ -69,7 +67,6 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
     "SHELL.SVC": sha(SHELL_SVC),
     "GLCD.SVC": sha(GLCD_SVC),
     "TED.COM": sha(readFileSync(TED.path)),
-    "TEDP.COM": sha(readFileSync(TEDP.path)),
     "TBUG.SVC": sha(readFileSync(TBUG[0].path)),
     "TBUG.HLP": sha(readFileSync(TBUG[1].path)),
     "TAS.COM": sha(readFileSync(TAS.path)),
@@ -92,7 +89,7 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
   };
   const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
   const themes = {
-    SYSTEM: ["TEDP.COM", "TAS.COM", "BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
+    SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
     ASM: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
     BASIC: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
     MON3: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
@@ -452,11 +449,11 @@ test("on the card at 40 columns, TED BOUNCE.BAS scrolls sideways along its longe
   assert.deepEqual(m.violations, []);
 });
 
-// TEDP, TED with the document kept on the card, is on SYSTEM beside TED. It
-// opens SAMPLE.ASM where it lies, takes a typed line at the top, saves and
-// quits: the card's SAMPLE.ASM is then that line and the old file after it.
-test("on SYSTEM, TEDP SAMPLE.ASM opens the file in place, and a line typed at the top is saved before the old text", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
-  check(TEDP);
+// TED keeps the document on the card. It opens SAMPLE.ASM where it lies,
+// takes a typed line at the top, saves and quits: the card's SAMPLE.ASM is
+// then that line and the old file after it.
+test("on SYSTEM, TED SAMPLE.ASM opens the file in place, and a line typed at the top is saved before the old text", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
+  check(TED);
   const card = starter().on("SYSTEM");
   const before = Buffer.from(volume(card, "A").read("SAMPLE.ASM")).toString("latin1").split("\x1a", 1)[0];
   const m = boot(card, { tms: true, matrix: true, width: 40 });
@@ -465,13 +462,13 @@ test("on SYSTEM, TEDP SAMPLE.ASM opens the file in place, and a line typed at th
     m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 3_000_000_000, what);
   };
   const status = () => m.screen()[23] ?? "";
-  keys("tedp sample.asm\r", "TEDP", () => /L1 C1\b/.test(status()));
+  keys("ted sample.asm\r", "TED", () => /L1 C1\b/.test(status()));
   assert.equal(m.screen()[0].trimEnd(), before.split("\r\n")[0].slice(0, 40).trimEnd(), "the file's first line at the top");
-  keys("; TEDP\r", "the typed line", () => /L2 C1\b/.test(status()));
+  keys("; TED\r", "the typed line", () => /L2 C1\b/.test(status()));
   const saved = () => Buffer.from(volume(card, "A").read("SAMPLE.ASM")).toString("latin1").split("\x1a", 1)[0];
-  keys("\x13", "the save", () => saved() === `; TEDP\r\n${before}`);
+  keys("\x13", "the save", () => saved() === `; TED\r\n${before}`);
   keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A:SYSTEM>")));
-  assert.equal(saved(), `; TEDP\r\n${before}`, "the typed line, then the old file");
+  assert.equal(saved(), `; TED\r\n${before}`, "the typed line, then the old file");
   assert.deepEqual(m.violations, []);
 });
 

@@ -38,7 +38,7 @@ const PROGRAMS = [];
 // B: is the WORK disk and C: a spare drive for any of them.
 const CORE = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
 const THEMES = [
-  { label: "SYSTEM", files: ["TEDP.COM", "TAS.COM", "BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"] },
+  { label: "SYSTEM", files: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"] },
   { label: "ASM", files: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"] },
   { label: "BASIC", files: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"] },
   { label: "MON3", files: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"] },
@@ -249,7 +249,6 @@ async function main() {
   }
   files.push(...await displayFiles(ROOT, { assembleGlcd: () => assembleGlcd(ROOT, run), assembleShell: () => assembleShell(ROOT, run) }));
   files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM or NAME.BAS, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
-  files.push({ name: "TEDP.COM", description: "TEDP, TED with the document kept on the card for files up to 65,535 bytes: TEDP NAME.EXT, TED's keys", bytes: pinnedBytes("TEDP.COM") });
   // SAMPLE.ASM, a first program for TAS, and TIMES.BAS, a first program for
   // BAZA, as CP/M text files.
   const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
@@ -299,7 +298,7 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "22",
+    revision: "23",
     name: "TEC-OS starter",
     instruction: "A: holds SYSTEM, the volume for the first chapters. CD ? lists the volumes; CD NAME puts one on the drive you are on and CD A:NAME on A: (CD A:ASM, CD A:BASIC, CD A:MON3 or CD A:GAMES), and CD A:SYSTEM brings this one back. Every A: volume has the shell, TED, GLCD.SVC and the TBUG debugger. B: (WORK) is your work disk: type B:, copy an example there (COPY A:SAMPLE.ASM B:) and build and run it there; programs come from A:. C: is a spare drive: CD C:NAME puts a volume on it. At A:SYSTEM>, TAS SAMPLE then SAMPLE builds and runs a first program, BAZA TIMES then TIMES one in BASIC, and TED SAMPLE.ASM or TED TIMES.BAS reads one. On GAMES, CAVERNS plays the adventure (TYPE CAVERNS.TXT for instructions), BOUNCE plays a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), and MON3.SVC, LOAD SNAKE9.BIN, then GO plays Snake9; click the RGB panel for matrix arrow controls. On BASIC, BAZA CAVERNS and BAZA BOUNCE rebuild them. On ASM, TAS DEMO then DEMO shows the hardware (TED DEMO.ASM to read it). On MON3, TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO runs a MON-3 program on the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to the prompt; TAS SNAKE9 SNAKE9.BIN rebuilds Snake9. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. Power off (Power cycle on the page) gives the card's own drives again.",
     profile: "tecos",
