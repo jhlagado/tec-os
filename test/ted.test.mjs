@@ -2,7 +2,7 @@
 // reopens a file at every console's size, opens at a line, and runs the round
 // of F9, ^T D and F5 with TAS. Emulator evidence. TED.COM and TAS.COM are
 // pinned inputs (test/inputs.json). CURSOR and TEXCAP are TED's own words,
-// from the listing of TED's build (build/ted/ted.sym); the workspace at 2500h
+// from the listing of TED's build (build/ted/ted.sym); the workspace at 2400h
 // holds them, and the pin's hash holds the build.
 
 import { readFileSync } from "node:fs";
@@ -17,14 +17,7 @@ import { check, pinned } from "./lib/inputs.mjs";
 const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
 const CURSOR = 0x24ca; // the cursor's offset in the text
-// The approved eighteenth shell page
-// reduces the former capacity floors.
-const BARE_SEARCH_PAGE = 256;
-// TED's workspace is at 2400h again from 28d9cc7, its RST slots holding
-// its most called routines' heads; 70ff3df and cb9fdbe had it a page higher.
-const TED_WORKSPACE_PAGE = 0;
-
-const TEXCAP = 0x2551; // the text's room, from the word at 0006h
+const TEXCAP = 0x2551; // the room for edits in RAM (TED 444cf3e's build/ted/ted.sym)
 const NOTES = "hello\nsecond line\n";
 const EDITED = "hello\nYsecond line\n";
 // Line 2 fails: 256 doesn't fit A. A ';' typed at the error's column makes it a comment.
@@ -216,13 +209,21 @@ test("TED B:HELLO.ASM from A: opens B:'s file, and F9 builds it on B: with A:'s 
   assert.deepEqual(m.violations, []);
 });
 
-test("TED's text holds at least 27,926 bytes on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
+// TED keeps its document on the card and only its edits in RAM, so a file
+// is not bounded by the TPA: up to 65,535 bytes, its offsets being 16-bit.
+// TEXCAP is the room left for the edits.
+const LENGTH = CURSOR - 2; // the document's length
+const bigFile = (bytes) => {
+  const line = Buffer.from("x".repeat(62) + "\r\n", "latin1");
+  return Buffer.concat(Array.from({ length: bytes / 64 }, () => line));
+};
+
+test("TED opens a 64,000-byte file whole and refuses a 65,664-byte one, with at least 23,110 bytes for edits on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
   check(TED);
   // The starter's display files: on a board with both, GLCD.SVC loads and gives
   // way to the ROM's PICO9918 console, so one driver is loaded (the figures).
   // The starter card's four drives, as its recipe asks for them.
-  for (const [board, historicalFloor] of [[{ glcd: false }, 28_182], [{ tms: true, matrix: true, glcd: true }, 28_182]]) {
-    const floor = historicalFloor - BARE_SEARCH_PAGE - TED_WORKSPACE_PAGE;
+  for (const board of [{ glcd: false }, { tms: true, matrix: true, glcd: true }]) {
     const image = createContainer(
       [
         { geometry: "G1M", label: "SYSTEM", mount: "A" },
@@ -236,20 +237,27 @@ test("TED's text holds at least 27,926 bytes on the starter's files, SHELL.SVC a
     const a = volume(image, "A");
     for (const f of await displayFiles(ROOT)) a.write(f.name, f.bytes);
     a.write("TED.COM", tedBytes());
+    a.write("BIG.TXT", bigFile(64_000));
+    a.write("HUGE.TXT", bigFile(65_664));
     const m = boot(image, board);
-    keys(m, "ted x.asm\r", "TED", () => /TED +X\.ASM/.test(m.text(0)));
-    assert.ok(word(m, TEXCAP) >= floor, `${word(m, TEXCAP)} bytes ${board.tms ? "on a board with both" : "with no display"}, at least ${floor}`);
+    const where = board.tms ? "on a board with both" : "with no display";
+    keys(m, "ted big.txt\r", "TED on the 64,000-byte file", () => /TED +BIG\.TXT/.test(m.text(0)));
+    assert.equal(word(m, LENGTH), 64_000, `the whole file ${where}`);
+    assert.ok(word(m, TEXCAP) >= 23_110, `${word(m, TEXCAP)} bytes for edits ${where}, at least 23,110`);
+    let mark = m.output.length;
+    keys(m, "\x11", "the prompt", () => /A(:\S*)?>$/.test(m.text(mark)));
+    mark = m.output.length;
+    keys(m, "ted huge.txt\r", "TED on the 65,664-byte file", () => /EDIT error 04/.test(m.text(mark)) || m.screen().some((l) => /EDIT error 04/.test(l)));
+    assert.deepEqual(m.violations, []);
   }
 });
 
 // The smallest system the starter card teaches: the shell, MON3.SVC
-// installed and left by EXIT, then TED. Its room is below the 24,576-byte
-// source limit, so a source at the limit is edited with MON3.SVC unloaded.
-test("TED's text holds at least 23,062 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 22,294 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
+// installed and left by EXIT, then TED, whose edits then have less room.
+test("TED's edits have at least 18,502 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 17,734 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
   check(TED);
   const P = /\r\n\d*[A-P](:\S*)?>$/;
-  for (const [board, via, historicalFloor] of [[{ glcd: false }, "serial", 23_318], [{ matrix: true, glcd: true }, "matrix", 22_550]]) {
-    const floor = historicalFloor - BARE_SEARCH_PAGE - TED_WORKSPACE_PAGE;
+  for (const [board, via, floor] of [[{ glcd: false }, "serial", 18_502], [{ matrix: true, glcd: true }, "matrix", 17_734]]) {
     const m = boot(new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))), board);
     const type = (line, done, what) => {
       const mark = m.output.length;
