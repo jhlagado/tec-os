@@ -235,7 +235,7 @@ and the drive's volume. Hidden (SYS) files are omitted, as in the ROM's
 `DIR`; no visible match gives `NO FILE` with FF00h. Rows retain the existing
 two-group directory order. A row remains 20 columns, within the GLCD's 21,
 and long listings stop at `[more]`. `DIR /W` goes directly to the ROM's wide
-listing; with no shell, `DIR` is the ROM's listing too.
+listing, with no overlay read; with no shell, `DIR` is the ROM's listing too.
 
 **Its cost.** A first search combines each name's extent sizes in a table.
 Two more searches then produce the rows, with no BDOS 35 scan and search
@@ -246,9 +246,11 @@ service never takes the TPA below 8000h.
 
 `DIR` takes about twice `DIR /W`'s time, its rows holding about twice the
 characters, whatever the files' sizes. On a G8M volume at 4 MHz on the serial
-console: 452 files, all but one of a single record, 40.6 s against 21.5 s; 352
-files, 100 of them of 40 KiB, 32.3 s against 16.9 s; 181 files, 180 of them of
-40 KiB, 17.9 s against 9.0 s (`test/dir-cost.test.mjs`). So a file over 32 KiB
+console: 452 files, all but one of a single record, 41.9 s against 21.5 s; 352
+files, 100 of them of 40 KiB, 33.7 s against 16.9 s; 181 files, 180 of them of
+40 KiB, 17.8 s against 9.0 s (`test/dir-cost.test.mjs`). Those include reading
+the overlay from A:, about 1.3 s with A:'s blocks out of the cache, as after a
+listing that large. So a file over 32 KiB
 on a G8M volume, or over 16 KiB on a G1M, which has more than one directory
 entry, no longer slows `DIR`. `DIR /W` is the fast listing, at half the time.
 
@@ -297,8 +299,9 @@ installed by, on the drive and in the user area it was read from, reads the
 overlay's 12 records into 2300h, checks that the overlay's stamp is the one
 built with this shell, adds its own page to each byte that holds a resident
 address, and enters it. The user area and the DMA are put back first. Each of
-the three commands reads the file first, so it takes about 12 records' time
-more than a resident command would, and overwrites the TPA from 2300h, as
+the three commands reads the file first: at 4 MHz on the starter card about
+80 ms with A:'s blocks in the cache, over a second with them out of it. It
+overwrites the TPA from 2300h, as
 `DIR`'s table does from 0100h; a built-in runs only at the prompt.
 
 If the file can't be opened or read, or its overlay is another build's, `DIR`
