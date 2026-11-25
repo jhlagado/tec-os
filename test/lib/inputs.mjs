@@ -19,7 +19,7 @@ export { digest };
 
 // TIMES.COM as the pinned BAZA.COM and BAZA.RTL compile programs/TIMES.BAS:
 // 9,344 bytes. It moves with them, since it carries BAZA's runtime.
-export const TIMES_COM = "39eb46edba4236ab84600c13f15ffae4066da6c1c914a3eb90ca758f57077516";
+export const TIMES_COM = "76c8a97860506dcd1f63658b6444d171d32be6ecc1371f2b9afb99d08afac007";
 
 /**
  * The pinned input `name`: { path, skip, problem }. Pass `skip` to test()
