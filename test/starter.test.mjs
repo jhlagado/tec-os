@@ -23,9 +23,10 @@ const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
 const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
+const BAZ = pinned("BAZ.COM");
 const BOUNCE = pinned("BOUNCE.BAS");
 const TBUG = ["TBUG.SVC", "TBUG.HLP"].map(pinned);
-const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip || TBUG.some((p) => p.skip);
+const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BAZ.skip || BOUNCE.skip || TBUG.some((p) => p.skip);
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 const text = (name) => textAt(`programs/${name}`);
@@ -54,6 +55,7 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
   check(TAS);
   check(BAZA);
   check(RTL);
+  check(BAZ);
   check(BOUNCE);
   for (const p of TBUG) check(p);
   const { card, recipe } = starter();
@@ -70,6 +72,7 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
     "TAS.COM": sha(readFileSync(TAS.path)),
     "BAZA.COM": sha(readFileSync(BAZA.path)),
     "BAZA.RTL": sha(readFileSync(RTL.path)),
+    "BAZ.COM": sha(readFileSync(BAZ.path)),
     "SAMPLE.ASM": sha(text("SAMPLE.ASM")),
     "TIMES.BAS": sha(text("TIMES.BAS")),
     "BOUNCE.BAS": sha(bounceText()),
@@ -86,9 +89,9 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
   };
   const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
   const themes = {
-    SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
+    SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
     ASM: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
-    BASIC: ["BAZA.COM", "BAZA.RTL", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
+    BASIC: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
     MON3: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
     GAMES: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"],
   };

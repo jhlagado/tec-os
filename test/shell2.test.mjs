@@ -1206,9 +1206,9 @@ test("S2-12 volumes", () => {
   // Every A: volume holds the core set, and each its theme.
   const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
   const theme = {
-    SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
+    SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
     ASM: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
-    BASIC: ["BAZA.COM", "BAZA.RTL", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
+    BASIC: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
     MON3: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
     GAMES: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"],
   };
@@ -1227,7 +1227,7 @@ test("S2-12 no mount.com", () => {
   }
   const basic = volume(starterImage(), "BASIC").list().map((f) => f.name);
   assert.ok(basic.includes("CAVERNS.BAS") && !basic.includes("CAVERNS.COM"), "BASIC: readers compile the supplied source");
-  assert.equal(names.length, 12);
+  assert.equal(names.length, 13);
 });
 
 test("S2-12 instruction", () => {

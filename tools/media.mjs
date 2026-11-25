@@ -38,9 +38,9 @@ const PROGRAMS = [];
 // B: is the WORK disk and C: a spare drive for any of them.
 const CORE = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
 const THEMES = [
-  { label: "SYSTEM", files: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"] },
+  { label: "SYSTEM", files: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"] },
   { label: "ASM", files: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"] },
-  { label: "BASIC", files: ["BAZA.COM", "BAZA.RTL", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"] },
+  { label: "BASIC", files: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"] },
   { label: "MON3", files: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"] },
   { label: "GAMES", files: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"] },
 ];
@@ -256,6 +256,7 @@ async function main() {
   files.push({ name: "TIMES.BAS", description: "a first BASIC program: BAZA TIMES, then TIMES", bytes: text("TIMES.BAS") });
   files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
   files.push({ name: "BAZA.COM", description: "BAZA, the BASIC compiler: BAZA NAME, NAME.BAS to NAME.COM", bytes: baza });
+  files.push({ name: "BAZ.COM", description: "BAZ, the BASIC interpreter, a preview: BAZ NAME.BAS runs it; a statement it doesn't run yet stops with NOT IMPLEMENTED", bytes: pinnedBytes("BAZ.COM") });
   files.push({ name: "BAZA.RTL", description: "BAZA's runtime library, which it copies into each program", bytes: rtl });
   // The pinned example's font access
   // is adapted to the glyph service
@@ -296,7 +297,7 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "20",
+    revision: "21",
     name: "TEC-OS starter",
     instruction: "A: holds SYSTEM, the volume for the first chapters. CD ? lists the volumes; CD NAME puts one on the drive you are on and CD A:NAME on A: (CD A:ASM, CD A:BASIC, CD A:MON3 or CD A:GAMES), and CD A:SYSTEM brings this one back. Every A: volume has the shell, TED, GLCD.SVC and the TBUG debugger. B: (WORK) is your work disk: type B:, copy an example there (COPY A:SAMPLE.ASM B:) and build and run it there; programs come from A:. C: is a spare drive: CD C:NAME puts a volume on it. At A:SYSTEM>, TAS SAMPLE then SAMPLE builds and runs a first program, BAZA TIMES then TIMES one in BASIC, and TED SAMPLE.ASM or TED TIMES.BAS reads one. On GAMES, CAVERNS plays the adventure (TYPE CAVERNS.TXT for instructions), BOUNCE plays a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), and MON3.SVC, LOAD SNAKE9.BIN, then GO plays Snake9; click the RGB panel for matrix arrow controls. On BASIC, BAZA CAVERNS and BAZA BOUNCE rebuild them. On ASM, TAS DEMO then DEMO shows the hardware (TED DEMO.ASM to read it). On MON3, TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO runs a MON-3 program on the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to the prompt; TAS SNAKE9 SNAKE9.BIN rebuilds Snake9. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. Power off (Power cycle on the page) gives the card's own drives again.",
     profile: "tecos",
