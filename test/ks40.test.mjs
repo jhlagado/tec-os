@@ -181,9 +181,9 @@ test('KS40 cold legacy storage clears before the primary40 console starts',()=>{
  assert.equal(m.read(m.sym('PIWID')),40);assert.equal(m.read(m.sym('VWID')),40);assert.equal(shadow(m),0);assert.deepEqual(m.violations,[]);
 });
 
-test('KS40 PICO version4 keeps width minimum3 ABI5.3 and every public state offset',()=>{
+test('KS40 PICO version4 keeps width minimum3 ABI5.4 and every public state offset',()=>{
  const {m,table}=fresh();assert.equal(m.sym('PICOVER'),4);assert.equal(m.sym('PICOWVER'),3);
- assert.equal(m.read(m.sym('ABIMAJ')),5);assert.equal(m.read(m.sym('ABIMIN')),3);
+ assert.equal(m.read(m.sym('ABIMAJ')),5);assert.equal(m.read(m.sym('ABIMIN')),4);
  m.write(table+m.sym('PICOVRB'),3);find(m,4,false);assert.equal(find(m,3),table);
  m.write(table+m.sym('PICOVRB'),2);find(m,3,false);find(m,4,false);m.write(table+m.sym('PICOVRB'),5);assert.equal(find(m,4),table);
  for(const [name,value]of Object.entries({PICOREG:16,PICOFIL:18,PICOWR:20,PICORD:22,PICOWID:24,PICOVRB:36,PICOTPD:41,PICOTPS:42,PINT32:0x3000,PINT40:0x3000,PINT80:0x3000,PICOMNT:0x3000,PIR132:0xc0,PIR140:0xd0,PIR180:0xd0,LATCHV:0x40,SYSLAT:0xff,LATEXP:4,LCDCMD:4,LCDDAT:0x84,VDPDAT:0xbe,VDPCTL:0xbf}))assert.equal(m.sym(name),value,name);

@@ -234,13 +234,13 @@ test("the resident GLCD draws every screen of the workload as the driver did, by
 test("on a GLCD board (0006h) is three pages lower than with the driver, and no more", { timeout: 1_800_000 }, async () => {
   const { m, bdosVector } = await workload;
   assert.equal(m.historicalFont, false, "TPA reading uses production font");
-  // Three pages below the eighteen-page
+  // Three pages below the eleven-page
   // shell and the stub's page. The old
   // REF.bdosVector - 306h figure predates
   // the stub's 479-byte move and the
   // shell's resident allocation.
   const stub = word(m, m.sym("STUBAD"));
-  assert.equal(bdosVector, ((stub >> 8) - 18 - 3) << 8);
+  assert.equal(bdosVector, ((stub >> 8) - 11 - 3) << 8);
 });
 
 test("a program on the CCP stack calls CONOUT directly in what the stack leaves it, CCPSTN less the return word, and the BDOS stack keeps a quarter free", { timeout: 1_800_000 }, async (t) => {
