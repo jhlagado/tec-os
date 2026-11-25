@@ -882,11 +882,9 @@ LTXT EQU LBUF+2
 ; plus 1 and CDON to the drive it is
 ; on. VIDX is the walk's index, VLIST
 ; set to list. DIR: DDRV its drive,
-; DSKIP the matches consumed, DNUM the
-; files shown, DTOT their bytes, DPASS
-; its pass, DRST set to begin the
-; search again, DFAST the table mode,
-; HMAP the marked names.
+; DNUM the files shown, DTOT their
+; bytes, DPASS its pass, HMAP the
+; marked names.
 ; NUMV is a 24-bit number, DIGB its
 ; digits. CD prints no number, so
 ; CDNAME shares their bytes; a walk
@@ -911,16 +909,13 @@ CDON      EQU   CDIDX+1
 VIDX      EQU   CDON+1
 VLIST     EQU   VIDX+1
 DDRV      EQU   VLIST+1
-DSKIP     EQU   DDRV+1
-DNUM      EQU   DSKIP+2
+DNUM      EQU   DDRV+1
 DTOT      EQU   DNUM+2
 NUMV      EQU   DTOT+3
 DIGB      EQU   NUMV+3
 CDNAME    EQU   NUMV
 DPASS     EQU   DIGB+9
-DRST      EQU   DPASS+1
-DFAST     EQU   DRST+1
-HMAP      EQU   DFAST+1
+HMAP      EQU   DPASS+1
 STKBOT    EQU   HMAP+16
 STKTOP    EQU   STKBOT+48
 

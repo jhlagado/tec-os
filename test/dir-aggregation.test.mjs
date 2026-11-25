@@ -113,7 +113,7 @@ function tableGuard(m) {
   const body = Buffer.from(Array.from({ length: end - 0x2240 }, (_, i) => m.read(0x2240 + i)));
   return () => {
     assert.deepEqual(Buffer.from(Array.from({ length: end - 0x2240 }, (_, i) => m.read(0x2240 + i))), body, "table never reaches the rest of the TPA");
-    assert.ok(Array.from({ length: 0x2a }, (_, i) => m.read(0x116 + i)).every(value => value === 0xa5), "unused header bytes remain untouched");
+    assert.ok([0x100, 0x101, ...Array.from({ length: 0x2b }, (_, i) => 0x115 + i)].every(a => m.read(a) === 0xa5), "unused header bytes remain untouched");
   };
 }
 
@@ -220,74 +220,7 @@ test("DIR table: fast path starts three searches and never BDOS 35", () => {
   assert.deepEqual(pairs(r.text), [["BIG.DAT", 40960]]);
   assert.equal(r.counters.searchFirst, 3);
   assert.equal(r.counters.size, 0);
-  assert.equal(word(m, 0x100), 1);
-  assert.equal(word(m, 0x102), 0x250);
-});
-
-test("DIR table: refused workspace uses legacy without TPA writes", async () => {
-  const edits = [["  ld hl,($0006)\n", "  ld hl,$223F\n"]];
-  const svc = await shellVariant(edits);
-  const { m } = fresh({ svc, variant: true, geometry: "G1M", entries: [{ name: "X.DAT", rc: 1 }, { name: "X.DAT", ex: 1, rc: 2 }] });
-  const check = tableGuard(m), r = list(m);
-  check();
-  assert.deepEqual(pairs(r.text), [["X.DAT", 16640]]);
-  assert.ok(Array.from({ length: 0x2140 }, (_, i) => m.read(0x100 + i)).every(value => value === 0xa5));
-  assert.ok(r.counters.size > 0);
-});
-
-test("DIR table: capacity fallback restarts before printing rows", async () => {
-  const edits = [["DLIMIT EQU $2240", "DLIMIT EQU $0250"]];
-  const svc = await shellVariant(edits);
-  const { m } = fresh({ svc, variant: true, entries: [{ name: "A.DAT", rc: 1 }, { name: "B.DAT", rc: 2 }, { name: "C.DAT", rc: 3 }] });
-  const check = tableGuard(m), r = list(m);
-  check();
-  assert.deepEqual(pairs(r.text), [["A.DAT", 128], ["B.DAT", 256], ["C.DAT", 384]]);
-  assert.match(r.text, /3 files, 768 bytes/);
-  assert.deepEqual([r.text.match(/ files?, /g).length, r.text.match(/ free on /g).length], [1, 1], "one summary and one free line after the restart");
-  assert.ok(Array.from({ length: 0x1ff0 }, (_, i) => m.read(0x250 + i)).every(value => value === 0xa5));
-  assert.equal(m.read(pageOf(m) + svc.symbols.DFAST), 0);
-});
-
-test("DIR table: invalid links and cycles fail without hanging", () => {
-  for (const kind of ["below", "misaligned", "unallocated", "cycle"]) {
-    const { m } = fresh({ entries: [{ name: "A.DAT", rc: 1 }, { name: "B.DAT", rc: 2 }, { name: "C.DAT", rc: 3 }] });
-    let injected = false;
-    const p = pageOf(m);
-    const r = list(m, "DIR B:", { hook: n => {
-      if (injected || n.pc !== p + SHELL.symbols.DAF1 || word(n, 0x100) !== 1) return;
-      assert.notDeepEqual(Array.from({ length: 11 }, (_, i) => n.read(0x104 + i)), Array.from({ length: 11 }, (_, i) => n.read(0x240 + i)));
-      const head = n.cpu.cpu.h << 8 | n.cpu.cpu.l;
-      assert.ok(head >= 0x140 && head < 0x240 && !(head & 1));
-      const pointer = kind === "below" ? 0x100 : kind === "misaligned" ? 0x241 : kind === "unallocated" ? word(n, 0x102) : 0x240;
-      n.write(head, pointer & 255); n.write(head + 1, pointer >> 8);
-      if (kind === "cycle") { n.write(0x24e, 0x40); n.write(0x24f, 2); }
-      injected = true;
-    } });
-    assert.ok(injected, kind);
-    assert.match(r.text, /DIR STATE/);
-    assert.equal(r.result, 0xff00);
-    assert.deepEqual(pairs(r.text), []);
-    assert.match(at(m, "ECHO alive"), /alive/);
-    assert.deepEqual(pairs(list(m).text), [["A.DAT", 128], ["B.DAT", 256], ["C.DAT", 384]], "next DIR reinitializes private state");
-  }
-});
-
-test("DIR table: an absent marked key is refused before a zero-size row", () => {
-  const { m } = fresh({ geometry: "G1M", entries: [{ name: "A.DAT", rc: 1 }, { name: "A.DAT", ex: 1, rc: 2 }] });
-  const p = pageOf(m);
-  let injected = false;
-  const r = list(m, "DIR B:", { hook: n => {
-    if (injected || n.pc !== p + SHELL.symbols.DAGGET) return;
-    assert.equal(word(n, p + SHELL.symbols.DNUM), 0, "before the first filename row");
-    assert.equal(word(n, 0x100), 1);
-    n.write(0x240, n.read(0x240) ^ 1);
-    injected = true;
-  } });
-  assert.ok(injected);
-  assert.equal(r.result, 0xff00);
-  assert.match(r.text, /DIR STATE/);
-  assert.deepEqual(pairs(r.text), []);
-  assert.deepEqual(pairs(list(m).text), [["A.DAT", 16640]]);
+  assert.equal(word(m, 0x102), 0x250, "one name in the table");
 });
 
 test("DIR table: all 512 colliding keys stay within the reservation", { timeout: 900_000 }, t => {
@@ -295,8 +228,7 @@ test("DIR table: all 512 colliding keys stay within the reservation", { timeout:
   const { m } = fresh({ entries }), check = tableGuard(m), r = list(m);
   check();
   assert.deepEqual(pairs(r.text), names.map((name, i) => [name, (128 + (i & 127)) * 128]));
-  assert.equal(word(m, 0x100), 512);
-  assert.equal(word(m, 0x102), 0x2240);
+  assert.equal(word(m, 0x102), 0x2240, "512 names: the table full");
   t.diagnostic(JSON.stringify({ scope: "functional maximal-chain observation", files: 512, cycles: r.cycles, counters: r.counters }));
   assert.equal(r.counters.searchFirst, 3);
   assert.equal(r.counters.size, 0);
@@ -315,11 +247,11 @@ test("DIR table mutant: without the maximum, a file is sized by its first entry 
   const normal = list(fresh({ geometry: "G1M", entries }).m);
   assert.deepEqual(pairs(normal.text), right);
   assert.equal(normal.counters.size, 0, "from the table, not BDOS 35");
-  const first = await shellVariant([["  jp DAGMAX      ; coalesce same key", "  ret"]]);
+  const first = await shellVariant([["  jr nc,DAGMAX   ; coalesce same key", "  ret nc"]]);
   const kept = list(fresh({ geometry: "G1M", entries, svc: first, variant: true }).m);
   assert.deepEqual(pairs(kept.text), [["LATER.DAT", 16384], ["EARLY.DAT", 33920]], "the first entry met");
   assert.equal(kept.counters.size, 0);
-  const last = await shellVariant([["  jr c,DAMEND    ; candidate was smaller\n", ""]]);
+  const last = await shellVariant([["  ret c          ; candidate was smaller\n", ""]]);
   const taken = list(fresh({ geometry: "G1M", entries, svc: last, variant: true }).m);
   assert.deepEqual(pairs(taken.text), [["LATER.DAT", 33920], ["EARLY.DAT", 16384]], "the last entry met");
   assert.equal(taken.counters.size, 0);
@@ -364,14 +296,13 @@ test("DIR table: no name and 511 names stay within the reservation", { timeout: 
     assert.deepEqual(pairs(r.text), []);
     assert.match(r.text, /NO FILE/);
     assert.equal(r.result, 0xff00);
-    assert.equal(word(m, 0x100), 0, "the table's count");
+    assert.equal(word(m, 0x102), 0x240, "no name in the table");
   }
   const names = Array.from({ length: 511 }, (_, i) => `N${String(i).padStart(4, "0")}.DAT`);
   const { m } = fresh({ entries: names.map((name, i) => ({ name, ex: 1, rc: i & 127 })) }), check = tableGuard(m), r = list(m);
   check();
   assert.deepEqual(pairs(r.text), names.map((name, i) => [name, (128 + (i & 127)) * 128]));
-  assert.equal(word(m, 0x100), 511);
-  assert.equal(word(m, 0x102), 0x2230, "one node's room left");
+  assert.equal(word(m, 0x102), 0x2230, "511 names: one node's room left");
   assert.equal(r.counters.searchFirst, 3);
   assert.equal(r.counters.size, 0);
 });
