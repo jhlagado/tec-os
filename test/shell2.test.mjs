@@ -1266,16 +1266,16 @@ test("S2-13 docs", () => {
   assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
   for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
-    "a TPA of 41,984 bytes"])
+    "a TPA of 43,776 bytes"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);
   const container = flat("docs/container-format.md");
   assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
   assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
   const compat = flat("docs/compatibility.md");
-  for (const s of ["46,790 bytes", "41,984", "41,216"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  for (const s of ["46,790 bytes", "43,776", "43,008"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
-  assert.match(flat("docs/mon3.md"), /from `A500h` to `9200h`, and the TPA from 41,984 bytes to \*\*37,120\*\*/);
-  assert.match(flat("docs/mon3.md"), /it is `8F00h`, a TPA of \*\*36,352\*\*/);
+  assert.match(flat("docs/mon3.md"), /from `AC00h` to `9900h`, and the TPA from 43,776 bytes to \*\*38,912\*\*/);
+  assert.match(flat("docs/mon3.md"), /it is `9600h`, a TPA of \*\*38,144\*\*/);
   // The figures are measured ones: no doc speaks of a projection or of a qualification still to come.
   for (const n of ["README.md", "docs/shell.md", "docs/compatibility.md", "docs/memory-map.md", "docs/mon3.md"])
     assert.doesNotMatch(flat(n), /\bprojects? (word|A400h|text|41,|these)|projected|projections?\b|pending (current )?runtime|qualification must confirm|to be confirmed/i, `${n}: measured figures, stated plainly`);

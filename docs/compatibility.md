@@ -9,8 +9,8 @@ three, each with a vector for an 8 MiB volume, and a card can ask for four. A ca
 drives field gives 47,240. A board with a PICO9918 has the same: its console
 is in the ROM and its RAM in the BIOS's state (KS39). The GLCD's driver takes
 three pages under the stub's page, leaving 45,568 on the starter card. The
-starter card loads `SHELL.SVC`, which takes eighteen pages there, leaving
-41,728, and 40,960 with the GLCD's driver too. The CCP loads a `.COM` up to
+starter card loads `SHELL.SVC`, which takes eleven pages there, leaving
+43,520, and 42,752 with the GLCD's driver too. The CCP loads a `.COM` up to
 the start of the page holding the word at `0006h`, so the largest it loads on
 the starter card with nothing loaded is 46,336 bytes (`0100h–B5FFh`), 200
 below the TPA: a program may use the rest. It reports version 2.2.
@@ -270,7 +270,7 @@ and run.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
   more than 46,534 bytes of TPA, may fail; how much a card gives depends on
   its drives and what is loaded. Measured on the starter card: 46,790 bare,
-  41,984 with the shell, and 41,216 with the shell and the GLCD's driver.
+  43,776 with the shell, and 43,008 with the shell and the GLCD's driver.
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
   that does not go through it is the check for `^S` while the BDOS writes,

@@ -63,9 +63,9 @@ the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
 On the starter card it is 4,758 bytes of header and image in **19 pages**, 5,215
 bytes as a file with its relocation data. The starter card loads `SHELL.SVC`
-first, so the word at `0006h` goes from `A500h` to `9200h`, and the TPA from
-41,984 bytes to **37,120**. With `GLCD.SVC` installed too, as the GLCD
-console's startup does, it is `8F00h`, a TPA of **36,352**, in any order of
+first, so the word at `0006h` goes from `AC00h` to `9900h`, and the TPA from
+43,776 bytes to **38,912**. With `GLCD.SVC` installed too, as the GLCD
+console's startup does, it is `9600h`, a TPA of **38,144**, in any order of
 installing the three. On the starter card
 with no shell, whose three drives take the bare ROM's word to `B7C6h`, it goes
 from `B7C6h` to `A400h`, and the TPA from 46,790 bytes to 41,728, and 40,960 with
