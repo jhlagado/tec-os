@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { checkInterfaces, DHLEN, FORMAT, fixupsOf, includedFiles, packSvc } from './svc.mjs';
+import { checkInterfaces, DHLEN, FORMAT, fixupsOf, includedFiles, packShell, packSvc } from './svc.mjs';
 
 export const GLCD_SOURCE = 'drivers/glcd.asm';
 export const MON3_SOURCE = 'drivers/mon3.asm';
@@ -55,8 +55,22 @@ export const assembleGlcd = (root, run) => assembleService(root, run, GLCD_SOURC
 /** MON3.SVC, the MON-3 session service, by the same two flat assemblies. */
 export const assembleMon3 = (root, run) => assembleService(root, run, MON3_SOURCE, 'MON3.SVC');
 
-/** SHELL.SVC, the resident shell, by the same two flat assemblies. */
-export const assembleShell = (root, run) => assembleService(root, run, SHELL_SOURCE, 'SHELL.SVC');
+/**
+ * SHELL.SVC, the resident shell, by the same two flat assemblies, with its
+ * overlay packed at the back of the file as makeSvc packs it.
+ */
+export async function assembleShell(root, run) {
+  checkInterfaces(readFileSync(join(root, SHELL_SOURCE), 'utf8'), 'SHELL.SVC');
+  for (const file of includedFiles(join(root, SHELL_SOURCE))) checkInterfaces(readFileSync(file, 'utf8'), basename(file));
+  const assemble = origin => run({ root, entry: SHELL_SOURCE, origin, target: 'SHELL.SVC', phase: 'flat' });
+  const at1 = await assemble(0x100);
+  const at2 = await assemble(0x200);
+  assert.equal(at1.origin, 0x100, 'SHELL first origin');
+  assert.equal(at2.origin, 0x200, 'SHELL second origin');
+  const symbols = Object.fromEntries([...at1.globals].map(([name, symbol]) => [name, symbol.value]));
+  assert.ok(at1.image[0] === 0x44 && at1.image[1] === FORMAT && at1.image[2] === 0, 'invalid SHELL header');
+  return packShell(Uint8Array.from(at1.image), Uint8Array.from(at2.image), symbols, 'SHELL.SVC').file;
+}
 
 export async function assembleDistributionCom(root, run, name) {
   assert.ok(name === 'MOUNT.COM' || name === 'DEMO.COM', 'unsupported TAS distribution program');

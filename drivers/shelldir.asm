@@ -281,6 +281,16 @@ FILEM:    DB    " file, $"
 BYTESM:   DB    " bytes$"
 FREEM:    DB    " free on $"
 
+; A row break through the pager, CR
+; then LF. Carry: the listing stopped.
+
+LSTNL:
+  ld e,CR
+  call PGPUT
+  ret c          ; stopped at [more]
+  ld e,LF
+  jp PGPUT
+
 ; HL = match A's entry in the record at
 ; 0080h, A being its slot plus 1.
 
@@ -338,13 +348,6 @@ HB2:
 HB3:
   ld a,b         ; the bit
   ret
-
-; DMA at 0080h.
-
-SETDMA:
-  ld de,DEFDMA
-  ld c,26        ; 26: set the DMA
-  jp BDOS
 
 ; NUMV = 128 times the 24-bit count of
 ; records at HL, low byte first: its

@@ -134,16 +134,6 @@ PUTDRV:
   ld e,':'
   jp PUTC
 
-; A row break through the pager, CR
-; then LF. Carry: the listing stopped.
-
-LSTNL:
-  ld e,CR
-  call PGPUT
-  ret c          ; stopped at [more]
-  ld e,LF
-  jp PGPUT
-
 ; CLS: the screen cleared and the
 ; cursor home, by the terminal's codes.
 

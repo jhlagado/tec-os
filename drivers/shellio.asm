@@ -264,72 +264,12 @@ PTSK:
   djnz PT0
   ret
 
-; A, 0 to 99, in decimal, with no
-; leading zero: a service's pages,
-; below 58. PDNZ is set once a digit is
-; printed.
+; DMA at 0080h.
 
-PUTDEC8:
-  ld b,a         ; the value
-  xor a
-  ld (PDNZ),a    ; none printed yet
-  ld a,b
-  ld c,10        ; tens first
-  call PD1       ; the tens
-  add a,'0'      ; the units
-  ld e,a         ; print it
-  jr PUTC
-
-; The digit of A in base C, printed if
-; it is not a leading zero. Returns A
-; less that digit's part.
-
-PD1:
-  ld b,'0'-1     ; the digit, from 0
-
-PD2:
-  inc b          ; one more C
-  sub c
-  jr nc,PD2      ; one more C
-  add a,c        ; one C back
-  ld c,a         ; the remainder
-  ld a,b         ; the digit
-  cp '0'
-  jr nz,PD3      ; a nonzero digit
-  ld a,(PDNZ)    ; one printed yet?
-  or a
-  ld a,c
-  ret z          ; a leading zero
-
-PD3:
-  ld e,b         ; print it
-  push bc
-  call PUTC
-  pop bc
-  ld a,1         ; so later ones show
-  ld (PDNZ),a    ; a digit printed
-  ld a,c         ; the remainder
-  ret
-
-; A as two hex digits.
-
-PUTHEX:
-  push af        ; keep the value
-  rrca
-  rrca
-  rrca
-  rrca           ; the high digit
-  call PH1       ; print it
-  pop af         ; the low digit
-
-PH1:
-  and $0F        ; the low nibble
-  add a,$90      ; 90h to 9Fh
-  daa            ; A to F: 00h-05h, CY
-  adc a,$40      ; D0h-D9h or 41h-46h
-  daa            ; '0'-'9' or 'A'-'F'
-  ld e,a         ; print it
-  jr PUTC
+SETDMA:
+  ld de,DEFDMA
+  ld c,26        ; 26: set the DMA
+  jp BDOS
 
 ; The pager, as the ROM's was. PGRST
 ; at each LINE takes the geometry from

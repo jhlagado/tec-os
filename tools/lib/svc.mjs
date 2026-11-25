@@ -131,6 +131,7 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
   const { bytes: at1, symbols } = await assembleAt(copy, 0x100, work);
   const { bytes: at2 } = await assembleAt(copy, 0x200, work);
   if (symbols.INIT === undefined || symbols.REMOVE === undefined) throw new Error(`${source}: INIT and REMOVE required`);
+  if (symbols.OVBASE !== undefined) return packShell(at1, at2, symbols, basename(source), { deps, reloc, relocatedEntry });
   if (at1.length !== at2.length) throw new Error(`${source}: the two assemblies differ in length`);
   const fixups = fixupsOf(at1, at2, DHLEN, basename(source));
   // The image for page 0: each fixup's byte one less than at 0100h.
@@ -179,4 +180,65 @@ export function packSvc(at0, symbols, fixups, { deps = [], reloc = "delta", relo
   put(15, symbols.INIT - 0x100);
   const offsets = Object.fromEntries(Object.entries(symbols).map(([k, v]) => [k, v - 0x100]));
   return { file, symbols: offsets, image: at0.length, fixups, data };
+}
+
+/**
+ * A service with an overlay, as SHELL.SVC: the source's second ORG, at
+ * OVBASE, starts code assembled for that fixed address in the TPA and ended
+ * by OVEND. AT1 and AT2 are the flat images at 0100h and 0200h and SYMBOLS
+ * the first's. The resident part, to IMGEND, is packed as any service. The
+ * overlay goes at the back of the file, from record OVREC: its bytes, the
+ * resident references in it marked by a list after them, a gap of 1 to 254
+ * from the byte before OVBASE or from the last marked, 255 moving on 254,
+ * 0 ending it. Each marked byte, the high byte of a resident address, is
+ * one less than at 0100h, so the shell adds its page. Its first three bytes
+ * take the stamp and the records; the resident's OVREC and OVSTMP the
+ * record and the same stamp.
+ */
+export function packShell(at1, at2, symbols, name, opts = {}) {
+  const base = symbols.OVBASE, imgEnd = symbols.IMGEND - 0x100, ovEnd = symbols.OVEND;
+  if (symbols.OVEND === undefined || symbols.OVREC === undefined || symbols.OVSTMP === undefined || symbols.OVHDR !== base) {
+    throw new Error(`${name}: an overlay needs OVHDR at OVBASE, OVEND, OVREC and OVSTMP`);
+  }
+  const res1 = at1.subarray(0, imgEnd), res2 = at2.subarray(0, imgEnd);
+  const ov1 = at1.subarray(base - 0x100, ovEnd - 0x100), ov2 = at2.subarray(base - 0x200, ovEnd - 0x200);
+  if (at1.length !== ovEnd - 0x100 || at2.length !== ovEnd - 0x200) throw new Error(`${name}: bytes after OVEND`);
+  if (at1.subarray(imgEnd, base - 0x100).some((b) => b !== 0)) throw new Error(`${name}: bytes between IMGEND and OVBASE`);
+  const fixups = fixupsOf(res1, res2, DHLEN, name);
+  const at0 = Uint8Array.from(res1);
+  for (const f of fixups) at0[f + DHLEN] -= 1;
+  const marks = fixupsOf(ov1, ov2, 3, `${name} overlay`).map((f) => f + 3);
+  const ov0 = Uint8Array.from(ov1);
+  for (const f of marks) ov0[f] -= 1;
+  const list = [];
+  let at = -1;
+  for (const f of marks) {
+    let gap = f - at;
+    for (; gap > 254; gap -= 254) list.push(255);
+    list.push(gap);
+    at = f;
+  }
+  list.push(0);
+  const block = new Uint8Array(ov0.length + list.length);
+  block.set(ov0);
+  block.set(list, ov0.length);
+  const records = Math.ceil(block.length / 128);
+  if (records > 255) throw new Error(`${name}: the overlay is over 255 records`);
+  let stamp = createHash("sha256").update(block.subarray(3)).digest().readUInt16LE(0) || 1;
+  block[0] = stamp & 0xff;
+  block[1] = stamp >> 8;
+  block[2] = records;
+  const first = packSvc(at0, symbols, fixups, opts);
+  const record = Math.ceil(first.file.length / 128);
+  const put = (img, at, v) => {
+    img[at] = v & 0xff;
+    img[at + 1] = v >> 8;
+  };
+  put(at0, symbols.OVREC - 0x100, record);
+  put(at0, symbols.OVSTMP - 0x100, stamp);
+  const packed = packSvc(at0, symbols, fixups, opts);
+  const file = new Uint8Array(record * 128 + block.length);
+  file.set(packed.file);
+  file.set(block, record * 128);
+  return { ...packed, file, overlay: { base, bytes: ov0.length, list: list.length, record, records, stamp, marks } };
 }

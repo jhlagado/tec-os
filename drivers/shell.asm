@@ -70,8 +70,23 @@ TABLE: DW LINE,PAGE,HREC,HSTO
 ; HL=0, A=0, NC. Clobbers BC and DE.
 
 INIT:
-  ld h,b
-  ld l,c         ; HL = the name
+  push bc        ; the name
+  ld e,$FF
+  ld c,32        ; 32: the user
+  call BDOS
+  pop hl         ; HL = the name
+  push af
+  dec hl
+  ld a,(hl)      ; the FCB's drive
+  inc hl
+  or a
+  jr nz,IN1      ; a drive named
+  ld a,(CURDSK)  ; none: the current
+  and $0F
+  inc a          ; from 1
+
+IN1:
+  push af
   ld de,EXNAM    ; the record's name
   ld bc,8        ; into the record
   ldir
@@ -82,6 +97,10 @@ INIT:
   ldir
   ld a,LOW(RING) ; the ring's first
   ld (HHEAD),a   ; byte: the next store
+  pop af
+  ld (OVDRV),a   ; the file's drive
+  pop af
+  ld (OVUSR),a   ; and its user
   ld hl,EXRDY
   set 0,(hl)     ; ready, bit 1 kept
   ld hl,0        ; no records
@@ -777,15 +796,15 @@ CS1:
 
 SHTAB:
   DB "COPY",0
-  DW CMDCOPY
+  DW OVCOPY
   DB "DEL",0
   DW CMDDEL
   DB "SERVICES",0
-  DW CMDSVC
+  DW OVSVC
   DB "CD",0
   DW CMDCD
   DB "DIR",0
-  DW CMDDIR
+  DW OVDIR
   DB "CLS",0
   DW CMDCLS
   DB "ECHO",0
@@ -804,10 +823,9 @@ SHTAB:
   DW HAND
   DB 0
 
-%INCLUDE "shellcmd.asm"
 %INCLUDE "shellio.asm"
 %INCLUDE "shellcd.asm"
-%INCLUDE "shelldir.asm"
+%INCLUDE "shellovl.asm"
 
 IMGEND:
 
@@ -848,14 +866,16 @@ LCOND EQU PGSP+2
 
 ; CLAIMD: the first claim is made.
 ; FCBBASE: the FCB the parser fills.
-; CCOUNT: COPY's records. The ring's
-; HHEAD is its next store and HPOS the
-; end of the line recalled. The pager's
-; PGLINE and PGCOL count, PGROWS and
-; PGWID are its page. PDNZ: a decimal
-; digit printed. CFCB is COPY's
-; destination and a script's name, SFCB
-; the open script, LBUF typed input: its
+; OVDRV and OVUSR: the drive, from 1,
+; and the user the shell's file was
+; read from, for the overlay. The
+; ring's HHEAD is its next store and
+; HPOS the end of the line recalled.
+; The pager's PGLINE and PGCOL count,
+; PGROWS and PGWID are its page. CFCB
+; is COPY's destination, a script's
+; name and the overlay's file, SFCB the
+; open script, LBUF typed input: its
 ; capacity, count and LTXT, the text,
 ; which also holds a script's line and
 ; a recalled one. The shell's 48-byte
@@ -863,15 +883,15 @@ LCOND EQU PGSP+2
 
 CLAIMD EQU LCOND+1
 FCBBASE EQU CLAIMD+1
-CCOUNT EQU FCBBASE+2
-HHEAD EQU CCOUNT+2
+OVDRV EQU FCBBASE+2
+OVUSR EQU OVDRV+1
+HHEAD EQU OVUSR+1
 HPOS EQU HHEAD+1
 PGLINE EQU HPOS+1
 PGCOL EQU PGLINE+1
 PGROWS EQU PGCOL+1
 PGWID EQU PGROWS+1
-PDNZ EQU PGWID+1
-CFCB EQU PDNZ+1
+CFCB EQU PGWID+1
 SFCB EQU CFCB+36
 LBUF EQU SFCB+36
 LTXT EQU LBUF+2
@@ -879,12 +899,7 @@ LTXT EQU LBUF+2
 ; LBL holds each drive's volume label,
 ; 11 bytes a drive, valid while its
 ; first byte is not zero. VIDX is the
-; walk's index. DIR: DDRV its drive,
-; DNUM the files shown, DTOT their
-; bytes, DPASS its pass, HMAP the
-; marked names.
-; NUMV is a 24-bit number, DIGB its
-; digits.
+; walk's index.
 
 ; A volume's descriptor, which TNDESC
 ; puts in CFCB, has its drive (FFh for
@@ -900,14 +915,7 @@ CFEX      EQU   CFCB+12
 
 LBL       EQU   LBUF+130
 VIDX      EQU   LBL+44
-DDRV      EQU   VIDX+1
-DNUM      EQU   DDRV+1
-DTOT      EQU   DNUM+2
-NUMV      EQU   DTOT+3
-DIGB      EQU   NUMV+3
-DPASS     EQU   DIGB+9
-HMAP      EQU   DPASS+1
-STKBOT    EQU   HMAP+16
+STKBOT    EQU   VIDX+1
 STKTOP    EQU   STKBOT+48
 
 ; The ring is the last 128 bytes, on a
@@ -921,3 +929,48 @@ XEND EQU RING+128
 HFIX EQU $BD+(LOW(RING)/128)*64
 XTRA EQU XEND-IMGEND
 CLRLEN EQU XEND-VARS-1
+
+; The overlay: DIR, COPY and SERVICES,
+; assembled for the TPA at OVBASE,
+; above DIR's table at 0100h-223Fh. The
+; build puts it at the back of the
+; file, from a record of its own, with
+; its relocation list after OVEND, and
+; writes OVHDR's stamp and record count
+; and the shell's OVREC and OVSTMP. Its
+; table enters DIR, COPY and SERVICES.
+
+OVBASE EQU $2300
+
+  ORG OVBASE
+
+OVHDR:    DW    0
+OVNREC:   DB    0
+  jp CMDDIR
+  jp CMDCOPY
+  jp CMDSVC
+
+%INCLUDE "shelldir.asm"
+%INCLUDE "shellcmd.asm"
+
+OVEND:
+
+; The overlay's own variables, after
+; its code, over the relocation list,
+; which is done with once it runs.
+; COPY: CCOUNT its records. SERVICES:
+; PDNZ, a decimal digit printed. DIR:
+; DDRV its drive, DNUM the files shown,
+; DTOT their bytes, DPASS its pass,
+; HMAP the marked names. NUMV is a
+; 24-bit number, DIGB its digits.
+
+CCOUNT    EQU   OVEND
+PDNZ      EQU   CCOUNT+2
+DDRV      EQU   PDNZ+1
+DNUM      EQU   DDRV+1
+DTOT      EQU   DNUM+2
+NUMV      EQU   DTOT+3
+DIGB      EQU   NUMV+3
+DPASS     EQU   DIGB+9
+HMAP      EQU   DPASS+1

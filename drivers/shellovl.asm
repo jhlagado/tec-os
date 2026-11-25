@@ -1,0 +1,176 @@
+; SHELL.SVC's overlay loader and the
+; ROM's name parser. DIR, COPY and
+; SERVICES are not resident: their code
+; is the overlay, at the back of the
+; shell's own file, read into the TPA
+; at OVBASE when one of them runs.
+; Included by shell.asm.
+
+; The ROM's name parser, TNPARSE: the
+; name at HL into the 36-byte FCB at
+; DE, whose drive, name, type and rest
+; are cleared first. Carry for a bad
+; name or drive. Returns HL at the
+; delimiter. FCBBASE keeps the FCB for
+; UNAMBIG. Changes AF, BC and DE.
+
+PARSEFCB:
+  ld (FCBBASE),de
+  ld c,TNPARSE
+  jp ABICALL     ; the ROM's parser
+
+; The handlers in SHTAB: each loads the
+; overlay and enters it with HL after
+; its word, at its entry in the
+; overlay's table.
+
+OVDIR:
+  xor a          ; DIR, entry 0
+  jr OVLOAD
+
+OVCOPY:
+  ld a,3         ; COPY, entry 3
+  jr OVLOAD
+
+OVSVC:
+  ld a,6         ; SERVICES, entry 6
+
+; Open the file the shell was installed
+; by, on its drive and in its user, as
+; INIT kept them, and read its records
+; from OVREC into OVBASE, as many as
+; the overlay's first record says. The
+; stamp must be the one built with this
+; shell. Then add the shell's page to
+; each byte the relocation list after
+; OVEND marks: a gap of 1 to 254 from
+; the byte before OVBASE, or from the
+; last marked, 255 moving on 254 with
+; nothing marked, 0 ending the list.
+; The user and the DMA are put back. A
+; DIR whose overlay can't be read goes
+; to the ROM's; COPY and SERVICES fail
+; with FF00h.
+
+OVLOAD:
+  push hl        ; the operand
+  push af        ; the entry
+  ld e,$FF
+  ld c,32        ; 32: the user now
+  call BDOS
+  push af
+  ld a,(OVUSR)   ; the shell's own
+  ld e,a
+  ld c,32
+  call BDOS
+  ld hl,CFCB     ; the file's FCB
+  ld de,CFCB+1
+  ld bc,35
+  ld (hl),b      ; all zero
+  ldir
+  ld a,(OVDRV)
+  ld (CFCB),a    ; its drive
+  ld hl,EXNAM    ; its name
+  ld de,CFCB+1
+  ld c,8
+  ldir
+  ld hl,OVTYPE   ; type SVC
+  ld c,3
+  ldir
+  ld de,CFCB
+  ld c,15        ; 15: open
+  call BDOS
+  inc a
+  jr z,OVFAIL    ; no file
+  ld hl,(OVREC)  ; the overlay's first
+  ld (CFCB+33),hl
+  ld de,OVBASE
+
+OV1:
+  push de
+  ld c,26        ; 26: the DMA there
+  call BDOS
+  ld de,CFCB
+  ld c,33        ; 33: read the record
+  call BDOS
+  pop de
+  or a
+  jr nz,OVFAIL   ; a short file
+  ld hl,(CFCB+33)
+  inc hl         ; the next record
+  ld (CFCB+33),hl
+  ld hl,128
+  add hl,de
+  ex de,hl       ; the next 128 bytes
+  ld hl,OVBASE+2 ; the records left
+  dec (hl)
+  jr nz,OV1
+  call OVBACK    ; user and DMA back
+  ld hl,(OVBASE) ; its stamp
+  ld de,(OVSTMP) ; this shell's
+  or a
+  sbc hl,de
+  jr nz,OVNO     ; another shell's
+  ld hl,OVBASE-1
+  ld de,OVEND    ; the list
+
+OVR1:
+  ld a,(de)
+  inc de
+  or a
+  jr z,OVGO      ; the list's end
+  ld c,a
+  ld b,0
+  inc a          ; 255?
+  jr nz,OVR2     ; a gap to a byte
+  dec c          ; on 254, nothing
+  add hl,bc      ; marked
+  jr OVR1
+
+OVR2:
+  add hl,bc      ; the gap
+  ld a,(hl)
+  add a,HIGH(HDR) ; the shell's page
+  ld (hl),a
+  jr OVR1
+
+OVGO:
+  pop af         ; the entry
+  pop hl         ; the operand
+  add a,LOW(OVBASE+3)
+  ld e,a
+  ld d,HIGH(OVBASE+3)
+  push de
+  ret            ; into the overlay
+
+OVFAIL:
+  call OVBACK    ; user and DMA back
+
+OVNO:
+  pop af         ; the entry
+  or a
+  jp z,HAND      ; DIR: the ROM's
+  ld de,OVMSG
+  jp ERRMSG      ; code FF00h
+
+; The user saved below the return, and
+; the DMA at 0080h.
+
+OVBACK:
+  pop hl         ; the return
+  pop af         ; the user it was
+  push hl
+  ld e,a
+  ld c,32
+  call BDOS
+  jp SETDMA
+
+OVTYPE:   DB    "SVC"
+OVMSG:    DB    "NO OVERLAY$"
+
+; Written by the build: the overlay's
+; first record in the file and its
+; stamp.
+
+OVREC:    DW    0
+OVSTMP:   DW    0
