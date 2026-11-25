@@ -206,7 +206,7 @@ neither.
 
 ## Base page
 
-Warm boot at `0000h`, BDOS vector at `0005h` (target `B6C8h` on the starter card, directly
+Warm boot at `0000h`, BDOS vector at `0005h` (target `B7C6h` on the starter card, directly
 below the allocation vectors), IOBYTE at
 `0003h` (stored, not acted on), the drive at `0004h` with the user nibble zero, default FCBs at
 `005Ch` and `006Ch`, command tail and default DMA at `0080h`, programs at

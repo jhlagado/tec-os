@@ -49,8 +49,8 @@ With a service in, `(0006h)` is its page's start. The `JP` there goes straight i
 the BDOS, so a BDOS call is two jumps however many services are in, and every field a
 service needs lies at or above that word, where a program that sets SP from it can't
 reach. With none in, `(0006h)` is the stub directly below the allocation vectors,
-`B6C8h` on the four-drive starter card; the two-volume reference card gives
-`B988h`.
+`B7C6h` on the three-drive starter card; the two-volume reference card gives
+`B986h`.
 
 Format version 4 has version 1's layout. It rose with ABI 5, as 3 did with ABI 4:
 services test no ABI, and each major moved the table's entries, so the loader
