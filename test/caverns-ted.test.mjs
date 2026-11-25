@@ -39,8 +39,7 @@ test('Caverns book exercise: copy, TED edit/save/build, run at the prompt, and r
  fkey(m,9,'TED builds Caverns and returns',()=>/COM written/.test(m.text(mark))&&/CAVBOOK\.BAS/.test(status()));
  assert.notEqual(sha(a.read('CAVBOOK.COM')),originalCom,'modified source produces a distinct executable');
  assert.ok(a.read('CAVBOOK.COM').length<40000);
- // Caverns is too large for BAZ, the interpreter F5 runs, with the shell
- // resident, so the built CAVBOOK.COM runs from the prompt.
+ // The exercise runs the CAVBOOK.COM that F9 built, from the prompt.
  keys(m,'\x11','leave TED',()=>m.ready());
  mark=m.output.length;
  keys(m,'cavbook\r','run the modified Caverns',()=>m.text(mark).includes(replacement)&&m.text(mark).includes('useful-looking compass')&&m.text(mark).endsWith('? '));

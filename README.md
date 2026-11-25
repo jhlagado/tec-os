@@ -46,7 +46,7 @@ Node.js 20 or later.
   else
     tas_stage=$(mktemp -d "$PWD/.inputs/.tas-host.XXXXXX")
     git clone https://github.com/jhlagado/tas.git "$tas_stage"
-    git -C "$tas_stage" checkout --detach fdd21f53c9fa13742eccc9f30339403c080ccfd1
+    git -C "$tas_stage" checkout --detach bf0c151f62fe5b0a8cc09a3bf1d7109567948fbd
     (cd "$tas_stage" && npm ci)
     TECOS_TAS_HOST="$tas_stage" node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
     mv "$tas_stage" .inputs/tas-host
@@ -195,7 +195,7 @@ and prints that number's times table.
 `BAZA TIMES` compiles it with the card's `BAZA.COM` and `BAZA.RTL` and `TIMES`
 runs it; in `TED TIMES.BAS`, F9 builds it with BAZA as it builds an `.ASM` with
 TAS, and F5 runs the source under `BAZ.COM`, the interpreter, a preview that
-holds about 22 KB of source with the shell resident and stops a statement it
+runs Caverns' 26.8 KB source with the shell resident and stops a statement it
 doesn't run yet with `NOT IMPLEMENTED`.
 
 The starter card also includes the author-refined Caverns BASIC source and

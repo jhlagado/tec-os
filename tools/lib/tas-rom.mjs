@@ -7,8 +7,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inputsDir, pinnedBytes } from './pins.mjs';
 import { decodeImage, scanSource, tasImage } from './tas-d8.mjs';
 
-const runnerPin = 'fdd21f53c9fa13742eccc9f30339403c080ccfd1'; // jhlagado/tas
-const tasPin = 'fdd21f53c9fa13742eccc9f30339403c080ccfd1';
+const runnerPin = 'bf0c151f62fe5b0a8cc09a3bf1d7109567948fbd'; // jhlagado/tas
+const tasPin = 'bf0c151f62fe5b0a8cc09a3bf1d7109567948fbd';
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const include = /^([ \t]*%INCLUDE[ \t]+")([^"\r\n]+)(")/gim;
 
@@ -78,8 +78,8 @@ export async function tasAssembler() {
   const root = fileURLToPath(new URL('../../', import.meta.url));
   const entry = JSON.parse(readFileSync(join(root, 'test/inputs.json'), 'utf8')).inputs['TAS.COM'];
   assert.equal(entry.commit, tasPin, 'unsupported TAS manifest commit');
-  assert.equal(entry.sha256, '78541bbd3a66b8a832bba1f04ed48c3b174c98322fe8aabd57a2079bf1564ab1', 'unsupported TAS manifest hash');
-  assert.equal(entry.bytes, 10725, 'unsupported TAS manifest byte count');
+  assert.equal(entry.sha256, '0ceacfa1d33436a9413bd3469233403bb3355c92aa4631f7188e31f94cef25f3', 'unsupported TAS manifest hash');
+  assert.equal(entry.bytes, 10788, 'unsupported TAS manifest byte count');
   const override = process.env.TECOS_TAS_HOST;
   assert.ok(override !== '', 'TECOS_TAS_HOST is empty: unset it or select the prepared pinned host');
   const host = resolve(override ?? join(inputsDir(root), 'tas-host'));
