@@ -17,7 +17,7 @@ Stale symbols are worse than none. Edit `FILL.ASM` and copy over a fresh `FILL.C
 
 Each time TBUG stops a program at launch, it checks for a `NAME.TBG` file beside `NAME.COM` and reads its trailing header record. That header holds the image's end address and a 16-bit checksum of every byte in the assembled image. TBUG sums the loaded image in RAM and checks both numbers.
 
-![TAS writes NAME.TBG beside NAME.COM. TBUG checks the end address and image checksum at launch, enabling SY, Code labels and the Symbols view on Y when both match.](/images/tbg/symbols-load.svg)
+![TAS writes NAME.TBG beside NAME.COM. TBUG checks the end address and image checksum at launch, enabling SY, Code labels and the Symbols view on Y when both match.](/images/tbug/symbols-load.svg)
 
 When both match, symbols turn on and `SY` lights up at the right end of row 2 in Registers:
 

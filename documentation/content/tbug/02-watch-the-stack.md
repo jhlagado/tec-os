@@ -43,7 +43,7 @@ Eighty character cells cannot fit registers, disassembly, stack, memory and symb
 
 Pressing `R`, `C`, `S`, `M` or `Y` jumps directly to that view from any inspection screen. `Tab` also cycles forward around the ring and `Shift+Tab` cycles backward. Each switch flashes the view's name (`CODE`, `STACK`, `MEMORY`) on the bottom row for about half a second before its real fourth row returns. Any key pressed during that flash clears the title immediately and acts at once, so you never wait on the banner once you know the layout.
 
-![R, C, S, M and Y jump directly to Registers, Code, Stack, Memory and Symbols while Tab and Shift+Tab cycle through them. F8 steps into, F7 steps over and F6 steps out.](/images/tbg/views.svg)
+![R, C, S, M and Y jump directly to Registers, Code, Stack, Memory and Symbols while Tab and Shift+Tab cycle through them. F8 steps into, F7 steps over and F6 steps out.](/images/tbug/views.svg)
 
 You can also drill straight into a related view. In Registers, the arrow keys move `>` across the grid. Hit `Enter` on `PC` to open Code at the stopped instruction, or `Enter` on `SP` to open Stack. `Esc` steps back one level to where you came from. To leave TBUG at any time, press `Q` and confirm `Quit TBUG? Y/N` with `Y` or `Q`.
 
@@ -101,7 +101,7 @@ Now hit `Enter` on that top slot to open Memory at `98FCh`:
 
 The first two bytes read `34 12`, not `12 34`. Because the Z80 is little-endian, the low byte (`34h`) sits at the lower address (`98FCh`) and the high byte (`12h`) sits above it (`98FDh`). Stack pairs those bytes back into 16-bit words because `PUSH`, `POP`, `CALL` and `RET` work on words. Memory shows raw bytes in ascending address order. Both views read the exact same RAM through two different lenses.
 
-![F8 executes PUSH HL, moving SP down two bytes from 98FEh to 98FCh. Stack displays the word 1234 while Memory displays the bytes in address order as 34 12.](/images/tbg/stack-step.svg)
+![F8 executes PUSH HL, moving SP down two bytes from 98FEh to 98FCh. Stack displays the word 1234 while Memory displays the bytes in address order as 34 12.](/images/tbug/stack-step.svg)
 
 Hit `Esc` to step back to Stack, then press `C` to return to Code, where `→` now sits on `0104 POP DE`. Tap `F8` to execute the pop, then press `R` to return to Registers. `DE` holds `1234`, `HL` still holds `1234` and `SP` has returned to `98FE`. Press `F5` to let `RET` end `STEP.COM` (`PC ----`, `SP 9900`, `EX`), then `Q` and `Y` to return to `B>`.
 

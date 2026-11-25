@@ -60,7 +60,7 @@ A Z80 has no hardware breakpoint registers, so TBUG patches RAM while the progra
 
 When you press `F5`, TBUG writes `F7h` (`RST 30h`, also called `RST 6`) over the first byte at `0104h` and starts the CPU. When execution hits `0104h`, `RST 30h` jumps straight into TBUG's trap handler. TBUG saves every register, writes the original `D1h` byte back into `0104h`, leaves the breakpoint registered in its table and draws the LCD with `BP`.
 
-![Pressing Space registers 0104h and saves D1h. While running under F5, TBUG patches 0104h with F7h (RST 30h). On trap, TBUG restores D1h and stops with BP.](/images/tbg/breakpoint.svg)
+![Pressing Space registers 0104h and saves D1h. While running under F5, TBUG patches 0104h with F7h (RST 30h). On trap, TBUG restores D1h and stops with BP.](/images/tbug/breakpoint.svg)
 
 That mechanism explains two limits you will run into:
 
@@ -90,7 +90,7 @@ B>TBUG.SVC ARM
 
 Now run any `.COM` program normally, such as `STEP` or `HELLO`. TEC-OS routes the launch through `COMVEC` (added in TEC-OS ABI 5.3) and stops the program at `0100h` with its ordinary command tail intact in page zero (`0080h`).
 
-![Four ways to stop a running program: one-shot F5 off PC, persistent Space breakpoints, Ctrl+Esc at the next BDOS call and TBUG.SVC ARM via COMVEC.](/images/tbg/stop-paths.svg)
+![Four ways to stop a running program: one-shot F5 off PC, persistent Space breakpoints, Ctrl+Esc at the next BDOS call and TBUG.SVC ARM via COMVEC.](/images/tbug/stop-paths.svg)
 
 A few details keep `ARM` predictable:
 

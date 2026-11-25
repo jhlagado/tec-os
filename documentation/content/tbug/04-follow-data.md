@@ -73,7 +73,7 @@ Tap `F8` once more for `INC HL`. `HL` moves to `010Bh`, and Memory steps forward
 
 Move the cursor down past the bottom row to scroll further ahead, and row 1 switches to `HL+`, reminding you that you are looking past `HL` at a fixed offset.
 
-![Following HL moves Memory from 010Ah to 010Bh as INC HL runs. Editing with E is restricted to program memory between 0100h and the lowest resident service.](/images/tbg/memory-follow.svg)
+![Following HL moves Memory from 010Ah to 010Bh as INC HL runs. Editing with E is restricted to program memory between 0100h and the lowest resident service.](/images/tbug/memory-follow.svg)
 
 Now finish the loop in one move using the one-shot run from Chapter 3. Press `C` to jump to Code, scroll `>` down to `0109 RET` and press `F5`. The remaining three passes run at full speed and halt before `RET`.
 

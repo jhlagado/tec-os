@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const out = new URL('../public/images/tbg/', import.meta.url);
+const out = new URL('../public/images/tbug/', import.meta.url);
 const W = 720;
 
 const esc = (s) =>

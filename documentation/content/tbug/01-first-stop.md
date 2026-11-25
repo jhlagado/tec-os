@@ -67,7 +67,7 @@ Ordinary `.COM` programs load at `0100h` and grow upwards into free RAM. Residen
 
 On the starter card, `SHELL.SVC` is already loaded at boot and uses enough upper RAM that TBUG may not fit beside it. Switch back to drive A and run `UNLOAD` to drop the shell and return to the bare `A>` prompt. If your card loads other services at boot, unload or omit them when you need space for TBUG.
 
-![TBUG is loaded at the top of RAM below the ROM and uses only the 20 × 4 character LCD and matrix keyboard while the program keeps the console.](/images/tbg/first-stop.svg)
+![TBUG is loaded at the top of RAM below the ROM and uses only the 20 × 4 character LCD and matrix keyboard while the program keeps the console.](/images/tbug/first-stop.svg)
 
 Once resident, TBUG survives warm boots and works transparently alongside the rest of the computer. Whenever a debugged program stops, TBUG draws on the 20 × 4 character LCD and reads the matrix keyboard. Your console stays untouched, so any text or graphics your program draws remains exactly where the program put it.
 

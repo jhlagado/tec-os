@@ -65,7 +65,7 @@ The theme retains the reference's numbered figures and image previews.
 ## Book illustrations
 
 The TEC-OS schematics use the same SVG plates, numbered captions and image
-previews as the TBG book and debug80-docs. Each diagram has an accessible title
+previews as the TBUG book and debug80-docs. Each diagram has an accessible title
 and description. The Markdown image text supplies its caption and alternative
 text. These drawings explain the adjacent text and are not screen captures.
 
