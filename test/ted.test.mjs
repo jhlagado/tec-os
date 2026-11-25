@@ -1,6 +1,6 @@
 // TED, the editor of the other study's tools, on TEC-OS: it edits, saves and
 // reopens a file at every console's size, opens at a line, and runs the round
-// of ^T B, ^T D and ^T R with TAS. Emulator evidence. TED.COM and TAS.COM are
+// of F9, ^T D and F5 with TAS. Emulator evidence. TED.COM and TAS.COM are
 // pinned inputs (test/inputs.json). CURSOR and TEXCAP are TED's own words,
 // from the listing of TED's build (build/ted/ted.sym); the workspace at 2400h
 // holds them, and the pin's hash holds the build.
@@ -126,7 +126,7 @@ test("a byte TED refuses stops it with EDIT error 03 and the byte's line and col
 });
 
 /**
- * The round on DRIVE: ^T B fails and opens at the error; the fix, ^T B again, ^T R runs
+ * The round on DRIVE: F9 fails and opens at the error; the fix, F9 again, F5 runs
  * the program, and a key brings TED back at the same place. TED and TAS are on
  * DRIVE: the CCP looks for a command on the current drive only.
  */
@@ -147,29 +147,29 @@ function round({ drive = "A", tms = true }) {
   keys(m, "ted hello.asm\r", "TED", () => /TED +HELLO\.ASM/.test(status()));
 
   mark = m.output.length;
-  keys(m, "\x14b", "the failed build's return", () => /TED\r\n/.test(since()) && /operands are not valid/.test(status()));
+  keys(m, "\x1b[20~", "the failed build's return", () => /TED\r\n/.test(since()) && /operands are not valid/.test(status()));
   assert.equal(word(m, CURSOR), 12, "at line 2, column 2: the error's place");
   assert.equal(volume(image, drive).list().some((f) => f.name === "HELLO.COM"), false, "a failed build leaves no HELLO.COM");
 
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
   mark = m.output.length;
-  keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(since()) && /TED\.PRJ: HELLO\.ASM/.test(status()));
+  keys(m, "\x1b[20~", "the good build's return", () => /TED\r\n/.test(since()) && /TED\.PRJ: HELLO\.ASM/.test(status()));
   assert.match(since(), /HELLO\.COM written/);
-  assert.equal(text(image, drive, "HELLO.ASM"), FIXED, "^T B saves first");
+  assert.equal(text(image, drive, "HELLO.ASM"), FIXED, "F9 saves first");
   assert.equal(word(m, CURSOR), 13);
 
   mark = m.output.length;
-  keys(m, "\x14r", "the program and the wait", () => /Press a key/.test(since()));
+  keys(m, "\x1b[15~", "the program and the wait", () => /Press a key/.test(since()));
   assert.match(since(), new RegExp(`${drive}(:\\S*)?>HELLO\\r\\nHI\\r\\n`), "HELLO ran");
   keys(m, " ", "TED again", () => /L2 C3/.test(status()));
-  assert.equal(word(m, CURSOR), 13, "the same place as before ^T R");
+  assert.equal(word(m, CURSOR), 13, "the same place as before F5");
   keys(m, "\x11", "the prompt", () => new RegExp(`${drive}(:\\S*)?>$`).test(since()));
   assert.deepEqual(m.violations, []);
   const names = volume(image, drive).list().map((f) => f.name);
   for (const n of ["HELLO.COM", "HELLO.TBG", "TED.PRJ", "TED.SES"]) assert.ok(names.includes(n), `${n} on ${drive}:`);
 }
 
-test("the round on A: with the PICO9918: ^T B at the error, the fix, ^T R", { skip: TED.skip || TAS.skip, timeout: 1_800_000 }, () => {
+test("the round on A: with the PICO9918: F9 at the error, the fix, F5", { skip: TED.skip || TAS.skip, timeout: 1_800_000 }, () => {
   round({ drive: "A" });
 });
 
@@ -181,7 +181,7 @@ test("the round on A: with a serial terminal", { skip: TED.skip || TAS.skip, tim
   round({ drive: "A", tms: false });
 });
 
-test("TED B:HELLO.ASM from A: opens B:'s file, and ^T B builds it on B: with A:'s TAS", { skip: TED.skip || TAS.skip, timeout: 600_000 }, () => {
+test("TED B:HELLO.ASM from A: opens B:'s file, and F9 builds it on B: with A:'s TAS", { skip: TED.skip || TAS.skip, timeout: 600_000 }, () => {
   check(TED);
   check(TAS);
   const image = standardCard();
@@ -193,11 +193,11 @@ test("TED B:HELLO.ASM from A: opens B:'s file, and ^T B builds it on B: with A:'
   const status = () => m.screen()[23];
   keys(m, "ted b:hello.asm\r", "TED on B:'s file", () => /TED .*HELLO\.ASM/.test(status()));
   let mark = m.output.length;
-  keys(m, "\x14b", "the failed build's return", () => /TED\r\n/.test(m.text(mark)) && /operands are not valid/.test(status()));
+  keys(m, "\x1b[20~", "the failed build's return", () => /TED\r\n/.test(m.text(mark)) && /operands are not valid/.test(status()));
   assert.equal(word(m, CURSOR), 12, "at the error's line and column");
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
   mark = m.output.length;
-  keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
+  keys(m, "\x1b[20~", "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
   keys(m, "\x11", "the prompt", () => /A(:\S*)?>$/.test(m.text(mark)));
   assert.equal(text(image, "B", "HELLO.ASM"), FIXED, "saved on B:");
   const onB = volume(image, "B").list().map((f) => f.name);
@@ -254,7 +254,7 @@ test("TED's text holds at least 23,062 bytes on the starter card with MON3.SVC r
   }
 });
 
-test("C:TED from B: edits B:'s file, and ^T B runs C:'s TAS and comes back to C:'s TED, item E's load drive", { skip: TED.skip || TAS.skip, timeout: 600_000 }, () => {
+test("C:TED from B: edits B:'s file, and F9 runs C:'s TAS and comes back to C:'s TED, item E's load drive", { skip: TED.skip || TAS.skip, timeout: 600_000 }, () => {
   check(TED);
   check(TAS);
   const image = standardCard([{ geometry: "G1M", label: "TOOLS", mount: "C" }]);
@@ -268,12 +268,12 @@ test("C:TED from B: edits B:'s file, and ^T B runs C:'s TAS and comes back to C:
   keys(m, "b:\r", "the drive", () => /B(:\S*)?>$/.test(m.text(mark)));
   keys(m, "c:ted hello.asm\r", "C:'s TED on B:'s file", () => /TED .*HELLO\.ASM/.test(status()));
   mark = m.output.length;
-  keys(m, "\x14b", "the failed build's return", () => /TED\r\n/.test(m.text(mark)) && /operands are not valid/.test(status()));
+  keys(m, "\x1b[20~", "the failed build's return", () => /TED\r\n/.test(m.text(mark)) && /operands are not valid/.test(status()));
   assert.doesNotMatch(m.text(mark), /TAS\?|TED\?/, "both found on C:");
   assert.equal(word(m, CURSOR), 12, "at the error's line and column");
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
   mark = m.output.length;
-  keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
+  keys(m, "\x1b[20~", "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
   keys(m, "\x11", "the prompt", () => /B(:\S*)?>$/.test(m.text(mark)));
   assert.equal(text(image, "B", "HELLO.ASM"), FIXED, "saved on B:");
   assert.ok(volume(image, "B").list().some((f) => f.name === "HELLO.COM"), "HELLO.COM on B:");
@@ -303,13 +303,13 @@ PUT: PUSH HL
  RET
 `;
 
-// TED.PRJ's ARGS goes on ^T R's run line. The shell splits a line at an &
+// TED.PRJ's ARGS goes on F5's run line. The shell splits a line at an &
 // after a blank, so TED stops ARGS there; an & inside a word is text.
 for (const [args, tail, what] of [
   ["X &HELLO Z", " X", "stops at the & after a blank: the program runs once with X"],
   ["/M:&HE000 Q&R", " /M:&HE000 Q&R", "keeps an & inside a word"],
 ]) {
-  test(`under the shell, ^T R with ARGS ${args} ${what}`, { skip: TED.skip || TAS.skip, timeout: 900_000 }, () => {
+  test(`under the shell, F5 with ARGS ${args} ${what}`, { skip: TED.skip || TAS.skip, timeout: 900_000 }, () => {
     check(TED);
     check(TAS);
     const image = standardCard();
@@ -322,7 +322,7 @@ for (const [args, tail, what] of [
     const status = () => m.screen()[23];
     keys(m, "ted hello.asm\r", "TED", () => /TED +HELLO\.ASM/.test(status()));
     const mark = m.output.length;
-    keys(m, "\x14r", "the program and the wait", () => /Press a key/.test(m.text(mark)));
+    keys(m, "\x1b[15~", "the program and the wait", () => /Press a key/.test(m.text(mark)));
     const out = m.text(mark);
     keys(m, " ", "TED again", () => /TED +HELLO\.ASM/.test(status()));
     const shown = tail.replace(/[/.]/g, "\\$&");

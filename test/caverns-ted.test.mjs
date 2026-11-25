@@ -35,11 +35,11 @@ test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen afte
  assert.equal(text(a).split('\n').find(l=>l.startsWith(bannerNumber+' ')),expected.split('\n').find(l=>l.startsWith(bannerNumber+' ')));
  assert.equal(text(a),expected);
  let mark=m.output.length;
- keys(m,'\x14b','TED builds Caverns and returns',()=>/COM written/.test(m.text(mark))&&/CAVBOOK\.BAS/.test(status()));
+ keys(m,'\x1b[20~','TED builds Caverns and returns',()=>/COM written/.test(m.text(mark))&&/CAVBOOK\.BAS/.test(status()));
  assert.notEqual(sha(a.read('CAVBOOK.COM')),originalCom,'modified source produces a distinct executable');
  assert.ok(a.read('CAVBOOK.COM').length<40000);
  mark=m.output.length;
- keys(m,'\x14r','TED builds and runs Caverns',()=>m.text(mark).includes(replacement)&&m.text(mark).includes('useful-looking compass')&&m.text(mark).endsWith('? '));
+ keys(m,'\x1b[15~','TED builds and runs Caverns',()=>m.text(mark).includes(replacement)&&m.text(mark).includes('useful-looking compass')&&m.text(mark).endsWith('? '));
  keys(m,'quit\r','quit the modified game',()=>m.text().endsWith('? ')&&m.text().includes('Another adventure?'));
  keys(m,'n\r','leave the game for TED return pause',()=>/Press a key/.test(m.screen().join('\n')));
  keys(m,' ','return to TED',()=>/CAVBOOK\.BAS/.test(status()));
