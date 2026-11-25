@@ -37,6 +37,10 @@ BIOSBAS:
 
 KBARROW:
   DB "[A[B[D[C"  ; up, down, left, right
+KBSARR:
+  DB "[1;2A[1;2B[1;2D[1;2C" ; with Shift
+KBFNAT:
+  DB "[5~[6~[H [F" ; with Fn: PgUp PgDn Home End
 
 ; Fn with digit keys 13h-1Ch (0-9): the
 ; tail after ESC, four bytes a key. O and

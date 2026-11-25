@@ -173,8 +173,14 @@ k / 8, bit k % 8 of port FEh. Keys 0, 1 and 2 are Shift, Ctrl and Fn; key 7
 toggles Caps Lock, shown on the latch's CAPS lamp. Keys 3–6 are the arrow
 keys; TEC-OS delivers them as `ESC [ A`, `ESC [ B`, `ESC [ D` and `ESC [ C`
 (up, down, left, right), the sequences ANSI-terminal programs such as Edit
-expect, so the up arrow no longer reads as ^C. A key is delivered once when
-it goes down; holding it does not repeat.
+expect, so the up arrow no longer reads as ^C. Fn with an arrow gives the
+page keys as xterm sends them: Fn+up is Page Up (`ESC [ 5 ~`), Fn+down Page
+Down (`ESC [ 6 ~`), Fn+left Home (`ESC [ H`) and Fn+right End (`ESC [ F`).
+Shift with an arrow gives xterm's modified arrow, `ESC [ 1 ; 2` and the
+arrow's letter; Ctrl with one gives the plain arrow. The BDOS line editor
+consumes a sequence with parameters, so these change nothing at the prompt
+or in a line read by function 10. Fn with a digit gives F1 to F10. A key is
+delivered once when it goes down; holding it does not repeat.
 
 ## Polling and timing
 

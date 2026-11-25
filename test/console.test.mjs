@@ -245,6 +245,39 @@ test("matrix arrow keys arrive as ANSI cursor sequences", async () => {
   assert.match(m.expect(/A(:\S*)?>$/), /1B 5B 41 1B 5B 44 /);
 });
 
+// Keys 3-6 are up, down, left and right; key 0 is Shift, 1 Ctrl and 2 Fn.
+test("Fn with an arrow sends Page Up, Page Down, Home and End, Shift with one xterm's modified arrow, and Ctrl with one the plain arrow", async () => {
+  const image = standardCard();
+  volume(image, "A").write("KEYS.COM", (await program("keys")).bytes);
+  const m = boot(image, { tms: true, matrix: true });
+  const kblast = m.sym("KBLAST");
+  const chord = (mod, key) => {
+    m.tec1g.applyMatrixKey(0, mod, true);
+    m.tec1g.applyMatrixKey(key >> 3, key & 7, true);
+    m.runUntil(() => m.read(kblast) === key, 50_000_000, `modifier ${mod} with key ${key}`);
+    m.tec1g.applyMatrixKey(key >> 3, key & 7, false);
+    m.tec1g.applyMatrixKey(0, mod, false);
+    m.runUntil(() => m.read(kblast) === 0xff, 50_000_000, `release of key ${key}`);
+  };
+  const run = (keys) => {
+    m.mark = m.output.length;
+    m.typeMatrix("keys\r");
+    keys();
+    return m.expect(/A(:\S*)?>$/);
+  };
+  const hex = (t) => [...t].map((c) => c.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")).join(" ") + " ";
+  for (const [key, want, pad, what] of [
+    [3, "\x1b[5~", "xy", "Fn+up is Page Up, ESC [ 5 ~"],
+    [4, "\x1b[6~", "xy", "Fn+down is Page Down, ESC [ 6 ~"],
+    [5, "\x1b[H", "xyz", "Fn+left is Home, ESC [ H"],
+    [6, "\x1b[F", "xyz", "Fn+right is End, ESC [ F"],
+  ]) assert.ok(run(() => { chord(2, key); m.typeMatrix(pad); }).includes(hex(want + pad)), what);
+  for (const [key, letter] of [[3, "A"], [4, "B"], [5, "D"], [6, "C"]])
+    assert.ok(run(() => chord(0, key)).includes(hex(`\x1b[1;2${letter}`)), `Shift with key ${key} is ESC [ 1 ; 2 ${letter}`);
+  assert.match(run(() => { chord(1, 3); m.typeMatrix("\x06"); }), /1B 5B 41 1B 5B 43 /, "Ctrl+up is the plain up, and right alone ESC [ C");
+  assert.deepEqual(m.violations, []);
+});
+
 /** Press Fn and digit key D (0-9) together on M's matrix until TEC-OS takes it. */
 
 test("Fn with a digit key sends F1 to F10 as xterm does, and Fn with another key its plain character", async () => {

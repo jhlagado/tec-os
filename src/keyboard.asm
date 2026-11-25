@@ -5,8 +5,10 @@
 ; Keys 0-2 are Shift, Ctrl and Fn. Key 7
 ; toggles Caps Lock. Fn with a digit key
 ; sends F1-F9 (Fn+1-9) and F10 (Fn+0) as
-; xterm sends them. A held key does not
-; repeat.
+; xterm sends them; Fn with an arrow sends
+; Page Up, Page Down, Home and End, and
+; Shift with one the modified arrow. A
+; held key does not repeat.
 
 ; Poll up to eight rows for a new key.
 ; Starts at KBMASK. NZ ends the poll:
@@ -102,7 +104,15 @@ KBMOD:
   cp 7           ; Caps Lock key
   jr z,KBCAPS
   jr nc,KBNOARR  ; Keys 3-6: ESC [ A-D
-  sub 3          ; keys 3-6: [A-[D
+  sub 3          ; B: arrow 0-3
+  ld b,a
+  ld a,d
+  cp 2           ; Fn: the page keys
+  jr z,KBFNAR
+  inc d
+  dec d          ; Z: Shift (D=0)
+  jr z,KBSHAR
+  ld a,b
   add a,a
   ld hl,KBARROW
   call KBIDX     ; HL: the arrow's tail
@@ -160,6 +170,36 @@ KBCAPS:
   out (SYSLAT),a
   xor a          ; Z: no character
   ret
+
+; Shift with an arrow: ESC [ 1 ; 2 and
+; the arrow's letter, as xterm sends it.
+
+KBSHAR:
+  ld a,b
+  add a,a
+  add a,a
+  add a,b        ; five bytes an arrow
+  ld hl,KBSARR
+  call KBIDX
+  ld c,5
+  jr KBTAIL
+
+; Fn with an arrow: Page Up, Page Down,
+; Home and End, ESC [ 5 ~, ESC [ 6 ~,
+; ESC [ H and ESC [ F.
+
+KBFNAR:
+  ld a,b
+  add a,a
+  add a,b        ; three bytes a key
+  ld hl,KBFNAT
+  call KBIDX
+  ld c,3
+  ld a,b
+  cp 2           ; Home and End: two
+  jr c,KBTAIL
+  dec c
+  jr KBTAIL
 
 ; Translate key E to ASCII in A.
 ; D: FFh none, 0 Shift, 1 Ctrl, 2 Fn.
