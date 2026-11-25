@@ -14,12 +14,12 @@
     "TED.COM": {
       "env": "TED_COM",
       "default": "../ted/dist/TED.COM",
-      "source": "jhlagado/ted cb9fdbe, dist/TED.COM",
+      "source": "jhlagado/ted 28d9cc7, dist/TED.COM",
       "repo": "jhlagado/ted",
-      "commit": "cb9fdbe5a44d4130d04672fe1e8664a4c3b25f37",
+      "commit": "28d9cc7718868b06d0a47a77f9b270aebd3af1eb",
       "path": "dist/TED.COM",
-      "bytes": 12636,
-      "sha256": "9a062c8e21f5d6dc6418b8ef0ed66e4239030f3c6fa673e946e483c04500c941"
+      "bytes": 12356,
+      "sha256": "6a462b5bb89062f182896eafd2d3e8046f8e89af5b7825e2ffc1582db2f32271"
     },
     "BAZA.COM": {
       "env": "BAZA_COM",

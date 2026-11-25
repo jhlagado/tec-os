@@ -21,7 +21,7 @@ const RTL = pinned("BAZA.RTL");
 const BAZ = pinned("BAZ.COM");
 const SKIP = TED.skip || BAZA.skip || RTL.skip || BAZ.skip;
 const SOURCE = readFileSync(resolve(ROOT, "programs/TIMES.BAS"), "utf8");
-const CURSOR = 0x25ca; // the cursor's offset in TED's text (test/ted.test.mjs)
+const CURSOR = 0x24ca; // the cursor's offset in TED's text (test/ted.test.mjs)
 const LIMIT = 100_000_000; // each step's cycles: a stall fails in seconds, naming the step
 const BAD = "95 PRINT (";
 // TED's text holds CR LF: line 10 starts after nine lines and their ends.

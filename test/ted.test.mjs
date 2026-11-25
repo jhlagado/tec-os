@@ -16,15 +16,15 @@ import { check, pinned } from "./lib/inputs.mjs";
 
 const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
-const CURSOR = 0x25ca; // the cursor's offset in the text
+const CURSOR = 0x24ca; // the cursor's offset in the text
 // The approved eighteenth shell page
 // reduces the former capacity floors.
 const BARE_SEARCH_PAGE = 256;
-// TED's workspace, from 70ff3df, starts at 2500h, a page above 2400h, so its
-// text starts a page higher.
-const TED_WORKSPACE_PAGE = 256;
+// TED's workspace is at 2400h again from 28d9cc7, its RST slots holding
+// its most called routines' heads; 70ff3df and cb9fdbe had it a page higher.
+const TED_WORKSPACE_PAGE = 0;
 
-const TEXCAP = 0x2651; // the text's room, from the word at 0006h
+const TEXCAP = 0x2551; // the text's room, from the word at 0006h
 const NOTES = "hello\nsecond line\n";
 const EDITED = "hello\nYsecond line\n";
 // Line 2 fails: 256 doesn't fit A. A ';' typed at the error's column makes it a comment.
@@ -216,7 +216,7 @@ test("TED B:HELLO.ASM from A: opens B:'s file, and F9 builds it on B: with A:'s 
   assert.deepEqual(m.violations, []);
 });
 
-test("TED's text holds at least 27,670 bytes on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
+test("TED's text holds at least 27,926 bytes on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
   check(TED);
   // The starter's display files: on a board with both, GLCD.SVC loads and gives
   // way to the ROM's PICO9918 console, so one driver is loaded (the figures).
@@ -245,7 +245,7 @@ test("TED's text holds at least 27,670 bytes on the starter's files, SHELL.SVC a
 // The smallest system the starter card teaches: the shell, MON3.SVC
 // installed and left by EXIT, then TED. Its room is below the 24,576-byte
 // source limit, so a source at the limit is edited with MON3.SVC unloaded.
-test("TED's text holds at least 22,806 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 22,038 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
+test("TED's text holds at least 23,062 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 22,294 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
   check(TED);
   const P = /\r\n\d*[A-P](:\S*)?>$/;
   for (const [board, via, historicalFloor] of [[{ glcd: false }, "serial", 23_318], [{ matrix: true, glcd: true }, "matrix", 22_550]]) {

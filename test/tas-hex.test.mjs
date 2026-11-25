@@ -61,7 +61,7 @@ async function target(source, stem, constrained, initialFiles = {}) {
   if (constrained) {
     assert.ok(line(m, "MON3.SVC").mon3);
     assert.equal(line(m, "EXIT").mon3, false);
-    assert.equal(word(m, 6), 0x8e00, "shell, GLCD and MON3 remain resident");
+    assert.equal(word(m, 6), 0x9500, "shell, GLCD and MON3 remain resident");
   }
   return { m, image, svc };
 }

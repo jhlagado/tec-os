@@ -72,7 +72,7 @@ test("SH16 version fields", () => {
   assert.match(inc, /^SVCFMT EQU 4$/m);
   assert.equal(ABI.TNSHELL, 16);
   assert.equal(ABI.TNGLYPH, 17);
-  assert.equal(ABI.TNCOUNT, 18);
+  assert.equal(ABI.TNCOUNT, 19);
   const { rom } = romFor();
   assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 3], "TNA 5.3: TNGLYPH, then COMVEC, added");
   for (const f of [SHELL.file, MON3.file, HOOK.file]) assert.deepEqual([...f.subarray(25, 28)], [0x45, 0x58, 1], "the record's version byte stays 1");
@@ -628,9 +628,10 @@ test("SH14 mutant: withoutDisplay keeping its : makes a kept piece a bad name", 
 const pages = (svc) => Math.ceil((svc.image + (svc.file[8] | (svc.file[9] << 8))) / 256);
 
 test("SH7 size", () => {
-  assert.ok(pages(SHELL) <= 18, `SHELL.SVC in 18 pages: ${SHELL.image} + extra`);
-  assert.ok(SHELL.image + (SHELL.file[8] | (SHELL.file[9] << 8)) <= 4608);
-  assert.equal(sym.RING % 256, 0, "the ring's page aligned");
+  assert.ok(pages(SHELL) <= 11, `SHELL.SVC in 11 pages: ${SHELL.image} + extra`);
+  assert.ok(SHELL.image + (SHELL.file[8] | (SHELL.file[9] << 8)) <= 2816);
+  assert.equal(sym.RING % 128, 0, "the ring on a 128-byte boundary");
+  assert.equal(sym.XEND - sym.RING, 128, "and 128 bytes");
 });
 
 /** The deepest each of the three stacks goes below a service entry's SP, as svc.test.mjs's watch measures. */
@@ -705,7 +706,7 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(0)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "SHELL,GLCD,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3, "the GLCD the console");
-    assert.equal(word(m, 6), 0x9100);
+    assert.equal(word(m, 6), 0x9800);
   }
   {
     const m = glcdBoard(["SHELL.SVC", "MON3.SVC", "GLCD.SVC"]);
@@ -714,7 +715,7 @@ test("SH7 with glcd and mon3", () => {
     m.type("EXIT\r");
     m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 900_000_000, "GLCD.SVC after EXIT");
     assert.equal(names(m), "SHELL,MON3,GLCD");
-    assert.equal(word(m, 6), 0x9100);
+    assert.equal(word(m, 6), 0x9800);
   }
   {
     const m = glcdBoard(["GLCD.SVC"]);
@@ -725,18 +726,18 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(m.mark)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "GLCD,SHELL,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3);
-    assert.equal(word(m, 6), 0x9100);
+    assert.equal(word(m, 6), 0x9800);
   }
 });
 
 test("SH7 tpa figures", () => {
   const m = shelled({ "MON3.SVC": MON3.file });
-  assert.equal(word(m, 6), 0xa700, "SHELL.SVC alone: TPA 42,496");
+  assert.equal(word(m, 6), 0xae00, "SHELL.SVC alone: TPA 44,288");
   at(m, "MON3.SVC", { re: M3 });
-  assert.equal(word(m, 6), 0x9400, "with MON3.SVC: 37,632");
+  assert.equal(word(m, 6), 0x9b00, "with MON3.SVC: 39,424");
   const g = glcdBoard(["SHELL.SVC", "GLCD.SVC"]);
   g.runUntil(() => g.ready() && g.read(g.sym("CONMOD")) === 3, 900_000_000, "the GLCD's prompt");
-  assert.equal(word(g, 6), 0xa400, "with GLCD.SVC: 41,728");
+  assert.equal(word(g, 6), 0xab00, "with GLCD.SVC: 43,520");
 });
 
 test("SH7 mutant: SHELL.SVC declaring 6 on the CCP's stack makes GLCD.SVC?", async () => {
@@ -746,9 +747,9 @@ test("SH7 mutant: SHELL.SVC declaring 6 on the CCP's stack makes GLCD.SVC?", asy
   assert.match(m.text(0), /GLCD\.SVC\?/);
 });
 
-test("SH7 mutant: a 128-byte recall buffer exceeds the eighteen-page limit", async () => {
+test("SH7 mutant: 128 more bytes of the shell's memory exceed the eleven-page limit", async () => {
   const mut = await shellVariant([["STKTOP    EQU   STKBOT+48\n", "STKTOP    EQU   STKBOT+48+128\n"]]);
-  assert.equal(pages(mut), 19);
+  assert.equal(pages(mut), 12);
 });
 
 // --- Pieces, separators and lines ------------------------------------------

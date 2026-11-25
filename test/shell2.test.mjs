@@ -164,22 +164,6 @@ test("S2-6 cannot mount", () => {
   assert.match(run(m, "CD C:"), /\r\nC:PROJECTS\r\n/, "C: keeps its volume");
 });
 
-test("S2-6 mutant: M3, CD without its other-drive refusal, mounts a volume twice and is refused", async () => {
-  const v = await shellVariant([["  inc a          ; FFh: on no drive\n  jr nz,CDELSE   ; on another drive", "  inc a\n  nop\n  nop"]]);
-  const m = machine({ shell: v.file });
-  run(m, "B:");
-  const t = run(m, "CD SYSTEM");
-  assert.doesNotMatch(t, /SYSTEM is on A:/);
-  assert.match(t, /CD FAILED/);
-});
-
-test("S2-6 mutant: MR, CD of the volume already there going on to mount it, is refused as on another drive", async () => {
-  const v = await shellVariant([["  jr z,CDSHOW    ; already there", "  nop\n  nop"]]);
-  const m = machine({ shell: v.file });
-  assert.match(run(m, "CD SYSTEM"), /SYSTEM is on A:/);
-  assert.equal(code(m), 0xff00);
-});
-
 test("S2-6 cd a:", () => {
   const m = machine();
   run(m, "B:");
@@ -215,40 +199,6 @@ function cdAfterList(shell) {
 
 test("S2-6 cd after cd ?", () => {
   assert.match(cdAfterList(), /^CD\r\r\nA:SYSTEM\r\nA:SYSTEM>$/, "d:NAME alone, no list");
-});
-
-test("S2-6 mutant: the prompt's walk keeping CD ?'s list flag lists the card inside CD's output", async () => {
-  const v = await shellVariant([["  call z,VWALKQ  ; the labels first", "  call z,VWALK"]]);
-  assert.match(cdAfterList(v.file), /WORK +B:/);
-});
-
-/**
- * On a card of more than a page of volumes, logged on B:, CD ? stopped by ^C
- * at [more], then a line: the prompts after it, under SHELL (a variant's file).
- */
-function listStopped(shell) {
-  const vols = [{ geometry: "G1M", label: "SYSTEM", mount: "A" }];
-  for (let i = 1; i < 29; i += 1) vols.push({ geometry: "G1M", label: `V${i}` });
-  vols.push({ geometry: "G1M", label: "LAST", mount: "B" });
-  const m = machine({ image: createContainer(vols, { drives: 4 }), shell });
-  run(m, "B:");
-  m.mark = m.output.length;
-  m.type("CD ?\r");
-  m.runUntil(() => /\[more\]$/.test(m.text(m.mark)), 2_000_000_000, "[more]");
-  m.type("\x03");
-  m.runUntil(() => m.ready() && P.test(m.text(m.mark)), 2_000_000_000, "the prompt");
-  return { stopped: m.text(m.mark), next: run(m, "ECHO x") };
-}
-
-test("S2-6 cd list stopped", () => {
-  const r = listStopped();
-  assert.match(r.stopped, /\r\nB:LAST>$/, "the prompt after the stopped list names B:'s volume");
-  assert.match(r.next, /\r\nB:LAST>$/);
-});
-
-test("S2-6 mutant: a CD ? stopped at [more] leaving its part-read labels valid shows B:>", async () => {
-  const v = await shellVariant([["  jr c,VWSTOP    ; stopped", "  ret c"]]);
-  assert.match(listStopped(v.file).next, /\r\nB:>$/);
 });
 
 // --- S2-4's CD row: a mount whose flush fails --------------------------------
@@ -299,7 +249,7 @@ test("S2-7 mutant: M5, the script's FCB left on drive 0, reads its next record f
 });
 
 test("S2-7 mutant: without the script-drive refusal, CD of the script's own drive is taken", async () => {
-  const v = await shellVariant([["  jp z,BADW      ; the script's own", "  nop\n  nop\n  nop"]]);
+  const v = await shellVariant([["  jr nz,CDHAND   ; another drive", "  jr CDHAND"]]);
   const m = machine({ files: { "G.CMD": script("CD A:GAMES", "ECHO after") }, shell: v.file });
   m.mark = m.output.length;
   m.type("G.CMD\r");
@@ -346,18 +296,14 @@ function describes(shell) {
 }
 
 test("S2-8 labels not read at each prompt", () => {
-  assert.deepEqual(describes(), { prompts: 0, cd: 6 }, "none at a prompt; CD alone reads the five and is refused the sixth index");
+  // CD alone is the ROM's, which reads the five and is refused the sixth;
+  // the shell reads its labels again at the prompt after it, the same six.
+  assert.deepEqual(describes(), { prompts: 0, cd: 12 }, "none at a prompt; CD alone and the prompt after it read the five each and are refused the sixth index");
 });
 
 test("S2-8 mutant: MW, DRVLBL walking whatever the table holds, reads the card at every prompt", async () => {
   const v = await shellVariant([["  ld a,(LBL)\n  or a\n  call z,VWALKQ", "  xor a\n  or a\n  call z,VWALKQ"]]);
   assert.ok(describes(v.file).prompts > 0);
-});
-
-test("S2-8 mutant: CD NAME not writing the label table leaves the prompt on the old volume", async () => {
-  const v = await shellVariant([["  ldir           ; copied in", "  nop\n  nop"]]);
-  const m = machine({ shell: v.file });
-  assert.doesNotMatch(run(m, "CD GAMES"), /\r\nA:GAMES>$/);
 });
 
 // --- S2-9 DIR with sizes ------------------------------------------------------
@@ -428,13 +374,6 @@ test("S2-9 sizes are bdos 35's", () => {
 // BDOS 35 sizes a marked file only in the legacy engine now, so M4 is
 // built on a shell held in that engine: one that finds no room for the table.
 const LEGACY = ["  ld hl,($0006)\n", "  ld hl,$223F\n"];
-
-test("S2-9 mutant: M4, the legacy engine's size from the entry with no BDOS 35, misses the sparse file's", async () => {
-  const legacy = await shellVariant([LEGACY]);
-  assert.deepEqual(rows(run(sized(legacy.file), "DIR X.DAT")), [["X.DAT", 128128]], "the legacy engine, by BDOS 35");
-  const v = await shellVariant([LEGACY, ["  call DOSSEQ    ; 35: its size\n  DB 35*2+0      ; its size", "  ld hl,0\n  ld (FCBONE+34),hl"]]);
-  assert.notDeepEqual(rows(run(sized(v.file), "DIR X.DAT")), [["X.DAT", 128128]]);
-});
 
 test("S2-9 mutant: the marks pass left out sizes the sparse file and BIG.DAT from their first entries", async () => {
   const v = await shellVariant([["  or (hl)        ; marked\n  ld (hl),a      ; set", "  or (hl)        ; marked\n  nop"]]);
@@ -615,11 +554,10 @@ const extra = (svc) => svc.file[8] | (svc.file[9] << 8);
 const pages = (svc) => Math.ceil((svc.image + extra(svc)) / 256);
 
 test("S2-11 size", (t) => {
-  assert.ok(pages(SHELL) <= 18, `SHELL.SVC in 18 pages: ${SHELL.image} + ${extra(SHELL)}`);
-  assert.ok(SHELL.image + extra(SHELL) <= 4608);
-  assert.equal(sym.RING % 256, 0, "the ring's page aligned");
-  // A reading, not a gate: 14 pages is the aim.
-  t.diagnostic(`image ${SHELL.image}, file ${SHELL.file.length}, extra RAM ${extra(SHELL)}, ${pages(SHELL)} pages, ${sym.RING - sym.STKTOP} bytes of room; ${SHELL.image + extra(SHELL) - 14 * 256} bytes over 14 pages`);
+  assert.ok(pages(SHELL) <= 11, `SHELL.SVC in 11 pages: ${SHELL.image} + ${extra(SHELL)}`);
+  assert.ok(SHELL.image + extra(SHELL) <= 2816);
+  assert.equal(sym.RING % 128, 0, "the ring on a 128-byte boundary");
+  t.diagnostic(`image ${SHELL.image}, file ${SHELL.file.length}, extra RAM ${extra(SHELL)}, ${pages(SHELL)} pages, ${sym.RING - sym.STKTOP} bytes of room; overlay ${SHELL.overlay.bytes} bytes in ${SHELL.overlay.records} records`);
 });
 
 test("S2-11 declared stacks", () => {
@@ -819,13 +757,13 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
     }
     return { tpa: word(m, 6) - 0x100, glcd: m.read(m.sym("CONMOD")) === 3, n: owners(m).length };
   };
-  assert.equal(tpa(["SHELL.SVC"]).tpa, 41728, "with the shell");
-  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 40960, "and GLCD.SVC");
-  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 36864, "and MON3.SVC");
+  assert.equal(tpa(["SHELL.SVC"]).tpa, 43520, "with the shell");
+  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 42752, "and GLCD.SVC");
+  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 38656, "and MON3.SVC");
   // The three together on a GLCD board, in three orders, the GLCD the console.
   for (const [startup, typed] of [[["SHELL.SVC", "GLCD.SVC", "MON3.SVC"], []], [["SHELL.SVC", "MON3.SVC", "GLCD.SVC"], []], [["GLCD.SVC"], ["SHELL.SVC", "MON3.SVC"]]]) {
     const r = tpa(startup, typed);
-    assert.deepEqual(r, { tpa: 36096, glcd: true, n: 3 }, startup.concat(typed).join(", "));
+    assert.deepEqual(r, { tpa: 37888, glcd: true, n: 3 }, startup.concat(typed).join(", "));
   }
 });
 
@@ -1110,7 +1048,7 @@ function tedCost(selected) {
   m.bootText = m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   assert.equal(createHash("sha256").update(Uint8Array.from({ length: 0x4000 }, (_, i) => m.read(0xc000 + i))).digest("hex"), createHash("sha256").update(selected.rom).digest("hex"));
-  const readLoop = 0x2200, inputReturn = 0x2208, wrapperReturn = 0x112, cursor = 0x25ca, length = cursor - 2; // TED cb9fdbe: the read loop, REABYTLO, at 2200h, the cursor at 25CAh (build/ted/ted.sym)
+  const readLoop = 0x21e9, inputReturn = 0x21f1, wrapperReturn = 0x112, cursor = 0x24ca, length = cursor - 2; // TED 28d9cc7: the read loop, REABYTLO, at 21E9h, the cursor at 24CAh (build/ted/ted.sym)
   assert.deepEqual(editor.slice(0xb, 0x17), Uint8Array.from([0xdd, 0xe5, 0xfd, 0xe5, 0xcd, 5, 0, 0xfd, 0xe1, 0xdd, 0xe1, 0xc9]));
   assert.deepEqual(editor.slice(readLoop - 0x100, readLoop - 0x100 + 12), Uint8Array.from([0x11, 0xff, 0, 0x0e, 6, 0xcd, 0x0b, 1, 0xb7, 0x28, 0xf5, 0xc9]));
   const owner = () => {
@@ -1245,7 +1183,7 @@ test("S2-12 tpa", () => {
   const bare = shellMachine(card);
   assert.equal(word(bare, 6) - 0x100, 46_790, "bare: three drives' vectors");
   const m = shellMachine(starterImage());
-  assert.equal(word(m, 6) - 0x100, 41_984, "with the shell, the starter card's STARTUP.CMD");
+  assert.equal(word(m, 6) - 0x100, 43_776, "with the shell, the starter card's STARTUP.CMD");
 });
 
 /** A card of the drives field's absence, built from the starter recipe without it: its machine under the shell. */

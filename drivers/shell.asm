@@ -893,8 +893,7 @@ PGCOL EQU PGLINE+1
 PGROWS EQU PGCOL+1
 PGWID EQU PGROWS+1
 CFCB EQU PGWID+1
-SFCB EQU CFCB+36
-LBUF EQU SFCB+36
+LBUF EQU CFCB+36
 LTXT EQU LBUF+2
 
 ; LBL holds each drive's volume label,
@@ -914,9 +913,14 @@ DSLBL     EQU   CFCB+16
 
 CFEX      EQU   CFCB+12
 
+; SFCB lies under the stack: nothing but
+; an open script writes it, so a guard
+; laid there reads any overrun.
+
 LBL       EQU   LBUF+130
 VIDX      EQU   LBL+44
-STKBOT    EQU   VIDX+1
+SFCB      EQU   VIDX+1
+STKBOT    EQU   SFCB+36
 STKTOP    EQU   STKBOT+48
 
 ; The ring is the last 128 bytes, on a

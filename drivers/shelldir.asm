@@ -3,7 +3,8 @@
 ; Included by shell.asm, whose LINE
 ; enters CMDDIR with HL after its word.
 
-; DIR /W is the ROM's wide listing. DIR
+; DIR /W, the ROM's wide listing, goes
+; to the ROM before the overlay. DIR
 ; [d:][name] lists each match not
 ; hidden, one a row: its name and its
 ; size, the maximum end record times
@@ -15,19 +16,6 @@
 
 CMDDIR:
   call SKIPSP    ; to the operand
-  ld a,(hl)
-  cp '/'         ; a switch?
-  jr nz,DR0      ; no switch
-  inc hl
-  ld a,(hl)      ; its letter
-  dec hl
-  and $DF        ; w or W
-  cp 'W'         ; another is a bad
-  jr nz,DR0      ; name, refused there
-  ld (hl),SPACE  ; /W blanked: the
-  inc hl         ; ROM's DIR runs
-  ld (hl),SPACE  ; the rest
-  jp HAND        ; to the ROM
 
 ; The pattern into CFCB: every name if
 ; none, on the drive named or the

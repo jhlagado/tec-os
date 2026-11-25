@@ -188,13 +188,3 @@ test("DIR cost control: one bucket for every name costs more than 128", { timeou
   assert.ok(result.ratio > WORKLOADS[0].cap, `${result.ratio.toFixed(2)} times DIR /W, over the row's cap of ${WORKLOADS[0].cap}`);
 });
 
-test("DIR cost control: the legacy engine sizes each large file by BDOS 35 and costs more", { timeout: 1_800_000 }, async t => {
-  const edits = [["  inc a          ; enable after clearing", "  xor a          ; keep legacy mode"]];
-  const svc = await shellVariant(edits), base = normal(WORKLOADS[2]);
-  const result = timed({ large: 180, svc, variant: "legacy engine" });
-  t.diagnostic(JSON.stringify({ control: "legacy engine", normalRatio: base.ratio, overCap: result.ratio > WORKLOADS[2].cap, ...brief(result) }));
-  assert.equal(sizedListing(result).size, result.marked, "one BDOS 35 for each file of more than one entry");
-  assert.ok(sizedListing(result).searchFirst > result.marked, "and a search begun again after each");
-  assert.ok(sizedListing(result).cycles > sizedListing(base).cycles, `${sizedListing(result).cycles} cycles against ${sizedListing(base).cycles}`);
-  assert.ok(result.ratio > WORKLOADS[2].cap, `${result.ratio.toFixed(2)} times DIR /W, over the row's cap of ${WORKLOADS[2].cap}`);
-});

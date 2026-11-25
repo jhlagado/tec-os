@@ -48,7 +48,28 @@ UNA1:
 ; its word, at its entry in the
 ; overlay's table.
 
+; DIR /W is the ROM's wide listing, as
+; with no shell: the switch blanked, the
+; ROM runs the rest, with no overlay.
+
 OVDIR:
+  push hl        ; the operand
+  call SKIPSP
+  cp '/'         ; a switch?
+  jr nz,OVD1     ; no switch
+  inc hl
+  ld a,(hl)      ; its letter
+  dec hl
+  and $DF        ; w or W
+  cp 'W'         ; another is a bad
+  jr nz,OVD1     ; name, refused there
+  ld (hl),SPACE  ; /W blanked: the
+  inc hl         ; ROM's DIR runs
+  ld (hl),SPACE  ; the rest
+  jp HAND        ; to the ROM
+
+OVD1:
+  pop hl
   xor a          ; DIR, entry 0
   jr OVLOAD
 
