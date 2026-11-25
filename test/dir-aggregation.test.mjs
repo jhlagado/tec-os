@@ -106,13 +106,18 @@ function list(m, line = "DIR B:", { via = "serial", hook } = {}) {
   }
 }
 
+// The TPA past the table, but for the overlay's records at 2300h, which DIR
+// reads in before it runs: the first address that changed, or -1.
 function tableGuard(m) {
-  const end = word(m, 6);
-  assert.ok(m.classicBankIn && end >= 0x2240);
+  const end = word(m, 6), ov = SHELL.overlay, ovEnd = ov.base + ov.records * 128;
+  assert.ok(m.classicBankIn && end >= ovEnd);
   for (let a = 0x100; a < end; a++) m.write(a, 0xa5);
-  const body = Buffer.from(Array.from({ length: end - 0x2240 }, (_, i) => m.read(0x2240 + i)));
+  const outside = () => {
+    for (let a = 0x2240; a < end; a++) if ((a < ov.base || a >= ovEnd) && m.read(a) !== 0xa5) return a;
+    return -1;
+  };
   return () => {
-    assert.deepEqual(Buffer.from(Array.from({ length: end - 0x2240 }, (_, i) => m.read(0x2240 + i))), body, "table never reaches the rest of the TPA");
+    assert.equal(outside(), -1, "table and overlay never reach the rest of the TPA");
     assert.ok([0x100, 0x101, ...Array.from({ length: 0x2b }, (_, i) => 0x115 + i)].every(a => m.read(a) === 0xa5), "unused header bytes remain untouched");
   };
 }
