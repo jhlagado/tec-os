@@ -502,7 +502,12 @@ UNMORE: DB CR,"      ",CR,'$'
 ; the ROM erases that line, then copies
 ; this one over it, byte for byte in
 ; place. The ring holds zero-ended
-; lines; HPOS ends the one shown.
+; lines; HPOS ends the one shown. The
+; ring is 128 bytes on a 128-byte
+; boundary, so each step of L is
+; followed by HFIX, which puts bit 7
+; back to the ring's: SET 7,L or RES
+; 7,L.
 
 HREC:
   ld h,HIGH(RING)
@@ -514,8 +519,10 @@ HREC:
   call HSTART    ; this line's start
   dec l          ; the older line's zero
   dec l
+  DB $CB,HFIX
   ld a,(hl)      ; its last byte, or 0
   inc l          ; L at its zero
+  DB $CB,HFIX
   or a           ; another line?
   scf
   ret z          ; no older line
@@ -529,6 +536,7 @@ HRNEW:
 
 HRNEW1:
   inc l          ; the next line's
+  DB $CB,HFIX
   ld a,(hl)      ; end, at its zero
   or a
   jr nz,HRNEW1   ; to the next's end
@@ -547,6 +555,7 @@ HRC:
   ld (de),a      ; copied out
   inc de
   inc l          ; within the ring
+  DB $CB,HFIX
   jr HRC
 
 HRE:
@@ -560,24 +569,32 @@ HRE:
 
 HSTART:
   dec l          ; the byte before
+  DB $CB,HFIX
   ld a,(hl)
-  inc l
   or a           ; its zero?
-  ret z          ; the zero before it
-  dec l          ; go back one
-  jr HSTART
+  jr nz,HSTART   ; go back one
+  inc l          ; the line's first
+  DB $CB,HFIX
+  ret
 
 ; HSTORE, on the BDOS's stack: DE = a
 ; typed line, B = its length. Store it
 ; unless it holds a zero or repeats the
 ; newest, then clear the oldest lines
-; it overwrote.
+; it overwrote. A line of 127, the
+; buffer's most, is not kept: with its
+; zero it would fill the ring and cover
+; the zero that ends the clearing.
 
 HSTO:
+  ld a,b
+  cp 127         ; the whole ring?
+  ret nc         ; too long to keep
   ld h,HIGH(RING)
   ld a,(HHEAD)   ; the newest's
   dec a
   ld l,a         ; the newest's zero
+  DB $CB,HFIX
   call HSTART    ; its start
   push de        ; the line
   push bc        ; its length, in B
@@ -594,14 +611,17 @@ HSCMP:
 HSCMP1:
   inc de
   inc l
+  DB $CB,HFIX
   djnz HSCMP     ; all B bytes
 
 ; Equal only if no byte differed and
-; the newest ends where the line does.
+; the newest ends where the line does,
+; its seven low bits being enough.
 
   ld a,(HHEAD)   ; the newest's end
   dec a
-  sub l          ; at L?
+  xor l          ; at L?
+  and $7F
   or c           ; and no difference
   jr z,HSKEEP    ; a repeat
   pop bc         ; the length
@@ -614,9 +634,11 @@ HSPUT:
   ld (hl),a      ; the line, wrapping
   inc de
   inc l
+  DB $CB,HFIX
   djnz HSPUT
   ld (hl),0      ; its zero
   inc l          ; past the zero
+  DB $CB,HFIX
   ld a,l         ; the new head
   ld (HHEAD),a   ; the next store
 
@@ -627,6 +649,7 @@ HSCLR:
   ld a,(hl)      ; a stale byte
   ld (hl),0      ; cleared
   inc l
+  DB $CB,HFIX
   or a           ; its zero?
   jr nz,HSCLR
   ret

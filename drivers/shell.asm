@@ -80,6 +80,8 @@ INIT:
   ld bc,CLRLEN
   ld (hl),0      ; all zero
   ldir
+  ld a,LOW(RING) ; the ring's first
+  ld (HHEAD),a   ; byte: the next store
   ld hl,EXRDY
   set 0,(hl)     ; ready, bit 1 kept
   ld hl,0        ; no records
@@ -919,11 +921,14 @@ HMAP      EQU   DPASS+1
 STKBOT    EQU   HMAP+16
 STKTOP    EQU   STKBOT+48
 
-; The ring is the last page, aligned so
-; that a byte offset in L wraps within
-; it.
+; The ring is the last 128 bytes, on a
+; 128-byte boundary: L keeps its offset
+; and HFIX, SET 7,L or RES 7,L, the
+; second byte of a CB instruction, puts
+; back the ring's bit 7 after each step.
 
-RING EQU ((STKTOP+255)/256)*256
-XEND EQU RING+256
+RING EQU ((STKTOP+127)/128)*128
+XEND EQU RING+128
+HFIX EQU $BD+(LOW(RING)/128)*64
 XTRA EQU XEND-IMGEND
 CLRLEN EQU XEND-VARS-1

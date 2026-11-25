@@ -1,5 +1,5 @@
 // Command-line history at the prompt, moved from the CCP to SHELL.SVC:
-// the ring in the shell's own last page, ^W and ^N, through the
+// the 128-byte ring at the end of the shell's memory, ^W and ^N, through the
 // ROM's HREC and HSTORE calls. Emulator evidence, on the serial console.
 
 import { test } from "node:test";
@@ -22,18 +22,18 @@ function held(m) {
 
 /** The ring's lines from the newest back, read from the shell's pages. */
 function lines(m) {
-  const page = pageOf(m);
-  const ring = Uint8Array.from({ length: 256 }, (_, i) => m.read(page + SHELL.symbols.RING + i));
-  const head = m.read(page + SHELL.symbols.HHEAD);
+  const page = pageOf(m), size = SHELL.symbols.XEND - SHELL.symbols.RING, w = size - 1;
+  const ring = Uint8Array.from({ length: size }, (_, i) => m.read(page + SHELL.symbols.RING + i));
+  const head = (m.read(page + SHELL.symbols.HHEAD) - SHELL.symbols.RING) & w;
   const out = [];
-  let p = (head - 1) & 0xff;
-  while (ring[(p - 1) & 0xff] !== 0 && out.length < 256) {
-    let q = (p - 1) & 0xff;
-    while (ring[(q - 1) & 0xff] !== 0) q = (q - 1) & 0xff;
+  let p = (head - 1) & w;
+  while (ring[(p - 1) & w] !== 0 && out.length < size) {
+    let q = (p - 1) & w;
+    while (ring[(q - 1) & w] !== 0) q = (q - 1) & w;
     let t = "";
-    for (let i = q; i !== p; i = (i + 1) & 0xff) t += String.fromCharCode(ring[i]);
+    for (let i = q; i !== p; i = (i + 1) & w) t += String.fromCharCode(ring[i]);
     out.push(t);
-    p = (q - 1) & 0xff;
+    p = (q - 1) & w;
   }
   return out;
 }
@@ -99,9 +99,18 @@ test("SH11 over many lines the ring wraps and every recall is a whole line", () 
     if (stored[stored.length - 1] !== t) stored.push(t);
     const want = [];
     let used = 1;
-    for (let i = stored.length - 1; i >= 0 && (used += stored[i].length + 1) <= 256; i -= 1) want.push(stored[i]);
+    for (let i = stored.length - 1; i >= 0 && (used += stored[i].length + 1) <= 128; i -= 1) want.push(stored[i]);
     assert.deepEqual(lines(m), want, `after ${JSON.stringify(t)}`);
   }
+});
+
+test("SH11 a line of 126 fills the ring with its zero and is kept; one of 127 is not", () => {
+  const long = "z" + "y".repeat(125);
+  const m = session(["dir", long]);
+  assert.deepEqual(lines(m), [long], "126 and its zero: the whole ring, dir overwritten");
+  m.command("stat");
+  m.command("z" + "x".repeat(126));
+  assert.deepEqual(lines(m), ["stat"], "127 not kept, and the ring stays whole");
 });
 
 test("SH11 a line repeated, a line holding a 0 and an empty line are not stored", () => {
