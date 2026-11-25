@@ -13,9 +13,9 @@
     },
     "TED.COM": {
       "env": "TED_COM",
-      "default": "../thorium/dist/TED.COM",
-      "source": "jhlagado/thorium dc0cd0f, dist/TED.COM",
-      "repo": "jhlagado/thorium",
+      "default": "../ted/dist/TED.COM",
+      "source": "jhlagado/ted dc0cd0f, dist/TED.COM",
+      "repo": "jhlagado/ted",
       "commit": "dc0cd0f991aad439c78ed8b7d541afa88dff16c0",
       "path": "dist/TED.COM",
       "bytes": 12328,

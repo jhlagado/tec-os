@@ -78,11 +78,11 @@ page; no test here drives a browser. `playwright` stays pinned in
 `web/` page that `npm start` serves; `npx playwright install chromium` fetches
 the browser that version expects.
 
-Assembly, media and tests select each application input, TED and TAS from
-Thorium and `BAZA.COM`, `BAZA.RTL` and `BOUNCE.BAS` from Baza, from an
+Assembly, media and tests select each application input, TED from TED, TAS
+from TAS and `BAZA.COM`, `BAZA.RTL` and `BOUNCE.BAS` from Baza, from an
 explicit `TED_COM`, `TAS_COM`, `BAZA_COM`, `BAZA_RTL` or `BOUNCE_BAS`, then
-`.inputs/NAME`, then the legacy sibling paths `../thorium/dist/TED.COM`,
-`../thorium/dist/TAS.COM`, `../baza/dist/BAZA.COM`, `../baza/dist/BAZA.RTL`
+`.inputs/NAME`, then the sibling paths `../ted/dist/TED.COM`,
+`../tas/dist/TAS.COM`, `../baza/dist/BAZA.COM`, `../baza/dist/BAZA.RTL`
 and `../baza/examples/BOUNCE.BAS`. `npm run media` needs all five to build
 the card. Baza's repository is private: without access to it, put the three
 pinned files, from someone who has it, in `.inputs/`. A selected override
@@ -182,7 +182,7 @@ Enter retry before normal commands resume
 ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
-`TED X.ASM!TAS X &X`. TED, from Thorium `dc0cd0f` (`TED.COM`
+`TED X.ASM!TAS X &X`. TED, from TED `dc0cd0f` (`TED.COM`
 `ae37d995`, 12,328 bytes), stops a file name and `TED.PRJ`'s `ARGS` at the
 same `!` and `&`, so a project's `ARGS X &Y` gives ^T R's program the tail
 ` X` and runs nothing after it.
