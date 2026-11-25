@@ -85,7 +85,7 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
     "SNAKE9.BIN": sha(snake.bytes),
     // Compiled by the pinned BAZA as the card is built: the Caverns record's, and Bounce's.
     "CAVERNS.COM": caverns.comSha256,
-    "BOUNCE.COM": "fa7c30104ea434e3f10c5bc0f350980f887e038d86a13f5fe8dba8ffc90d48ef",
+    "BOUNCE.COM": "0b2f199990302fea3a718cee40ea83e181e66ec0673efed836f6647f1af5a745",
   };
   const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
   const themes = {
@@ -168,7 +168,7 @@ function bounceRound(card) {
   const com = Buffer.from(volume(card, "A").read("BOUNCE.COM"));
   // The adapted source's compiled length and hash, retaken from the build.
   assert.equal(com.length, 16000, "adapted BOUNCE.COM's length");
-  assert.equal(sha(com), "fa7c30104ea434e3f10c5bc0f350980f887e038d86a13f5fe8dba8ffc90d48ef", "adapted BOUNCE.COM as the pinned BAZA compiles it");
+  assert.equal(sha(com), "0b2f199990302fea3a718cee40ea83e181e66ec0673efed836f6647f1af5a745", "adapted BOUNCE.COM as the pinned BAZA compiles it");
   m.enqueueInput("bounce\r", "matrix");
   m.runUntil(() => (m.pumpInput(), !m.pending?.length), 50_000_000, "the command line");
   run(150_000_000);

@@ -24,32 +24,32 @@
     "BAZA.COM": {
       "env": "BAZA_COM",
       "default": "../baza/dist/BAZA.COM",
-      "source": "jhlagado/baza 4204b18 (distribution for 5732c4c), dist/BAZA.COM",
+      "source": "jhlagado/baza be3370c, dist/BAZA.COM",
       "repo": "jhlagado/baza",
-      "commit": "4204b18f44f1f87f2eddf624bb53558854f0cc4a",
+      "commit": "be3370cb941fea1155b10e1bc2b1f74f9459b426",
       "path": "dist/BAZA.COM",
       "bytes": 13440,
-      "sha256": "6af11dc2733468c796079f45368d1678d204177da2a4a08fa852cefb1e50ef72"
+      "sha256": "2ff0cabe4bb96f0339915d7b6de870668ecb50541faa0f0645b0e15a2548cea1"
     },
     "BAZA.RTL": {
       "env": "BAZA_RTL",
       "default": "../baza/dist/BAZA.RTL",
-      "source": "jhlagado/baza c49f477, dist/BAZA.RTL",
+      "source": "jhlagado/baza be3370c, dist/BAZA.RTL",
       "repo": "jhlagado/baza",
-      "commit": "c49f477e0e2138c46fa6e84f0bb158874733d692",
+      "commit": "be3370cb941fea1155b10e1bc2b1f74f9459b426",
       "path": "dist/BAZA.RTL",
       "bytes": 13056,
-      "sha256": "421a43b94ef6b1ac2c0024ee5ef5317e0eb56428a40472c39f28f670b80111a8"
+      "sha256": "d64b80244995be3dc46acb8614fe7ef7babc5d0671189c3ce818dccc4c8a9376"
     },
     "BAZ.COM": {
       "env": "BAZ_COM",
       "default": "../baza/dist/BAZ.COM",
-      "source": "jhlagado/baza 8655d81, dist/BAZ.COM",
+      "source": "jhlagado/baza be3370c, dist/BAZ.COM",
       "repo": "jhlagado/baza",
-      "commit": "8655d81392050ef673103e04f888d7e5c34ea2b9",
+      "commit": "be3370cb941fea1155b10e1bc2b1f74f9459b426",
       "path": "dist/BAZ.COM",
       "bytes": 20864,
-      "sha256": "b4bceb5b77015082fe5f4549e9648e1bbfc1e365da98b460a0bc75c6f61ef89b"
+      "sha256": "bad83af9f2e4dfaa35079e621d08be4872c3c75b6fc051c6d30f174baf71d63b"
     },
     "BOUNCE.BAS": {
       "env": "BOUNCE_BAS",

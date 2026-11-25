@@ -780,7 +780,7 @@ function onStarter(command, { logged = "B" } = {}) {
     assert.equal(file.length, 4096); assert.deepEqual(file, putBytes(16), "all sixteen pages hold PUT's known bytes");
   } else {
     assert.match(text, /COM written\r\n/); assert.equal(file.length, 16000);
-    assert.equal(sha(file), "fa7c30104ea434e3f10c5bc0f350980f887e038d86a13f5fe8dba8ffc90d48ef", "the complete pinned compiler result (BOUNCE.BAS lines 40, 50 and 170 call GLYPH)");
+    assert.equal(sha(file), "0b2f199990302fea3a718cee40ea83e181e66ec0673efed836f6647f1af5a745", "the complete pinned compiler result (BOUNCE.BAS lines 40, 50 and 170 call GLYPH)");
   }
   for (const c of t.commits) {
     assert.ok(c.published.length <= file.length);
