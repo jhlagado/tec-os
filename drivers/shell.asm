@@ -542,7 +542,8 @@ SBDOT:
   jr SBDOT
 
 SBLOOK:
-  call CPCHK     ; no empty/wildcard name
+  call UNAMBIG   ; no empty/wildcard name
+  jp c,BADW
   call SETDMA
   ld hl,SBEXT
   call SBPROBE

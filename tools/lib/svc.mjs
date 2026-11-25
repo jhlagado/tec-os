@@ -205,6 +205,14 @@ export function packShell(at1, at2, symbols, name, opts = {}) {
   if (at1.length !== ovEnd - 0x100 || at2.length !== ovEnd - 0x200) throw new Error(`${name}: bytes after OVEND`);
   if (at1.subarray(imgEnd, base - 0x100).some((b) => b !== 0)) throw new Error(`${name}: bytes between IMGEND and OVBASE`);
   const fixups = fixupsOf(res1, res2, DHLEN, name);
+  // The resident part never calls or jumps to an overlay label: the overlay
+  // is there only while one of its commands runs.
+  const ovLabels = new Map(Object.entries(symbols).filter(([, v]) => v > base + 2 && v < ovEnd).map(([k, v]) => [v, k]));
+  const branch = new Set([0xc3, 0xcd, 0xc2, 0xca, 0xd2, 0xda, 0xe2, 0xea, 0xf2, 0xfa, 0xc4, 0xcc, 0xd4, 0xdc, 0xe4, 0xec, 0xf4, 0xfc]);
+  for (let i = DHLEN; i + 2 < res1.length; i += 1) {
+    const to = res1[i + 1] | res1[i + 2] << 8;
+    if (branch.has(res1[i]) && ovLabels.has(to)) throw new Error(`${name}: the resident part branches to the overlay's ${ovLabels.get(to)} at ${(i + 0x100).toString(16)}h`);
+  }
   const at0 = Uint8Array.from(res1);
   for (const f of fixups) at0[f + DHLEN] -= 1;
   const marks = fixupsOf(ov1, ov2, 3, `${name} overlay`).map((f) => f + 3);

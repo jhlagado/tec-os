@@ -218,29 +218,6 @@ CPWRITE: DB "WRITE ERROR$"
 CPCLOSE: DB "CLOSE ERROR$"
 CPCOPIED: DB "COPIED $"
 
-; Carry if the FCB at FCBBASE has no
-; name, or a ? in its name or type.
-; HL and BC are kept.
-
-UNAMBIG:
-  push hl
-  push bc
-  ld hl,(FCBBASE)
-  inc hl
-  ld a,(hl)      ; the name's first
-  cp SPACE       ; blank: no name
-  jr z,UNA1      ; no name: Z, carry
-  ld bc,11       ; name and type
-  ld a,'?'       ; wild?
-  cpir           ; Z if a ? is found
-
-UNA1:
-  pop bc         ; restore
-  pop hl
-  scf            ; Z: carry, refused
-  ret z          ; refused
-  or a           ; NZ: clear carry
-  ret
 
 ; A, 0 to 99, in decimal, with no
 ; leading zero: a service's pages,

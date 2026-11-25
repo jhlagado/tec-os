@@ -917,7 +917,6 @@
     "CPPARSE",
     "ENDCHK",
     "DOSSEQ",
-    "UNAMBIG",
     "PUTDEC8",
     "PUTHEX"
   ],
@@ -976,6 +975,7 @@
   ],
   "drivers/shellovl.asm": [
     "PARSEFCB",
+    "UNAMBIG",
     "OVDIR",
     "OVLOAD",
     "OVBACK"
