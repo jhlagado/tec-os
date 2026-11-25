@@ -299,70 +299,70 @@
     {
       "input": "COPY",
       "output": "COPY\r\r\nCOPY?\r\n\r\nA:SYSTEM>",
-      "calls": "59ec5295c2beacc784d7ec1f51dfd47fcdde171517de6065673c6b40826388be",
+      "calls": "3b558433d3f063bf0be1c1aabb4380ae8a5a9d07bcb50d5a8030a2467a9998eb",
       "peak": 12,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT",
       "output": "COPY HELLO.TXT\r\r\nCOPY?\r\n\r\nA:SYSTEM>",
-      "calls": "59ec5295c2beacc784d7ec1f51dfd47fcdde171517de6065673c6b40826388be",
+      "calls": "3b558433d3f063bf0be1c1aabb4380ae8a5a9d07bcb50d5a8030a2467a9998eb",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY <",
       "output": "COPY <\r\r\nCOPY?\r\n\r\nA:SYSTEM>",
-      "calls": "59ec5295c2beacc784d7ec1f51dfd47fcdde171517de6065673c6b40826388be",
+      "calls": "3b558433d3f063bf0be1c1aabb4380ae8a5a9d07bcb50d5a8030a2467a9998eb",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT <",
       "output": "COPY HELLO.TXT <\r\r\nCOPY?\r\n\r\nA:SYSTEM>",
-      "calls": "59ec5295c2beacc784d7ec1f51dfd47fcdde171517de6065673c6b40826388be",
+      "calls": "3b558433d3f063bf0be1c1aabb4380ae8a5a9d07bcb50d5a8030a2467a9998eb",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT HELLO.TXT",
       "output": "COPY HELLO.TXT HELLO.TXT\r\r\nCOPY?\r\n\r\nA:SYSTEM>",
-      "calls": "59ec5295c2beacc784d7ec1f51dfd47fcdde171517de6065673c6b40826388be",
+      "calls": "3b558433d3f063bf0be1c1aabb4380ae8a5a9d07bcb50d5a8030a2467a9998eb",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY NOFILE.TXT B:",
       "output": "COPY NOFILE.TXT B:\r\r\nNO SOURCE\r\n\r\nA:SYSTEM>",
-      "calls": "6b384a1c3e63dcd8b794e2521c7c9270579cbf82077be3f7bf46298eb29a03f7",
+      "calls": "e51596510386b61f6d2c8e38eb6da98a5b095418855953fcab4105631489ba88",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT C:",
       "output": "COPY HELLO.TXT C:\r\r\n\r\nBdos Err On C: R/O\r\nA:SYSTEM>",
-      "calls": "9d8b35c01b763c0ce3ef5a85c5c948f91dc7a0d2083f23e18bc08bffa6c352a0",
+      "calls": "3d0d202c2928721b60f55db26fdb28f51400d6f5415432dbdc5061215117d005",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY BIG.BIN B:",
       "output": "COPY BIG.BIN B:\r\r\nWRITE ERROR\r\n\r\nA:SYSTEM>",
-      "calls": "0cedb37f230a786e101a3a3bf760f77c6b987f57bf9d389b55e60954e490983d",
+      "calls": "a35436a101013a4bea5ba987a249b79b17d13d3cc50cdb53f17e98653a3164b7",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT B:SMALL.TXT",
       "output": "COPY HELLO.TXT B:SMALL.TXT\r\r\nWRITE ERROR\r\n\r\nA:SYSTEM>",
-      "calls": "4c3aab6532f9f525b468f54d3bf27a104d8245ceeb91f55e97eb56a813711ee1",
+      "calls": "9cf09d60949dd0a4cf24055a4906c16b5ff0e79b9199928929fbbfb068001f95",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT D:",
       "output": "COPY HELLO.TXT D:\r\r\nCANNOT MAKE DEST\r\n\r\nA:SYSTEM>",
-      "calls": "73b2b769b6785d161723aab96799702d59f688fa90efb31ff35a5d4ac802d999",
+      "calls": "f049abb2b717ac3bb0cc36199e457e8f1d45803fdf3683ac3fe3907b26ffed14",
       "peak": 16,
       "shell": true
     }
@@ -374,5 +374,6 @@
       "calls": "84c8fe94a2e1e9ced5fe297c559b9e663952583b856f4d69fee368a942523ef5",
       "peak": 14
     }
-  ]
+  ],
+  "shellCalls": "The shell rows' calls are re-recorded at the 11-page shell, whose COPY reads its overlay through the BDOS before its own calls, with the shell's FCBs at new addresses. Their outputs are those first recorded, unchanged."
 }
