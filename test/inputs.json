@@ -21,6 +21,16 @@
       "bytes": 12356,
       "sha256": "6a462b5bb89062f182896eafd2d3e8046f8e89af5b7825e2ffc1582db2f32271"
     },
+    "TEDP.COM": {
+      "env": "TEDP_COM",
+      "default": "../ted/dist/TEDP.COM",
+      "source": "jhlagado/ted fc2e652, dist/TEDP.COM",
+      "repo": "jhlagado/ted",
+      "commit": "fc2e652438acaade869eb75d4718bde2cc3c537b",
+      "path": "dist/TEDP.COM",
+      "bytes": 14919,
+      "sha256": "509560a0de3063ee624f957ea172aa1604a73ba371ace0b4f66a54cd3ec41ea7"
+    },
     "BAZA.COM": {
       "env": "BAZA_COM",
       "default": "../baza/dist/BAZA.COM",
