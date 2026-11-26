@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkCompactSource } from '../tools/lib/style-compact.mjs';
+import { checkCompactSource, checkNames } from '../tools/lib/style-compact.mjs';
 
 const source = [
   '; Load the byte.',
@@ -18,6 +18,7 @@ test('compact layout checks routine headers and preserves literal case', () => {
   assert.deepEqual(rules(source), []);
   assert.ok(rules(source.replace('; Load the byte.\n', '')).includes('header'));
   assert.ok(rules(source.replace("ld a,'A'", "LD A,'A'")).includes('case'));
+  assert.deepEqual(rules(source.replace('INNER:', 'kbInner:')), [], 'a camel case label (MD-16)');
   assert.ok(rules(source.replace('  ret', '\tret')).includes('spaces'));
   assert.ok(rules(source.replace(/ +; done/, ' ; done')).includes('column'));
   assert.ok(rules(source.replace('\n\nINNER:', '\nINNER:')).includes('blank'));
@@ -93,4 +94,11 @@ test('the source cap remains 24576 bytes with one byte over refused', () => {
   assert.equal(Buffer.byteLength(text), 24576);
   assert.deepEqual(check(text), []);
   assert.ok(check(text+'x').includes('size'));
+});
+
+test('Names (MD-16): camel case code, lowercase private labels, Pascal case data, capital constants', () => {
+  const good = ['seek:', '  ret', '', 'kbSeek:', '', '.loop:', '  ret', 'KbTails: DB 1', 'HIST_LEN EQU 96', 'CR EQU 13'].join('\n');
+  assert.deepEqual(checkNames(good), []);
+  const bad = ['Seek:', '  ret', '', '.Loop:', '  ret', 'KBTAILS: DB 1', 'kbTails: DB 1', 'HistLen EQU 96'].join('\n');
+  assert.deepEqual(checkNames(bad).map((f) => f.line), [1, 4, 6, 7, 8]);
 });

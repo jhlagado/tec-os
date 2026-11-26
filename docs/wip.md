@@ -47,3 +47,14 @@ test is still owed before release 1 is declared, and KD-262 adds the D5
 smoke test's BAZA build and run from TED, the book's BASIC page and the
 Viewer's card. The viewer keeps its own
 firmware pin and receiving checks.
+
+## Open: the Names sweep (Origo MD-16)
+
+Every source moves to Names (`docs/assembly-style.md`): camel case code,
+Pascal case data, capital constants, private labels for a routine's
+branches. The sweep stays open until every source under `src/`, `drivers/`
+and `diag/` is listed in `tools/names-swept.json`, which `tools/style-check.mjs`
+then holds to Names. It goes module by module, each step case-only and
+checked to build the same ROM and the same symbol map; a rename that changes
+letters is its own change. New and changed code follows Names from now on.
+Swept so far: MON3.SVC's five sources, `drivers/mon3*.asm`, by the MON3 session.
