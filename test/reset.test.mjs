@@ -393,7 +393,7 @@ test("a retained drive of geometry 0 is not retained, whatever its other bytes, 
   const text = reset(m);
   assert.deepEqual(idx(m), [1, 0, 0, 0]);
   assert.equal(m.read(entry(m, 1) + 6), 0, "B: empty");
-  assert.equal(lineCount(text, "SYSTEM"), 1, text);
+  assert.equal(lineCount(text.replace(/A:SYSTEM>/g, ""), "SYSTEM"), 1, text); // the banner's line; the prompt shows the volume too
   assert.doesNotMatch(text, /B: /);
   assert.notEqual(mountOn(m, 1, 0), 0, "SYSTEM is on A: already");
   assert.equal(mountOn(m, 1, 1), 0);
@@ -520,7 +520,7 @@ test("from another drive and a video console, a reset reaches A:, user 0, on the
   reset(m);
   assert.deepEqual([m.read(3), m.read(4), m.read(m.sym("CONMOD"))], [1, 0, 1], "IOBYTE's CON: CRT:, drive and user 0, the console CRT:");
   assert.equal(m.serial.length, serial, "nothing on serial");
-  assert.ok(m.screen().includes("A>"), "the prompt on the screen, in its mode again");
+  assert.ok(m.screen().some((l) => /^A:\S*>$/.test(l.trimEnd())), "the prompt on the screen, in its mode again");
 });
 
 test("a default drive beyond MNTDRV is refused with MEMOUNT", () => {

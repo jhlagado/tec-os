@@ -136,7 +136,8 @@ test("BAZA builds TIMES on TEC-OS, and TIMES runs at 40 columns and returns to t
   assert.ok(run.includes(RUN.join("\r\n") + "\r\n"), run);
   const screen = m.screen().map((l) => l.trimEnd());
   while (!screen.at(-1)) screen.pop();
-  assert.deepEqual(screen.slice(-RUN.length - 2), [...RUN.map((l) => l.trimEnd()), "", "A>"], "the screen, no line wrapped");
+  assert.deepEqual(screen.slice(-RUN.length - 2, -1), [...RUN.map((l) => l.trimEnd()), ""], "the screen, no line wrapped");
+  assert.match(screen.at(-1), /^A:\S*>$/, "then the prompt, with its volume");
   const com = Buffer.from(volume(image, "A").read("TIMES.COM"));
   // BAZA's output for this source: a restyle that changes the program's code
   // changes it.

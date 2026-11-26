@@ -26,18 +26,18 @@ function command(m, line, body, result = 0) {
 test("RIG3 bare CD lists and queries the selected directories", () => {
   const m = boot(card());
   command(m, "CD ?", /SYSTEM +A:\r\nWORK +B:\r\nPROJECTS +C:\r\nGAMES *\r\nSPARE/);
-  command(m, "CD", /\r\nA:SYSTEM\r\nA>$/);
-  command(m, "CD C:", /\r\nC:PROJECTS\r\nA>$/);
-  command(m, "CD D:", /\r\nD:\r\nA>$/);
+  command(m, "CD", /\r\nA:SYSTEM\r\nA:SYSTEM>$/);
+  command(m, "CD C:", /\r\nC:PROJECTS\r\nA:SYSTEM>$/);
+  command(m, "CD D:", /\r\nD:\r\nA:SYSTEM>$/);
   assert.deepEqual(selections(m), [1, 2, 3, 0]);
 });
 
 test("RIG3 bare CD changes the presented directory while retaining the drive", () => {
   const m = boot(card());
-  command(m, "B:", /B>$/);
-  command(m, "cd games", /\r\nB:GAMES\r\nB>$/);
+  command(m, "B:", /B:WORK>$/);
+  command(m, "cd games", /\r\nB:GAMES\r\nB:GAMES>$/);
   assert.deepEqual(selections(m), [1, 4, 3, 0]);
-  command(m, "CD D:SPARE", /\r\nD:SPARE\r\nB>$/);
+  command(m, "CD D:SPARE", /\r\nD:SPARE\r\nB:GAMES>$/);
   assert.deepEqual(selections(m), [1, 4, 3, 5]);
   assert.equal(m.read(4), 1);
 });
@@ -104,7 +104,7 @@ test("RIG3 bare CD retains its selection when a data-prerequisite flush fails", 
   guest.type("WR W.DAT\r");
   guest.runUntil(() => guest.pc === main, 400_000_000, "WR's direct return before input");
   refuse = true;
-  guest.runUntil(() => guest.ready() && /\r\nA>$/.test(guest.text(guest.mark)), 400_000_000, "input with failed pending writes");
+  guest.runUntil(() => guest.ready() && /\r\nA:\S*>$/.test(guest.text(guest.mark)), 400_000_000, "input with failed pending writes");
   const before = selections(guest);
   command(guest, "CD D:SPARE", /\r\nCD FAILED\r\n/, 0xff00);
   assert.deepEqual(selections(guest), before);
@@ -122,7 +122,7 @@ test("RIG3 reset recovery restores SYSTEM and loads SHELL", () => {
   command(m, "CD A:GAMES", /A:GAMES>$/);
   const mark = m.output.length;
   m.reset();
-  m.runUntil(() => m.ready() && /\r\nA>$/.test(m.text(mark)), 900_000_000, "bare CCP after reset");
+  m.runUntil(() => m.ready() && /\r\nA:\S*>$/.test(m.text(mark)), 900_000_000, "bare CCP after reset");
   assert.equal(pageOf(m), 0);
   assert.equal(selections(m)[0], 4);
   command(m, "CD ?", /SYSTEM/);
@@ -131,7 +131,7 @@ test("RIG3 reset recovery restores SYSTEM and loads SHELL", () => {
   assert.equal(selections(m)[0], 1);
   command(m, "SHELL.SVC", /A:SYSTEM>$/);
   assert.ok(pageOf(m));
-  assert.equal(word(m, 6) - 256, 43520);
+  assert.equal(word(m, 6) - 256, 44032); // the shell's nine pages at ABI 5.6 (43,520 with eleven)
   const powered = boot(image);
   assert.equal(selections(powered)[0], 1, "power cycle uses the card defaults");
   assert.ok(pageOf(powered));

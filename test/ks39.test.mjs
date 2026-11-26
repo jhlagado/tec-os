@@ -56,7 +56,7 @@ test("on a PICO9918 board with no PICO.SVC the banner, volumes and prompt are on
   const m = start(standardCard());
   const screen = m.screen();
   assert.deepEqual(screen.slice(1, 4), ["TEC-OS 0.1 for TEC-1G", "A: SYSTEM", "B: WORK"]);
-  assert.ok(screen.includes("A>"));
+  assert.ok(screen.some((l) => /^A:\S*>$/.test(l.trimEnd())));
   assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD")), m.serialText()], [CRT, CRT, ""]);
   const serial = start(standardCard(), { matrix: false });
   assert.deepEqual([serial.read(3) & 3, serial.read(m.sym("CONMOD")), word(serial, m.sym("PIVEC"))], [0, 0, 0], "serial, and no table");
@@ -103,8 +103,8 @@ test("UNLOAD of a GLCD.SVC that gave way to CRT: leaves the PICO9918's screen as
   assert.equal(m.read(m.sym("SVCHEAD")), 0, "unloaded");
   const screen = m.screen();
   assert.equal(screen[1], "TEC-OS 0.1 for TEC-1G", "the banner still there: no clear");
-  assert.ok(screen.some((row) => row.startsWith("A>GLCD.SVC")), "and the line that loaded it");
-  assert.ok(screen.some((row) => row.startsWith("A>UNLOAD")), "and the UNLOAD");
+  assert.ok(screen.some((row) => /^A:\S*>GLCD\.SVC/.test(row)), "and the line that loaded it");
+  assert.ok(screen.some((row) => /^A:\S*>UNLOAD/.test(row)), "and the UNLOAD");
   assert.deepEqual([m.read(m.sym("CONMOD")), m.read(3) & 3, word(m, m.sym("GLVEC"))], [CRT, CRT, 0]);
 });
 
@@ -167,5 +167,5 @@ test("a PICO9918 board booting the starter's display files has the shell's figur
   assert.equal(pico.read((head << 8) + 8), 0, "and nothing above it: GLCD.SVC gave way");
   const serial = boot(standardCard());
   assert.equal(word(serial, 6), word(serial, serial.sym("STUBAD")), "nothing loaded on the serial board");
-  assert.equal(word(pico, 6), (word(serial, 6) & 0xff00) - 0x0b00, "the shell's 11 pages below the stub's page");
+  assert.equal(word(pico, 6), (word(serial, 6) & 0xff00) - 0x0900, "the shell's 9 pages below the stub's page (11 before ABI 5.6)");
 });

@@ -93,7 +93,7 @@ test('the unfiltered input path reproduces escape bytes stored and echoed at the
  assert.deepEqual([...rom.subarray(at,at+3)],[0xfe,0x1b,0xca]);
  rom.fill(0,at,at+5);
  const m=new Machine({rom,symbols,sdImage:standardCard()});
- m.expect(/A>$/);
+ m.expect(/A:\S*>$/);
  m.runUntil(()=>m.ready(),100_000_000,'the control prompt');
  const mark=m.output.length;
  m.type('AB\x1b[A');

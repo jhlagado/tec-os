@@ -43,7 +43,7 @@ const { rom, symbols } = romFor();
 function romVerdict(image) {
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK });
   const out = m.expect(/\r\nA(:\S*)?>$|R retry> $/, { from: 0, maxCycles: 200_000_000 });
-  return out.endsWith("A>") ? "mounts" : `error ${out.match(/error ([0-9A-F]{2})/)?.[1]}`;
+  return /A:\S*>$/.test(out) ? "mounts" : `error ${out.match(/error ([0-9A-F]{2})/)?.[1]}`;
 }
 
 const dir = mkdtempSync(resolve(tmpdir(), "verify-mount-"));

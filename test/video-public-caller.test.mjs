@@ -114,13 +114,13 @@ for (const mode of ["PICO", "GLCD"])
       const mark = m.output.length;
       c.pc = 0;
       m.runUntil(
-        () => m.ready() && /\r\nA>$/.test(m.text(mark)),
+        () => m.ready() && /\r\nA:\S*>$/.test(m.text(mark)),
         200_000_000,
         "explicit warm transition back to video prompt",
       );
       m.typeMatrix("CON\r");
       m.runUntil(
-        () => m.ready() && /CON: (CRT|UC1):\r\nA>$/.test(m.text(mark)),
+        () => m.ready() && /CON: (CRT|UC1):\r\nA:\S*>$/.test(m.text(mark)),
         200_000_000,
         "subsequent legitimate matrix command",
       );
