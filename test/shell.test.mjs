@@ -520,7 +520,7 @@ test("SH14 mon3 enter and again", () => {
   assert.match(at(m, "MON3.SVC", { re: M3 }), /MON3>$/);
   const p = page();
   assert.equal(m.read(p + 25 + 3), 3, "INIT set bit 0 alone: ready and bit 1");
-  at(m, "EXIT");
+  at(m, "GO 0"); // leaves it installed: EXIT would remove it
   const n = opens(m);
   assert.match(at(m, "MON3.SVC", { re: M3 }), /MON3>$/, "typed again: entered");
   assert.equal(n(), 0, "without a file read");
@@ -714,8 +714,9 @@ test("SH7 with glcd and mon3", () => {
     m.mark = m.output.length;
     m.type("EXIT\r");
     m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 900_000_000, "GLCD.SVC after EXIT");
-    assert.equal(names(m), "SHELL,MON3,GLCD");
-    assert.equal(word(m, 6), 0x9800);
+    // MON3 was the lowest at EXIT, so it went before GLCD.SVC installed: its 19 pages came back.
+    assert.equal(names(m), "SHELL,GLCD");
+    assert.equal(word(m, 6), 0x9800 + 19 * 0x100);
   }
   {
     const m = glcdBoard(["GLCD.SVC"]);
@@ -1161,7 +1162,7 @@ test("SH12 unload last", () => {
 test("SH12 unload order", () => {
   const m = shelled({ "MON3.SVC": MON3.file });
   at(m, "MON3.SVC", { re: M3 });
-  at(m, "EXIT");
+  at(m, "GO 0"); // leaves it installed: EXIT would remove it
   const sp = pageOf(m);
   at(m, "UNLOAD");
   assert.equal(shown(m), sp + sym.TABLE, "MON3.SVC goes first; the shell keeps the prompt");

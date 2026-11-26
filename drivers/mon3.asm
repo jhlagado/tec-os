@@ -844,12 +844,32 @@ RESETD:
   ld c,37
   jp BDOS
 
-; EXIT: interrupts off, IM 1, the
+; EXIT: as the lowest resident, set
+; EXRMV so the warm boot removes the
+; service; otherwise say it stays. A
+; damaged table keeps it in, quietly,
+; so LOAD stays refused until reset.
+; Then interrupts off, IM 1, the
 ; drives reset, page zero as it was,
-; the hook out and the devices idle.
-; Then the real warm boot.
+; the hook out and the devices idle,
+; and the real warm boot.
 
 CEXIT:
+  ld a,(DMG)     ; tables damaged?
+  or a           ; then stay, so LOAD
+  jr nz,EXKEEP   ; is refused till reset
+  ld a,($0007)   ; the lowest's page
+  cp HIGH(HDR)   ; this service's?
+  jr z,EXLEAVE   ; yes: it can go
+  ld de,MSTAY
+  call PRINT     ; no: say it stays
+  jr EXKEEP      ; and leave EXRMV clear
+
+EXLEAVE:
+  ld hl,EXRDY    ; EXRMV in its state:
+  set EXRMV,(hl)
+
+EXKEEP:
   di
   im 1
   call RESETD    ; the drives reset
@@ -1098,101 +1118,6 @@ FCBF:
   inc de
   jr FCBF
 
-; Read a hex word of one to four digits
-; at HL into DE. Carry if it has no
-; digit, a fifth digit, or anything but
-; trailing spaces and the line's end
-; after it. Clobbers A and B.
-
-HEXW:
-  ld de,0
-  ld b,4         ; at most four digits
-  ld a,(hl)
-  call HEXD
-  ret c          ; no digit
-
-HEXW1:
-  ex de,hl       ; HL = the word
-  add hl,hl
-  add hl,hl
-  add hl,hl
-  add hl,hl      ; one digit up
-  or l
-  ld l,a         ; the new digit in
-  ex de,hl
-  inc hl
-  ld a,(hl)
-  call HEXD
-  jr c,HEXW2     ; the number's end
-  djnz HEXW1
-  scf            ; a fifth digit
-  ret
-
-HEXW2:
-  ld a,(hl)
-  cp ' '+1       ; a space or the end
-  ccf            ; carry: text joined
-  ret c
-  call SKIP      ; no further operand
-  ret z
-  scf
-  ret
-
-; A hex digit's value from A, either
-; case. Carry if it is none.
-
-HEXD:
-  cp 'a'
-  jr c,HEXD1     ; not lower case
-  sub $20        ; a to A
-
-HEXD1:
-  sub '0'
-  ret c          ; below 0
-  cp 10
-  ccf
-  ret nc         ; 0 to 9
-  sub 7          ; A to F as 10-15
-  cp 10
-  ret c          ; between 9 and A
-  cp 16
-  ccf            ; carry past F
-  ret
-
-; Write HL as four hex digits at DE,
-; or A as two at HEXA. DE steps on.
-
-HLSTR:
-  ld a,h
-  call HEXA      ; the high byte
-  ld a,l
-
-HEXA:
-  push af        ; the low digit
-  rrca
-  rrca
-  rrca
-  rrca           ; the high digit
-  call HEXN
-  pop af
-
-HEXN:
-  call HEXC
-  ld (de),a      ; the character
-  inc de
-  ret
-
-; A's low four bits as a hex digit's
-; character. Clobbers F.
-
-HEXC:
-  and $0F
-  add a,$90      ; DAA's hex trick
-  daa
-  adc a,$40
-  daa            ; 0-9, A-F
-  ret
-
 %INCLUDE "mon3api.asm"
 %INCLUDE "mon3io.asm"
 %INCLUDE "mon3hex.asm"
@@ -1212,6 +1137,8 @@ MBRK: DB "BRK $"
 MDMG: DB "Tables damaged: EXIT"
   DB " and reset",13,10,'$'
 MRUN: DB "Running at: ",0
+MSTAY: DB "MON3 stays installed"
+  DB 13,10,'$'
 
 ; State. RUNOK is nonzero after a good
 ; load at RUNAT. INT38 is nonzero when

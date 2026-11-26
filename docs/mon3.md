@@ -57,14 +57,15 @@ A>
 ```
 
 `MON3.SVC` installs the service if it isn't in, and enters it: its execution
-record asks to be entered on install. It stays installed after `EXIT`, so
-`MON3.SVC` enters again without reading the file. Warm boot keeps it, and
-`UNLOAD` or a reset removes it. `docs/services.md` gives the identity rule:
+record asks to be entered on install. `EXIT` removes it again, in the same
+step, when it is the lowest resident (below). Every other way out leaves it
+installed, so `MON3` enters again without reading the file. Warm boot keeps
+it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the identity rule:
 `B:MON3.SVC` enters the copy installed from A:, and a second copy needs
 `UNLOAD` first. An older card's line with `/E` after the name still enters:
 the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
-On the starter card it is 4,758 bytes of header and image in **19 pages**, 5,215
+On the starter card it is 4,807 bytes of header and image in **19 pages**, 5,269
 bytes as a file with its relocation data. The starter card loads `SHELL.SVC`
 first, so the word at `0006h` goes from `AC00h` to `9900h`, and the TPA from
 43,776 bytes to **38,912**. With `GLCD.SVC` installed too, as the GLCD
@@ -160,7 +161,14 @@ It does not relocate absolute addresses embedded in machine code or data.
 
 - **`EXIT`** turns interrupts off, sets IM 1, resets the drives, puts page
   zero back, takes the warm-boot hook out, turns the digits and LED matrix
-  off, leaves the serial line idle, and warm boots to `A>`.
+  off, leaves the serial line idle, and warm boots to `A>`. Before that it
+  asks to be removed: as the lowest resident, the one `(0007h)` names, it
+  sets its execution record's `EXRMV` bit, and the warm boot unloads it, so
+  its 19 pages come back with nothing more typed (`docs/services.md`,
+  Removal). With a service installed after it, it can't go first: it prints
+  `MON3 stays installed` and stays, for `UNLOAD` later. With the tables
+  damaged it stays too, quietly, so `LOAD` stays refused until a reset. A
+  ROM before ABI 5.5 ignores the bit, and the service stays, as before.
 
 A program's `RET` comes back to `MON3>`. Interrupts go off, PROTECT is
 cleared, the serial line is idle again, the session's page zero is written
@@ -296,7 +304,9 @@ Entry is refused, with return code FF00h and nothing changed:
 error all end the session at `A>` through the warm boot, with 0008h–003Fh,
 0041h–004Fh, the NMI entry, the IOBYTE and the drive as they were, and IM 1.
 Each also resets the drives, so every allocation vector is rebuilt from its
-directory at its next use, as after a program's `RET`.
+directory at its next use, as after a program's `RET`. Only `EXIT` asks
+for the service's removal; every other way out leaves it installed, so a
+program that ends with `JP 0000h` can be looked at again from `MON3>`.
 
 A program that sets EXPAND through port FFh and jumps to 0000h is the one
 exit that passes the hook: under EXPAND 1 the RAM BIOS table is not the one

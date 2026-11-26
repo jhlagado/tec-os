@@ -131,8 +131,8 @@ function checkKey(s, r) {
 function checkExit(s) {
   assert.ok(s.exit, "EXIT reaches the CCP's prompt");
   const differ = s.pageZero.flatMap((v, i) => (v === s.pageZeroAfter[i] ? [] : [i]));
-  // The word at 0006h is lower by the service's pages: its high byte always, its low byte unless a service was in already.
-  assert.ok(differ.includes(7) && differ.every((i) => i === 6 || i === 7), `page zero 0000h-004Fh as before /E, but the BDOS entry's word: ${differ}`);
+  // EXIT removes MON3.SVC as the lowest resident (EXRMV), so the BDOS entry's word is back too.
+  assert.deepEqual(differ, [], `page zero 0000h-004Fh as before /E, the BDOS entry's word included: ${differ}`);
   assert.equal(s.target, s.m.sym("WBOOTR"), "the warm-boot entry's target is WBOOTR again");
 }
 
@@ -161,6 +161,9 @@ for (const kind of ["serial", "glcd"]) {
 
   test(`KG60 re-entry without the file, ${on}`, { skip }, async () => {
     const { m, image } = await theSlice(kind);
+    // EXIT took the service out, so install it again and leave it in with GO 0.
+    assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC installs again");
+    assert.ok(!line(m, "GO 0").mon3, "GO 0 leaves it installed");
     m.command("ERA MON3.SVC");
     assert.ok(!volume(image, "A").list().some((f) => f.name === "MON3.SVC"), "MON3.SVC is off the card");
     assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC enters with no file");

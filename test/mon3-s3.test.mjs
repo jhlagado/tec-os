@@ -132,7 +132,7 @@ async function workspace(svc) {
   const m = boot({ "MON3.SVC": svc.file, "PROG.BIN": Uint8Array.from([0x3e, 0x55, 0x32, 0x00, 0x0a, 0xc9]) });
   assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC installs and enters");
   assert.deepEqual(workspaceDiffers(m).slice(0, 8), [], "install and enter: 0A00h-0E19h zero, VPORT 0A00h");
-  assert.ok(!line(m, "EXIT").mon3);
+  assert.ok(!line(m, "GO 0").mon3, "GO 0 leaves with MON3.SVC installed");
   for (let i = 0; i < REGION[1]; i += 1) m.write(REGION[0] + i, 0xff);
   assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC enters again");
   assert.deepEqual(workspaceDiffers(m).slice(0, 8), [], "re-entry over FFh: 0A00h-0E19h zero, VPORT 0A00h");
