@@ -57,6 +57,10 @@ The bare prompt behaves as a CP/M 2.2 CCP:
 - `DIR` and `TYPE` list without pausing, and `DIR` is the ROM's wide listing.
 - The prompt is the ROM's, `A>`. `CD` queries, lists and changes directory
   selections; `CLS`, `ECHO` and `PAUSE` require the shell.
+- The colon tells the two prompts apart. The shell's prompt always has one,
+  `A:SYSTEM>` or `C:>`, and the bare prompt never does, `A>`. Without the
+  colon, `COPY`, `DEL`, `SERVICES` and the other shell commands are not
+  there.
 - Only the first line of `STARTUP.CMD` runs.
 
 TED's build line, `A:TAS NAME!A:TED`, needs the shell to come back to TED. With
