@@ -1,37 +1,41 @@
 # The shell: SHELL.SVC and the ROM's shell hook
 
-The CCP in ROM is minimal. It runs a `.COM` or a `.SVC`, changes drive, and
-has CP/M's built-ins `DIR`, `ERA`, `REN` and `TYPE`, with
-`CON`, `CD` and `UNLOAD`. It reads one line of `A:STARTUP.CMD` after a reset.
+The CCP in ROM holds the primitives a prompt needs. It runs a `.COM` or a
+`.SVC`, changes drive, and has CP/M's built-ins `DIR`, `ERA`, `REN` and
+`TYPE`, with `CON`, `CD`, `UNLOAD` and `CLS`. Its prompt shows the drive's
+volume, `A:SYSTEM>`; its line input keeps a history, recalled with Up/Down and
+^W/^N; and `TYPE` and `DIR` pause at `[more]` one row short of a full screen.
+It reads one line of `A:STARTUP.CMD` after a reset.
 
 `SHELL.SVC` is a resident service that takes over the prompt through the
-ROM's shell hook. It holds what left the ROM:
+ROM's shell hook, for the power user. It adds:
 
-- the command history, Up/Down and ^W/^N;
-- the drive's directory selection in the prompt, and script-drive protection
-  for `CD`, which the ROM runs;
-- `DIR` with each file's size, `COPY`, `DEL`, `SERVICES`, `CLS`, `ECHO` and
-  `PAUSE`, the first three from the overlay at the back of `SHELL.SVC`;
-- the pager, `[more]` in `TYPE` and `DIR`;
+- script-drive protection for `CD`, which the ROM runs;
+- `DIR` with each file's size, `COPY`, `DEL`, `SERVICES`, `ECHO` and `PAUSE`,
+  the first three from the overlay at the back of `SHELL.SVC`;
 - lines of several commands joined by `!` and `&`;
 - `.CMD` scripts, and the rest of `STARTUP.CMD`.
+
+The ROM's history, pager, `CLS` and prompt serve the shell too: it pages
+`DIR` through `TNPAGE` and shows its prompt through `TNPRMPT`, both at ABI
+5.6, and its prompt is the ROM's.
 
 Every other command it hands back to the ROM to run. The starter card's
 `STARTUP.CMD` starts with `SHELL.SVC`, so the shell is in after every reset.
 A key held through reset skips `STARTUP.CMD`, and the bare prompt comes back.
 
-`SHELL.SVC` occupies 11 pages: a 2,816-byte allocation containing its image
+`SHELL.SVC` occupies 9 pages: a 2,304-byte allocation containing its image
 and extra RAM. `DIR`, `COPY` and `SERVICES` are its overlay, read into the TPA
-when one runs ([below](#the-overlay)). Its history is a 128-byte ring at the
-end of its memory. Its own stack
+when one runs ([below](#the-overlay)). Its own stack
 is 48 bytes, of which the census's workload uses 16 and the deepest path, the
 prompt's reading of the volume labels with every cache line changed and
 kept, 34 (`test/shell.test.mjs` and `test/shell2.test.mjs`, which read a guard
-pattern laid under it); no path may use more than 36. It declares 6 bytes of
-the BDOS's stack and none of the BIOS's or the CCP's, so `GLCD.SVC` and
-`MON3.SVC` install beside it. With the shell alone the word at 0006h is AC00h
-on the starter card, a TPA of 43,776 bytes. It parses names with the ROM's
-`TNPARSE`, service 18 at ABI 5.4, and its `INIT` refuses an older ROM.
+pattern laid under it); no path may use more than 36. It declares none of
+the BDOS's, BIOS's or CCP's stacks, so `GLCD.SVC` and `MON3.SVC` install
+beside it. With the shell alone the word at 0006h is AE00h on the starter
+card, a TPA of 44,288 bytes. It parses names with the ROM's `TNPARSE`, pages
+with `TNPAGE` and shows its prompt with `TNPRMPT`, and its `INIT` refuses a
+ROM before ABI 5.6.
 
 ## With no shell
 
@@ -44,8 +48,8 @@ The bare prompt behaves as a CP/M 2.2 CCP:
 - A bare `NAME` tries `NAME.COM` then `NAME.SVC`. COM searches the current
   drive then A: unless a drive was named. SVC uses the named or current
   drive. With the shell, a missing executable also allows `NAME.CMD`.
-  A built-in always wins: `TYPE`, `ERA`, `REN`, `CON` and `UNLOAD` go to the
-  ROM, `COPY`, `DEL`, `SERVICES`, `CD`, `DIR`, `CLS`, `ECHO` and `PAUSE` to
+  A built-in always wins: `TYPE`, `ERA`, `REN`, `CON`, `UNLOAD` and `CLS` go
+  to the ROM, `COPY`, `DEL`, `SERVICES`, `CD`, `DIR`, `ECHO` and `PAUSE` to
   the shell, and a script of the same name runs only as `NAME.CMD`.
   A found but unloadable executable stops the search. `NAME.` retains its
   COM-only meaning. An explicit `.COM` or `.SVC` selects only that type.
@@ -54,13 +58,12 @@ The bare prompt behaves as a CP/M 2.2 CCP:
   and cannot run `NAME.COM` at the bare prompt.
 - A function 47 line is echoed after the prompt and runs whole, as one
   command: `TYPE X!TYPE Y` is `TYPE` with the tail `X!TYPE Y`.
-- `DIR` and `TYPE` list without pausing, and `DIR` is the ROM's wide listing.
-- The prompt is the ROM's, `A>`. `CD` queries, lists and changes directory
-  selections; `CLS`, `ECHO` and `PAUSE` require the shell.
-- The colon tells the two prompts apart. The shell's prompt always has one,
-  `A:SYSTEM>` or `C:>`, and the bare prompt never does, `A>`. Without the
-  colon, `COPY`, `DEL`, `SERVICES` and the other shell commands are not
-  there.
+- `DIR` is the ROM's wide listing, and it and `TYPE` pause at `[more]` as
+  with the shell.
+- The prompt is the same with the shell and without: the drive and its
+  volume, `A:SYSTEM>`, or `C:>` for a drive with none. `CD` queries, lists
+  and changes directory selections; `ECHO` and `PAUSE` require the shell.
+- The history and its keys, Up/Down and ^W/^N, work at the bare prompt.
 - Only the first line of `STARTUP.CMD` runs.
 
 TED's build line, `A:TAS NAME!A:TED`, needs the shell to come back to TED. With
@@ -165,8 +168,7 @@ again, as a typed script.
 
 CD changes the directory presented by a drive by selecting a named on-card
 volume. A: to D: are equal drives, and each presents one volume, or none.
-The basic commands below also work at the bare ROM CCP; its prompt remains
-`A>` rather than showing the directory label.
+The commands below work at the bare ROM CCP as with the shell.
 The prompt shows the drive and its volume: `B:GAMES>`; a drive with no volume
 shows `C:>`. A command not found on the
 current drive runs from A:, as if A: were always on the path.
@@ -192,10 +194,9 @@ another there: the drive then frees the first.
 the ROM's volume services (`TNMOUNT` and `TNDESC`,
 [rom-services.md](rom-services.md)), and the mount writes every changed cache
 line first, puts the volume on the drive and resets it, and on the drive you
-are on selects it again. `CD ?` lists without the pager. The shell keeps each
-drive's label, read at its first prompt and again at the prompt after any
-`CD`; any other prompt reads nothing from the card. A program that calls
-`TNMOUNT` or `TNUNMNT` itself leaves the prompt's label stale until a `CD`.
+are on selects it again. `CD ?` lists without the pager. Each prompt reads the
+drive's label afresh from the ROM's volume table, which is in memory, so a
+program that calls `TNMOUNT` or `TNUNMNT` itself is shown at the next prompt.
 
 The drive you are on is written behind, and logging onto another drive or
 `CD` moves it ([recovery.md](recovery.md)). A program that selects a drive by
@@ -263,8 +264,8 @@ Ordinary drive and read errors keep their BDOS handling.
 
 ## `CLS`, `ECHO` and `PAUSE`
 
-- `CLS` sends `ESC [ H ESC [ 2 J`: the PICO9918's screen, the GLCD's or the
-  terminal's then holds only the prompt.
+- `CLS`, the ROM's, sends `ESC [ H ESC [ 2 J`: the PICO9918's screen, the
+  GLCD's or the terminal's then holds only the prompt, on its top row.
 - `ECHO text` prints the text as typed. The shell folds only a piece's first
   word to match its built-ins; `COPY`, `CD` and `DIR` fold their own
   operands, and a piece handed to the ROM is folded by the ROM, so a program's
@@ -280,19 +281,26 @@ Ordinary drive and read errors keep their BDOS handling.
 - `DEL` is `ERA` by another name: the shell hands `ERA` to the ROM.
 - `SERVICES` lists each loaded service, the newest first: its name and its
   pages.
-- `CD`, `DIR`, `CLS`, `ECHO` and `PAUSE`, above.
+- `CD`, `DIR`, `ECHO` and `PAUSE`, above.
+
+## The ROM's pager and history
+
+Both are the ROM's, at the bare prompt and under the shell alike.
+
 - The pager pauses `TYPE` and `DIR` one row before a full screen, with the
-  geometry `TNINFO` gives (80 by 24 on the serial terminal).
-- The history ring keeps the lines typed at the prompt, 128 bytes of them with
-  a zero after each; ^W shows the one before and ^N the one after. A line equal
-  to the newest is not stored again, nor one of 127 characters, the most a line
-  holds: with its zero it would fill the ring. A program's line input receives
-  ^W and ^N as characters.
+  console's size (80 by 24 on the serial terminal). Each prompt starts a new
+  page. At `[more]` any key goes on; Esc or Q stops the listing; ^C stops it
+  and drops the rest of the line. The shell's own `DIR` pages through it, as
+  `TNPAGE`.
+- The history keeps the lines typed at the prompt, 96 bytes of them with a
+  zero after each; ^W shows the one before and ^N the one after. A line equal
+  to the newest is not kept again, nor one of 95 characters or more, which
+  with its zero would fill the ring. A program's line input receives ^W and ^N
+  as characters.
 - Plain Up and Down (CSI or SS3) perform the same older/newer history actions
   as ^W and ^N. Recall replaces partial input, with an empty line past the
-  newest. Modified arrows and other navigation remain ignored. The bare CCP
-  has no history and ignores arrows. Programs reading raw characters can
-  handle arrows themselves.
+  newest. Modified arrows and other navigation remain ignored. Programs
+  reading raw characters can handle arrows themselves.
 
 ## The overlay
 
@@ -344,8 +352,10 @@ F8h); any other nonzero HL returns `TNEBAD` with carry, and the hook is
 unchanged. Otherwise it returns HL = the table it replaced (0 for none), A = 0,
 carry clear. BC, IX and IY are kept; DE changes. It makes no BDOS call.
 
-The table is four words in the shell's own pages: `LINE`, `PAGE`, `HREC` and
-`HSTORE`.
+The table is one word in the shell's own pages, `LINE`. Before ABI 5.6 it was
+four, `LINE`, `PAGE`, `HREC` and `HSTORE`; from 5.6 the ROM pages and keeps the
+history itself and reads only the first word, so an older shell's table still
+works.
 
 **`LINE`: the next command line.** The ROM calls it at every prompt in place of
 its own prompt and line input: after each warm boot, built-in, drive change and
@@ -364,21 +374,10 @@ empty line.
   as a typed one. An empty line brings the next prompt. `LINE` must return.
   It must return with the user area as it found it: the ROM runs the line in
   that area, and only the next prompt puts it back to area 0.
-- The first BDOS 10 after a `LINE` call offers ^W and ^N through `HREC` and
-  stores the finished line through `HSTORE`. A program's BDOS 10 does neither.
-
-**`PAGE`: the pager.** `TYPE` sends every byte of a file through it, and `DIR`
-its row breaks. E is the byte; carry stops the listing. AF, DE and HL change,
-and BC on a pause. It is called on the CCP's stack. With no shell the ROM prints
-the byte.
-
-**`HREC` and `HSTORE`: the history.** BDOS 10 calls them on the BDOS's stack,
-and neither may call the BDOS.
-
-- `HREC`: C = ^W (older) or ^N (newer). Carry: nothing to show. Otherwise HL is
-  a zero-ended line of at most 127, which the ROM shows in place of the line
-  being typed: it erases that line and copies this one in.
-- `HSTORE`: DE is a finished, nonempty line and B its length.
+- The first BDOS 10 after a `LINE` call offers the ROM's history, as the bare
+  prompt's line input does. A program's BDOS 10 has none.
+- A shell's own listings page through `TNPAGE`, and its prompt is `TNPRMPT`'s
+  drive and volume, then `>`.
 
 The ROM keeps the table's address in its workspace, not published. The release
 sweep in `PZSWP`, at every warm boot and every release of pages, drops a table
@@ -387,8 +386,8 @@ prompt back.
 
 A shell's stack declarations are a share of the loader's allowance, `SVCLIM`'s
 8 (BDOS), 12 (BIOS) and 6 (CCP), summed over the residents. `SHELL.SVC` declares
-6, 0 and 0 and `GLCD.SVC` 2, 0 and 6, so together they take the whole of the
-BDOS's and the CCP's. A second shell beside both must declare none on either.
+none and `GLCD.SVC` 2, 0 and 6, so a second shell beside both may declare up to
+6 of the BDOS's and none of the CCP's.
 
 ## Enter on install
 

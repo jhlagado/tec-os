@@ -98,12 +98,13 @@ prompt. Named volumes and `CD` are the way to keep groups of files apart.
 
 `SHELL.SVC`, a resident service on the starter card and the first line of its
 `STARTUP.CMD`, takes the prompt through the ROM's shell hook and adds what the
-ROM's CCP leaves out ([shell.md](shell.md)): the history, `COPY`, `DEL`,
-`SERVICES`, the pager, lines of several commands and `.CMD` scripts. With no
-shell, after a reset with a key held for one, `!` and `&` are ordinary
-characters, `COPY`, `DEL` and `SERVICES` are names like any other, `DIR` and
-`TYPE` don't pause, a typed `NAME.CMD` is rejected and only the first line
-of `STARTUP.CMD` runs.
+ROM's CCP leaves to a power user's shell ([shell.md](shell.md)): `COPY`,
+`DEL`, `SERVICES`, `ECHO`, `PAUSE`, lines of several commands and `.CMD`
+scripts. The ROM's CCP itself keeps the history, the pager, `CLS` and the
+volume in the prompt. With no shell, after a reset with a key held for one,
+`!` and `&` are ordinary characters, `COPY`, `DEL` and `SERVICES` are names
+like any other, a typed `NAME.CMD` is rejected and only the first line of
+`STARTUP.CMD` runs.
 
 Under the shell a line of up to 127 characters, typed, from a script, from
 `STARTUP.CMD` or from function 47, is split into pieces. `!` always separates,
@@ -139,17 +140,19 @@ leave the code at 0, and the line goes on. The shell's built-ins:
   destination is closed with the records written before `WRITE ERROR` is
   printed.
 - `SERVICES` lists the services loaded, each with its pages.
+The ROM's CCP, with or without the shell:
+
 - `TYPE` and `DIR` pause with `[more]` when the screen fills.
 - The prompt keeps a history of the lines typed at it. ^W puts the line before
   in the buffer, erasing the one shown, and ^N the line after; past the newest
   the line is empty. The line recalled can be edited and sent like a typed one.
-  The history is a 256-byte ring in the shell's own pages, kept by warm boot and
+  The history is a 96-byte ring in the ROM's workspace, kept by warm boot and
   emptied by a reset. A line equal to the newest is not stored again, and nor is
   one holding a 0. Programs receive ^W and ^N as characters in the buffer,
   and their lines are not kept.
 - Function 10 consumes terminal navigation escape bytes without storing or
-  echoing them. At the shell prompt plain Up/Down recalls older/newer commands
-  through the existing ^W/^N history. Bare ROM and program line input ignore
+  echoing them. At the prompt, bare or the shell's, plain Up/Down recalls
+  older/newer commands through the ^W/^N history. Program line input ignores
   navigation; raw character input retains it. A lone Escape
   is ignored. `ESC [` and `ESC O` start CSI and SS3 sequences, so manually
   typed text with those prefixes is interpreted the same way. CR and editing
