@@ -8,7 +8,7 @@ in place of its own copy. Like `TNGLYPH` it goes straight to its code, with no
 housekeeping first. Number 15, the font's table at ABI 5.1, is refused from 5.2. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, which `TAS DEMO` builds from the starter card's `DEMO.ASM`, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,741 bytes (`tecos`) and has 643 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,112 bytes (`tecos`) and has 272 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -326,7 +326,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->643<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->272<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
