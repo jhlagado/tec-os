@@ -508,12 +508,12 @@ test("SH11 SERVICES lists each service and its pages, the newest first, with non
   volume(image, "A").write("OK.SVC", (await svc()).file);
   volume(image, "A").write("TWO.SVC", (await svc({ HDRNAME: '"TWO     "', XTRA: 300 })).file);
   const t = bench(boot(image));
-  assert.match(t.m.command("SERVICES"), /^SERVICES\r\r\nSHELL 11\r\nA(:\S*)?>$/, "the shell alone");
+  assert.match(t.m.command("SERVICES"), /^SERVICES\r\r\nSHELL 9\r\nA(:\S*)?>$/, "the shell alone");
   t.m.command("OK.SVC");
   t.m.command("TWO.SVC");
-  assert.match(t.m.command("SERVICES"), /TWO 2\r\nDEMO 1\r\nSHELL 11\r\n/);
+  assert.match(t.m.command("SERVICES"), /TWO 2\r\nDEMO 1\r\nSHELL 9\r\n/);
   t.m.command("UNLOAD");
-  assert.match(t.m.command("SERVICES"), /SERVICES\r\r\nDEMO 1\r\nSHELL 11\r\n/);
+  assert.match(t.m.command("SERVICES"), /SERVICES\r\r\nDEMO 1\r\nSHELL 9\r\n/);
 });
 
 test("a demonstration file is 60 bytes: a 25-byte header, 31 of image, 4 of relocation", async () => {
@@ -535,7 +535,7 @@ test("the relocation data decodes to the same fixups by delta, and a long gap ta
 test("the table has no removal: function 2 is refused and the service stays", async () => {
   const t = await machine();
   t.load((await svc()).file);
-  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 19 }).carry, 1); // past the last, TNPARSE
+  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 21 }).carry, 1); // past the last, TNPRMPT (TNPARSE before ABI 5.6)
   assert.equal(t.find("DEMO").carry, 0);
 });
 
@@ -809,7 +809,7 @@ const edit = (fn) => {
   return f;
 };
 const u16 = (at, v) => edit((_, d) => d.setUint16(at, v, true));
-const top = 0xb9; // (0006h)'s page on the card in standardCard()
+const top = 0xb8; // (0006h)'s page on the card in standardCard(): B8F4h at ABI 5.6, the CCP's history, pager and labels taking 145 bytes (B9xxh before)
 const extraFor = (n) => n - S;
 const MALFORMED = [
   ["the file shorter than its header", good.file.slice(0, 16), 0x110],
@@ -1182,7 +1182,7 @@ for (const opts of [{}, { tms: true, matrix: true }]) {
       assert.equal(m.videoConsole(), true, "the ROM's PICO9918 console");
       say("SERVICES");
       assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+SHELL +11\s+A(:\S*)?>/, "the loaded two and the shell: the ROM's console is no service");
-    } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\nSHELL 11\r\n/);
+    } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\nSHELL 9\r\n/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     say("KEEP.SVC");

@@ -14,6 +14,9 @@ CMDUNL:
   call SVCUNL
   jp nc,STARTED  ; NC: unload completed
 
+TOBADCMD:
+  jp BADCMD
+
 ; CLS: the screen cleared and the
 ; cursor home, by the terminal's codes;
 ; the prompt then starts the top row.
@@ -22,9 +25,6 @@ cmdCls:
   ld de,ClsMsg   ; ESC [H, ESC [2J
   call PUTSTR
   jp MAINLOOP    ; no CRLF before it
-
-TOBADCMD:
-  jp BADCMD
 
 ; Retry the next console name. Input DE
 ; is the differing table byte, C
