@@ -72,9 +72,9 @@ test("SH16 version fields", () => {
   assert.match(inc, /^SVCFMT EQU 4$/m);
   assert.equal(ABI.TNSHELL, 16);
   assert.equal(ABI.TNGLYPH, 17);
-  assert.equal(ABI.TNCOUNT, 19);
+  assert.equal(ABI.TNCOUNT, 21);
   const { rom } = romFor();
-  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 5], "TNA 5.5: TNGLYPH, COMVEC, TNPARSE, then EXRMV, added");
+  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 6], "TNA 5.6: TNGLYPH, COMVEC, TNPARSE, EXRMV, then TNPAGE and TNPRMPT, added");
   for (const f of [SHELL.file, MON3.file, HOOK.file]) assert.deepEqual([...f.subarray(25, 28)], [0x45, 0x58, 1], "the record's version byte stays 1");
   assert.match(readFileSync(resolve(ROOT, "tools/build.mjs"), "utf8"), /^const VERSION = \{ major: 0, minor: 1 \};$/m);
 });
@@ -223,53 +223,48 @@ test("SH5 zero bound", () => {
   assert.equal(m.read(m.sym("CMDTXT") + 127), 0, "the byte at the buffer's end is zero after the return");
 });
 
+/** The ROM's history ring as text, a dot for each zero. */
+const ring = (m) => String.fromCharCode(...Array.from({ length: 96 }, (_, i) => m.read(m.sym("HISTRING") + i) || 0x2e));
+
 test("SH5 history only after line", () => {
+  // From ABI 5.6 the history is the ROM's: the first BDOS 10 after LINE keeps
+  // its line in HistRing, and a program's BDOS 10 keeps none.
   const m = bare({ "LINE.COM": LINEP });
   at(m, "HOOK.SVC", { re: S });
-  const recs = hw(m, "RECS");
-  const stos = hw(m, "STOS");
-  m.mark = m.output.length;
-  m.type("\x17\r");
-  m.runUntil(() => m.ready() && S.test(m.text(m.mark)), 200_000_000, "the prompt after ^W");
-  assert.equal(hw(m, "RECS"), recs + 1, "the first BDOS 10 after LINE offers ^W through HREC");
   at(m, "SAY", { re: S });
-  assert.ok(hw(m, "STOS") > stos, "and stores through HSTORE");
-  // A program's line input after an injected line: no BDOS 10 since LINE.
+  assert.match(ring(m), /SAY\./, "the line after LINE is kept");
   inject(m, "LINE");
-  const r2 = hw(m, "RECS");
-  const s2 = hw(m, "STOS");
   m.mark = m.output.length;
   m.type("\r");
   m.runUntil(() => m.read(m.sym("LINMAX")) === 20 && m.waitingForInput(), 200_000_000, "LINE's input");
-  m.type("A\x17\r");
+  const before = ring(m);
+  m.type("QQ\x17\r");
   m.runUntil(() => m.ready() && S.test(m.text(m.mark)), 200_000_000, "the prompt after LINE");
-  assert.deepEqual({ recs: hw(m, "RECS"), stos: hw(m, "STOS") }, { recs: r2, stos: s2 }, "a program's BDOS 10 neither recalls nor stores");
+  assert.equal(ring(m), before, "a program's BDOS 10 keeps nothing");
 });
 
 test("SH5 page", () => {
+  // From ABI 5.6 the ROM pages TYPE and DIR itself: a shell's PAGE word is
+  // not called.
   const long = Buffer.from(`${"abcdefghij".repeat(10)}\r\n\x1a`, "latin1");
   const m = bare({ "L.TXT": long, "B.TXT": HELLO });
   at(m, "HOOK.SVC", { re: S });
-  let p = hw(m, "PAGES");
-  at(m, "TYPE L.TXT", { re: S });
-  assert.equal(hw(m, "PAGES") - p, 102, "TYPE sends every byte through PAGE");
-  p = hw(m, "PAGES");
+  const p = hw(m, "PAGES");
+  assert.match(at(m, "TYPE L.TXT", { re: S }), /abcdefghij/);
   at(m, "DIR", { re: S });
-  const rows = hw(m, "PAGES") - p;
-  assert.ok(rows >= 2 && rows % 2 === 0, `DIR sends its row breaks, CR and LF: ${rows}`);
-  m.write(lowest(m) + hsym.STOP, 1);
-  p = hw(m, "PAGES");
-  const out = at(m, "TYPE L.TXT", { re: S });
-  assert.equal(hw(m, "PAGES") - p, 1, "carry stops the listing");
-  assert.doesNotMatch(out, /bcd/);
+  assert.equal(hw(m, "PAGES"), p, "PAGE never called");
 });
 
 test("SH5 no hook", () => {
+  // With no shell the ROM still pages: 30 lines on serial's 24 rows wait at
+  // [more] after 23.
   const long = Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i}\r\n`).join("") + "\x1a", "latin1");
   const m = bare({ "L.TXT": long });
-  const out = at(m, "TYPE L.TXT");
-  assert.equal(count(out, /line \d+/g), 30, "TYPE prints with no pause");
-  assert.doesNotMatch(out, /\[more\]/);
+  m.mark = m.output.length;
+  m.type("TYPE L.TXT\r");
+  assert.equal(count(m.expect(/\[more\]$/, { maxCycles: 400_000_000 }), /line \d+/g), 23, "23 lines, then [more]");
+  m.type(" ");
+  assert.equal(count(m.expect(/\r\n[A-P](:\S*)?>$/, { maxCycles: 400_000_000 }), /line \d+/g), 7, "the rest");
   assert.match(at(m, "DIR"), /L\.TXT/);
 });
 
@@ -346,13 +341,12 @@ test("SH5 mutant: SHLINE not clearing the history gate offers ^W to a program", 
   const m = shellMachine(bareCard({ "LINE.COM": LINEP }), mut);
   at(m, "HOOK.SVC", { re: S });
   inject(m, "LINE");
-  const r = hw(m, "RECS");
   m.mark = m.output.length;
   m.type("\r");
   m.runUntil(() => m.read(m.sym("LINMAX")) === 20 && m.waitingForInput(), 200_000_000, "LINE's input");
-  m.type("A\x17\r");
+  m.type("QQ\r");
   m.runUntil(() => m.ready() && S.test(m.text(m.mark)), 200_000_000, "the prompt after LINE");
-  assert.notEqual(hw(m, "RECS"), r, "the program's BDOS 10 reached HREC");
+  assert.match(ring(m), /QQ\./, "the program's BDOS 10 line reached the history");
 });
 
 test("SH5 mutant: SHLINE without the zero bound leaves the line unended", () => {
@@ -628,10 +622,11 @@ test("SH14 mutant: withoutDisplay keeping its : makes a kept piece a bad name", 
 const pages = (svc) => Math.ceil((svc.image + (svc.file[8] | (svc.file[9] << 8))) / 256);
 
 test("SH7 size", () => {
-  assert.ok(pages(SHELL) <= 11, `SHELL.SVC in 11 pages: ${SHELL.image} + extra`);
-  assert.ok(SHELL.image + (SHELL.file[8] | (SHELL.file[9] << 8)) <= 2816);
-  assert.equal(sym.RING % 128, 0, "the ring on a 128-byte boundary");
-  assert.equal(sym.XEND - sym.RING, 128, "and 128 bytes");
+  // Nine pages from ABI 5.6, the ROM keeping the pager and history (eleven,
+  // and a 128-byte ring of its own, before).
+  assert.ok(pages(SHELL) <= 9, `SHELL.SVC in 9 pages: ${SHELL.image} + extra`);
+  assert.ok(SHELL.image + (SHELL.file[8] | (SHELL.file[9] << 8)) <= 2304);
+  assert.equal(sym.RING, undefined, "no ring of its own");
 });
 
 /** The deepest each of the three stacks goes below a service entry's SP, as svc.test.mjs's watch measures. */
@@ -679,14 +674,14 @@ const LONG = Buffer.from(`${"W".repeat(100)}\r\n${Array.from({ length: 40 }, (_,
 const WORK = { "S.CMD": Buffer.from("TYPE HELLO.TXT\r\n; c\r\nDIR\r\n\x1a", "latin1"), "L.TXT": LONG, "CH.COM": chain("F &SAY!SAY") };
 
 test("SH7 declared stacks", () => {
-  assert.deepEqual([...SHELL.file.subarray(12, 15)], [6, 0, 0], "declared: BDOS 6, BIOS 0, CCP 0");
+  assert.deepEqual([...SHELL.file.subarray(12, 15)], [0, 0, 0], "declared: none, the ROM keeping the history on the BDOS's stack");
   const m = shelled(WORK);
   const page = pageOf(m);
   const use = entries(m, page, page + pages(SHELL) * 256);
   workload(m);
-  assert.ok(use.bdos <= 6, `the BDOS's: ${use.bdos}`);
+  assert.equal(use.bdos, 0, "no shell code on the BDOS's stack");
   assert.equal(use.bios, 0);
-  assert.equal(use.ccp, 0, "LINE and PAGE take the shell's own stack at once");
+  assert.equal(use.ccp, 0, "LINE takes the shell's own stack at once");
   // The allowance is a sum: SHELL.SVC's and GLCD.SVC's together within SVCLIM.
   const glcd = [...GLCD_SVC.subarray(12, 15)];
   assert.deepEqual(glcd, [2, 0, 6]);
@@ -706,7 +701,7 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(0)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "SHELL,GLCD,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3, "the GLCD the console");
-    assert.equal(word(m, 6), 0x9800);
+    assert.equal(word(m, 6), 0x9900);
   }
   {
     const m = glcdBoard(["SHELL.SVC", "MON3.SVC", "GLCD.SVC"]);
@@ -716,7 +711,7 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 900_000_000, "GLCD.SVC after EXIT");
     // MON3 was the lowest at EXIT, so it went before GLCD.SVC installed: its 19 pages came back.
     assert.equal(names(m), "SHELL,GLCD");
-    assert.equal(word(m, 6), 0x9800 + 19 * 0x100);
+    assert.equal(word(m, 6), 0x9900 + 19 * 0x100);
   }
   {
     const m = glcdBoard(["GLCD.SVC"]);
@@ -727,30 +722,30 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(m.mark)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "GLCD,SHELL,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3);
-    assert.equal(word(m, 6), 0x9800);
+    assert.equal(word(m, 6), 0x9900);
   }
 });
 
 test("SH7 tpa figures", () => {
   const m = shelled({ "MON3.SVC": MON3.file });
-  assert.equal(word(m, 6), 0xae00, "SHELL.SVC alone: TPA 44,288");
+  assert.equal(word(m, 6), 0xaf00, "SHELL.SVC alone: TPA 44,544, nine pages at ABI 5.6 (44,288 with eleven before)");
   at(m, "MON3.SVC", { re: M3 });
-  assert.equal(word(m, 6), 0x9b00, "with MON3.SVC: 39,424");
+  assert.equal(word(m, 6), 0x9c00, "with MON3.SVC: 39,680");
   const g = glcdBoard(["SHELL.SVC", "GLCD.SVC"]);
   g.runUntil(() => g.ready() && g.read(g.sym("CONMOD")) === 3, 900_000_000, "the GLCD's prompt");
-  assert.equal(word(g, 6), 0xab00, "with GLCD.SVC: 43,520");
+  assert.equal(word(g, 6), 0xac00, "with GLCD.SVC: 43,776");
 });
 
 test("SH7 mutant: SHELL.SVC declaring 6 on the CCP's stack makes GLCD.SVC?", async () => {
-  const mut = await shellVariant([["  DB 6,0,0\n", "  DB 6,0,6\n"]]);
+  const mut = await shellVariant([["  DB 0,0,0\n", "  DB 0,0,6\n"]]);
   const m = shellMachine(shellCard({ "GLCD.SVC": GLCD_SVC }, { startup: ["SHELL.SVC", "GLCD.SVC"], shell: mut.file }), { matrix: true, glcd: true, noWait: true });
   m.runUntil(() => m.ready(), 900_000_000, "the prompt");
   assert.match(m.text(0), /GLCD\.SVC\?/);
 });
 
-test("SH7 mutant: 128 more bytes of the shell's memory exceed the eleven-page limit", async () => {
-  const mut = await shellVariant([["STKTOP    EQU   STKBOT+48\n", "STKTOP    EQU   STKBOT+48+128\n"]]);
-  assert.equal(pages(mut), 12);
+test("SH7 mutant: 256 more bytes of the shell's memory exceed the nine-page limit", async () => {
+  const mut = await shellVariant([["STKTOP    EQU   STKBOT+48\n", "STKTOP    EQU   STKBOT+48+256\n"]]);
+  assert.equal(pages(mut), 10);
 });
 
 // --- Pieces, separators and lines ------------------------------------------
@@ -1122,30 +1117,6 @@ test("SH10 mutant: the rest given typed origin says NODEV.SVC?", async () => {
 
 // --- Mutants of the moved commands (their tests are in their own files) ----
 
-test("SH11 mutant: the ring's duplicate test removed stores a line twice", async () => {
-  const mut = await shellVariant([["  jr z,HSKEEP    ; a repeat", "  nop\n  nop"]]);
-  const m = shellMachine(shellCard({}, { startup: ["SHELL.SVC"], shell: mut.file }));
-  at(m, "SAY");
-  at(m, "SAY");
-  const ring = pageOf(m) + mut.symbols.RING;
-  const text = toLatin1(Uint8Array.from(Array.from({ length: 16 }, (_, i) => m.read(ring + i))));
-  assert.equal(count(text, /SAY\0/g), 2);
-});
-
-test("SH11 mutant: PAGE counting a tab as one column wraps late", async () => {
-  const tabs = Buffer.from(`${"\t".repeat(11)}X\r\n`.repeat(30) + "\x1a", "latin1"); // past 80 columns
-  const right = shellMachine(shellCard({ "T.TXT": tabs }, { startup: ["SHELL.SVC"] }));
-  const mut = await shellVariant([["  ld a,(PGCOL)   ; the column\n  or 7\n  inc a          ; the next eighth", "  ld a,(PGCOL)\n  inc a\n  nop\n  nop"]]);
-  const wrong = shellMachine(shellCard({ "T.TXT": tabs }, { startup: ["SHELL.SVC"], shell: mut.file }));
-  const more = (m) => {
-    m.mark = m.output.length;
-    m.type("TYPE T.TXT\r");
-    m.runUntil(() => /\[more\]$/.test(m.text(m.mark)), 400_000_000, "[more]");
-    return count(m.text(m.mark), /X/g);
-  };
-  assert.notEqual(more(right), more(wrong));
-});
-
 // --- Re-entry, unload and recovery -----------------------------------------
 
 const HOOKZ = HOOK; // HOOK.SVC declares no stack, so two fit beside SHELL.SVC
@@ -1291,19 +1262,6 @@ test("SH13 guard read between prompts", () => {
   assert.ok(deepest > 0 && deepest <= 24, `the shell's own stack: ${deepest} of 48`);
 });
 
-test("SH13 mutant: PAGE's stack 16 bytes lower reads above 24", async () => {
-  // The same size, so the guard reads it: PAGE takes its stack at STKTOP-16.
-  const mut = await shellVariant([["  ld (PGSP),sp   ; the caller's SP\n  ld sp,STKTOP   ; the shell's stack", "  ld (PGSP),sp\n  ld sp,STKTOP-16"]]);
-  assert.equal(mut.file.length, SHELL.file.length, "the same size");
-  const m = shellMachine(shellCard({}, { shell: mut.file }));
-  const at0 = GUARDS.machines.findIndex((x) => x.m === m);
-  assert.ok(at0 >= 0, "the guard reads the variant");
-  const [g] = GUARDS.machines.splice(at0, 1);
-  at(m, "TYPE HELLO.TXT");
-  const deepest = g.read();
-  assert.ok(deepest > 24, `the shell's own stack: ${deepest} of 48, past the bound`);
-});
-
 test("SH13 census with the shell", () => {
   const { stacks, shell } = census(["SHELL.SVC"]);
   console.log(JSON.stringify({ stacks, shell }));
@@ -1315,15 +1273,6 @@ test("SH13 census with the three", () => {
   const { stacks, shell } = census(["SHELL.SVC", "GLCD.SVC"], { matrix: true, glcd: true });
   assert.ok(shell >= 12 && shell <= 24, `the shell's own stack: ${shell} of 48, the docs' 16 within 12 to 24`);
   for (const [k, s] of Object.entries(stacks)) assert.ok(s.deepest <= s.reserved * 0.75, `${k}: ${s.deepest} of ${s.reserved}`);
-});
-
-test("SH13 mutant: PAGE on the CCP's stack uses the CCP's room it declared 0 of", async () => {
-  const mut = await shellVariant([["  ld (PGSP),sp   ; the caller's SP\n  ld sp,STKTOP   ; the shell's stack\n  call PGPUT     ; the byte\n  ld sp,(PGSP)   ; back, carry kept", "  call PGPUT"]]);
-  const m = shellMachine(shellCard(WORK, { startup: ["SHELL.SVC"], shell: mut.file }));
-  const page = pageOf(m);
-  const use = entries(m, page, page + pages(mut) * 256);
-  at(m, "TYPE HELLO.TXT");
-  assert.ok(use.ccp > 0);
 });
 
 // --- Docs, the CP/M 3 departures and TED -----------------------------------

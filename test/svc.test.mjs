@@ -1181,7 +1181,7 @@ for (const opts of [{}, { tms: true, matrix: true }]) {
     if (opts.tms) {
       assert.equal(m.videoConsole(), true, "the ROM's PICO9918 console");
       say("SERVICES");
-      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+SHELL +11\s+A(:\S*)?>/, "the loaded two and the shell: the ROM's console is no service");
+      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+SHELL +9\s+A(:\S*)?>/, "the loaded two and the shell: the ROM's console is no service");
     } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\nSHELL 9\r\n/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);

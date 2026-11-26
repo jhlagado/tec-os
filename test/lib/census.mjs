@@ -14,6 +14,9 @@ export function watch(m) {
   const [guard, guardEnd] = [s("STKGUARD"), s("STKGUEND")];
   const write = m.cpu.hardware.memWrite;
   m.cpu.hardware.memWrite = (addr, value) => {
+    // A write at 8000h-BFFFh with the latch's EXPAND bit set goes to the
+    // expansion bank, as the cache's tags do, not to a stack in the main one.
+    if (addr >= 0x8000 && addr < 0xc000 && m.sysCtrl & 0x04) return write(addr, value);
     const pc = m.cpu.cpu.pc;
     const ldir = (m.read(pc) === 0xed && m.read(pc + 1) === 0xb0) || (m.read(pc - 1) === 0xed && m.read(pc) === 0xb0);
     if (!ldir) for (const [k, [b, t]] of Object.entries(stacks)) if (addr >= b && addr < t && addr < low[k]) low[k] = addr;
