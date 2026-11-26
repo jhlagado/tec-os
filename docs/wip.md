@@ -57,4 +57,4 @@ and `diag/` is listed in `tools/names-swept.json`, which `tools/style-check.mjs`
 then holds to Names. It goes module by module, each step case-only and
 checked to build the same ROM and the same symbol map; a rename that changes
 letters is its own change. New and changed code follows Names from now on.
-Swept so far: none.
+Swept so far: MON3.SVC's five sources, `drivers/mon3*.asm`, by the MON3 session; `src/cpm/ccpterm.asm`, written to Names when it was added.
