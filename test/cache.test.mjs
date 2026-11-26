@@ -1795,7 +1795,11 @@ function directoryLast({ bare, recover, rom }) {
     return rootStep();
   };
   m.type("A:P2\r");
-  m.runUntil(() => finalPrompts.ready() && finalPrompts.owner.textAtEntry.endsWith("A:SYSTEM>"), 400_000_000, "actual A input after close returned");
+  // A cache notice prints after any BDOS call's housekeeping, so it may fall
+  // between two of the prompt's characters (A:, Cache clear, SYSTEM>), as it
+  // could between the old prompt's A and >. The prompt is judged without it.
+  const unNoticed = (t) => t.replace(/\r\n(Cache clear|Write pending|Write error)\r\n/g, "");
+  m.runUntil(() => finalPrompts.ready() && unNoticed(finalPrompts.owner.textAtEntry).endsWith("A:SYSTEM>"), 400_000_000, "actual A input after close returned");
   const finalOwner = { ...finalPrompts.owner, pc: m.pc }; m.step = session.step;
   assert.equal(p2Entries, 1); assert.ok(release); assert.notEqual(closeA, null); assert.equal(m.read(0x4100), closeA);
   const final = snapshot("after close actual input");
