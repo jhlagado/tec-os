@@ -137,8 +137,8 @@ const leave = (m, r) => {
 
 // The ROM's size, hash and ABI against the baseline.
 
-// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back), restated at ABI 5.2 for TNGLYPH (17) and TNCOUNT 18, at ABI 5.4 for TNPARSE (18) and TNCOUNT 19, and at ABI 5.5 for EXRMV, the execution record's state bit 2. The ROM figure is the COMVEC build's 15,600 (ABI 5.3, TEC-OS 8d6c09b), restated from the packed-font build's 15,549 (decided 2026-11-24); the cap is a ceiling on growth from it.
-const BASELINE = { used: 15600, cap: 128, tpa: 47273, abi: "86892f80a6054a7554b870d3a8e57cd6a8dd7ac90307dbca9055e19a60f649bb" };
+// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back), restated at ABI 5.2 for TNGLYPH (17) and TNCOUNT 18, at ABI 5.4 for TNPARSE (18) and TNCOUNT 19, and at ABI 5.5 for EXRMV, the execution record's state bit 2. The ROM figure is EXRMV's build's 15,728 (ABI 5.5, TEC-OS e371fee), restated as John decided on 2026-11-26 to raise the cap for EXRMV and the CCP's growth, from the COMVEC build's 15,600 (ABI 5.3, TEC-OS 8d6c09b), itself restated from the packed-font build's 15,549 (decided 2026-11-24); the cap is a ceiling on growth from it.
+const BASELINE = { used: 15728, cap: 128, tpa: 47273, abi: "86892f80a6054a7554b870d3a8e57cd6a8dd7ac90307dbca9055e19a60f649bb" };
 
 test("KG58 rom cap", () => {
   const census = () => JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));

@@ -7,8 +7,9 @@
 ; sends F1-F9 (Fn+1-9) and F10 (Fn+0) as
 ; xterm sends them; Fn with an arrow sends
 ; Page Up, Page Down, Home and End, and
-; Shift with one the modified arrow. A
-; held key does not repeat.
+; Shift with one the modified arrow.
+; Shift with Tab sends back-tab, ESC [ Z.
+; A held key does not repeat.
 
 ; Poll up to eight rows for a new key.
 ; Starts at KBMASK. NZ ends the poll:
@@ -138,6 +139,15 @@ KBSEEK1:
   jr KBDELIV
 
 KBNOARR:
+  ld a,e
+  cp 9           ; Tab?
+  jr nz,KBNOTAB
+  inc d
+  dec d          ; Z: Shift, back-tab
+  ld b,27        ; tail 27: [Z
+  jr z,KBTAILN
+
+KBNOTAB:
   ld a,d
   cp 2           ; Fn held?
   jr nz,KBPLAIN

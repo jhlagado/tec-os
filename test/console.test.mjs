@@ -246,7 +246,7 @@ test("matrix arrow keys arrive as ANSI cursor sequences", async () => {
 });
 
 // Keys 3-6 are up, down, left and right; key 0 is Shift, 1 Ctrl and 2 Fn.
-test("Fn with an arrow sends Page Up, Page Down, Home and End, Shift with one xterm's modified arrow, and Ctrl with one the plain arrow", async () => {
+test("Fn with an arrow sends Page Up, Page Down, Home and End, Shift with one xterm's modified arrow, Ctrl with one the plain arrow, and Shift with Tab back-tab", async () => {
   const image = standardCard();
   volume(image, "A").write("KEYS.COM", (await program("keys")).bytes);
   const m = boot(image, { tms: true, matrix: true });
@@ -275,6 +275,8 @@ test("Fn with an arrow sends Page Up, Page Down, Home and End, Shift with one xt
   for (const [key, letter] of [[3, "A"], [4, "B"], [5, "D"], [6, "C"]])
     assert.ok(run(() => chord(0, key)).includes(hex(`\x1b[1;2${letter}`)), `Shift with key ${key} is ESC [ 1 ; 2 ${letter}`);
   assert.match(run(() => { chord(1, 3); m.typeMatrix("\x06"); }), /1B 5B 41 1B 5B 43 /, "Ctrl+up is the plain up, and right alone ESC [ C");
+  assert.ok(run(() => { chord(0, 9); m.typeMatrix("xyz"); }).includes(hex("\x1b[Zxyz")), "Shift with Tab, key 9, is back-tab, ESC [ Z");
+  assert.ok(run(() => { chord(1, 9); m.typeMatrix("\t\txyz"); }).includes("09 09 09 78 79 7A "), "Ctrl with Tab, and Tab alone, are 09h");
   // The host's queue, as the page uses it: a queued key held with its modifier.
   assert.ok(run(() => {
     m.enqueueKey(4, 2);

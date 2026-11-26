@@ -177,8 +177,9 @@ expect, so the up arrow no longer reads as ^C. Fn with an arrow gives the
 page keys as xterm sends them: Fn+up is Page Up (`ESC [ 5 ~`), Fn+down Page
 Down (`ESC [ 6 ~`), Fn+left Home (`ESC [ H`) and Fn+right End (`ESC [ F`).
 Shift with an arrow gives xterm's modified arrow, `ESC [ 1 ; 2` and the
-arrow's letter; Ctrl with one gives the plain arrow. The BDOS line editor
-consumes a sequence with parameters, so these change nothing at the prompt
+arrow's letter; Ctrl with one gives the plain arrow. Shift with Tab gives
+xterm's back-tab, `ESC [ Z`; Tab alone, and with Ctrl or Fn, is 09h. The BDOS
+line editor consumes such a sequence, so these change nothing at the prompt
 or in a line read by function 10. Fn with a digit gives F1 to F10. A key is
 delivered once when it goes down; holding it does not repeat.
 

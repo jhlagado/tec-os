@@ -367,7 +367,7 @@ test("SH1 rom figure", () => {
   const { used, free, regions } = first.rom;
   // The ROM figure includes buffered line
   // navigation and bare-name search, the packed font (-329) and COMVEC (+51).
-  assert.deepEqual([used, free], [15728, 656], "the ROM's bytes used and free"); // EXRMV at ABI 5.5, 16: the warm boot's test of the lowest resident's state bit 2 and its call to the removal, 20, less 4 from the arrows' index and the record test's page-zero case; the matrix's Fn and Shift arrows, 30: one table of the tails after ESC, each ending at its first byte from 40h, scanned for the one wanted (Ctrl's arrows, 8 bytes, kept plain); TNPARSE at ABI 5.4: its table entry, 2 bytes, and its dispatch past housekeeping, 5
+  assert.deepEqual([used, free], [15741, 643], "the ROM's bytes used and free"); // back-tab, 13: Shift with Tab's test and its two-byte tail; EXRMV at ABI 5.5, 16: the warm boot's test of the lowest resident's state bit 2 and its call to the removal, 20, less 4 from the arrows' index and the record test's page-zero case; the matrix's Fn and Shift arrows, 30: one table of the tails after ESC, each ending at its first byte from 40h, scanned for the one wanted (Ctrl's arrows, 8 bytes, kept plain); TNPARSE at ABI 5.4: its table entry, 2 bytes, and its dispatch past housekeeping, 5
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   assert.ok(first.ram.tpa.bytes >= 47238, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
