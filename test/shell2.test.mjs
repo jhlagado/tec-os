@@ -17,7 +17,7 @@ import { check, pinned } from "./lib/inputs.mjs";
 import { MUTANTS } from "./lib/coalesce.mjs";
 import { cacheState, fileBlock } from "./lib/cache-pending.mjs";
 import { publicContext } from "./lib/public-caller.mjs";
-import { SHELL, at, code, owners, pageOf, shellCard, shellMachine, shellVariant, word } from "./lib/shell.mjs";
+import { SHELL, at, code, find, owners, pageOf, romMutant, shellCard, shellMachine, shellVariant, word } from "./lib/shell.mjs";
 
 const P = /\r\n\d*[A-P](:\S*)?>$/;
 const sym = SHELL.symbols;
@@ -180,9 +180,9 @@ test("S2-6 cd a: and reset", () => {
   const m = machine({ image });
   run(m, "CD A:GAMES");
   m.reset();
-  m.runUntil(() => m.ready() && /\r\nA>$/.test(m.text(m.mark)), 900_000_000, "the prompt after the reset");
+  m.runUntil(() => m.ready() && /\r\nA:GAMES>$/.test(m.text(m.mark)), 900_000_000, "the prompt after the reset");
   assert.equal(pageOf(m), 0, "a recognised reset keeps GAMES on A:, which has no SHELL.SVC");
-  assert.match(m.text(m.mark), /\r\nA>$/, "the bare prompt");
+  assert.match(m.text(m.mark), /\r\nA:GAMES>$/, "the bare prompt, with its volume as the shell's has it");
   // Power off and on: the card's own drives, and the shell again.
   const { rom, symbols } = romFor();
   const n = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK });
@@ -273,8 +273,8 @@ test("S2-8 prompt", () => {
   run(m, "B:");
   run(m, "CD GAMES");
   assert.match(m.text(m.mark), /\r\nB:GAMES>$/);
-  // A drive with no volume: its label blank in the table.
-  for (let i = 0; i < 11; i += 1) m.write(pageOf(m) + sym.LBL + 11 + i, 0x20);
+  // A drive with no volume: its label blank in the ROM's table (ABI 5.6).
+  for (let i = 0; i < 11; i += 1) m.write(m.sym("RLBL") + 11 + i, 0x20);
   assert.match(run(m, ""), /\r\nB:>$/, "d:>");
 });
 
@@ -282,13 +282,13 @@ test("S2-8 bare prompt", () => {
   const image = four();
   shellCard({}, { image, startup: [] });
   const m = shellMachine(image);
-  assert.match(m.text(0), /\r\nA>$/, "with no shell, the ROM's prompt");
-  assert.match(run(m, "B:"), /\r\nB>$/);
+  assert.match(m.text(0), /\r\nA:SYSTEM>$/, "with no shell, the ROM's prompt, the same from ABI 5.6");
+  assert.match(run(m, "B:"), /\r\nB:WORK>$/);
 });
 
 /** TNDESC's calls through four commands and their prompts, and through CD alone, on SHELL (a variant's file). */
-function describes(shell) {
-  const m = machine({ shell });
+function describes(shell, opts = {}) {
+  const m = machine({ shell, opts });
   const at = m.sym("VSDSC");
   const prompts = hits(m, at, () => ["ECHO a", "", "B:", "DIR"].forEach((l) => run(m, l)));
   const cd = hits(m, at, () => run(m, "CD"));
@@ -297,13 +297,16 @@ function describes(shell) {
 
 test("S2-8 labels not read at each prompt", () => {
   // CD alone is the ROM's, which reads the five and is refused the sixth;
-  // the shell reads its labels again at the prompt after it, the same six.
-  assert.deepEqual(describes(), { prompts: 0, cd: 12 }, "none at a prompt; CD alone and the prompt after it read the five each and are refused the sixth index");
+  // it mounts nothing, so the prompt after it keeps the labels it holds.
+  assert.deepEqual(describes(), { prompts: 0, cd: 6 }, "none at a prompt; CD alone reads the five and is refused the sixth index");
 });
 
-test("S2-8 mutant: MW, DRVLBL walking whatever the table holds, reads the card at every prompt", async () => {
-  const v = await shellVariant([["  ld a,(LBL)\n  or a\n  call z,VWALKQ", "  xor a\n  or a\n  call z,VWALKQ"]]);
-  assert.ok(describes(v.file).prompts > 0);
+test("S2-8 mutant: MW, drvVol walking whatever the table holds, reads the card at every prompt", () => {
+  const mut = romMutant((b, s) => {
+    const i = find(b, s("DRVVOL"), [0xb7, 0x20, null], 8); // OR A; JR NZ,.show: LblOk set
+    b[i + 1] = b[i + 2] = 0;
+  });
+  assert.ok(describes(undefined, mut).prompts > 0);
 });
 
 // --- S2-9 DIR with sizes ------------------------------------------------------
@@ -473,7 +476,7 @@ test("S2-10 cls", () => {
   run(m, "ECHO one");
   run(m, "ECHO two");
   assert.ok(m.screen(80).filter((l) => l.trim()).length > 3);
-  run(m, "CLS");
+  at(m, "CLS", { re: /A:SYSTEM>$/ }); // the ROM's CLS: no blank line before the prompt
   const after = m.screen(80).filter((l) => l.trim());
   assert.equal(after.length, 1, JSON.stringify(after));
   assert.match(after[0], /A:SYSTEM>/, "the PICO9918's screen holds the prompt alone");
@@ -554,14 +557,14 @@ const extra = (svc) => svc.file[8] | (svc.file[9] << 8);
 const pages = (svc) => Math.ceil((svc.image + extra(svc)) / 256);
 
 test("S2-11 size", (t) => {
-  assert.ok(pages(SHELL) <= 11, `SHELL.SVC in 11 pages: ${SHELL.image} + ${extra(SHELL)}`);
-  assert.ok(SHELL.image + extra(SHELL) <= 2816);
-  assert.equal(sym.RING % 128, 0, "the ring on a 128-byte boundary");
-  t.diagnostic(`image ${SHELL.image}, file ${SHELL.file.length}, extra RAM ${extra(SHELL)}, ${pages(SHELL)} pages, ${sym.RING - sym.STKTOP} bytes of room; overlay ${SHELL.overlay.bytes} bytes in ${SHELL.overlay.records} records`);
+  // Nine pages from ABI 5.6, the ROM keeping the pager, the history and the labels.
+  assert.ok(pages(SHELL) <= 9, `SHELL.SVC in 9 pages: ${SHELL.image} + ${extra(SHELL)}`);
+  assert.ok(SHELL.image + extra(SHELL) <= 2304);
+  t.diagnostic(`image ${SHELL.image}, file ${SHELL.file.length}, extra RAM ${extra(SHELL)}, ${pages(SHELL)} pages, ${2304 - SHELL.image - extra(SHELL)} bytes of room; overlay ${SHELL.overlay.bytes} bytes in ${SHELL.overlay.records} records`);
 });
 
 test("S2-11 declared stacks", () => {
-  assert.deepEqual([...SHELL.file.subarray(12, 15)], [6, 0, 0], "BDOS 6, BIOS 0, CCP 0");
+  assert.deepEqual([...SHELL.file.subarray(12, 15)], [0, 0, 0], "none: the ROM keeps the history on its own");
 });
 
 /** A real thirty-block refused queue drives the shell's cold label walk. */
@@ -650,9 +653,10 @@ function deepestWalk(shell = SHELL) {
   assert.equal(snapshot("owned input with all thirty retained").queue.length, 30);
   assert.ok(m.cpu.cpu.sp < base || m.cpu.cpu.sp >= top); assert.ok(inputSP < base || inputSP >= top);
   for (let address = base; address < top; address++) m.write(address, 0xa5);
-  m.write(page + s.LBL, 0);
+  // From ABI 5.6 the labels are the ROM's: clearing LblOk makes the shell's
+  // next prompt, through TNPRMPT, walk them on the shell's own stack.
+  m.write(m.sym("LBLOK"), 0);
   assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(page + s.LINE + 4 + i)), [0x31, top & 255, top >> 8]);
-  assert.deepEqual(Array.from({ length: 12 }, (_, i) => m.read(page + s.VW1 + i)), [0x7b, 0x32, (page + s.VIDX) & 255, (page + s.VIDX) >> 8, 0x21, (page + s.CFCB) & 255, (page + s.CFCB) >> 8, 0x0e, 11, 0xcd, m.sym("ABICALL") & 255, m.sym("ABICALL") >> 8]);
   const workerBottom = m.sym("HKSTKB"), workerTop = m.sym("HKSTKT"), workerGuard = Array.from({ length: 2 }, (_, i) => m.read(m.sym("HKGRD") + i));
   assert.equal(workerBottom - m.sym("HKGRD"), 2); assert.equal(workerTop - workerBottom, 56);
   assert.deepEqual(workerGuard, [0, 0], "cold workspace clear initializes the private guard");
@@ -677,9 +681,10 @@ function deepestWalk(shell = SHELL) {
     frame = { instructionPC: m.pc, bytes: Array.from({ length: 3 }, (_, i) => m.read(m.pc + i)), sp: m.cpu.cpu.sp, depth: m.read(m.sym("HKDEP")), busy: m.read(m.sym("HKBUSY")) };
     if (m.classicBankIn && frame.sp >= page && frame.sp <= top) { shellSamples++; shellLowSP = Math.min(shellLowSP, frame.sp); }
     if (m.pc === 0x122) { publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.equal(m.cpu.cpu.a, 0x78); assert.equal(++returnedKey, 1); }
-    if (m.pc === m.sym("ABICALL") && m.cpu.cpu.c === 11) {
-      publicContext(m); assert.equal(pendingDescriptor, null); assert.equal(m.cpu.cpu.e, 0); assert.equal(m.cpu.cpu.h << 8 | m.cpu.cpu.l, page + s.CFCB);
-      assert.equal(word(m, m.cpu.cpu.sp), page + s.VW1 + 12); assert.equal(snapshot("TNDESC real full-cache pressure").queue.length, 30);
+    if (m.pc === m.sym("VSDSC") && !pendingDescriptor) {
+      assert.equal(m.cpu.cpu.h << 8 | m.cpu.cpu.l, m.sym("RCFCB"), "the ROM's walk describes into its own scratch");
+      assert.ok(m.cpu.cpu.sp >= base && m.cpu.cpu.sp < top, "on the shell's stack, through TNPRMPT");
+      assert.equal(snapshot("TNDESC real full-cache pressure").queue.length, 30);
       pendingDescriptor = { sp: m.cpu.cpu.sp, back: word(m, m.cpu.cpu.sp), attempts: attempts.length, allocations: [] };
     }
     if (pendingDescriptor && m.pc === m.sym("CTAKE")) {
@@ -697,7 +702,7 @@ function deepestWalk(shell = SHELL) {
       allocation.passes.push({ pc: m.pc, sp: m.cpu.cpu.sp, position: state.position, attempts: attempts.length });
     }
     if (pendingDescriptor && m.pc === pendingDescriptor.back) {
-      publicContext(m); assert.equal(m.cpu.cpu.sp, pendingDescriptor.sp + 2); assert.equal(m.cpu.cpu.flags.C, 1);
+      assert.equal(m.cpu.cpu.sp, pendingDescriptor.sp + 2); assert.equal(m.cpu.cpu.flags.C, 1);
       assert.ok(pendingDescriptor.allocations.length > 0, "functional full-cache allocation ran beyond the ordinary entry attempt");
       for (const allocation of pendingDescriptor.allocations) assert.deepEqual(allocation.passes.map(p => p.position), Array.from({ length: 31 }, (_, i) => i));
       assert.ok(attempts.length > pendingDescriptor.attempts); descriptors.push({ ...pendingDescriptor, returnedSP: m.cpu.cpu.sp, carry: m.cpu.cpu.flags.C, attemptsMade: attempts.length - pendingDescriptor.attempts }); pendingDescriptor = null;
@@ -757,13 +762,13 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
     }
     return { tpa: word(m, 6) - 0x100, glcd: m.read(m.sym("CONMOD")) === 3, n: owners(m).length };
   };
-  assert.equal(tpa(["SHELL.SVC"]).tpa, 43520, "with the shell");
-  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 42752, "and GLCD.SVC");
-  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 38656, "and MON3.SVC");
+  assert.equal(tpa(["SHELL.SVC"]).tpa, 44032, "with the shell: nine pages at ABI 5.6 (43,520 with eleven)");
+  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 43264, "and GLCD.SVC");
+  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 39168, "and MON3.SVC");
   // The three together on a GLCD board, in three orders, the GLCD the console.
   for (const [startup, typed] of [[["SHELL.SVC", "GLCD.SVC", "MON3.SVC"], []], [["SHELL.SVC", "MON3.SVC", "GLCD.SVC"], []], [["GLCD.SVC"], ["SHELL.SVC", "MON3.SVC"]]]) {
     const r = tpa(startup, typed);
-    assert.deepEqual(r, { tpa: 37888, glcd: true, n: 3 }, startup.concat(typed).join(", "));
+    assert.deepEqual(r, { tpa: 38400, glcd: true, n: 3 }, startup.concat(typed).join(", "));
   }
 });
 
@@ -927,7 +932,7 @@ test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
   const b = bdos11("B"), a = bdos11("A");
   t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
   for (const [drive, current, qualified] of [["B", b, qualifiedB], ["A", a, qualifiedA]])
-    assert.ok(current.nothing - qualified.nothing <= 360, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
+    assert.ok(current.nothing - qualified.nothing <= 362, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`); // 360 before ABI 5.6, whose CCP code moves the poll's by a T-state on A:
   assert.ok(b.worst / qualifiedB.worst - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / qualifiedB.worst - 1) * 100).toFixed(2)} % over qualified`);
   assert.ok(a.worst / qualifiedA.worst - 1 <= 0.05, `logged on A:: ${a.worst} T, ${((a.worst / qualifiedA.worst - 1) * 100).toFixed(2)} % over qualified`);
 });
@@ -1190,9 +1195,9 @@ test("S2-12 tpa", () => {
   const card = starterImage();
   volume(card, "A").write("STARTUP.CMD", Buffer.from("\x1a", "latin1"));
   const bare = shellMachine(card);
-  assert.equal(word(bare, 6) - 0x100, 46_790, "bare: three drives' vectors");
+  assert.equal(word(bare, 6) - 0x100, 46_645, "bare: three drives' vectors, and the CCP's history, pager and labels, 145 bytes, at ABI 5.6 (46,790 before)");
   const m = shellMachine(starterImage());
-  assert.equal(word(m, 6) - 0x100, 43_776, "with the shell, the starter card's STARTUP.CMD");
+  assert.equal(word(m, 6) - 0x100, 44_288, "with the shell, the starter card's STARTUP.CMD: its nine pages (43,776 with eleven)");
 });
 
 /** A card of the drives field's absence, built from the starter recipe without it: its machine under the shell. */
@@ -1274,17 +1279,17 @@ test("S2-13 docs", () => {
   ]) assert.ok(recovery.includes(s), `recovery.md: ${s}`);
   assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
-  for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
-    "a TPA of 43,776 bytes"])
+  for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "is shown at the next prompt", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
+    "a TPA of 44,288 bytes"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);
   const container = flat("docs/container-format.md");
   assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
   assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
   const compat = flat("docs/compatibility.md");
-  for (const s of ["46,790 bytes", "43,776", "43,008"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  for (const s of ["46,645 bytes", "44,288", "43,520"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
-  assert.match(flat("docs/mon3.md"), /from `AC00h` to `9900h`, and the TPA from 43,776 bytes to \*\*38,912\*\*/);
-  assert.match(flat("docs/mon3.md"), /it is `9600h`, a TPA of \*\*38,144\*\*/);
+  assert.match(flat("docs/mon3.md"), /from `AE00h` to `9B00h`, and the TPA from 44,288 bytes to \*\*39,424\*\*/);
+  assert.match(flat("docs/mon3.md"), /it is `9800h`, a TPA of \*\*38,656\*\*/);
   // The figures are measured ones: no doc speaks of a projection or of a qualification still to come.
   for (const n of ["README.md", "docs/shell.md", "docs/compatibility.md", "docs/memory-map.md", "docs/mon3.md"])
     assert.doesNotMatch(flat(n), /\bprojects? (word|A400h|text|41,|these)|projected|projections?\b|pending (current )?runtime|qualification must confirm|to be confirmed/i, `${n}: measured figures, stated plainly`);

@@ -19,7 +19,7 @@ CAVERNS
 ```
 
 The current executable is **37,888 bytes**, including its selected runtime.
-Compilation and play work with the shell resident (TPA 43,776 bytes); no UNLOAD
+Compilation and play work with the shell resident (TPA 44,288 bytes); no UNLOAD
 is needed. BAZA.RTL is required for compilation, not beside the running game.
 Use the PICO9918 console at 80 columns and matrix keyboard input, as tested.
 Physical TEC-1G qualification remains outstanding.

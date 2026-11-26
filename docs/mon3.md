@@ -67,12 +67,12 @@ the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
 On the starter card it is 4,807 bytes of header and image in **19 pages**, 5,269
 bytes as a file with its relocation data. The starter card loads `SHELL.SVC`
-first, so the word at `0006h` goes from `AC00h` to `9900h`, and the TPA from
-43,776 bytes to **38,912**. With `GLCD.SVC` installed too, as the GLCD
-console's startup does, it is `9600h`, a TPA of **38,144**, in any order of
+first, so the word at `0006h` goes from `AE00h` to `9B00h`, and the TPA from
+44,288 bytes to **39,424**. With `GLCD.SVC` installed too, as the GLCD
+console's startup does, it is `9800h`, a TPA of **38,656**, in any order of
 installing the three. On the starter card
-with no shell, whose three drives take the bare ROM's word to `B7C6h`, it goes
-from `B7C6h` to `A400h`, and the TPA from 46,790 bytes to 41,728, and 40,960 with
+with no shell, whose three drives take the bare ROM's word to `B735h`, it goes
+from `B735h` to `A400h`, and the TPA from 46,645 bytes to 41,728, and 40,960 with
 `GLCD.SVC`. The monitor, its line buffer, its FCB, its saved page
 zero and its stack are all in those pages, above anything a MON-3 program may
 load into. MON-3's graphics buffer and variables are not: they are MON-3's
@@ -478,7 +478,7 @@ its two `LD A,R` on both sides. The console's return is tested with
   and starts nothing while a write is pending, so no earlier write is lost
   with a hung program.
 - **The accepted disk hazard.** A MON-3 program that writes from the bare
-  BDOS entry through BFFFh (`B7C6h` on the starter, `B986h` on the two-volume
+  BDOS entry through BFFFh (`B735h` on the starter, `B8F5h` on the two-volume
   reference card) can damage the allocation vectors, workspace and RAM BIOS
   table. It can
   damage TEC-OS's disk tables. The protections are the flush before `GO`,
