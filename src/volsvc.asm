@@ -165,11 +165,11 @@ RSEQ2:
 ; BDOS with no active caller BDOS call.
 
 VSMNT:
-  call VSIN
+  call VSCHG
   jr VMNT
 
 VSUNM:
-  call VSIN
+  call VSCHG
   jr VUNM
 
 ; Describe copies all 32 card-descriptor
@@ -349,6 +349,14 @@ VMNTRS:
 ; on a tag hit. Keep B/DE/HL and
 ; incoming flags. Return A=FFh. No
 ; validation or cache walk here.
+
+; A mount or unmount: the prompt's
+; labels are read again (LblOk). Then
+; as VSIN.
+
+VSCHG:
+  xor a
+  ld (LblOk),a
 
 VSIN:
   ld c,b

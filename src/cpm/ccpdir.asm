@@ -1,12 +1,13 @@
 ; Directory-selection scratch in
-; LOADBUF, live only while CD runs.
+; LOADBUF, live only while CD or the
+; prompt's walk runs. RLBL, the drives'
+; labels, is kept in ram.asm.
 
 RCDDRV EQU LOADBUF
 RCDIDX EQU LOADBUF+1
 RCDON EQU LOADBUF+2
 RVIDX EQU LOADBUF+3
 RVLIST EQU LOADBUF+4
-RLBL EQU LOADBUF+5
 RCDNAME EQU LOADBUF+49
 RCFCB EQU LOADBUF+60
 RDSDRV EQU RCFCB+14
@@ -241,6 +242,7 @@ RVWSTOP:
 
   xor a          ; labels part read:
   ld (RLBL),a    ; the table invalid
+  ld (LblOk),a   ; and read again
   ret
 
 ; HL = drive A's 11 bytes in RLBL.
@@ -331,20 +333,30 @@ RCFAILR:
   ld (PRGCODE),hl
   jp STARTED
 
-; Drive E as d:NAME, its volume's label
-; read afresh, as the prompt shows it
-; and service TNPRMPT gives the shell.
+; Drive E as d:NAME, as the prompt
+; shows it and service TNPRMPT gives the
+; shell. The labels are read once into
+; RLBL, LblOk then set, and again only
+; after a mount or unmount clears it.
 ; The walk's scratch is LOADBUF, so
 ; while a startup record waits there
-; (STPOS 1) the drive alone is shown,
-; as d:. Changes all.
+; (STPOS 1) an unread table shows the
+; drive alone, as d:. Changes all.
 
 drvVol:
+  ld a,(LblOk)
+  or a           ; NZ: RLBL holds them
+  jr nz,.show
   ld a,(STPOS)
   dec a          ; Z: a record waits
   ld a,e         ; the drive
   jp z,RPUTDRV   ; d: alone
-  push af        ; the drive, kept
-  call RVWALKQ   ; every label, again
-  pop af
+  push de        ; the drive, kept
+  call RVWALKQ   ; every label, once
+  pop de
+  ld a,1         ; kept until a mount
+  ld (LblOk),a   ; changes
+
+.show:
+  ld a,e         ; the drive
   jp RDRVLBL     ; d: and the label

@@ -171,6 +171,13 @@ CMDTXT:
 
 APIRTPC: DS 2
 
+; The drives' labels for the prompt,
+; 11 bytes for each of A: to D:, valid
+; while LblOk is nonzero (ccpdir.asm).
+
+RLBL: DS 4*11
+LblOk: DS 1
+
 ; The pager's place (ccpterm.asm).
 
 PgLine: DS 1     ; the pager's rows
