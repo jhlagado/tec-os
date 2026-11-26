@@ -254,36 +254,16 @@ DIRFK:
   jp STARTED
 
 ; Listing output for DIR's row breaks:
-; CR, then LF through LSTPUT. Carry from
-; either stops the listing.
+; CR, then LF through the pager, pgPut.
+; Carry from either stops the listing.
 
 LSTCRLF:
   ld e,CR
-  call LSTPUT
+  call pgPut
   ret c          ; propagate stop
   ld e,LF
+  jp pgPut
 
-; Listing output for TYPE's bytes: E
-; through the shell's PAGE entry when a
-; shell holds the hook, so the listing
-; can pause there; carry stops it.
-; Without a shell, print E with carry
-; clear, so a bare listing never
-; pauses. Changes AF/DE/HL, and BC on a
-; shell's pause.
-
-LSTPUT:
-  ld a,(SHOWN+1)
-  or a
-  jr z,LSTP0     ; no shell
-  ld a,2
-  call SHENT     ; HL = PAGE
-  jp (hl)        ; its carry stops
-
-LSTP0:
-  call PUTCHAR
-  or a           ; carry clear
-  ret
 
 ; Print a field from HL with positive
 ; B=1..255. Current callers use 8 or 3.
@@ -389,7 +369,7 @@ TYPEBYTE:
   ld e,a
   push bc        ; count across pager
   push hl        ; pointer across pager
-  call LSTPUT
+  call pgPut     ; paged: carry stops
   pop hl
   pop bc
   jr c,TYPEEND   ; carry after restore
@@ -417,3 +397,4 @@ TYPEEND:
 FILENO:
   ld de,NOFILE
   jp ERRGO       ; failure-code message
+

@@ -330,3 +330,15 @@ RCFAILR:
   ld hl,RCFAIL
   ld (PRGCODE),hl
   jp STARTED
+
+; Drive E as d:NAME, its volume's label
+; read afresh, as the prompt shows it
+; and service TNPRMPT gives the shell.
+; Changes all.
+
+showVol:
+  ld a,e         ; the drive, kept
+  push af        ; across the walk
+  call RVWALKQ   ; every label, again
+  pop af
+  jp RDRVLBL     ; d: and the label

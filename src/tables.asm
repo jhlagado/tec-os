@@ -84,6 +84,8 @@ KEYTAB: DB "CD",0
   DW CMDCON
   DB "UNLOAD",0
   DW CMDUNL
+  DB "CLS",0
+  DW cmdCls
   DB 0
 
 ; FNTAB: functions 0-40. FCBMAP selects
@@ -146,6 +148,11 @@ SVTAB: DW HWSINFO,HWSDIG
 ; entry keeps the table whole.
 
   DW PARSEFCB
+
+; 19 and 20: the pager and the prompt's
+; drive and volume, at ABI minor 6.
+
+  DW pgPut,showVol
 
 ; Twelve-byte FCB prefixes for CMDFCB:
 ; explicit drive A, eight-byte name and

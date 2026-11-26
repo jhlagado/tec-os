@@ -213,8 +213,10 @@ TNLIST EQU 14
 
 TNFONT EQU 15
 
-; SHELL: HL = a shell's table of four
-; words, LINE, PAGE, HREC and HSTORE,
+; SHELL: HL = a shell's table, its one
+; word LINE (four words, LINE, PAGE,
+; HREC and HSTORE, before ABI 5.6, when
+; the ROM took the pager and history),
 ; or 0 to give the prompt back. Returns
 ; HL = the table it replaced, 0 for
 ; none. A table must lie in a
@@ -255,6 +257,23 @@ TNGLYPH EQU 17
 
 TNPARSE EQU 18
 
+; PAGE: E through the ROM's pager, as
+; TYPE and DIR use it: the row and
+; column kept, [more] one row short of
+; a full screen. Carry: the listing
+; stopped, ^C also dropping the rest of
+; the line. Each prompt starts a page.
+; Added at ABI minor 6.
+
+TNPAGE EQU 19
+
+; PROMPT: drive E as d:NAME, its
+; volume's label read afresh, as the
+; bare prompt shows it. Changes all.
+; Added at ABI minor 6.
+
+TNPRMPT EQU 20
+
 ; TNCOUNT is the exclusive service
 ; bound, not callable. Failures return
 ; status A with carry:
@@ -263,7 +282,7 @@ TNPARSE EQU 18
 ; failure does not imply unchanged
 ; workspace, cache or hardware.
 
-TNCOUNT EQU 19
+TNCOUNT EQU 21
 
 TNEBAD EQU 1
 

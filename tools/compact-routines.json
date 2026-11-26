@@ -440,6 +440,7 @@
   ],
   "src/cpm/ccpcmd.asm": [
     "CMDUNL",
+    "cmdCls",
     "CONNO",
     "CMDCON",
     "PREPPAGE",
@@ -458,6 +459,15 @@
     "STLINE",
     "SETLB"
   ],
+  "src/cpm/ccpterm.asm": [
+    "pgPut",
+    "pgNewLn",
+    "hstNext",
+    "hstPrev",
+    "hstRecal",
+    "hstStart",
+    "hstStore"
+  ],
   "src/cpm/ccpfile.asm": [
     "CMDDIR",
     "DIRREADY",
@@ -467,7 +477,6 @@
     "DIRNEXT",
     "DIRDONE",
     "LSTCRLF",
-    "LSTPUT",
     "PUTTRIM",
     "PUTDEC",
     "CMDTYPE",
@@ -991,6 +1000,7 @@
     "RPUTN",
     "RPUTTRIM",
     "RCRLF",
-    "RCFAILR"
+    "RCFAILR",
+    "showVol"
   ]
 }

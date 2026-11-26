@@ -143,9 +143,10 @@ GEOESZ  EQU     6
 function checkAbi(at, rom) {
   const byte = (a) => rom[a - 0xc000];
   check(String.fromCharCode(byte(at("ABITAB")), byte(at("ABITAB") + 1), byte(at("ABITAB") + 2)) === "TNA", "the signature at ABITAB");
-  check(byte(at("ABIMAJ")) === 5 && byte(at("ABIMIN")) === 5, "ABI 5.5 at ABIMAJ and ABIMIN");
+  check(byte(at("ABIMAJ")) === 5 && byte(at("ABIMIN")) === 6, "ABI 5.6 at ABIMAJ and ABIMIN");
   check(byte(at("ABICALL")) === 0xc3 && (byte(at("ABICALL") + 1) | (byte(at("ABICALL") + 2) << 8)) === at("SVCDSP"), "ABICALL is JP SVCDSP");
   check(at("ABIEND") === at("ABICALL") + 3 && at("ABIEND") - at("ABITAB") === 8, "the table is 8 bytes");
+  check(at("HISTRING") >> 8 === (at("HISTRING") + at("HIST_LEN") - 1) >> 8, "the history ring lies within one page");
   check(at("SVCFMT") === FORMAT, `abi.inc's SVCFMT is ${at("SVCFMT")}, tools/lib/svc-format.mjs has ${FORMAT}`);
   const table = Array.from({ length: at("TNCOUNT") }, (_, n) => byte(at("SVTAB") + 2 * n) | (byte(at("SVTAB") + 2 * n + 1) << 8));
   check(table.every((v) => v >= at("ROMCODE") && v < at("CODEEND")), "every service's entry is code");

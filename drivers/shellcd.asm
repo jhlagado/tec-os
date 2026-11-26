@@ -52,97 +52,7 @@ CDG1:
   jp BADW        ; the script's own
 
 CDHAND:
-  xor a          ; the labels invalid:
-  ld (LBL),a     ; read at the prompt
   jp HAND        ; the ROM's CD
-
-; Walk the card's volumes from index 0,
-; each described by TNDESC into CFCB,
-; to the first index refused. LBL takes
-; the labels of those on A: to D:.
-; Changes all.
-
-VWALKQ:
-  ld hl,LBL
-  ld de,LBL+1
-  ld bc,4*11-1
-  ld (hl),SPACE  ; no labels yet
-  ldir           ; all spaces
-  ld e,b         ; from index 0
-
-VW1:
-  ld a,e
-  ld (VIDX),a
-  ld hl,CFCB     ; its 32 bytes
-  ld c,TNDESC    ; describe it
-  call ABICALL
-  ret c          ; past the last
-  ld a,(DSDRV)   ; its drive, or FFh
-  cp 4           ; on A: to D:?
-  jr nc,VW5      ; on no drive
-  call LBLADR    ; its row
-  ex de,hl
-  ld hl,DSLBL    ; its label
-  ld bc,11
-  ldir           ; into the table
-
-VW5:
-  ld a,(VIDX)
-  inc a
-  ld e,a         ; the next index
-  jr VW1
-
-; HL = drive A's 11 bytes in LBL.
-; Changes AF and BC.
-
-LBLADR:
-  ld hl,LBL      ; drive A:'s
-  ld bc,11
-  inc a
-
-LA1:
-  dec a
-  ret z          ; at drive A's
-  add hl,bc      ; the next drive
-  jr LA1
-
-; Drive A as d:NAME, its label trimmed,
-; for the prompt and for DIR. LBL is
-; read from the card first when its
-; first byte is zero. A drive past D:
-; has no label. Changes all.
-
-DRVLBL:
-  push af        ; the drive
-  call PUTDRV
-  ld a,(LBL)
-  or a
-  call z,VWALKQ  ; the labels first
-  pop af
-  cp 4
-  ret nc         ; past D:
-  call LBLADR
-  ld b,11
-  jp PUTTRIM     ; the label
-
-; Drive A as its letter and a colon.
-
-PUTDRV:
-  add a,'A'
-  ld e,a
-  call PUTC      ; the letter
-  ld e,':'
-  jp PUTC
-
-; CLS: the screen cleared and the
-; cursor home, by the terminal's codes.
-
-CMDCLS:
-  ld de,CLSMSG
-  call PUTS      ; ESC [H, ESC [2J
-  jp BDONE
-
-CLSMSG:   DB    27,"[H",27,"[2J$"
 
 ; ECHO text: the text as typed, after
 ; its blanks.
@@ -164,9 +74,11 @@ CMDPAU:
   ld a,(hl)
   or a
   jr nz,PA1      ; text given
-  ld de,MOREMSG
+  ld de,PAUMSG
   call PUTS      ; [more]
   jr PA2
+
+PAUMSG: DB "[more]$"
 
 PA1:
   call PUTZ      ; the text

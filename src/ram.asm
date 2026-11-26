@@ -238,6 +238,20 @@ LINPTR: DS 2
 LINMAX: DS 1
 LINCNT: DS 1
 HFLAG: DS 1      ; FFh CCP
+PgLine: DS 1     ; the pager's rows
+PgCol: DS 1      ; and column, a word
+
+; The prompt's history (ccpterm.asm):
+; HIST_LEN bytes of zero-ended lines,
+; within one page, as the build checks.
+; HistHead is the next store and
+; HistPos the end of the line shown,
+; each as its low byte.
+
+HIST_LEN EQU 96
+HistHead: DS 1
+HistPos: DS 1
+HistRing: DS HIST_LEN
                  ; prompt/history
 CURDRV: DS 1
 DEFDRV: DS 1

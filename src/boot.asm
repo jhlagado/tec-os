@@ -63,6 +63,12 @@ COLDZ:
   ld bc,WSSPAN
   ld (hl),0
   ldir
+
+; The history starts empty: the next
+; line goes at the ring's start.
+
+  ld a,LOW(HistRing)
+  ld (HistHead),a
   ld sp,STKTOP
 
   call CONINIT

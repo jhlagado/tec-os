@@ -14,6 +14,15 @@ CMDUNL:
   call SVCUNL
   jp nc,STARTED  ; NC: unload completed
 
+; CLS: the screen cleared and the
+; cursor home, by the terminal's codes;
+; the prompt then starts the top row.
+
+cmdCls:
+  ld de,ClsMsg   ; ESC [H, ESC [2J
+  call PUTSTR
+  jp MAINLOOP    ; no CRLF before it
+
 TOBADCMD:
   jp BADCMD
 
@@ -698,3 +707,4 @@ STLE:
   call PUTSTR    ; stops at embedded $
   or a           ; carry-clear line
   ret
+

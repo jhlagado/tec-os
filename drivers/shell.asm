@@ -4,11 +4,12 @@
 ; ROM CCP leaves out: lines of pieces
 ; joined by ! and &, .CMD scripts, the
 ; rest of STARTUP.CMD, COPY, DEL,
-; SERVICES, CD and the volume in the
-; prompt, DIR with sizes, CLS, ECHO,
-; PAUSE, the pager and the history
-; ring. Every other piece goes back to
-; the ROM to run. The hook's contract,
+; SERVICES, CD's script guard, DIR with
+; sizes, ECHO and PAUSE. The ROM gives
+; it the pager, the history, CLS and
+; the prompt's volume (ABI 5.6). Every
+; other piece goes back to the ROM to
+; run. The hook's contract,
 ; the .CMD rules and the separators are
 ; set out in docs/shell.md.
 
@@ -32,13 +33,14 @@ FAILCODE EQU 255*256
 ; The writer fills INIT, REMOVE, size
 ; and relocation. XTRA bytes of extra
 ; RAM follow the image. Declared stack
-; use: BDOS 6 (HREC and HSTORE), BIOS
-; 0, CCP 0: LINE and PAGE move at once
-; to the shell's own stack.
+; use: none on the BDOS's, BIOS's or
+; CCP's: LINE moves at once to the
+; shell's own stack, and the ROM keeps
+; the pager and the history.
 
 HDR: DB 'D',SVCFMT,0,1
   DW 0,0,XTRA,0
-  DB 6,0,0
+  DB 0,0,0
   DW 0
   DB "SHELL   "
 
@@ -57,17 +59,20 @@ EXNAM: DS 8,' '
 ENTRY0:
   jr ENTRY
 
-; The hook's table: LINE, PAGE, HREC
-; and HSTORE. It must not cross a page,
-; and lies in the first.
+; The hook's table, one word, LINE: the
+; ROM pages and keeps the history
+; itself from ABI 5.6. It lies in the
+; first page.
 
-TABLE: DW LINE,PAGE,HREC,HSTO
+TABLE: DW LINE
 
 ; BC points at the eight-byte name the
 ; loader read the file by, the FCB's
 ; drive the byte before it. Refuse a
-; ROM before ABI 5.4, which has no
-; TNPARSE: TNEBAD with carry. Keep the
+; ROM before ABI 5.6, which has no
+; TNPAGE or TNPRMPT and no pager or
+; history of its own: TNEBAD with
+; carry. Keep the
 ; name in the record, and the drive and
 ; user for the overlay, clear the extra
 ; RAM and set ready last. Returns no
@@ -75,8 +80,8 @@ TABLE: DW LINE,PAGE,HREC,HSTO
 ; and DE.
 
 INIT:
-  ld a,(ABIMIN)  ; TNPARSE is at
-  cp 4           ; ABI minor 4
+  ld a,(ABIMIN)  ; the ROM's pager and
+  cp 6           ; prompt: ABI 5.6
   ld a,TNEBAD
   ret c          ; an older ROM: none
   push bc        ; the name
@@ -99,13 +104,11 @@ IN1:
   ld de,EXNAM    ; the record's name
   ld bc,8        ; into the record
   ldir
-  ld hl,VARS     ; state, buffers, ring
+  ld hl,VARS     ; state and buffers
   ld de,VARS+1   ; a byte at a time
   ld bc,CLRLEN
   ld (hl),0      ; all zero
   ldir
-  ld a,LOW(RING)
-  ld (HHEAD),a   ; the ring's first
   pop af
   ld (OVDRV),a   ; the file's drive
   pop af
@@ -194,9 +197,6 @@ LINE:
   ld (OUTP),de
   ld (OWNPG),bc  ; C stub, B lowest
   push af        ; the flags
-  call PGRST     ; each command's pager
-  ld a,(HHEAD)
-  ld (HPOS),a    ; recall from newest
   pop af
   bit 1,a        ; dropped?
   jr z,LN1       ; nothing dropped
@@ -301,7 +301,7 @@ SEND:
 
 ; A typed line through BDOS 10, the
 ; first since LINE, so the ROM offers
-; the history ring's ^W and ^N.
+; its history's ^W and ^N.
 
 TYPED:
   call PROMPT
@@ -815,8 +815,6 @@ SHTAB:
   DW CMDCD
   DB "DIR",0
   DW OVDIR
-  DB "CLS",0
-  DW CMDCLS
   DB "ECHO",0
   DW CMDECHO
   DB "PAUSE",0
@@ -851,9 +849,8 @@ IMGEND:
 ; none), PIECE this piece, LCOND
 ; nonzero when the next follows & only.
 ; OUTP is the ROM's buffer, STUBPG and
-; LOWPG LINE's C and B. SAVSP and PGSP
-; hold the SP that LINE and PAGE were
-; called with.
+; LOWPG LINE's C and B. SAVSP holds
+; the SP that LINE was called with.
 
 VARS EQU IMGEND
 PREV EQU VARS
@@ -871,51 +868,27 @@ OWNPG EQU OUTP+2
 STUBPG EQU OWNPG
 LOWPG EQU OWNPG+1
 SAVSP EQU OWNPG+2
-PGSP EQU SAVSP+2
-LCOND EQU PGSP+2
+LCOND EQU SAVSP+2
 
 ; CLAIMD: the first claim is made.
 ; FCBBASE: the FCB the parser fills.
 ; OVDRV and OVUSR: the drive, from 1,
 ; and the user the shell's file was
-; read from, for the overlay. The
-; ring's HHEAD is its next store and
-; HPOS the end of the line recalled.
-; The pager's PGLINE and PGCOL count,
-; PGROWS and PGWID are its page. CFCB
+; read from, for the overlay. CFCB
 ; is COPY's destination, a script's
 ; name and the overlay's file, SFCB the
 ; open script, LBUF typed input: its
 ; capacity, count and LTXT, the text,
-; which also holds a script's line and
-; a recalled one. The shell's 48-byte
+; which also holds a script's line. The shell's 48-byte
 ; stack is under STKTOP.
 
 CLAIMD EQU LCOND+1
 FCBBASE EQU CLAIMD+1
 OVDRV EQU FCBBASE+2
 OVUSR EQU OVDRV+1
-HHEAD EQU OVUSR+1
-HPOS EQU HHEAD+1
-PGLINE EQU HPOS+1
-PGCOL EQU PGLINE+1
-PGROWS EQU PGCOL+1
-PGWID EQU PGROWS+1
-CFCB EQU PGWID+1
+CFCB EQU OVUSR+1
 LBUF EQU CFCB+36
 LTXT EQU LBUF+2
-
-; LBL holds each drive's volume label,
-; 11 bytes a drive, valid while its
-; first byte is not zero. VIDX is the
-; walk's index.
-
-; A volume's descriptor, which TNDESC
-; puts in CFCB, has its drive (FFh for
-; none) at DSDRV and its label at DSLBL.
-
-DSDRV     EQU   CFCB+14
-DSLBL     EQU   CFCB+16
 
 ; DIR searches with CFCB, whose extent
 ; byte is CFEX.
@@ -926,21 +899,13 @@ CFEX      EQU   CFCB+12
 ; an open script writes it, so a guard
 ; laid there reads any overrun.
 
-LBL       EQU   LBUF+130
-VIDX      EQU   LBL+44
-SFCB      EQU   VIDX+1
+SFCB      EQU   LBUF+130
 STKBOT    EQU   SFCB+36
 STKTOP    EQU   STKBOT+48
 
-; The ring is the last 128 bytes, on a
-; 128-byte boundary: L keeps its offset
-; and HFIX, SET 7,L or RES 7,L, the
-; second byte of a CB instruction, puts
-; back the ring's bit 7 after each step.
+; The extra RAM ends with the stack.
 
-RING EQU ((STKTOP+127)/128)*128
-XEND EQU RING+128
-HFIX EQU $BD+(LOW(RING)/128)*64
+XEND EQU STKTOP
 XTRA EQU XEND-IMGEND
 CLRLEN EQU XEND-VARS-1
 

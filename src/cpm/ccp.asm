@@ -162,6 +162,14 @@ MAINLOOP:
                  ; stack
 
 MLREAD:
+
+; Each line's output starts a new page,
+; and ^W first recalls the newest line.
+
+  ld hl,0
+  ld (PgLine),hl
+  ld a,(HistHead)
+  ld (HistPos),a
   call SAVEDRV   ; the drive, at 0004h
   ld a,(SHOWN+1)
   or a
@@ -172,10 +180,9 @@ MLREAD:
   jr MLSKIP
 
 MLBARE:
-  ld a,(CURDSK)
-  add a,'A'      ; drive letter
+  ld a,(CURDSK)  ; the current drive
   ld e,a
-  call PUTCHAR
+  call showVol   ; as d:NAME
   ld e,'>'
   call PUTCHAR   ; prompt terminator
   ld hl,CHPOS    ; a function 47 line
@@ -189,6 +196,8 @@ MLBARE:
   ld (STFLAG),a  ; save line origin
   jr nz,MLGOT    ; startup already
                  ; copied
+  ld a,$FF       ; ^W/^N and Up/Down
+  ld (HFLAG),a   ; for this line alone
   ld de,CMDBUF
   ld c,10        ; 10: counted input
   call BDOS
@@ -304,8 +313,11 @@ SHLINE:
   ld hl,CHPOS
   ld e,(hl)      ; the flags
   ld (hl),0
-  xor a
-  call SHENT     ; HL = LINE
+  ld hl,(SHOWN)  ; the shell's table:
+  ld a,(hl)      ; its one word, LINE
+  inc hl
+  ld h,(hl)
+  ld l,a         ; HL = LINE
   ld a,e
   ld de,CMDTXT
   call VHLJP
@@ -313,20 +325,6 @@ SHLINE:
   ld (hl),0      ; the line is bounded
   ld hl,HFLAG
   ld (hl),0      ; not for a program
-  ret
-
-; HL = word A of the shell's table at
-; SHOWN. The table does not cross a
-; page. Changes AF.
-
-SHENT:
-  ld hl,(SHOWN)
-  add a,l
-  ld l,a
-  ld a,(hl)
-  inc hl
-  ld h,(hl)
-  ld l,a
   ret
 
 ; Put the BDOS back in user area 0 and

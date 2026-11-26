@@ -8,7 +8,7 @@
 
   DB "TNA"
   DB 5
-  DB 5           ; C007h ABIMIN, the
+  DB 6           ; C007h ABIMIN, the
                  ; minor version: 2 adds
                  ; TNGLYPH, 3 COMVEC,
                  ; 4 TNPARSE, 5 EXRMV

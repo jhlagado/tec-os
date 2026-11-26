@@ -260,7 +260,9 @@ DRD1:
   ld de,FREEM
   call PUTS
   ld a,(DDRV)    ; its volume
-  call DRVLBL    ; d:NAME
+  ld e,a
+  ld c,TNPRMPT
+  call ABICALL   ; d:NAME
   jp BDONE
 
 NOFMSG:   DB    "NO FILE$"
@@ -274,10 +276,15 @@ FREEM:    DB    " free on $"
 
 LSTNL:
   ld e,CR
-  call PGPUT
+  call OPAGE
   ret c          ; stopped at [more]
   ld e,LF
-  jp PGPUT
+
+; E through the ROM's pager.
+
+OPAGE:
+  ld c,TNPAGE
+  jp ABICALL
 
 ; HL = match A's entry in the record at
 ; 0080h, A being its slot plus 1.

@@ -493,9 +493,7 @@ LINHIST:
   or a
   jr z,LINCHR    ; program: ordinary
                  ; byte
-  ld a,4
-  call SHENT     ; the shell's HREC
-  call VHLJP     ; C: ^W older, ^N newer
+  call hstRecal  ; C: ^W older, ^N newer
   jr c,TOLINLP   ; carry: none to show
   jp LINHR       ; show the shell's line
 
@@ -665,9 +663,7 @@ LINDONE:
   ld (hl),0
   and b          ; prompt with data
   jr z,LINDN1    ; nothing to store
-  ld a,6
-  call SHENT     ; the shell's HSTORE
-  call VHLJP     ; DE: data, B: count
+  call hstStore  ; DE: data, B: count
 
 LINDN1:
   xor a

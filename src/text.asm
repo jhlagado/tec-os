@@ -15,8 +15,12 @@ DGERR: DB "No volume mounted, error ",0
 DGPROM: DB "R retry> ",0
 DGCARD: DB "CARD?",0
 
-; CCP '$'-terminated text.
-; UNMORE erases [more].
+; CCP '$'-terminated text. UnMore
+; erases the pager's [more].
+
+MoreMsg: DB "[more]$"
+UnMore: DB CR,"      ",CR,'$'
+ClsMsg: DB 27,"[H",27,"[2J$"
 
 ; ---- cpm/ccp.asm
 
