@@ -334,11 +334,17 @@ RCFAILR:
 ; Drive E as d:NAME, its volume's label
 ; read afresh, as the prompt shows it
 ; and service TNPRMPT gives the shell.
-; Changes all.
+; The walk's scratch is LOADBUF, so
+; while a startup record waits there
+; (STPOS 1) the drive alone is shown,
+; as d:. Changes all.
 
 drvVol:
-  ld a,e         ; the drive, kept
-  push af        ; across the walk
+  ld a,(STPOS)
+  dec a          ; Z: a record waits
+  ld a,e         ; the drive
+  jp z,RPUTDRV   ; d: alone
+  push af        ; the drive, kept
   call RVWALKQ   ; every label, again
   pop af
   jp RDRVLBL     ; d: and the label
