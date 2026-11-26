@@ -218,7 +218,7 @@ const bigFile = (bytes) => {
   return Buffer.concat(Array.from({ length: bytes / 64 }, () => line));
 };
 
-test("TED opens a 64,000-byte file whole and refuses a 65,664-byte one, with at least 23,110 bytes for edits on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
+test("TED opens a 64,000-byte file whole and refuses a 65,664-byte one, with at least 21,830 bytes for edits on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
   check(TED);
   // The starter's display files: on a board with both, GLCD.SVC loads and gives
   // way to the ROM's PICO9918 console, so one driver is loaded (the figures).
@@ -243,7 +243,7 @@ test("TED opens a 64,000-byte file whole and refuses a 65,664-byte one, with at 
     const where = board.tms ? "on a board with both" : "with no display";
     keys(m, "ted big.txt\r", "TED on the 64,000-byte file", () => /TED +BIG\.TXT/.test(m.text(0)));
     assert.equal(word(m, LENGTH), 64_000, `the whole file ${where}`);
-    assert.ok(word(m, TEXCAP) >= 23_110, `${word(m, TEXCAP)} bytes for edits ${where}, at least 23,110`);
+    assert.ok(word(m, TEXCAP) >= 21_830, `${word(m, TEXCAP)} bytes for edits ${where}, at least 21,830`); // TED dbcffc1, 1,280 bytes less than 9cbb955's 23,110: its new keys and help
     let mark = m.output.length;
     keys(m, "\x11", "the prompt", () => /A(:\S*)?>$/.test(m.text(mark)));
     mark = m.output.length;
@@ -254,10 +254,10 @@ test("TED opens a 64,000-byte file whole and refuses a 65,664-byte one, with at 
 
 // The smallest system the starter card teaches: the shell, MON3.SVC
 // installed and left by EXIT, then TED, whose edits then have less room.
-test("TED's edits have at least 18,502 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 17,734 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
+test("TED's edits have at least 17,222 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 16,454 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
   check(TED);
   const P = /\r\n\d*[A-P](:\S*)?>$/;
-  for (const [board, via, floor] of [[{ glcd: false }, "serial", 18_502], [{ matrix: true, glcd: true }, "matrix", 17_734]]) {
+  for (const [board, via, floor] of [[{ glcd: false }, "serial", 17_222], [{ matrix: true, glcd: true }, "matrix", 16_454]]) {
     const m = boot(new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))), board);
     const type = (line, done, what) => {
       const mark = m.output.length;
