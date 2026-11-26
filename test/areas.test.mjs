@@ -64,7 +64,7 @@ test("a program that sets area 3 and exits leaves the prompt in area 0, with no 
   for (const shell of [false, true]) {
     const m = boot(card({ shell }));
     const where = shell ? "the shell" : "the ROM";
-    assert.match(m.command("AREA 3"), shell ? /\r\nA:SYSTEM>$/ : /\r\nA>$/, `${where}: no number before the prompt`);
+    assert.match(m.command("AREA 3"), /\r\nA:SYSTEM>$/, `${where}: no number before the prompt, the same with the shell and without`);
     assert.equal(m.read(4), 0, "0004h: drive A:, user nibble zero");
     assert.match(m.command("AREA"), /\r\nAREA 0\r\n/, `${where}: function 32's query returns 0`);
     assert.match(m.command("TYPE HELLO.TXT"), /\r\nhello\r\n/, `${where}: the next command runs in area 0`);
@@ -149,11 +149,16 @@ const BARE_SEARCH_PRICE = { rom: 64, shell: 256, launch: 24_000 };
 // shell (34 T-states measured), on 24 November 2026.
 const COMVEC_PRICE = { launch: 34 };
 const MAIN = { tpa: { twoVolume: 47237, starter: 46533 }, shelled: 42752 };
+// The owner raised the ROM's cap for EXRMV and the CCP's primitives on 26
+// November 2026: the pager, the history, CLS and the prompt's volume, with
+// back-tab, 416 bytes of ROM and 144 of fixed RAM; the bare prompt prints its
+// volume's label, 7 more characters, some 96,000 T-states on the serial line.
+const CCP_PRICE = { rom: 416, tpa: 144, warm: 97_000, program: 1_000 }; // program: the typed line kept in the history, some 800 T-states
 
 test("USER-removal savings remain after the approved bare-search ROM and RAM costs", () => {
   const census = JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
-  assert.ok(census.rom.used - BARE_SEARCH_PRICE.rom < WAS.used, `${census.rom.used} bytes used including ${BARE_SEARCH_PRICE.rom} approved lookup bytes`);
-  for (const row of ["twoVolume", "starter"]) assert.ok(census.ram.cards[row].tpa >= MAIN.tpa[row], `${row}: TPA ${census.ram.cards[row].tpa}`);
+  assert.ok(census.rom.used - BARE_SEARCH_PRICE.rom - CCP_PRICE.rom < WAS.used, `${census.rom.used} bytes used including ${BARE_SEARCH_PRICE.rom} approved lookup bytes and the CCP's ${CCP_PRICE.rom}`);
+  for (const row of ["twoVolume", "starter"]) assert.ok(census.ram.cards[row].tpa + CCP_PRICE.tpa >= MAIN.tpa[row], `${row}: TPA ${census.ram.cards[row].tpa}, the CCP's ${CCP_PRICE.tpa} approved`);
   const top = (m) => m.read(6) | (m.read(7) << 8);
   const bare = top(boot(card())), shelled = top(boot(card({ shell: true })));
   const pages = (bare >> 8) - (shelled >> 8);
@@ -191,8 +196,9 @@ test("the ordinary command path retains warm-prompt bounds and the approved shel
   }
   t.diagnostic(JSON.stringify({ now, was: WAS.path, kept }));
   for (const k of ["bare", "shell"]) {
-    assert.ok(now[k].warm <= WAS.path[k].warm, `${k}: ${now[k].warm} T-states from a warm boot to the prompt, ${WAS.path[k].warm} before`);
-    const allowance = (k === "shell" ? BARE_SEARCH_PRICE.launch : 0) + COMVEC_PRICE.launch;
+    const label = k === "bare" ? CCP_PRICE.warm : 0; // the shell's prompt showed the volume already
+    assert.ok(now[k].warm <= WAS.path[k].warm + label, `${k}: ${now[k].warm} T-states from a warm boot to the prompt, ${WAS.path[k].warm} before, plus ${label} approved`);
+    const allowance = (k === "shell" ? BARE_SEARCH_PRICE.launch : 0) + CCP_PRICE.program + COMVEC_PRICE.launch; // the ROM keeps the shell's lines too
     assert.ok(now[k].program <= WAS.path[k].program + allowance, `${k}: ${now[k].program} T-states from a typed command to the program, ${WAS.path[k].program} before plus ${allowance} approved`);
   }
   // The ROM kept from before, which sets the area at each entry, is over the bare figure to the prompt.

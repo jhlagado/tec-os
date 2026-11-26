@@ -19,9 +19,9 @@ test("with a PICO9918 and the matrix keyboard the screen is the console from the
   const m = boot(standardCard(), { tms: true, matrix: true, width: 40 });
   const screen = m.screen();
   assert.deepEqual(screen.slice(0, 4), ["", "TEC-OS 0.1 for TEC-1G", "A: SYSTEM", "B: WORK"], "the banner and volumes on the screen");
-  const at = screen.indexOf("A>");
+  const at = screen.indexOf("A:SYSTEM>");
   assert.ok(at >= 0, "the prompt on the screen");
-  assert.equal(m.cell(at, 2), 0xa0, "cursor is the reverse image of a space");
+  assert.equal(m.cell(at, 9), 0xa0, "cursor is the reverse image of a space, after A:SYSTEM>");
   m.command("DIR");
   assert.equal(m.serialText(), "", "nothing goes to the serial port");
   assert.equal(m.read(3) & 3, 1, "IOBYTE CON: is CRT:");
@@ -44,7 +44,7 @@ test("CON switches the console between devices and falls back to serial", () => 
   m.typeMatrix("con uc1:\r");
   m.expect(/A(:\S*)?>$/);
   assert.equal(m.read(3) & 3, 3);
-  assert.deepEqual(m.glcdScreen().slice(0, 3), ["CON: UC1:", "A>", ""]);
+  assert.deepEqual(m.glcdScreen().slice(0, 3), ["CON: UC1:", "A:SYSTEM>", ""]);
   m.mark = m.output.length;
   m.typeMatrix("con tty\r");
   assert.match(m.expect(/A(:\S*)?>$/), /CON: TTY:\r\n/);
@@ -115,12 +115,12 @@ test("the video terminal implements its ANSI subset", async () => {
   const t = m.screen();
   assert.equal(t[21], "L29");
   assert.equal(t[0], "L08");
-  assert.equal(t[23], "A>");
+  assert.equal(t[23], "A:SYSTEM>");
 });
 
 test("CON PICO 32 uses TMS9918 Graphics I", () => {
   const m = boot(standardCard(), { tms: true, matrix: true, width: 32 });
-  assert.ok(m.screen(32).includes("A>"));
+  assert.ok(m.screen(32).includes("A:SYSTEM>"));
   assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[1], 0xc0);
 });
 
@@ -140,12 +140,12 @@ test("DIR lays out names to fit the display and reports free space", () => {
   const tms = boot(image, { tms: true, matrix: true, width: 40 });
   tms.command("DIR");
   const s = tms.screen();
-  const at = s.indexOf("A>DIR");
+  const at = s.indexOf("A:SYSTEM>DIR");
   assert.deepEqual(s.slice(at + 1, at + 5), [
     "COPY.COM     TERM.COM     PROBE.COM",
     "MANUAL.TXT   README.TXT   X",
     "6 files, 1004K free",
-    "A>",
+    "A:SYSTEM>",
   ]);
   const small = standardCard();
   for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "MANUAL.TXT", "README.TXT", "X"]) volume(small, "A").write(n, new Uint8Array(300));
@@ -153,7 +153,7 @@ test("DIR lays out names to fit the display and reports free space", () => {
   glcd.command("DIR *.COM");
   const g = glcd.glcdScreen();
   const from = g.indexOf("COPY.COM"); // GLCD.SVC and STARTUP.CMD are on A: too
-  assert.deepEqual(g.slice(from, from + 5), ["COPY.COM", "TERM.COM", "PROBE.COM", "3 files, 1000K free", "A>"]);
+  assert.deepEqual(g.slice(from, from + 5), ["COPY.COM", "TERM.COM", "PROBE.COM", "3 files, 1000K free", "A:SYSTEM>"]);
   assert.match(tms.command("DIR B:"), /NO FILE/);
 });
 
@@ -162,7 +162,7 @@ test("the GLCD is the console when no TMS9918 answers", () => {
   // The banner and the volumes go to serial and the LCD; the CCP's first
   // startup loads GLCD.SVC, and the GLCD is the console from its next prompt.
   assert.match(m.serialText(), /TEC-OS 0\.1 for TEC-1G\r\nA: SYSTEM *\r\nB: WORK/);
-  assert.equal(m.glcdScreen().find((l) => l !== ""), "A>");
+  assert.equal(m.glcdScreen().find((l) => l !== ""), "A:SYSTEM>");
   m.mark = m.output.length;
   m.typeMatrix("put 1 g.com\r");
   m.expect(/A(:\S*)?>$/);
@@ -329,15 +329,15 @@ test("the default console is the PICO9918's 80 x 24 text mode", () => {
   assert.equal(m.read(m.sym("VWID")), 80);
   m.command("DIR");
   let s = m.screen();
-  let at = s.indexOf("A>DIR");
+  let at = s.indexOf("A:SYSTEM>DIR");
   assert.equal(s[at + 1], "COPY.COM     TERM.COM     PROBE.COM    MANUAL.TXT   README.TXT   X");
   m.command("TYPE WIDE.TXT");
   s = m.screen();
-  at = s.indexOf("A>TYPE WIDE.TXT");
+  at = s.indexOf("A:SYSTEM>TYPE WIDE.TXT");
   assert.equal(s[at + 1], `${"y".repeat(79)}Z`, "80 characters fill one line");
   assert.equal(s[at + 2], "w".repeat(80));
   assert.equal(s[at + 3], "wwwww");
-  assert.equal(s[at + 5], "A>");
+  assert.equal(s[at + 5], "A:SYSTEM>");
 });
 
 test("the video terminal inserts and deletes characters and lines", async () => {
