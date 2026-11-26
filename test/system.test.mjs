@@ -24,7 +24,7 @@ test("cold boot leaves the overlay off, the classic bank selected and the CCP pr
   assert.equal(m.physicalBank, -1);
   const bdosVector = m.read(6) | (m.read(7) << 8);
   assert.equal(bdosVector, m.read(m.sym("STUBAD")) | (m.read(m.sym("STUBAD") + 1) << 8));
-  assert.equal(bdosVector, 0xb986, "the two-volume reference card's BDOS entry");
+  assert.equal(bdosVector, 0xb8f6, "the two-volume reference card's BDOS entry, 144 bytes lower at ABI 5.6 for the CCP's history, pager and labels");
   assert.equal(m.read(0), 0xc3);
   assert.equal((m.read(1) | (m.read(2) << 8)) - 3, m.sym("RAMBIOS"));
   assert.equal(m.sym("RAMBIOS"), 0xbf00, "the RAM BIOS table is in the top page");
@@ -187,9 +187,9 @@ test("BDOS file functions pass the probe", SLOW, async () => {
 const G1M = (mount, label) => ({ geometry: "G1M", label, mount });
 const G8M = (mount, label) => ({ geometry: "G8M", label, mount });
 const CARDS = [
-  { name: "the two-volume reference card", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK")], entry: 0xb986 },
-  { name: "the reference card with C:", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK"), G1M("C", "MORE")], entry: 0xb946 },
-  { name: "four 8 MiB volumes", volumes: ["A", "B", "C", "D"].map((d) => G8M(d, `VOL${d}`)), entry: 0xb6c6 },
+  { name: "the two-volume reference card", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK")], entry: 0xb8f6 },
+  { name: "the reference card with C:", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK"), G1M("C", "MORE")], entry: 0xb8b6 },
+  { name: "four 8 MiB volumes", volumes: ["A", "B", "C", "D"].map((d) => G8M(d, `VOL${d}`)), entry: 0xb636 },
 ];
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 

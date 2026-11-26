@@ -55,12 +55,12 @@ export const mon3Svc = (opt = {}) => makeSvc(resolve(ROOT, "drivers/mon3.asm"), 
  * the least (0006h), and the least TPA alone and with GLCD.SVC. Every size
  * test reads it.
  */
-export const MON3_CEILING = { bytes: 4864, pages: 19, top: 0xa600, tpa: 42240, tpaGlcd: 41472 };
+export const MON3_CEILING = { bytes: 4864, pages: 19, top: 0xa500, tpa: 41984, tpaGlcd: 41216 }; // a page lower at ABI 5.6, the CCP's history, pager and labels taking the reference card's bare (0006h) to B8F6h
 
 /** A build on the two-volume reference card: pages, (0006h), entry, TPA and SERVICES line. */
 export function figures(svc) {
   const pages = Math.ceil(svc.image / 256);
-  const top = (0xb9 - pages) << 8;
+  const top = (0xb8 - pages) << 8; // B8F6h's page on the reference card at ABI 5.6 (B986h's before)
   return { pages, top, entry: top + 41, tpa: top - 0x100, line: `MON3 ${pages}` };
 }
 

@@ -1097,7 +1097,7 @@ test("KG66 reset after", async () => {
     const a = volume(m.image, "A");
     assert.deepEqual(Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))])), before, `${name}: the card's files as before GO`);
     assert.deepEqual(services(m), [], `${name}: no service after the reset`);
-    assert.equal(word(m, 6), 0xb986, `${name}: (0006h) B986h`);
+    assert.equal(word(m, 6), 0xb8f6, `${name}: (0006h) B8F6h`);
   }
 });
 

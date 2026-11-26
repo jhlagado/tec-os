@@ -374,7 +374,7 @@ test("KG67 glcd-3d", { timeout: 600_000 }, async () => {
 });
 
 // After glcd-text and glcd-demo, which never return, a reset: the card's
-// files as before GO, no service, and (0006h) B986h.
+// files as before GO, no service, and (0006h) B8F6h.
 
 test("KG67 reset after", async () => {
   // Each program runs here, to the end its own test reaches.
@@ -387,7 +387,7 @@ test("KG67 reset after", async () => {
     const a = volume(m.image, "A");
     assert.deepEqual(Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))])), before, `${name}: the card's files as before GO`);
     assert.deepEqual(services(m), [], `${name}: no service after the reset`);
-    assert.equal(word(m, 6), 0xb986, `${name}: (0006h) B986h`);
+    assert.equal(word(m, 6), 0xb8f6, `${name}: (0006h) B8F6h`);
   }
 });
 
@@ -471,7 +471,7 @@ async function consoleAfterGo(svc) {
     const { m } = await glcdGo(svc, bytes, at);
     assert.deepEqual(unreadable(m, "MON3>"), [], `${name}: the panel at MON3>`);
     assert.ok(!line(m, "EXIT").mon3);
-    assert.deepEqual(unreadable(m, "A>"), [], `${name}: the panel at A> after EXIT`);
+    assert.deepEqual(unreadable(m, ">"), [], `${name}: the panel at the prompt after EXIT`);
   }
   // Call 2's return runs the restore too: TXT's drawing, then LD C,2 and
   // RST 10h in place of its RET. On the serial console the panel keeps

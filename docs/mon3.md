@@ -53,7 +53,7 @@ MON3>GO
 ...
 MON3>EXIT
 
-A>
+A:SYSTEM>
 ```
 
 `MON3.SVC` installs the service if it isn't in, and enters it: its execution
@@ -161,7 +161,7 @@ It does not relocate absolute addresses embedded in machine code or data.
 
 - **`EXIT`** turns interrupts off, sets IM 1, resets the drives, puts page
   zero back, takes the warm-boot hook out, turns the digits and LED matrix
-  off, leaves the serial line idle, and warm boots to `A>`. Before that it
+  off, leaves the serial line idle, and warm boots to the prompt, `A:SYSTEM>`. Before that it
   asks to be removed: as the lowest resident, the one `(0007h)` names, it
   sets its execution record's `EXRMV` bit, and the warm boot unloads it, so
   its 19 pages come back with nothing more typed (`docs/services.md`,
@@ -301,7 +301,7 @@ Entry is refused, with return code FF00h and nothing changed:
 ## The ways out
 
 `EXIT`, ^C at `MON3>`, a program's `RST 00h`, `JP 0000h` or BDOS 0, and a BDOS
-error all end the session at `A>` through the warm boot, with 0008h–003Fh,
+error all end the session at the prompt through the warm boot, with 0008h–003Fh,
 0041h–004Fh, the NMI entry, the IOBYTE and the drive as they were, and IM 1.
 Each also resets the drives, so every allocation vector is rebuilt from its
 directory at its next use, as after a program's `RET`. Only `EXIT` asks
@@ -320,7 +320,7 @@ The next entry takes it out first, and `UNLOAD` does too.
 
 | Entry | MON-3 | In S2 |
 | --- | --- | --- |
-| `RST 00h` | monitor reset | ends the session at `A>` through TEC-OS's warm boot |
+| `RST 00h` | monitor reset | ends the session at the prompt through TEC-OS's warm boot |
 | `RST 08h` | `scanKeysWait` | implemented, keypad and matrix |
 | `RST 10h` | API, selector in C | the calls below; a selector of 63 or more shows `displayError` |
 | `RST 18h` | GLCD API, selector in A | calls 0 to 20, MON-3's own routines; 21 and above show `displayError` |

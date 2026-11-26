@@ -139,8 +139,8 @@ const leave = (m, r) => {
 
 // The ROM's size, hash and ABI against the baseline.
 
-// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back), restated at ABI 5.2 for TNGLYPH (17) and TNCOUNT 18, at ABI 5.4 for TNPARSE (18) and TNCOUNT 19, and at ABI 5.5 for EXRMV, the execution record's state bit 2. The ROM figure is EXRMV's build's 15,728 (ABI 5.5, TEC-OS e371fee), restated as John decided on 2026-11-26 to raise the cap for EXRMV and the CCP's growth, from the COMVEC build's 15,600 (ABI 5.3, TEC-OS 8d6c09b), itself restated from the packed-font build's 15,549 (decided 2026-11-24); the cap is a ceiling on growth from it.
-const BASELINE = { used: 15728, cap: 128, tpa: 47273, abi: "86892f80a6054a7554b870d3a8e57cd6a8dd7ac90307dbca9055e19a60f649bb" };
+// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back), restated at ABI 5.2 for TNGLYPH (17) and TNCOUNT 18, at ABI 5.4 for TNPARSE (18) and TNCOUNT 19, at ABI 5.5 for EXRMV, the execution record's state bit 2, and at ABI 5.6 for TNPAGE (19), TNPRMPT (20) and TNCOUNT 21. The ROM figure is the CCP primitives' build's 16,144 (ABI 5.6: back-tab, the pager, the history, CLS and the prompt's volume), restated as John decided on 2026-11-26 to raise the cap for EXRMV and the CCP's growth, from EXRMV's build's 15,728 (ABI 5.5, TEC-OS e371fee), from the COMVEC build's 15,600 (ABI 5.3, TEC-OS 8d6c09b), itself restated from the packed-font build's 15,549 (decided 2026-11-24); the cap is a ceiling on growth from it.
+const BASELINE = { used: 16144, cap: 128, tpa: 47273, abi: "c44f8d6f85d3cbc627079e13eafc8708682dce05caee3209608d44861ebc617c" };
 
 test("KG58 rom cap", () => {
   const census = () => JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
@@ -160,7 +160,7 @@ test("KG58 rom cap", () => {
   assert.equal(sha(Buffer.from(abiDeclarations(abi.toString("utf8")), "utf8")), BASELINE.abi, "abi.inc's declarations as they were");
   assert.match(abi.toString("latin1"), /^SVCFMT EQU 4\b/m, "SVCFMT 4");
   const { rom, symbols } = romFor();
-  assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 5], "ABI 5.5");
+  assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 6], "ABI 5.6");
   const m = machine(card());
   assert.equal(word(m, 6) - 0x100, 47238, "TPA 47,238 with the shared recovery allocation and COMVEC");
   console.log(`ROM ${used} used, ${free} free, ${used - BASELINE.used} over the baseline, ${first.hash}`);
@@ -489,7 +489,7 @@ function running(file, prog) {
 }
 
 /** EXIT, the first line typed after MON3>, gives A> with nothing before it. */
-const cleanExit = (m) => assert.equal(line(m, "EXIT").out, "EXIT\r\r\n\r\nA>", "EXIT, the first line typed, goes to A>");
+const cleanExit = (m) => assert.match(line(m, "EXIT").out, /^EXIT\r\r\n\r\nA:\S*>$/, "EXIT, the first line typed, goes to the prompt, A: and its volume");
 
 /** ESCOUT ended by Esc, queued as the host queues a key and then held as a person holds it. */
 function escFallback(file) {
@@ -1565,7 +1565,7 @@ test("KG63 warm boot and reset", async () => {
   m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after a reset");
   assert.deepEqual(services(m), [], "a reset removes it");
-  assert.equal(word(m, 6), 0xb986);
+  assert.equal(word(m, 6), 0xb8f6);
 });
 
 async function unloads(svc) {
@@ -1576,7 +1576,7 @@ async function unloads(svc) {
     exitBy(m, how);
     m.command("UNLOAD");
     assert.deepEqual(services(m), [], `after ${how}: UNLOAD takes the pages`);
-    assert.equal(word(m, 6), 0xb986, `after ${how}: (0006h) back at B986h`);
+    assert.equal(word(m, 6), 0xb8f6, `after ${how}: (0006h) back at B8F6h`);
     assert.equal(warmTarget(m), m.sym("WBOOTR"), `after ${how}: the hook is out`);
     assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A(:\S*)?>$/, `after ${how}: a .COM exits to the prompt`);
   }
@@ -1664,14 +1664,14 @@ test("KG68 docs agree", async () => {
   const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
   assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **${fig.pages} pages**`), "the size");
   // The starter card asks for three drives, whose vectors take the bare
-  // ROM's word from B986h to B7C6h: MON3.SVC's pages go below page B7h.
-  const bare = fig.top - 0x200;
+  // ROM's word from B8F6h to B736h: MON3.SVC's pages go below page B7h.
+  const bare = fig.top - 0x100;
   const tpa = (top) => (top - 0x100).toLocaleString("en");
-  assert.ok(mon3.includes(`from \`B7C6h\` to \`${h4(bare)}\`, and the TPA from 46,790 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
-  // With the shell: (0006h) is AC00h with SHELL.SVC alone on the starter
-  // card, as shell2.test measures it, MON3.SVC's pages lower, and GLCD.SVC
-  // three pages lower still.
-  const shellTop = 0xac00;
+  assert.ok(mon3.includes(`from \`B736h\` to \`${h4(bare)}\`, and the TPA from 46,646 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
+  // With the shell: (0006h) is AE00h with SHELL.SVC alone on the starter
+  // card, its nine pages at ABI 5.6, as shell2.test measures it, MON3.SVC's
+  // pages lower, and GLCD.SVC three pages lower still.
+  const shellTop = 0xae00;
   const withMon3 = shellTop - fig.pages * 0x100;
   assert.ok(mon3.includes(`from \`${h4(shellTop)}\` to \`${h4(withMon3)}\`, and the TPA from ${tpa(shellTop)} bytes to **${tpa(withMon3)}**`), "(0006h) and the TPA with the shell");
   assert.ok(mon3.includes(`\`${h4(withMon3 - 0x300)}\`, a TPA of **${tpa(withMon3 - 0x300)}**`), "and with GLCD.SVC too");
@@ -1693,7 +1693,7 @@ test("KG68 docs agree", async () => {
   const listedIn = (head) => [...mon3.slice(mon3.indexOf(head)).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
   assert.deepEqual(listedIn("calls implemented, 42 of them:"), built.filter((i) => !(i in TRANSLATED)), "the implemented calls");
   assert.deepEqual(listedIn("Translated, on TEC-OS's resources, 4 of them:"), Object.keys(TRANSLATED).map(Number), "the translated calls");
-  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes from the bare BDOS entry through BFFFh \(`B7C6h` on the starter, `B986h` on the two-volume reference card\)/);
+  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes from the bare BDOS entry through BFFFh \(`B736h` on the starter, `B8F6h` on the two-volume reference card\)/);
   // The refused calls the doc lists are those the table sends to the error display, and RTCAPI.
   const refusedCalls = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [i] : []));
   const notBuilt = mon3.slice(mon3.indexOf("Not built, and refused:")).split(". Each")[0];
@@ -1778,7 +1778,7 @@ test("KG70 ABI minor 5 names bit 2 as EXRMV, and the file leaves it clear for it
   const exec = await execFile();
   const { rom, symbols } = romFor();
   const at = symbols.get("ABIMIN") - 0xc000;
-  assert.equal(rom[at], 5, "ABI minor 5 names the bit");
+  assert.ok(rom[at] >= 5, "ABI minor 5 named the bit");
   assert.match(readFileSync(resolve(ROOT, "src/abi.inc"), "latin1"), /^EXRMV EQU 2\b/m, "EXRMV, bit 2");
   assert.equal(exec[25 + 3] & 4, 0, "the file leaves the bit clear: only the entry sets it");
 });
