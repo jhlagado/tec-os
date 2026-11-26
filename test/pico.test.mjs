@@ -125,7 +125,7 @@ test("a GLCD-only board whose STARTUP.CMD sets CON CRT, or a program sets the fi
   // The shell runs the lines after its own.
   const m = start({ "GLCD.SVC": GLCD_SVC, "SHELL.SVC": SHELL_SVC, "SETCRT.COM": SETCRT, "STARTUP.CMD": startupFile("SHELL.SVC", "CON CRT", "SETCRT", "GLCD.SVC") }, { tms: false });
   assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/);
-  assert.deepEqual([m.read(m0(m)), m.read(3) & 3, word(m, 6) - 0x100], [UC1, UC1, TPA_GLCD - 0x0b00], "GLCD.SVC in, and the console, below the shell's eleven pages");
+  assert.deepEqual([m.read(m0(m)), m.read(3) & 3, word(m, 6) - 0x100], [UC1, UC1, TPA_GLCD - 0x0900], "GLCD.SVC in, and the console, below the shell's nine pages (eleven before ABI 5.6)");
 });
 
 test("a both-displays board whose STARTUP.CMD says CON UC1 loads GLCD.SVC and takes it, though CONMOD is still CRT: when TNDRVR runs (KE-200)", () => {
@@ -194,8 +194,8 @@ test("the console at 32 columns writes the colours and an empty sprite table", (
 });
 
 /** TPA on the starter card with nothing loaded, and with GLCD.SVC in: its three pages under the stub's page. */
-const TPA_NONE = 47238;
-const TPA_GLCD = 46336;
+const TPA_NONE = 47094; // 47,238 before ABI 5.6
+const TPA_GLCD = 46080; // 46,336 before ABI 5.6
 
 test("TPA after boot: the ROM's console alone, the GLCD's driver, and both", () => {
   const top = (m) => word(m, 6) - 0x100;
@@ -230,7 +230,7 @@ test("the starter card boots the shell and the ROM's console on a board with bot
   assert.deepEqual(files.map((f) => f.name), ["SHELL.SVC", "GLCD.SVC", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
-  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 44288], "GLCD.SVC out, the ROM's console the console (KE-150, KE-200), the shell's eleven pages under the stub's page, AE00h");
+  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 44544], "GLCD.SVC out, the ROM's console the console (KE-150, KE-200), the shell's nine pages under the stub's page, AF00h (eleven, AE00h, before ABI 5.6)");
   assert.equal(start(set, { tms: false }).read(3) & 3, UC1);
 });
 

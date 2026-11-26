@@ -24,7 +24,9 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 // each of 32 records, in cycles from the stub.
 // abi is the digest of abi.inc's declarations, its comment lines left out.
 const LANDING = { used: 14769, tpa: 47273, abi: "7aed95f4062b414350385658a87760e175ffa2041f5576f4f0b27c12e16dba99", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
-const INTEGRITY = { used: 15878, tpa: 47238, starter: 46790, entry: 0xb7c6 };
+// Restated at ABI 5.6, as John decided on 2026-11-26, for the CCP's history,
+// pager, CLS and prompt (15,878 used, TPA 47,238 and 46,790 at B7C6h before).
+const INTEGRITY = { used: 16144, tpa: 47094, starter: 46646, entry: 0xb736 };
 
 // Qualified control's costs in this exact returned-input fixture: one empty
 // status call, and 32 write/status pairs on each logged drive. The integrity
@@ -38,11 +40,12 @@ const STARTER_COST = { bounceB: 102_662_703, bounceA: 102_405_719 };
 test("AC12 version fields", () => {
   const inc = readText("src/abi.inc");
   const exrmv = inc.match(/\n; Execution record state bit 2[\s\S]*?\nEXRMV EQU 2\n/)[0];
-  assert.equal(sha(Buffer.from(abiDeclarations(inc.replace(exrmv, "")), "utf8")), LANDING.abi, "abi.inc's declarations as at TNPARSE's landing (ABI 5.4), with EXRMV's block alone added at 5.5");
+  const page = inc.match(/\n; PAGE: E through the ROM's pager[\s\S]*?\nTNPRMPT EQU 20\n/)[0];
+  assert.equal(sha(Buffer.from(abiDeclarations(inc.replace(exrmv, "").replace(page, "").replace("TNCOUNT EQU 21", "TNCOUNT EQU 19")), "utf8")), LANDING.abi, "abi.inc's declarations as at TNPARSE's landing (ABI 5.4), with EXRMV's block added at 5.5 and TNPAGE's and TNPRMPT's at 5.6");
   assert.match(inc, /^SVCFMT EQU 4$/m);
-  assert.equal(ABI.TNCOUNT, 19);
+  assert.equal(ABI.TNCOUNT, 21);
   const { rom } = romFor();
-  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 5], "TNA 5.5: COMVEC, TNPARSE, then EXRMV, added");
+  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 6], "TNA 5.6: COMVEC, TNPARSE, EXRMV, then TNPAGE and TNPRMPT, added");
   assert.match(readText("tools/build.mjs"), /^const VERSION = \{ major: 0, minor: 1 \};$/m);
   assert.deepEqual([...SHELL_SVC.subarray(25, 28)], [0x45, 0x58, 1], "the execution record's version byte stays 1");
 });
@@ -780,8 +783,8 @@ function onStarter(command, { logged = "B" } = {}) {
   if (put) {
     assert.equal(file.length, 4096); assert.deepEqual(file, putBytes(16), "all sixteen pages hold PUT's known bytes");
   } else {
-    assert.match(text, /COM written\r\n/); assert.equal(file.length, 16000);
-    assert.equal(sha(file), "0b2f199990302fea3a718cee40ea83e181e66ec0673efed836f6647f1af5a745", "the complete pinned compiler result (BOUNCE.BAS lines 40, 50 and 170 call GLYPH)");
+    assert.match(text, /COM written\r\n/); assert.equal(file.length, 16640); // Baza 184db08's integer words (16,000 before)
+    assert.equal(sha(file), "edecad40992fa899dcc758be077cd2cb7a3e00bb1eeb77b5c39992be6fb37884", "the complete pinned compiler result (BOUNCE.BAS lines 40, 50 and 170 call GLYPH)");
   }
   for (const c of t.commits) {
     assert.ok(c.published.length <= file.length);
@@ -803,13 +806,14 @@ function onStarter(command, { logged = "B" } = {}) {
 function checkBounceWrites(b) {
   const data = b.writes.map((block, i) => [block, b.fn[i]]).filter(([block]) => !b.dir.has(block));
   const times = data.reduce((n, [block]) => n.set(block, (n.get(block) ?? 0) + 1), new Map());
-  // The independently hash-checked 16,000-byte COM has 125 CP/M records:
-  // 31 complete 512-byte blocks and one final single-record block.
-  assert.equal(times.size, 32);
-  assert.deepEqual([...times.values()].sort((a,b)=>a-b), [1,...Array(31).fill(4)],
-    "full blocks progress four acknowledged versions; the final block progresses once");
-  // One CP/M extent requires three directory commits; larger output used two.
-  assert.equal(data.length, 125); assert.equal(b.writes.length - data.length, 3);
+  // The independently hash-checked 16,640-byte COM (Baza 184db08) has 130
+  // CP/M records: 32 complete 512-byte blocks and a final block of two.
+  assert.equal(times.size, 33);
+  assert.deepEqual([...times.values()].sort((a,b)=>a-b), [2,...Array(32).fill(4)],
+    "full blocks progress four acknowledged versions; the final block, of two records, twice");
+  // 130 records pass the first 16 KiB extent, so the directory is committed
+  // six times, three for each extent (one extent, three, before 184db08).
+  assert.equal(data.length, 130); assert.equal(b.writes.length - data.length, 6);
   assert.ok(b.writes.length <= 168, `${b.writes.length} BOUNCE card writes`);
 }
 

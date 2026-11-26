@@ -331,7 +331,7 @@ test("SH11 the built-in DEL comes before a DEL.COM, as ERA before ERA.COM; A:DEL
 
 test("the CCP's printer keeps OUTCHAR's column count and ^P echo", async () => {
   const m = await machine({ "ONE.DAT": Buffer.alloc(128) });
-  assert.equal(m.read(m.sym("COLUMN")), 2, "A> counted by OUTCHAR: the CCP prints through BDOS function 2");
+  assert.equal(m.read(m.sym("COLUMN")), "A:SYSTEM>".length, "A:SYSTEM> counted by OUTCHAR: the CCP prints through BDOS function 2");
   let listed = 0;
   const step = m.step.bind(m);
   m.step = () => {
@@ -366,10 +366,10 @@ test("SH1 rom figure", () => {
   const { used, free, regions } = first.rom;
   // The ROM figure includes buffered line
   // navigation and bare-name search, the packed font (-329) and COMVEC (+51).
-  assert.deepEqual([used, free], [15741, 643], "the ROM's bytes used and free"); // back-tab, 13: Shift with Tab's test and its two-byte tail; EXRMV at ABI 5.5, 16: the warm boot's test of the lowest resident's state bit 2 and its call to the removal, 20, less 4 from the arrows' index and the record test's page-zero case; the matrix's Fn and Shift arrows, 30: one table of the tails after ESC, each ending at its first byte from 40h, scanned for the one wanted (Ctrl's arrows, 8 bytes, kept plain); TNPARSE at ABI 5.4: its table entry, 2 bytes, and its dispatch past housekeeping, 5
+  assert.deepEqual([used, free], [16144, 240], "the ROM's bytes used and free"); // the CCP's primitives at ABI 5.6, 403: the pager (pgPut, pgNewLn), the history in place in a 96-byte ring (hstRecal, hstStore), CLS, the prompt's volume from RLBL kept at boot, mount and unmount, and TNPAGE and TNPRMPT, less the shell table's three unused words and SHENT; back-tab, 13: Shift with Tab's test and its two-byte tail; EXRMV at ABI 5.5, 16: the warm boot's test of the lowest resident's state bit 2 and its call to the removal, 20, less 4 from the arrows' index and the record test's page-zero case; the matrix's Fn and Shift arrows, 30: one table of the tails after ESC, each ending at its first byte from 40h, scanned for the one wanted (Ctrl's arrows, 8 bytes, kept plain); TNPARSE at ABI 5.4: its table entry, 2 bytes, and its dispatch past housekeeping, 5
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
-  assert.ok(first.ram.tpa.bytes >= 47238, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
+  assert.ok(first.ram.tpa.bytes >= 47094, `TPA ${first.ram.tpa.bytes} with nothing loaded`); // 47,238 before the CCP's history, pager and labels at ABI 5.6
   // abi.inc differs from before the hook by TNSHELL's, TNGLYPH's, COMVEC's, TNPARSE's and EXRMV's blocks and TNCOUNT alone.
   const abi = readText("src/abi.inc");
   const block = abi.match(/; SHELL: [\s\S]*?\nTNSHELL EQU 16\n\n/)[0];
@@ -377,7 +377,8 @@ test("SH1 rom figure", () => {
   const comvec = abi.match(/\n; The armed COM launch[\s\S]*?\nCOMVEC EQU \$[0-9A-F]+\n/)[0];
   const parse = abi.match(/; PARSE: [\s\S]*?\nTNPARSE EQU 18\n\n/)[0];
   const exrmv = abi.match(/\n; Execution record state bit 2[\s\S]*?\nEXRMV EQU 2\n/)[0];
-  assert.equal(sha(Buffer.from(abiDeclarations(abi.replace(block, "").replace(glyph, "").replace(parse, "").replace(comvec, "").replace(exrmv, "").replace("TNCOUNT EQU 19", "TNCOUNT EQU 16")), "utf8")), ABI_BASE, "abi.inc's declarations changed only by TNSHELL, TNGLYPH, COMVEC, TNPARSE, EXRMV and TNCOUNT");
+  const page = abi.match(/; PAGE: E through the ROM's pager[\s\S]*?\nTNPRMPT EQU 20\n\n/)[0];
+  assert.equal(sha(Buffer.from(abiDeclarations(abi.replace(page, "").replace(block, "").replace(glyph, "").replace(parse, "").replace(comvec, "").replace(exrmv, "").replace("TNCOUNT EQU 21", "TNCOUNT EQU 16")), "utf8")), ABI_BASE, "abi.inc's declarations changed only by TNSHELL, TNGLYPH, COMVEC, TNPARSE, EXRMV, TNPAGE, TNPRMPT and TNCOUNT");
   console.log(`ROM ${used} used, ${free} free, TPA ${first.ram.tpa.bytes}, ${first.hash.slice(0, 16)}`);
 });
 
@@ -389,7 +390,7 @@ test("SH1 keytab", () => {
     for (; rom[i]; i += 1) n += String.fromCharCode(rom[i]);
     names.push(n);
   }
-  assert.deepEqual(names, ["CD", "DIR", "TYPE", "ERA", "REN", "CON", "UNLOAD"], "KEYTAB holds the minimal CCP's built-ins and nothing else");
+  assert.deepEqual(names, ["CD", "DIR", "TYPE", "ERA", "REN", "CON", "UNLOAD", "CLS"], "KEYTAB holds the CCP's built-ins, CLS among them at ABI 5.6, and nothing else");
 });
 
 test("SAVE is no built-in: SAVE 1 X.COM says SAVE?, fails and writes no file, at the ROM's prompt and at the shell's", async () => {
@@ -405,7 +406,7 @@ test("SAVE is no built-in: SAVE 1 X.COM says SAVE?, fails and writes no file, at
 test("PUT.COM, the tests' file writer: n pages of a ramp, or of a fill byte, and the usage with no file for a bad operand", async () => {
   const m = await machine({ "PUT.COM": PUT_COM });
   const a = () => volume(m.sdImage, "A");
-  assert.equal(m.command("PUT 3 RAMP.DAT"), "PUT 3 RAMP.DAT\r\r\n\r\nA>", "nothing printed");
+  assert.match(m.command("PUT 3 RAMP.DAT"), /^PUT 3 RAMP\.DAT\r\r\n\r\nA:\S*>$/, "nothing printed");
   assert.deepEqual(a().read("RAMP.DAT"), putBytes(3));
   assert.deepEqual([...a().read("RAMP.DAT").slice(126, 131)], [126, 127, 1, 2, 3], "byte k of record r is r + k");
   m.command("PUT 2 B:FILL.DAT 165");
