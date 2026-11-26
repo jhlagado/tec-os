@@ -1,11 +1,10 @@
-// Command-line history at the prompt, moved from the CCP to SHELL.SVC:
-// the 128-byte ring at the end of the shell's memory, ^W and ^N, through the
-// ROM's HREC and HSTORE calls. Emulator evidence, on the serial console.
+// Command-line history at the prompt, the ROM's again from ABI 5.6: the
+// 96-byte HistRing in its workspace, ^W and ^N, kept under the shell as at
+// the bare prompt. Emulator evidence, on the serial console.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { boot, standardCard, volume, withShell } from "./lib/fixtures.mjs";
-import { SHELL, pageOf } from "./lib/shell.mjs";
 
 const W = "\x17";
 const N = "\x0e";
@@ -20,20 +19,23 @@ function held(m) {
   return String.fromCharCode(...Array.from({ length: n }, (_, i) => m.read(p + 2 + i)));
 }
 
-/** The ring's lines from the newest back, read from the shell's pages. */
+/** The ring's size, and the longest line it keeps: the line and its zero leave a byte. */
+const SIZE = 96, LONGEST = SIZE - 2;
+
+/** The ring's lines from the newest back, read from the ROM's HistRing. */
 function lines(m) {
-  const page = pageOf(m), size = SHELL.symbols.XEND - SHELL.symbols.RING, w = size - 1;
-  const ring = Uint8Array.from({ length: size }, (_, i) => m.read(page + SHELL.symbols.RING + i));
-  const head = (m.read(page + SHELL.symbols.HHEAD) - SHELL.symbols.RING) & w;
+  const at = m.sym("HISTRING"), w = (i) => ((i % SIZE) + SIZE) % SIZE;
+  const ring = Uint8Array.from({ length: SIZE }, (_, i) => m.read(at + i));
+  const head = w(m.read(m.sym("HISTHEAD")) - (at & 0xff));
   const out = [];
-  let p = (head - 1) & w;
-  while (ring[(p - 1) & w] !== 0 && out.length < size) {
-    let q = (p - 1) & w;
-    while (ring[(q - 1) & w] !== 0) q = (q - 1) & w;
+  let p = w(head - 1);
+  while (ring[w(p - 1)] !== 0 && out.length < SIZE) {
+    let q = w(p - 1);
+    while (ring[w(q - 1)] !== 0) q = w(q - 1);
     let t = "";
-    for (let i = q; i !== p; i = (i + 1) & w) t += String.fromCharCode(ring[i]);
+    for (let i = q; i !== p; i = w(i + 1)) t += String.fromCharCode(ring[i]);
     out.push(t);
-    p = (q - 1) & w;
+    p = w(q - 1);
   }
   return out;
 }
@@ -87,7 +89,7 @@ test("SH11 over many lines the ring wraps and every recall is a whole line", () 
   const rnd = (n) => ((x = (x * 1103515245 + 12345) & 0x7fffffff), x % n);
   const typed = [];
   for (let i = 0; i < 40; i += 1) {
-    const len = i % 7 === 3 ? 90 + rnd(37) : 1 + rnd(30);
+    const len = i % 7 === 3 ? 70 + rnd(30) : 1 + rnd(25);
     let t = "z";
     while (t.length < len) t += "abcdefghijklmnopqrstuvwxyz0123456789"[rnd(36)];
     typed.push(t);
@@ -96,21 +98,21 @@ test("SH11 over many lines the ring wraps and every recall is a whole line", () 
   const stored = [];
   for (const t of typed) {
     m.command(t);
-    if (stored[stored.length - 1] !== t) stored.push(t);
+    if (t.length <= LONGEST && stored[stored.length - 1] !== t) stored.push(t);
     const want = [];
     let used = 1;
-    for (let i = stored.length - 1; i >= 0 && (used += stored[i].length + 1) <= 128; i -= 1) want.push(stored[i]);
+    for (let i = stored.length - 1; i >= 0 && (used += stored[i].length + 1) <= SIZE; i -= 1) want.push(stored[i]);
     assert.deepEqual(lines(m), want, `after ${JSON.stringify(t)}`);
   }
 });
 
-test("SH11 a line of 126 fills the ring with its zero and is kept; one of 127 is not", () => {
-  const long = "z" + "y".repeat(125);
+test("SH11 a line of 94 fills the ring with its zero and is kept; one of 95 is not", () => {
+  const long = "z" + "y".repeat(LONGEST - 1);
   const m = session(["dir", long]);
-  assert.deepEqual(lines(m), [long], "126 and its zero: the whole ring, dir overwritten");
+  assert.deepEqual(lines(m), [long], "94 and its zero: the whole ring, dir overwritten");
   m.command("stat");
-  m.command("z" + "x".repeat(126));
-  assert.deepEqual(lines(m), ["stat"], "127 not kept, and the ring stays whole");
+  m.command("z" + "x".repeat(LONGEST));
+  assert.deepEqual(lines(m), ["stat"], "95 not kept, and the ring stays whole");
 });
 
 test("SH11 a line repeated, a line holding a 0 and an empty line are not stored", () => {
