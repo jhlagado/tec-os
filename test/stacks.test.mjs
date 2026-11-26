@@ -117,7 +117,7 @@ function recoveryRun(refusing = false) {
       m.sd.pendingResponse = [0x0d, 0xff];
       m.sd.delayBytes = 1;
     };
-    m.runUntil(() => m.ready() && /\r\nA>$/.test(m.text(m.mark)), 400_000_000, "pending-write refusal prompt");
+    m.runUntil(() => m.ready() && /\r\nA:SYSTEM>$/.test(m.text(m.mark)), 400_000_000, "pending-write refusal prompt");
   }
   run(m, "CD D:GAMES\r");
   const result = m.read(m.sym("PRGCODE")) | (m.read(m.sym("PRGCODE") + 1) << 8);

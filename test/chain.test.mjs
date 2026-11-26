@@ -468,7 +468,7 @@ test("SH8 KE-127: a startup line of 128 characters runs its first 127, and leave
   const got = atEntry(m);
   m.runUntil(() => idle(m, 0), 400_000_000, "the prompt");
   assert.deepEqual(got, [{ b100: 0xc9, tail: 126, last: 0 }]);
-  assert.match(m.text(0), new RegExp(`A>X ${"A".repeat(125)}\\r`));
+  assert.match(m.text(0), new RegExp(`A:SYSTEM>X ${"A".repeat(125)}\\r`));
 });
 
 test("SH8 KE-127: the longest tail typed, chained and from function 47, 126, 124 and 126 characters, leaves 0100h as loaded", () => {

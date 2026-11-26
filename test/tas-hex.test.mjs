@@ -61,7 +61,7 @@ async function target(source, stem, constrained, initialFiles = {}) {
   if (constrained) {
     assert.ok(line(m, "MON3.SVC").mon3);
     assert.equal(line(m, "GO 0").mon3, false); // leaves with MON3.SVC installed
-    assert.equal(word(m, 6), 0x9500, "shell, GLCD and MON3 remain resident");
+    assert.equal(word(m, 6), 0x9700, "shell, GLCD and MON3 remain resident"); // 9500h before the shell came to nine pages
   }
   return { m, image, svc };
 }

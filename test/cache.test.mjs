@@ -1296,7 +1296,7 @@ test("a refused close retains acknowledged data through warm boot without publis
   assert.ok(refusals.every(({ block, payload }) => block === lastBlock && Buffer.from(payload).equals(Buffer.from(received))), "every refused write contained the complete queued payload");
   assert.equal(warm.outcome, "normal", "valid default disk state can coexist with retained pending data");
   assert.equal(warm.text, m.text(m.mark));
-  assert.match(warm.text, /\r\nB>$/);
+  assert.match(warm.text, /\r\nB:WORK>$/);
   assert.equal(warm.text.match(/Write pending/g)?.length, 1, "one pending notice rather than a loss report");
   assert.doesNotMatch(warm.text, /Write lost/);
   assert.equal(afterWarm.ephemeral.HKDEP, 1, "the new counted input owns the API context");
@@ -1740,10 +1740,10 @@ function directoryLast({ bare, recover, rom }) {
   assert.deepEqual(Uint8Array.from({ length: 36 }, (_, i) => m.read(0x4000 + i)), fcb);
   held("after actual saved FCB");
   const beforePrompts = countedPrompts(m, { bare });
-  m.runUntil(() => beforePrompts.ready() && m.text(m.mark).endsWith(bare ? "B>" : "B:WORK>"), 400_000_000, "actual B input while data remains refused");
+  m.runUntil(() => beforePrompts.ready() && m.text(m.mark).endsWith("B:WORK>"), 400_000_000, "actual B input while data remains refused");
   held("B input before drive change"); const bOwner = { ...beforePrompts.owner, pc: m.pc };
   const bInputId = beforePrompts.count; m.type("A:\r");
-  m.runUntil(() => beforePrompts.ready() && beforePrompts.owner.id > bInputId && m.text(m.mark).endsWith(bare ? "A>" : "A:SYSTEM>"), 400_000_000, "actual A input after failed private flush");
+  m.runUntil(() => beforePrompts.ready() && beforePrompts.owner.id > bInputId && m.text(m.mark).endsWith("A:SYSTEM>"), 400_000_000, "actual A input after failed private flush");
   held("A input after refused drive change");
   assert.equal(m.read(sym.get("BOOTDRV")), 0); assert.equal(m.read(sym.get("DEFDRV")), 0);
   const aOwner = { ...beforePrompts.owner, pc: m.pc };
@@ -1795,7 +1795,7 @@ function directoryLast({ bare, recover, rom }) {
     return rootStep();
   };
   m.type("A:P2\r");
-  m.runUntil(() => finalPrompts.ready() && finalPrompts.owner.textAtEntry.endsWith(bare ? "A>" : "A:SYSTEM>"), 400_000_000, "actual A input after close returned");
+  m.runUntil(() => finalPrompts.ready() && finalPrompts.owner.textAtEntry.endsWith("A:SYSTEM>"), 400_000_000, "actual A input after close returned");
   const finalOwner = { ...finalPrompts.owner, pc: m.pc }; m.step = session.step;
   assert.equal(p2Entries, 1); assert.ok(release); assert.notEqual(closeA, null); assert.equal(m.read(0x4100), closeA);
   const final = snapshot("after close actual input");
@@ -1925,7 +1925,7 @@ function driveChange({ rom, typed = false, omitted = false } = {}) {
   const ownedPrompt = prompts.ready;
   let typedRelease = null, typedInputOwner = null;
   if (typed) {
-    m.runUntil(() => ownedPrompt() && m.text(m.mark).endsWith("A>"), 400_000_000, "the actual bare A API10 owner still refusing");
+    m.runUntil(() => ownedPrompt() && m.text(m.mark).endsWith("A:SYSTEM>"), 400_000_000, "the actual bare A API10 owner still refusing");
     typedInputOwner = { ...prompts.owner, pc: m.pc, text: m.text(m.mark) };
     typedRelease = held("typed prompt before physical recovery");
     assert.equal(m.read(bootDrive), 0); assert.equal(m.read(sym.get("ERRMODE")), 0xff);

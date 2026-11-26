@@ -93,7 +93,7 @@ test("a program that ends with EXPAND 1 in view warm boots into EXPAND 0, and it
   assert.doesNotMatch(m.text(from), /TEC-OS/, "a warm boot, not a cold one");
   assert.equal(m.sysCtrl & 0x04, 0, "EXPAND 0 in view");
   m.reset();
-  m.expect(/\r\nA(:\S*)?>$/, { from: 0 });
+  m.expect(/\r\nA(:\S*)?>$/); // from the reset's mark: the prompt before it does not count
   assert.match(m.command("TYPE B1.TMP"), /B{127}/, "the file's record on the card after a reset");
   assert.deepEqual(m.expand1Writes, []);
 });

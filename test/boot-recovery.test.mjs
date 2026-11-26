@@ -683,7 +683,7 @@ function backendRecovery(user) {
     imageSHA256: sha(image),
     cycles: r.m.cycles - start,
   };
-  assert.match(successful.text, new RegExp("\\r\\n" + (user || "") + "B>$"));
+  assert.match(successful.text, new RegExp("\\r\\n" + (user || "") + "B:WORK>$"));
   const returnReceipt = finishBarePrompt(r.m);
   assert.equal(classic(r.m, r.m.sym("HKDEP")), 0);
   assert.ok(coherent, "failure state is at a coherent recovery input");
@@ -844,7 +844,7 @@ function delayedStartup(syntheticNMI) {
   refuse = false;
   m.type("\r");
   run(
-    () => m.ready() && /CON: TTY:\r\nB>$/.test(m.text(mark)),
+    () => m.ready() && /CON: TTY:\r\nB:WORK>$/.test(m.text(mark)),
     "buffered startup executes after valid saved-drive restoration",
   );
   assert.equal(named("ERRMODE"), 0);

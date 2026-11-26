@@ -207,7 +207,7 @@ next drive change or warm boot; nothing on the starter card does it.
 **`CD` on A:.** The commands found on A: follow its volume: after `CD A:WORK`,
 `SAY` is `SAY?`, and `CD A:SYSTEM` brings them back. A reset keeps the drives'
 selection, so after `CD A:` to a volume with no `SHELL.SVC` (`CD A:WORK` on
-the starter card) a reset gives the bare `A>` on that volume, and before a
+the starter card) a reset gives the bare prompt on that volume, `A:WORK>`, and before a
 reset the shell's `DIR` is the ROM's and `COPY` and `SERVICES` are refused, as
 their overlay is read from A:. The ROM's `CD` remains available. Type `CD ?`, `CD A:SYSTEM` and `SHELL.SVC`
 to restore the shell.

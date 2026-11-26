@@ -44,7 +44,7 @@ test("RIG4 root fixture commits a real write on the next light call and preserve
   publicContext(r.m);
 
   const commandEntry = r.warm();
-  assert.match(commandEntry, /\r\nB>$/);
+  assert.match(commandEntry, /\r\nB:WORK>$/);
   assert.equal(recoveryInput(r.m), false);
   assert.match(r.m.command("CON"), /CON: TTY:/);
   r.m.runUntil(() => r.m.ready(), 20_000_000, "the command's prompt");

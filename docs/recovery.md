@@ -3,7 +3,7 @@
 ## Restoring SYSTEM from the bare prompt
 
 If A: presents GAMES rather than SYSTEM, a recognised reset keeps that
-selection and can leave a bare `A>` because GAMES has no shell startup.
+selection and can leave the bare prompt, `A:GAMES>`, because GAMES has no shell startup.
 The ROM now provides the same basic CD selection syntax as the shell:
 
 ```text
@@ -190,7 +190,7 @@ the write failure and wait for `Cache clear` before reset or removal.
 
 **`CD A:` and a reset.** A recognised reset keeps the drives' selection, so
 after `CD A:` to a volume without `SHELL.SVC` (`CD A:GAMES` on the starter
-card) a reset gives the bare `A>` on that volume. Use `CD ?`, `CD A:SYSTEM`
+card) a reset gives the bare prompt on that volume, `A:GAMES>`. Use `CD ?`, `CD A:SYSTEM`
 and `SHELL.SVC` to restore the shell, as above. Power off and on gives the
 card's own drives and shell again; on the web page, Power cycle.
 

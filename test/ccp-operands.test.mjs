@@ -38,7 +38,14 @@
 // data moves when the table grows. The CCP's peak is read per command against
 // that ROM's: nothing may add to it, but for the drive changes B: and A:,
 // whose peak was restated to 18 when a drive change came to write the cache
-// out first. Emulator evidence.
+// out first. At ABI 5.6 the bare prompt names the volume, A:SYSTEM>, so
+// every row was retaken from traces of e1ea9cc and this build paired row by
+// row: output and console characters the same but for the prompt's label;
+// every other call, its FCB bytes and its text the same; each buffer one
+// buffer, the CCP's 90h lower and the shell's COPY FCB 0Ah higher. Bare rows
+// that end at the prompt peak at 14, not 12: RDRVLBL keeps the drive while
+// it prints the letter. The shell's rows reach the CCP's stack less deeply,
+// 4 bytes, not 16. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

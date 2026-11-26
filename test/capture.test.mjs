@@ -12,7 +12,7 @@ test("capture follows named prompts after a drive change and CD A:, then GAMES's
   const out = execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--", "B:", "A:", "CD A:GAMES", "@reset"], { encoding: "utf8", timeout: 120_000 });
   assert.match(out, /B:WORK>A:/);
   assert.match(out, /A:GAMES>\n/);
-  assert.match(out, /A: GAMES *\n[^]*A>SHELL\.SVC\n[^]*A:GAMES>\n$/, "the reset keeps GAMES on A:, whose STARTUP.CMD loads the shell");
+  assert.match(out, /A: GAMES *\n[^]*A:GAMES>SHELL\.SVC\n[^]*A:GAMES>\n$/, "the reset keeps GAMES on A:, whose STARTUP.CMD loads the shell");
 });
 
 test("@press sends a key and goes on without a prompt: D, I, R, then Return run DIR (KB-25)", () => {
@@ -41,6 +41,6 @@ for (const width of [40, 32]) {
     rmSync(dir, { recursive: true });
     const rows = out.split("--- screen\n")[1].split("\n");
     assert.ok(rows.every((r) => r.length <= width), `no row past ${width} columns`);
-    assert.ok(rows.includes("A>DIR") && rows.includes("NO FILE"), `each line its own row:\n${rows.join("\n")}`);
+    assert.ok(rows.includes("A:SYSTEM>DIR") && rows.includes("NO FILE"), `each line its own row:\n${rows.join("\n")}`);
   });
 }

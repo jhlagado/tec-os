@@ -273,7 +273,7 @@ test("RIG4/5 warm boot retains failed bytes and later API retries them", () => {
   r.m.write(r.m.sym("CANY"), 1);
   const mark = r.m.output.length;
   r.m.cpu.cpu.pc = 0;
-  r.m.runUntil(() => r.m.ready() && /\r\nA>$/.test(r.m.text(mark)), 8e8, "warm prompt with retained failure");
+  r.m.runUntil(() => r.m.ready() && /\r\nA:SYSTEM>$/.test(r.m.text(mark)), 8e8, "warm prompt with retained failure");
   assert.deepEqual(r.queue(), [5]);
   assert.ok(r.m.expand[1].slice(5 * 512, 6 * 512).every((b) => b === 77));
   assert.ok(r.bytes(r.base).some((b) => b !== 77));
