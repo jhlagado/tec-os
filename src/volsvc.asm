@@ -165,11 +165,11 @@ RSEQ2:
 ; BDOS with no active caller BDOS call.
 
 VSMNT:
-  call VSCHG
+  call VSIN
   jr VMNT
 
 VSUNM:
-  call VSCHG
+  call VSIN
   jr VUNM
 
 ; Describe copies all 32 card-descriptor
@@ -229,6 +229,7 @@ VMNT:
 ; is rewritten.
 
   ld (ix+DMOUNT),c
+  call lblSet    ; the prompt's label
   push bc
   push de
   ld a,c
@@ -282,6 +283,7 @@ VUNM:
   jr nz,VBAD
   ld a,c
   call VCLEAR
+  call lblClr    ; the prompt's label
 
 VRESET:
 
@@ -349,14 +351,6 @@ VMNTRS:
 ; on a tag hit. Keep B/DE/HL and
 ; incoming flags. Return A=FFh. No
 ; validation or cache walk here.
-
-; A mount or unmount: the prompt's
-; labels are read again (LblOk). Then
-; as VSIN.
-
-VSCHG:
-  xor a
-  ld (LblOk),a
 
 VSIN:
   ld c,b

@@ -12,7 +12,7 @@ ROM table at `C003h`.
   addresses.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
-  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,645 bytes on the
+  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,646 bytes on the
   starter card with nothing loaded, its three drives' vectors taken; the card's
   `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 44,288, and 43,520
   with the GLCD's driver too.

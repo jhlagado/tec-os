@@ -240,10 +240,8 @@ RVW5:
 
 RVWSTOP:
 
-  xor a          ; labels part read:
-  ld (RLBL),a    ; the table invalid
-  ld (LblOk),a   ; and read again
-  ret
+  jp RVWALKQ     ; labels part read:
+                 ; read them all again
 
 ; HL = drive A's 11 bytes in RLBL.
 ; Changes AF and BC.
@@ -335,28 +333,49 @@ RCFAILR:
 
 ; Drive E as d:NAME, as the prompt
 ; shows it and service TNPRMPT gives the
-; shell. The labels are read once into
-; RLBL, LblOk then set, and again only
-; after a mount or unmount clears it.
-; The walk's scratch is LOADBUF, so
-; while a startup record waits there
-; (STPOS 1) an unread table shows the
-; drive alone, as d:. Changes all.
+; shell, from RLBL: cold boot fills it,
+; and each mount and unmount keeps its
+; row, so no prompt reads the card.
+; Changes all.
 
 drvVol:
-  ld a,(LblOk)
-  or a           ; NZ: RLBL holds them
-  jr nz,.show
-  ld a,(STPOS)
-  dec a          ; Z: a record waits
-  ld a,e         ; the drive
-  jp z,RPUTDRV   ; d: alone
-  push de        ; the drive, kept
-  call RVWALKQ   ; every label, once
-  pop de
-  ld a,1         ; kept until a mount
-  ld (LblOk),a   ; changes
-
-.show:
   ld a,e         ; the drive
   jp RDRVLBL     ; d: and the label
+
+; Drive C's row of RLBL takes the label
+; of descriptor IX, at a mount and at
+; cold boot. Keeps BC, DE and IX;
+; changes AF and HL.
+
+lblSet:
+  push bc
+  push de
+  ld a,c
+  call RLBLADR   ; HL: the drive's row
+  ex de,hl
+  push ix
+  pop hl
+  ld bc,DLABEL   ; the label in IX's
+  add hl,bc      ; descriptor
+  ld bc,11
+  ldir
+  pop de
+  pop bc
+  ret
+
+; Drive C's row of RLBL blanked, at an
+; unmount. Keeps BC, DE and IX; changes
+; AF and HL.
+
+lblClr:
+  push bc
+  ld a,c
+  call RLBLADR   ; HL: the drive's row
+  ld b,11
+
+.blank:
+  ld (hl),SPACE
+  inc hl
+  djnz .blank
+  pop bc
+  ret

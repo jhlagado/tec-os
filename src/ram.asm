@@ -172,11 +172,12 @@ CMDTXT:
 APIRTPC: DS 2
 
 ; The drives' labels for the prompt,
-; 11 bytes for each of A: to D:, valid
-; while LblOk is nonzero (ccpdir.asm).
+; 11 bytes for each of A: to D:: cold
+; boot fills them, and each mount and
+; unmount keeps its drive's row
+; (ccpdir.asm).
 
 RLBL: DS 4*11
-LblOk: DS 1
 
 ; The pager's place (ccpterm.asm).
 

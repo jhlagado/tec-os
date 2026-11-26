@@ -809,7 +809,7 @@ const edit = (fn) => {
   return f;
 };
 const u16 = (at, v) => edit((_, d) => d.setUint16(at, v, true));
-const top = 0xb8; // (0006h)'s page on the card in standardCard(): B8F4h at ABI 5.6, the CCP's history, pager and labels taking 145 bytes (B9xxh before)
+const top = 0xb8; // (0006h)'s page on the card in standardCard(): B8F6h at ABI 5.6, the CCP's history, pager and labels taking 144 bytes (B9xxh before)
 const extraFor = (n) => n - S;
 const MALFORMED = [
   ["the file shorter than its header", good.file.slice(0, 16), 0x110],

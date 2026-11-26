@@ -518,12 +518,22 @@ RAMSTOP:
 ; AF/BC/DE/HL/IX.
 
 SHOWVOL:
+
+; The prompt's labels start blank, and
+; each drive listed fills its row.
+
+  ld hl,RLBL
+  ld de,RLBL+1
+  ld bc,4*11-1
+  ld (hl),SPACE
+  ldir
   ld c,0
 
 SHV:
   push bc
   call DRVDESC
   jr nz,SHVN
+  call lblSet    ; the prompt's label
   ld hl,CMDTXT
   call DRVLAB
   ld hl,CMDTXT
