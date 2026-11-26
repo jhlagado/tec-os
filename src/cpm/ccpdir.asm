@@ -336,7 +336,7 @@ RCFAILR:
 ; and service TNPRMPT gives the shell.
 ; Changes all.
 
-showVol:
+drvVol:
   ld a,e         ; the drive, kept
   push af        ; across the walk
   call RVWALKQ   ; every label, again

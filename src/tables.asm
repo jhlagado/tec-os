@@ -152,7 +152,7 @@ SVTAB: DW HWSINFO,HWSDIG
 ; 19 and 20: the pager and the prompt's
 ; drive and volume, at ABI minor 6.
 
-  DW pgPut,showVol
+  DW pgPut,drvVol
 
 ; Twelve-byte FCB prefixes for CMDFCB:
 ; explicit drive A, eight-byte name and

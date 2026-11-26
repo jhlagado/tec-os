@@ -182,7 +182,7 @@ MLREAD:
 MLBARE:
   ld a,(CURDSK)  ; the current drive
   ld e,a
-  call showVol   ; as d:NAME
+  call drvVol   ; as d:NAME
   ld e,'>'
   call PUTCHAR   ; prompt terminator
   ld hl,CHPOS    ; a function 47 line

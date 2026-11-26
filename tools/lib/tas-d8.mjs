@@ -7,6 +7,7 @@ const romRules = {
   'diag.asm': { ramFile: 'vars.asm', resetFile: 'boot.asm', resetLine: 8, ramLimit: 0x7f00 },
 };
 const definition = /^\s*([A-Za-z_][A-Za-z0-9_]*)(?:(:)|\s+(EQU)\b)/i;
+const privateLabel = /^\s*\.[A-Za-z_][A-Za-z0-9_]*:/;
 const names = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_';
 const codeOrData = new Set('adc add and bit call ccf cp cpd cpdr cpi cpir cpl daa dec di djnz ei ex exx halt im in inc ind indr ini inir jp jr ld ldd lddr ldi ldir neg nop or out outd otdr outi otir pop push res ret reti retn rl rla rlc rlca rld rr rra rrc rrca rrd rst sbc scf set sla sra srl sub xor db dw cstr pstr istr'.split(' '));
 
@@ -157,7 +158,11 @@ export function scanSource(sources, entry) {
       // The map below gives each line one statement and one region kind, so
       // a line with several statements, a \ between them, is refused.
       assert.ok(!code(text).includes('\\'), file + ':' + (i + 1) + ': several statements on a line, which the ROM map cannot place');
-      const match = definition.exec(text);
+      // A private label, .name, belongs to the global label before it (TAS's
+      // scoping, Origo MD-16). It is no symbol of the map's: its line is the
+      // statement after it, if any.
+      const own = privateLabel.exec(text);
+      const match = own ? null : definition.exec(text);
       const kind = match?.[2] ? 'label' : 'constant';
       if (match) {
         const name = match[1].toUpperCase();
@@ -166,7 +171,7 @@ export function scanSource(sources, entry) {
         definitions.set(name, { file, line: i + 1, offset, kind });
         if (kind === 'constant') continue;
       }
-      const statement = (match ? text.slice(match[0].length) : text).trimStart();
+      const statement = (own ? text.slice(own[0].length) : match ? text.slice(match[0].length) : text).trimStart();
       if (statement === '' || statement.startsWith(';')) continue;
       const [op] = statement.toLowerCase().split(/\s+|;/, 1);
       const resetOrigin = file === resetFile && i + 1 === resetLine && /^ORG\s+\$C000\s*(?:;.*)?$/i.test(statement);
