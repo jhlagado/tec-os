@@ -15,28 +15,35 @@ authorize a layout migration; names move as Names says.
 
 ## Names
 
-Names come first, because a source is read more often than it is written
-and a name is read more often than any comment (Origo MD-16, in Origo's
-`bindings/z80-cpm/assembly-style.md`). A name in capitals, such as `EXRMV`,
-hides where its words begin and what they are.
+Names come first. A source is read more often than it is written, and a name
+more often than any comment. Origo's `bindings/z80-cpm/assembly-style.md`,
+Names (MD-16), is the source of truth; this is how TEC-OS applies it.
 
-- Never all capitals. TAS takes names in any case (`Loop` and `LOOP` are one
-  name), so case costs no byte and changes no symbol; it only shows the words.
-- A label, which names an address of code or data, is camel case: a short
-  lowercase prefix for its module, then capitalised words, such as `kbSeek`,
-  `kbTails`, `svcUnld` or `hstRing`.
-- A constant, defined by `EQU`, is Pascal case, such as `ExRemove`, `HistLen`
-  or `SysLatch`. Lowercase first is an address; a capital first is a value.
-- A routine's own branches use private labels, `.loop`, `.next` or `.done`. A
-  global label is a routine's entry, a shared tail or data.
-- Spend the eight characters on words, not clipped consonants. Where letters
-  must go, shorten the later words and keep each word's capital.
-- A name is unique by its letters: `kbTail` and `KbTail` are one name.
-- `abi.inc`'s names are published, so they keep their letters; their case may
-  follow this style.
-- Existing code moves when it is next reworked. A case-only respelling must
-  assemble to the same ROM and the same symbol map. A rename that changes
-  letters is its own change, with its callers, tests and documents.
+| Kind of name | Case | Examples |
+|---|---|---|
+| Code: a routine, an entry, a shared tail | camel case, lowercase for one word | `seek`, `kbSeek`, `svcUnld` |
+| A branch inside a routine | private, lowercase | `.loop`, `.next`, `.done` |
+| Data: a variable, table, buffer or string | Pascal case | `KbTails`, `HistRing`, `HistHead` |
+| A constant defined by `EQU` | capitals, `_` between words | `HIST_LEN`, `SYS_LAT`, `CR` |
+
+- The first letter tells the kind: lowercase is code, a capital is data, and
+  all capitals is a constant.
+- A code label shared across a module starts with its module's lowercase
+  prefix (`kbSeek`, `svcUnld`); a single word stays lowercase.
+- A constant splits its words with `_`; where eight characters can't hold
+  them, drop the underscores and keep the capitals.
+- Spend the eight characters on words, not clipped consonants.
+- TAS takes names in any case, so case costs no byte and no symbol, and a
+  name is unique by its letters alone.
+- `abi.inc`'s names are published and keep their letters.
+
+**Applying it.** New and changed code follows Names now, and review rejects a
+new name in the old style. The sweep of the existing sources is open work
+until every source is done, module by module. A case-only respelling must
+build the same ROM and the same symbol map. A rename that changes letters is
+its own change, with its callers, tests and documents. A swept source goes
+into `tools/names-swept.json`, and `tools/style-check.mjs` then holds it to
+Names (`checkNames` in `tools/lib/style-compact.mjs`).
 
 ## Compact layout
 
