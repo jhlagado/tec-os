@@ -36,7 +36,7 @@ export async function execFile(over = {}) {
 }
 
 /** MON3.SVC's SHA-256: the file the card holds, as media writes it. */
-export const MON3_SVC_SHA = "6fe01737baf4dda8f724f1dcc74eeb43f491cdff1b7630a12d9de33c1d555b64";
+export const MON3_SVC_SHA = "9af918cc931085315fc667992a795058e4ba528fe24822f4325b051dd2aaba43";
 
 /** The card's MON3.SVC, by media's writer: the pinned file, and the same as SVC, the tests' own build. */
 export async function cardMon3(svc) {
@@ -294,9 +294,11 @@ export async function ks53Census() {
   return depths();
 }
 
-/** MON3.SVC installed on M: typed, it is entered, and EXIT leaves the session with it installed. */
+/** MON3.SVC installed on M: typed, it is entered, and GO 0 leaves the session with it installed. */
 export function installMon3(m) {
   const r = line(m, "MON3.SVC");
-  if (r.mon3) line(m, "EXIT");
+  // EXIT removes the lowest resident (EXRMV). A program that ends with
+  // JP 0000h leaves it installed, so GO 0 runs one: the warm boot itself.
+  if (r.mon3) line(m, "GO 0");
   return r;
 }

@@ -459,9 +459,9 @@ not embedded machine-code addresses.
 
 The drive is A to P. The name has at most eight characters and the type
 three, and neither may hold `?` or `*`. Such a name is refused with `?`
-before it is looked up. `^C` at `MON3>` also ends the session. The service
-stays installed after `EXIT`, and `MON3.SVC` enters it again without
-reading the card. [Chapter 5](05-drives-and-user-areas.md#a-mon-3-session)
+before it is looked up. `^C` at `MON3>` also ends the session. `EXIT` also
+removes the service when nothing was installed after it. Any other way out
+leaves it installed, and `MON3` enters it again without reading the card. [Chapter 5](05-drives-and-user-areas.md#a-mon-3-session)
 describes the session and
 [Appendix D](appendix-d-error-messages.md#the-mon-3-session) its messages.
 

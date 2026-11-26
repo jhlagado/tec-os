@@ -131,8 +131,10 @@ function typed(m, text) {
 }
 
 /** Leave a MON3> session if TEXT entered one. */
+// Leave the session with MON3.SVC still installed: EXIT would remove it
+// (EXRMV), and a program that ends with JP 0000h, here GO 0, leaves it in.
 const leave = (m, r) => {
-  if (r.mon3) assert.ok(!line(m, "EXIT").mon3, "EXIT gives the CCP's prompt");
+  if (r.mon3) assert.ok(!line(m, "GO 0").mon3, "GO 0 gives the CCP's prompt");
 };
 
 // The ROM's size, hash and ABI against the baseline.
@@ -273,6 +275,38 @@ test("KG59 install and re-entry", async () => {
   assert.deepEqual(r.opens, [], "re-entry opens no file");
   leave(m, r);
   assert.deepEqual(services(m), [FIG.line], "one copy still");
+});
+
+test("KG59 EXIT removes MON3.SVC as the lowest resident, and only then", async () => {
+  const m = boot({ "MON3.SVC": await mon3File(), "X.SVC": await execFile() });
+  const top = word(m, 6);
+  // Alone and lowest: EXIT sets EXRMV, and the warm boot takes it out.
+  let r = typed(m, "MON3");
+  assert.ok(r.mon3, "MON3 installs and enters");
+  r = line(m, "EXIT");
+  assert.ok(!r.mon3, "EXIT gives the CCP's prompt");
+  assert.doesNotMatch(r.out, /stays installed/, "no message when it can go");
+  assert.deepEqual(services(m), [], "removed at the warm boot");
+  assert.equal(word(m, 6), top, "(0006h) as before it was installed");
+  // A program that ends with JP 0000h (GO 0) leaves it installed.
+  assert.ok(typed(m, "MON3").mon3);
+  assert.ok(!line(m, "GO 0").mon3, "GO 0 ends the session");
+  assert.deepEqual(services(m), [FIG.line], "still installed after JP 0000h");
+  // With X installed after it, MON3 isn't lowest: EXIT says so and stays.
+  typed(m, "X.SVC");
+  assert.equal(services(m).length, 2, "X installed after MON3");
+  assert.ok(typed(m, "MON3").mon3, "the copy that is in enters");
+  r = line(m, "EXIT");
+  assert.ok(!r.mon3);
+  assert.match(r.out, /MON3 stays installed\r\n/, "the message");
+  assert.equal(services(m).length, 2, "both still installed");
+  // Once X is unloaded MON3 is lowest again, and EXIT takes it out.
+  m.command("UNLOAD");
+  assert.deepEqual(services(m), [FIG.line]);
+  assert.ok(typed(m, "MON3").mon3);
+  assert.ok(!line(m, "EXIT").mon3);
+  assert.deepEqual(services(m), [], "gone once it was lowest");
+  assert.equal(word(m, 6), top);
 });
 
 /** The page whose image starts at PAGE+25 and the entry it was given, read at the entry: { page, hl }. */
@@ -1025,7 +1059,7 @@ test("KG61 mutant: an EXIT without IM 1 leaves IM 2", async () => {
 });
 
 test("KG61 mutant: a hook that skips the IOBYTE's copy leaves the program's after JP 0000h", async () => {
-  const svc = await mon3Variant([[HOOK_IO, HOOK_IO.replace("ld de,IOBYTE  ", "ld de,LBUF    ")]]);
+  const svc = await mon3Variant([[HOOK_IO, HOOK_IO.replace("ld de,IOBYTE  ", "ld de,SAVE0   ")]]);
   await assert.rejects(sixExits(svc, ["JP0.BIN"]), /JP0\.BIN: 0003h-0004h as before/);
 });
 
@@ -1286,7 +1320,7 @@ async function vectorExchange(svc, jp0 = false) {
     assert.ok(ok(line(m, "GO")));
     assert.deepEqual([m.read(x), m.read(y)], [0x00, 0xff], "the program exchanged the two bytes");
     assert.equal(vectorA(m).bytes.reduce((a, b) => a + b, 0), sum, "the vector's sum unchanged");
-    leave(m, { mon3: true });
+    assert.ok(!line(m, "EXIT").mon3, "EXIT"); // its own BDOS 37, not the hook's
   }
   // Three new files of 16 records, each filled with its own byte.
   const saved = {};

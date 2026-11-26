@@ -747,7 +747,7 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
     const m = shellMachine(shellCard({ "GLCD.SVC": GLCD_SVC, "MON3.SVC": MON3.file }, { startup, image: four() }), { matrix: true, glcd: true, noWait: true });
     if (startup.includes("MON3.SVC") && startup.indexOf("MON3.SVC") < startup.length - 1) {
       m.runUntil(() => m.waitingForInput() && /MON3>$/.test(m.text(0)), 900_000_000, "MON3>");
-      m.type("EXIT\r");
+      m.type("GO 0\r"); // leaves MON3.SVC installed, where EXIT would remove it
     }
     m.runUntil(() => m.waitingForInput() && owners(m).length >= startup.length && /(>)$/.test(m.text()), 1_500_000_000, "the services");
     for (const l of typed) {

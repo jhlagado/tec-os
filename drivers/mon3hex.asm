@@ -323,3 +323,98 @@ HBASE: DW 0      ; requested new base
 HGO: DW 0        ; GO's address
 HTARG: DW 0      ; this record's target
 HOVR: DB 0       ; a base was supplied
+
+; Read a hex word of one to four digits
+; at HL into DE. Carry if it has no
+; digit, a fifth digit, or anything but
+; trailing spaces and the line's end
+; after it. Clobbers A and B.
+
+HEXW:
+  ld de,0
+  ld b,4         ; at most four digits
+  ld a,(hl)
+  call HEXD
+  ret c          ; no digit
+
+HEXW1:
+  ex de,hl       ; HL = the word
+  add hl,hl
+  add hl,hl
+  add hl,hl
+  add hl,hl      ; one digit up
+  or l
+  ld l,a         ; the new digit in
+  ex de,hl
+  inc hl
+  ld a,(hl)
+  call HEXD
+  jr c,HEXW2     ; the number's end
+  djnz HEXW1
+  scf            ; a fifth digit
+  ret
+
+HEXW2:
+  ld a,(hl)
+  cp ' '+1       ; a space or the end
+  ccf            ; carry: text joined
+  ret c
+  call SKIP      ; no further operand
+  ret z
+  scf
+  ret
+
+; A hex digit's value from A, either
+; case. Carry if it is none.
+
+HEXD:
+  cp 'a'
+  jr c,HEXD1     ; not lower case
+  sub $20        ; a to A
+
+HEXD1:
+  sub '0'
+  ret c          ; below 0
+  cp 10
+  ccf
+  ret nc         ; 0 to 9
+  sub 7          ; A to F as 10-15
+  cp 10
+  ret c          ; between 9 and A
+  cp 16
+  ccf            ; carry past F
+  ret
+
+; Write HL as four hex digits at DE,
+; or A as two at HEXA. DE steps on.
+
+HLSTR:
+  ld a,h
+  call HEXA      ; the high byte
+  ld a,l
+
+HEXA:
+  push af        ; the low digit
+  rrca
+  rrca
+  rrca
+  rrca           ; the high digit
+  call HEXN
+  pop af
+
+HEXN:
+  call HEXC
+  ld (de),a      ; the character
+  inc de
+  ret
+
+; A's low four bits as a hex digit's
+; character. Clobbers F.
+
+HEXC:
+  and $0F
+  add a,$90      ; DAA's hex trick
+  daa
+  adc a,$40
+  daa            ; 0-9, A-F
+  ret

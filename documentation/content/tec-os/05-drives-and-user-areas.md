@@ -533,8 +533,12 @@ access and BDOS.
 First build the source-only example with `TAS HELLO3 HELLO3.BIN` at the
 CP/M prompt. Then `MON3.SVC` installs the service if necessary and enters
 its `MON3>` prompt.
-`EXIT` ends the session while leaving the service installed. The same
-command can later re-enter it without reading the file again.
+`EXIT` ends the session and removes the service, so its memory comes back,
+when nothing was installed after it. If something was, it prints
+`MON3 stays installed` and stays until you `UNLOAD` the later service and
+then MON3. Any other way out, such as a program that ends with `JP 0000h`,
+leaves the service installed, and `MON3` re-enters it without reading the
+file again.
 
 At `MON3>` you can load a file, run it or exit. Command words accept
 capitals or lower case:
@@ -544,7 +548,7 @@ capitals or lower case:
 | `LOAD NAME.BIN [ADDR]` | Loads the file at `4000h`, or at the hexadecimal `ADDR`, in whole records. Any type but `HEX` loads this way |
 | `LOAD NAME.HEX [ADDR]` | Loads Intel HEX at its records' addresses, or maps the lowest data address to `ADDR` while retaining gaps. All validation finishes before copying |
 | `GO [ADDR]` | Flushes the card cache, then runs the last good load at its remembered address or the explicit `ADDR` for one run. While a write is pending it prints `?` and runs nothing |
-| `EXIT` | Ends the session with a warm boot to `A:SYSTEM>` |
+| `EXIT` | Ends the session with a warm boot to `A:SYSTEM>`, removing the service when it was the last installed |
 
 `LOAD NAME.BIN 2000` then bare `GO` starts at 2000h; omitted BIN addresses
 still default to 4000h. HEX remembers its lowest loaded address, moved with
@@ -575,7 +579,7 @@ that ended a program out of the command line. Serial has no such wait.
 
 ### MON-3 memory and limits
 
-Warm boot preserves MON3.SVC. `UNLOAD` or reset removes it. Its
+Warm boot preserves MON3.SVC. `EXIT`, `UNLOAD` or reset removes it. Its
 current 4,781-byte header and image occupy 19 pages. With relocation data
 the file occupies 5,237 bytes. These later measurements belong to the monitor
 at `TEC-OS 1cded94eed6a077bd0cddea4554c2a2245c40a5a`; the earlier checked

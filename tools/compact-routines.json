@@ -42,9 +42,6 @@
     "UNHOOK",
     "FCBP",
     "FCBF",
-    "HEXW",
-    "HEXD",
-    "HLSTR",
     "LGOOD",
     "OPEN",
     "RANGE",
@@ -133,7 +130,10 @@
     "HEND",
     "GETB",
     "GETC",
-    "HREAD"
+    "HREAD",
+    "HEXW",
+    "HEXD",
+    "HLSTR"
   ],
   "programs/SAMPLE.ASM": [
     "START",

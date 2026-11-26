@@ -60,7 +60,7 @@ async function target(source, stem, constrained, initialFiles = {}) {
   const m = machine(image, { matrix: constrained });
   if (constrained) {
     assert.ok(line(m, "MON3.SVC").mon3);
-    assert.equal(line(m, "EXIT").mon3, false);
+    assert.equal(line(m, "GO 0").mon3, false); // leaves with MON3.SVC installed
     assert.equal(word(m, 6), 0x9500, "shell, GLCD and MON3 remain resident");
   }
   return { m, image, svc };
