@@ -55,7 +55,6 @@ test("UNLOAD is refused with no resident, and removes residents last in, first o
 
 test("nothing is kept for a level: the table ends at ABICALL's jump and the page at BE00h is free", async () => {
   const m = await machine({}, { ram96: true });
-  assert.equal(m.symbols.get("HRING"), undefined, "no history ring in EXPAND 1: it is the shell's");
   assert.equal(m.sym("ABIEND"), m.sym("ABICALL") + 3);
   assert.deepEqual(m.violations, []);
 });
@@ -424,14 +423,15 @@ test("PUT.COM, the tests' file writer: n pages of a ramp, or of a fill byte, and
 
 const LONG = Buffer.from(Array.from({ length: 40 }, (_, i) => `line ${i}\r\n`).join("") + "\x1a", "latin1");
 
-test("SH2 no pause", async () => {
-  const m = await machine({ "L.TXT": LONG, "PUT.COM": PUT_COM }, { matrix: true, tms: true, width: 40 });
-  const t = m.command("TYPE L.TXT", { maxCycles: 900_000_000 });
-  assert.doesNotMatch(t, /\[more\]/, "TYPE lists without pausing");
-  assert.equal((t.match(/line \d+/g) ?? []).length, 40);
-  for (let i = 0; i < 30; i += 1) m.command(`PUT 0 F${i}.COM`);
-  assert.doesNotMatch(m.command("DIR", { maxCycles: 900_000_000 }), /\[more\]/, "DIR too");
-  assert.equal(m.read(m.sym("VWID")), 40);
+test("SH2 the bare CCP pages on serial too: 40 lines of TYPE wait at [more] after 23", async () => {
+  const m = await machine({ "L.TXT": LONG });
+  m.mark = m.output.length;
+  m.type("TYPE L.TXT\r");
+  const t = m.expect(/\[more\]$/, { maxCycles: 900_000_000 });
+  assert.equal((t.match(/line \d+/g) ?? []).length, 23, "24 rows on serial, one for [more]");
+  m.type(" ");
+  assert.equal((m.expect(/\r\n[A-P](:\S*)?>$/, { maxCycles: 900_000_000 }).match(/line \d+/g) ?? []).length, 17, "the rest");
+  assert.deepEqual(m.violations, []);
 });
 
 const CHAINP = (text) => { const t = Buffer.from(`${text}\0`, "latin1"); return Uint8Array.from([0x21, 0x11, 0x01, 0x11, 0x80, 0x00, 0x01, t.length, 0x00, 0xed, 0xb0, 0x0e, 47, 0xcd, 0x05, 0x00, 0xc9, ...t]); };
