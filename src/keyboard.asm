@@ -104,13 +104,12 @@ KBMOD:
   cp 7           ; Caps Lock key
   jr z,KBCAPS
   jr nc,KBNOARR  ; Keys 3-6: ESC [ A-D
-  sub 2          ; arrow 1-4
-  ld b,a
-  ld a,d
-  inc a          ; 0 none, 1 Shift,
-  add a,a        ; 2 Ctrl, 3 Fn: four
-  add a,a        ; tails each
-  add a,b
+  ld b,a         ; keys 3-6
+  ld a,d         ; FFh none, 0 Shift,
+  add a,a        ; 1 Ctrl, 2 Fn: four
+  add a,a        ; tails each, from
+  add a,b        ; 4(D+1) + key - 2,
+  add a,2        ; mod 256: arrow 1-4
   ld b,a
 
 ; Queue tail B (1 the first) of KBTAILS

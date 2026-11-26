@@ -42,7 +42,7 @@ for(const tms of[true,false]){
   a.write("STARTUP.CMD",Buffer.from([0x1a]));
   a.write("CANARY.TXT",Buffer.from("CONSOLE STILL WORKS\r\n\x1a","latin1"));
   const m=boot(image,{tms,matrix:true,width:40,glcd:true});
-  assert.equal(m.read(0xc007),4,"the target ROM is ABI 5.4");
+  assert.equal(m.read(0xc007),5,"the target ROM is ABI 5.5");
   assert.equal(word(m,m.sym("GLVEC")),0,"no GLCD hook before the attempt");
   const before=installedState(m),calls=[];
   const step=m.step.bind(m);

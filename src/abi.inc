@@ -1,4 +1,4 @@
-; Public TEC-OS ABI 5.4: eight bytes at
+; Public TEC-OS ABI 5.5: eight bytes at
 ; C003h..C00Ah, containing TNA, major,
 ; minor and JP SVCDSP. Test TNA at
 ; ABITAB and major 5 at ABIMAJ before
@@ -20,7 +20,7 @@ ABITAB EQU $C003
 
 ABIMAJ EQU $C006
 
-; minor version, 3
+; minor version, 5
 
 ABIMIN EQU $C007
 
@@ -275,6 +275,17 @@ TNENODV EQU 2
 ; table entries.
 
 SVCFMT EQU 4
+
+; Execution record state bit 2: remove
+; at the next warm boot. The service
+; sets it before its exit, and only as
+; the lowest resident. At the warm boot
+; the CCP clears it and removes the
+; lowest resident as UNLOAD does; a
+; refusal leaves it installed. Added at
+; ABI minor 5: an older ROM ignores it.
+
+EXRMV EQU 2
 
 ; INFO B flags. Matrix is switch enable,
 ; not a presence probe. PICO/RTC flags

@@ -74,7 +74,7 @@ test("SH16 version fields", () => {
   assert.equal(ABI.TNGLYPH, 17);
   assert.equal(ABI.TNCOUNT, 19);
   const { rom } = romFor();
-  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 4], "TNA 5.4: TNGLYPH, COMVEC, then TNPARSE, added");
+  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 5], "TNA 5.5: TNGLYPH, COMVEC, TNPARSE, then EXRMV, added");
   for (const f of [SHELL.file, MON3.file, HOOK.file]) assert.deepEqual([...f.subarray(25, 28)], [0x45, 0x58, 1], "the record's version byte stays 1");
   assert.match(readFileSync(resolve(ROOT, "tools/build.mjs"), "utf8"), /^const VERSION = \{ major: 0, minor: 1 \};$/m);
 });

@@ -137,7 +137,7 @@ file offset 25:
 | --- | --- | --- |
 | 0 | 2 | `"EX"`, 45h 58h |
 | 2 | 1 | Its version, 1 |
-| 3 | 1 | Bit 0: ready, set by `INIT` last and cleared by `REMOVE` first. Bit 1: enter on install, set in the file; `INIT` and `REMOVE` keep it. Bits 2 to 7: 0 |
+| 3 | 1 | Bit 0: ready, set by `INIT` last and cleared by `REMOVE` first. Bit 1: enter on install, set in the file; `INIT` and `REMOVE` keep it. Bit 2 (`EXRMV`, ABI 5.5): remove at the next warm boot, 0 in the file and set by the service at run time. Bits 3 to 7: 0 |
 | 4 | 2 | The entry, from the header's start, as `INIT` and `REMOVE` are |
 | 6 | 8 | The name the service was installed by, written by `INIT` |
 | 14 | 2 | The service's own version, for its own use |
@@ -176,7 +176,7 @@ no message, nothing installed and nothing entered.
   the command's drive: 0 for the current drive, 1 for A: and so on.
 - Interrupts are off and the latch is `LATCLAS`.
 - **Return** is `RET`, `JP 0000h` or BDOS 0, each a warm boot that leaves the
-  service installed. The result is the BDOS 108 code: an entry that sets
+  service installed, unless it has set state bit 2 (below). The result is the BDOS 108 code: an entry that sets
   FF00h makes a following `&` piece skip.
 - **Failure:** the entry prints its own message, sets FF00h and returns.
 - **Recursion.** The CCP runs only after a warm boot, and warm boot ends any
@@ -431,6 +431,26 @@ disabled-interrupt path into real boot. This contract adds no IRQ handler and
 makes no physical interrupt, wiring or paired-write atomicity guarantee.
 
 ## Removal
+
+**At a warm boot, by the service's own request.** A service that should leave
+when its application ends sets its execution record's state bit 2, `EXRMV`,
+before its exit; `MON3.SVC`'s `EXIT` is the case it serves. Once each warm
+boot, after the disks are reset and before the first prompt, the CCP looks at
+the lowest resident alone, `SVCHEAD`'s page: if its image starts with an
+execution record whose state has bit 2, the CCP clears the bit and removes the
+service as `UNLOAD` does, below, printing nothing. A service that isn't
+removable, or whose `REMOVE` refuses, stays installed with the bit clear, so no
+later warm boot tries again. A program the application started that ends with
+`JP 0000h`, `RST 00h` or BDOS 0 leaves the bit clear, and the service stays.
+
+The service sets the bit only as the lowest resident: with a service in,
+`(0006h)` is the lowest one's page start, so comparing `(0007h)` with its own
+page tells it. Set while another is lower, the bit stays set, and the service
+goes at the first warm boot after it becomes the lowest. A ROM before ABI 5.5
+ignores the bit, so the service stays installed there, as before; `ABIMIN` 5
+or above says the bit is honoured.
+
+**By `UNLOAD`.**
 
 `UNLOAD` acts on the lowest resident only, read from `PZTOP`, and only if the
 owner list's head is its page. If the flag says it isn't

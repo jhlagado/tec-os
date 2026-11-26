@@ -284,12 +284,12 @@ export { GLCD_SVC };
  */
 export async function ks53Census() {
   const { rom, symbols } = romFor();
-  const image = card({ "MON3.SVC": (await mon3Svc()).file, "NRDY.SVC": await execFile({ V_NRDY: 1 }) });
+  const image = card({ "MON3.SVC": (await mon3Svc()).file, "NRDY.SVC": await execFile({ V_NRDY: 1 }), "EVICT.SVC": await execFile({ HDRNAME: '"EVICT   "' }) });
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });
   const depths = watch(m);
   m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
-  for (const [l, re] of [["MON3.SVC /E\r", MON3], ["EXIT\r"], ["MON3.SVC\r", MON3], ["EXIT\r"], ["NRDY.SVC\r"], ["UNLOAD\r"]]) censusRun(m, l, re);
+  for (const [l, re] of [["MON3.SVC /E\r", MON3], ["EXIT\r"], ["MON3.SVC\r", MON3], ["EXIT\r"], ["NRDY.SVC\r"], ["UNLOAD\r"], ["EVICT.SVC R\r"]]) censusRun(m, l, re);
   assert.deepEqual(m.violations, []);
   return depths();
 }

@@ -37,11 +37,12 @@ const STARTER_COST = { bounceB: 102_662_703, bounceA: 102_405_719 };
 
 test("AC12 version fields", () => {
   const inc = readText("src/abi.inc");
-  assert.equal(sha(Buffer.from(abiDeclarations(inc), "utf8")), LANDING.abi, "abi.inc's declarations as at TNPARSE's landing (ABI 5.4)");
+  const exrmv = inc.match(/\n; Execution record state bit 2[\s\S]*?\nEXRMV EQU 2\n/)[0];
+  assert.equal(sha(Buffer.from(abiDeclarations(inc.replace(exrmv, "")), "utf8")), LANDING.abi, "abi.inc's declarations as at TNPARSE's landing (ABI 5.4), with EXRMV's block alone added at 5.5");
   assert.match(inc, /^SVCFMT EQU 4$/m);
   assert.equal(ABI.TNCOUNT, 19);
   const { rom } = romFor();
-  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 4], "TNA 5.4: COMVEC, then TNPARSE, added");
+  assert.deepEqual([...rom.subarray(3, 8)], [0x54, 0x4e, 0x41, 5, 5], "TNA 5.5: COMVEC, TNPARSE, then EXRMV, added");
   assert.match(readText("tools/build.mjs"), /^const VERSION = \{ major: 0, minor: 1 \};$/m);
   assert.deepEqual([...SHELL_SVC.subarray(25, 28)], [0x45, 0x58, 1], "the execution record's version byte stays 1");
 });

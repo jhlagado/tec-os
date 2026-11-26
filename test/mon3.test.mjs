@@ -137,8 +137,8 @@ const leave = (m, r) => {
 
 // The ROM's size, hash and ABI against the baseline.
 
-// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back), restated at ABI 5.2 for TNGLYPH (17) and TNCOUNT 18, and at ABI 5.4 for TNPARSE (18) and TNCOUNT 19. The ROM figure is the COMVEC build's 15,600 (ABI 5.3, TEC-OS 8d6c09b), restated from the packed-font build's 15,549 (decided 2026-11-24); the cap is a ceiling on growth from it.
-const BASELINE = { used: 15600, cap: 128, tpa: 47273, abi: "7aed95f4062b414350385658a87760e175ffa2041f5576f4f0b27c12e16dba99" };
+// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back), restated at ABI 5.2 for TNGLYPH (17) and TNCOUNT 18, at ABI 5.4 for TNPARSE (18) and TNCOUNT 19, and at ABI 5.5 for EXRMV, the execution record's state bit 2. The ROM figure is the COMVEC build's 15,600 (ABI 5.3, TEC-OS 8d6c09b), restated from the packed-font build's 15,549 (decided 2026-11-24); the cap is a ceiling on growth from it.
+const BASELINE = { used: 15600, cap: 128, tpa: 47273, abi: "86892f80a6054a7554b870d3a8e57cd6a8dd7ac90307dbca9055e19a60f649bb" };
 
 test("KG58 rom cap", () => {
   const census = () => JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
@@ -158,7 +158,7 @@ test("KG58 rom cap", () => {
   assert.equal(sha(Buffer.from(abiDeclarations(abi.toString("utf8")), "utf8")), BASELINE.abi, "abi.inc's declarations as they were");
   assert.match(abi.toString("latin1"), /^SVCFMT EQU 4\b/m, "SVCFMT 4");
   const { rom, symbols } = romFor();
-  assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 4], "ABI 5.4");
+  assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 5], "ABI 5.5");
   const m = machine(card());
   assert.equal(word(m, 6) - 0x100, 47238, "TPA 47,238 with the shared recovery allocation and COMVEC");
   console.log(`ROM ${used} used, ${free} free, ${used - BASELINE.used} over the baseline, ${first.hash}`);
@@ -1682,4 +1682,68 @@ test("KG68 docs agree", async () => {
   assert.equal(/^GMODE: DB (.*)$/m.exec(src)[1], glcmod, "the restore's bytes are GLCMOD's");
   assert.ok(mon3.includes(`mode bytes, ${glcmod.split(",").map((b) => `${b.slice(1)}h`).join(", ").replace(/, (\S+)$/, " and $1")}, the same as its \`GLCMOD\``), "mon3.md names GLCMOD's bytes");
   for (const s of ["when CON: is `UC1:` (IOBYTE AND 3 is 3)", "whatever driver holds it", "It reads no status", "On any other console the panel stays", "`CLRBUF` (0E0Ch) zero is the session's choice"]) assert.ok(mon3.includes(s), `mon3.md: ${s}`);
+});
+
+// KG70: state bit 2 (EXRMV), set by the service at run time, removes the lowest
+// resident at the next warm boot, as UNLOAD does; a refusal leaves it in, the
+// bit cleared.
+
+/** The execution record's state byte of the installed service named NAME, from its page (pageOf). */
+const stateOf = (m, name) => m.read((pageOf(m, name) << 8) + 25 + 3);
+
+test("KG70 an entry that sets bit 2 is removed at its exit's warm boot, and one that leaves it clear stays", async () => {
+  const m = boot({ "X.SVC": await execFile() });
+  const top = word(m, 6), pz = word(m, m.sym("PZTOP")), gen = m.read(m.sym("SVCGEN"));
+  let r = typed(m, "X.SVC R");
+  assert.match(r.out, /EXEC X/, "installed and entered");
+  assert.deepEqual([services(m), word(m, 6), word(m, m.sym("PZTOP")), r.code], [[], top, pz, 0], "gone at the prompt: (0006h) and PZTOP as before");
+  assert.equal(m.read(m.sym("SVCGEN")), (gen + 1) & 0xff, "the generation rises, as at UNLOAD");
+  r = typed(m, "X.SVC");
+  assert.deepEqual([r.opens, services(m)], [["X.SVC"], ["X 1"]], "typed again it is read and installed; no R, so it stays");
+  for (const tail of ["J", "B", ""]) {
+    r = typed(m, `X.SVC ${tail}`);
+    assert.deepEqual([r.opens, services(m)], [[], ["X 1"]], `X.SVC ${tail}: entered, and a JP 0000h, BDOS 0 or RET with the bit clear keeps it`);
+    assert.equal(stateOf(m, "X") & 4, 0);
+  }
+  r = typed(m, "X.SVC R");
+  assert.deepEqual([r.opens, services(m), word(m, 6)], [[], [], top], "the copy that is in, entered, sets the bit and goes");
+  assert.deepEqual(m.violations, []);
+});
+
+test("KG70 a service not the lowest stays with its bit, and goes at the first warm boot after it is the lowest", async () => {
+  const m = boot({ "X.SVC": await execFile(), "Y.SVC": await execFile({ HDRNAME: '"Y       "' }) });
+  typed(m, "X.SVC");
+  typed(m, "Y.SVC");
+  assert.deepEqual(services(m), ["Y 1", "X 1"]);
+  typed(m, "X.SVC R");
+  assert.deepEqual(services(m), ["Y 1", "X 1"], "Y is the lowest: neither goes");
+  assert.equal(stateOf(m, "X") & 4, 4, "X keeps its bit");
+  assert.equal(stateOf(m, "Y") & 4, 0);
+  m.command("UNLOAD");
+  assert.deepEqual(services(m), ["X 1"], "UNLOAD is no warm boot: X is in");
+  typed(m, "X.SVC");
+  assert.deepEqual(services(m), [], "the next warm boot takes X, now the lowest");
+  assert.deepEqual(m.violations, []);
+});
+
+for (const [name, over, why] of [["K", { V_KEEP: 1 }, "its REMOVE refuses"], ["F", { FLAGS: 0 }, "it is not removable"]]) {
+  test(`KG70 ${why}: it stays installed, bit 2 cleared, and no warm boot tries again`, async () => {
+    const m = boot({ [`${name}.SVC`]: await execFile({ ...over, HDRNAME: `"${name}       "` }) });
+    const r = typed(m, `${name}.SVC R`);
+    assert.match(r.out, new RegExp(`EXEC ${name}`));
+    assert.deepEqual(services(m), [`${name} 1`], "installed");
+    assert.equal(stateOf(m, name) & 7, 3, "ready and enter kept, bit 2 cleared");
+    typed(m, `${name}.SVC`);
+    assert.deepEqual(services(m), [`${name} 1`], "a later warm boot leaves it");
+    assert.deepEqual(m.violations, []);
+  });
+}
+
+test("KG70 ABI minor 5 names bit 2 as EXRMV, and the file leaves it clear for its entry to set", async () => {
+  const exec = await execFile();
+  const { rom, symbols } = romFor();
+  const at = symbols.get("ABIMIN") - 0xc000;
+  assert.equal(rom[at], 5, "ABI minor 5 names the bit");
+  assert.match(readFileSync(resolve(ROOT, "src/abi.inc"), "latin1"), /^EXRMV EQU 2\b/m, "EXRMV, bit 2");
+  assert.equal(exec[25 + 3] & 4, 0, "the file leaves the bit clear: only the entry sets it");
 });

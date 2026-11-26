@@ -4,7 +4,8 @@
 ; a REMOVE that refuses. The entry keeps its A in ENTA.
 ; The entry prints EXEC and the header's name, then acts on the first letter
 ; of its command tail: J jumps to 0000h, B calls BDOS 0, F sets return code
-; FF00h, P pushes fifteen words and pops them. Each then returns.
+; FF00h, R sets state bit 2 (EXRMV: remove at the next warm boot), P pushes
+; fifteen words and pops them. Each then returns.
 %INCLUDE "../../src/abi.inc"
 
 BDOS	EQU	$0005
@@ -65,7 +66,12 @@ E1:     CP      'F'
         LD      DE,0-256
         LD      C,108
         JP      BDOS            ; its RET is the entry's
-E2:     CP      'P'
+E2:     CP      'R'
+        JR      NZ,E5
+        LD      HL,RDY
+        SET     EXRMV,(HL)      ; remove at the next warm boot
+        RET
+E5:     CP      'P'
         RET     NZ
         LD      B,15
 E3:     PUSH    HL

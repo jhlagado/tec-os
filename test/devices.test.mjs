@@ -13,7 +13,7 @@ test("the table at C003h: TNA, ABI 5.4 and one jump to the services, 8 bytes, an
   const m = boot(standardCard());
   const S = (n) => m.sym(n);
   assert.equal(S("ABITAB"), 0xc003);
-  assert.deepEqual([0, 1, 2, 3, 4, 5].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 5, 4, 0xc3], "TNA 5.4, then JP");
+  assert.deepEqual([0, 1, 2, 3, 4, 5].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 5, 5, 0xc3], "TNA 5.5, then JP");
   assert.equal(m.read(S("ABICALL") + 1) | (m.read(S("ABICALL") + 2) << 8), S("SVCDSP"));
   assert.deepEqual([S("ABICALL"), S("ABIEND")], [0xc008, 0xc00b]);
   for (const n of ["ABIVID", "ABIHW", "ABIMAIN", "ABIVOL", "ABIGLCD", "ABISVC", "ABIDRV", "OLDVOL", "HWBASE", "ABIFONT", "ABIMOVE", "ABIXMOV", "ABIXMRK", "ABIXCCP", "ABIXCMD", "XCCP", "XCMD", "XEXIT", "CCPFLG", "CCPLVL", "LVBASE", "HWSEGT", "RNDST", "HWARGA", "CBLOCK"]) assert.equal(m.symbols.get(n), undefined, `${n} is gone`);

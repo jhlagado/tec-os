@@ -81,7 +81,7 @@ CCPRST:
   call STBOOT    ; once after cold boot
   ld a,(BOOTDRV)
   or a
-  jr z,STARTED   ; A already selected
+  jr z,CCPRDY    ; A already selected
   ld e,a
   ld a,$FF
   ld (ERRMODE),a ; selection can fail too
@@ -119,6 +119,23 @@ CCPRKEY:
 CCPRDY:
   xor a
   ld (ERRMODE),a ; ordinary command policy
+
+; Once each warm boot: if the lowest
+; resident's execution record has state
+; bit 2, set by the service before its
+; exit, clear the bit and remove the
+; service as UNLOAD does. A refusal
+; leaves it installed, the bit clear.
+
+  ld a,(SVCHEAD)
+  ld h,a         ; none: page zero,
+  call EXMAG     ; 0019h zero at warm
+                 ; boot, so no record
+  jr nz,STARTED  ; no execution record
+  inc l          ; the state byte
+  bit 2,(hl)     ; remove at warm boot?
+  res 2,(hl)     ; RES keeps Z
+  call nz,SVCUNL
 
 ; Print CRLFMSG before joining MAINLOOP.
 ; Some completion paths enter MAINLOOP

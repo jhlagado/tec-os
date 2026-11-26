@@ -259,7 +259,7 @@ test("TNFONT, 15, is refused from ABI 5.2: TNEBAD with carry, HL and DE as passe
   assert.equal(r.hl, 0x1234, "HL unchanged");
   assert.equal(r.de, 0x5678, "DE unchanged");
   assert.deepEqual(Array.from({ length: 0x0f00 - 0x0100 }, (_, i) => m.read(0x0100 + i)), tpa, "0100h-0EFFh unchanged");
-  assert.equal(m.read(0xc007), 4, "ABI minor 4");
+  assert.equal(m.read(0xc007), 5, "ABI minor 5");
 });
 
 test("hardware services: stack depths", () => {
