@@ -11,13 +11,38 @@ The ROM sources under `src/`, `drivers/glcd.asm`, `programs/SAMPLE.ASM`,
 `test/programs/area.asm`, `test/programs/area3.asm` and `test/programs/put.asm`
 use the compact layout.
 Other live test programs retain their existing layout. A comment edit does not
-authorize a layout or case migration.
+authorize a layout migration; names move as Names says.
+
+## Names
+
+Names come first, because a source is read more often than it is written
+and a name is read more often than any comment (Origo MD-16, in Origo's
+`bindings/z80-cpm/assembly-style.md`). A name in capitals, such as `EXRMV`,
+hides where its words begin and what they are.
+
+- Never all capitals. TAS takes names in any case (`Loop` and `LOOP` are one
+  name), so case costs no byte and changes no symbol; it only shows the words.
+- A label, which names an address of code or data, is camel case: a short
+  lowercase prefix for its module, then capitalised words, such as `kbSeek`,
+  `kbTails`, `svcUnld` or `hstRing`.
+- A constant, defined by `EQU`, is Pascal case, such as `ExRemove`, `HistLen`
+  or `SysLatch`. Lowercase first is an address; a capital first is a value.
+- A routine's own branches use private labels, `.loop`, `.next` or `.done`. A
+  global label is a routine's entry, a shared tail or data.
+- Spend the eight characters on words, not clipped consonants. Where letters
+  must go, shorten the later words and keep each word's capital.
+- A name is unique by its letters: `kbTail` and `KbTail` are one name.
+- `abi.inc`'s names are published, so they keep their letters; their case may
+  follow this style.
+- Existing code moves when it is next reworked. A case-only respelling must
+  assemble to the same ROM and the same symbol map. A rename that changes
+  letters is its own change, with its callers, tests and documents.
 
 ## Compact layout
 
 - Use two literal spaces before instructions and one mnemonic/operand separator.
   Mnemonics, registers and condition codes are lowercase. Labels and constants
-  are uppercase. Preserve string and character literal contents exactly.
+  follow Names, above. Preserve string and character literal contents exactly.
 - Put code labels on their own lines, with a blank above each. Data labels and
   `EQU` names can share their declaration. Separate a left-margin comment block
   from surrounding source with a blank; one blank separates a header and label.
@@ -35,6 +60,8 @@ A routine header explains purpose, inputs, results, flags, clobbers and relevant
 ownership, lifetime or failure effects. Read the implementation, shared tails
 and actual callers before changing it. Explain non-obvious ordering, branch
 conditions and magic values; remove repetition and instruction paraphrases.
+Aim for a comment on nearly every code line, saying what the line does in the
+program's terms (Origo MD-16); a checker's floor is a minimum, not the aim.
 Do not retain empty commentary to reach a count or drop a necessary contract
 to shorten a block. A shorter but inaccurate explanation is a regression.
 

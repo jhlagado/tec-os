@@ -18,6 +18,7 @@ test('compact layout checks routine headers and preserves literal case', () => {
   assert.deepEqual(rules(source), []);
   assert.ok(rules(source.replace('; Load the byte.\n', '')).includes('header'));
   assert.ok(rules(source.replace("ld a,'A'", "LD A,'A'")).includes('case'));
+  assert.deepEqual(rules(source.replace('INNER:', 'kbInner:')), [], 'a camel case label (MD-16)');
   assert.ok(rules(source.replace('  ret', '\tret')).includes('spaces'));
   assert.ok(rules(source.replace(/ +; done/, ' ; done')).includes('column'));
   assert.ok(rules(source.replace('\n\nINNER:', '\nINNER:')).includes('blank'));

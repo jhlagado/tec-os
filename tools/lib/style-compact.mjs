@@ -48,7 +48,8 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
     if (line.length > 40 && !wide.includes(line)) fault('end', n, 'line exceeds 40 columns');
     if (wide.includes(line)) used.add(line);
     if (p.code.replace(/"[^"]*"|'[^']*'/g, '').includes('\t') || /^\t/.test(line)) fault('spaces', n, 'use spaces outside literals');
-    if (label && label !== label.toUpperCase()) fault('case', n, 'uppercase label or constant');
+    // Names may be in any case (MD-16): camel case labels and Pascal case
+    // constants are the style; the assembler takes names in any case.
     if (p.mnemonic?.toUpperCase() === '%INCLUDE' && !/^%include\b/i.test(p.code)) {
       fault('column', n, '%INCLUDE begins at column 1');
     }
