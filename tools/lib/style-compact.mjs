@@ -48,7 +48,8 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
     if (line.length > 40 && !wide.includes(line)) fault('end', n, 'line exceeds 40 columns');
     if (wide.includes(line)) used.add(line);
     if (p.code.replace(/"[^"]*"|'[^']*'/g, '').includes('\t') || /^\t/.test(line)) fault('spaces', n, 'use spaces outside literals');
-    if (label && label !== label.toUpperCase()) fault('case', n, 'uppercase label or constant');
+    // Names may be in any case (MD-16): camel case labels and Pascal case
+    // constants are the style; the assembler takes names in any case.
     if (p.mnemonic?.toUpperCase() === '%INCLUDE' && !/^%include\b/i.test(p.code)) {
       fault('column', n, '%INCLUDE begins at column 1');
     }
@@ -104,4 +105,32 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
   if (bytes > LIMITS.bytes) fault('size', 0, `${bytes} bytes`);
   if (!/^[A-Z0-9_]{1,8}\.[A-Z]{3}$/i.test(name)) fault('name', 0, `${name} is not an 8.3 name`);
   return { name, lines: lines.length, codeLines, commented, share, routines, headless, longestRun, bytes, faults };
+}
+
+/**
+ * Names (Origo MD-16), for a source marked as swept: code labels camel case,
+ * lowercase first; private labels lowercase; data labels Pascal case, a
+ * capital first and not all capitals; EQU names all capitals.
+ */
+export function checkNames(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\n$/, '').split('\n');
+  const parsed = lines.map(parseLine);
+  const code = codeLabels(parsed);
+  const faults = [];
+  const fault = (line, what) => faults.push({ rule: 'names', line, what });
+  for (const [i, p] of parsed.entries()) {
+    const name = p.label?.replace(/:$/, '');
+    if (!name) continue;
+    const n = i + 1;
+    if (name.startsWith('.')) {
+      if (name !== name.toLowerCase()) fault(n, `${name}: a private label is lowercase`);
+    } else if (/^EQU$/i.test(p.mnemonic ?? '')) {
+      if (name !== name.toUpperCase()) fault(n, `${name}: a constant is in capitals`);
+    } else if (p.kind === 'label' && code.has(i)) {
+      if (!/^[a-z]/.test(name)) fault(n, `${name}: a code label is camel case, lowercase first`);
+    } else if (!/^[A-Z]/.test(name) || (name.length > 1 && name === name.toUpperCase())) {
+      fault(n, `${name}: a data label is Pascal case`);
+    }
+  }
+  return faults;
 }

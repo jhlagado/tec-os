@@ -13,7 +13,7 @@
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkCompactSource } from "./lib/style-compact.mjs";
+import { checkCompactSource, checkNames } from "./lib/style-compact.mjs";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
 const args = process.argv.slice(2);
@@ -42,7 +42,14 @@ const given = args.filter((a, i) => !a.startsWith("--") && !["--json"].includes(
 const files = given.length ? given.map((f) => relative(ROOT, resolve(f))) : sources();
 const entries = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-routines.json"), "utf8"));
 const exceptions = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-exceptions.json"), "utf8"));
-const results = files.map((f) => ({ file: f, ...checkCompactSource(readFileSync(resolve(ROOT, f), "latin1"), basename(f), entries[f], exceptions[f]) }));
+// Sources swept to Names (Origo MD-16): each is held to it from then on.
+const swept = JSON.parse(readFileSync(resolve(ROOT, "tools/names-swept.json"), "utf8"));
+const results = files.map((f) => {
+  const text = readFileSync(resolve(ROOT, f), "latin1");
+  const r = checkCompactSource(text, basename(f), entries[f], exceptions[f]);
+  if (swept.includes(f)) r.faults.push(...checkNames(text));
+  return { file: f, ...r };
+});
 
 const pad = (s, n) => String(s).padStart(n);
 console.log(`${"file".padEnd(22)} ${pad("lines", 5)} ${pad("code", 5)} ${pad("comm%", 5)} ${pad("routines", 8)} ${pad("no hdr", 6)} ${pad("run", 4)} ${pad("bytes", 6)}  faults`);
