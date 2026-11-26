@@ -163,9 +163,10 @@ hstPrev:
 ; Recall a line, from BDOS 10 at the
 ; prompt: C = ^W, older, or ^N, newer.
 ; Carry: none to show. Otherwise HL is
-; the line, zero-ended, in LOADBUF,
-; which line input copies over the line
-; being typed. Changes AF, BC, DE, HL.
+; the line's first byte in HistRing,
+; zero-ended, which line input copies
+; over the line being typed, stepping
+; with hstNext. Changes AF, BC, DE, HL.
 
 hstRecal:
   ld h,HIGH(HistRing)
@@ -199,23 +200,8 @@ hstRecal:
 .show:
   ld a,l         ; its end, now the
   ld (HistPos),a
-  call hstStart  ; L at its start
-  ld de,LOADBUF  ; copied out whole
-
-.copy:
-  ld a,(HistPos)
-  cp l           ; at its end?
-  jr z,.end
-  ld a,(hl)      ; a byte of it
-  ld (de),a
-  inc de
-  call hstNext
-  jr .copy
-
-.end:
-  xor a          ; zero-ended
-  ld (de),a
-  ld hl,LOADBUF  ; the line recalled
+  call hstStart  ; HL at its start
+  or a           ; NC: a line to show
   ret
 
 ; L back to the first byte of the line

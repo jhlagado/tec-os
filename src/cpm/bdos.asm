@@ -669,7 +669,7 @@ LINDN1:
   xor a
   ret
 
-; Erase the line and show the shell's
+; Erase the line and show the history's
 ; zero-ended line at HL in its place.
 
 LINHR:
@@ -677,9 +677,11 @@ LINHR:
   call LINERASE
   pop hl
 
-; Copy the shell's line into the buffer
-; and echo it, until its zero or the
-; buffer is full.
+; Copy the history's line into the
+; buffer and echo it, until its zero or
+; the buffer is full. It is read in
+; place in HistRing, so each step wraps
+; through hstNext.
 
 LINHC:
   ld a,(hl)
@@ -690,7 +692,7 @@ LINHC:
   ld a,e         ; E=LINMAX, D=LINCNT
   cp d
   jp z,LINLOOP   ; full
-  push hl        ; the shell's line
+  push hl        ; the history's line
   ld hl,(LINPTR)
   ld (hl),c      ; store and advance
   inc hl
@@ -699,7 +701,7 @@ LINHC:
   inc (hl)       ; one more counted
   call ECHOCHAR  ; echo the stored byte
   pop hl
-  inc hl         ; the shell's next byte
+  call hstNext   ; its next byte
   jr LINHC
 
 ; Consume a terminal key without

@@ -12,7 +12,8 @@ const PROMPT = /\r\n[A-P]:\S*>$/;
 
 /** The line BDOS 10 holds at the bare prompt, read from its buffer. */
 function held(m) {
-  m.runUntil(() => m.waitingForInput(), 50_000_000, "line input");
+  const first = m.sym(m.videoConsole() ? "CINMX" : "CINLP"), last = m.sym(m.videoConsole() ? "CINME" : "CINWE");
+  m.runUntil(() => m.pc >= first && m.pc < last, 50_000_000, "line input, the recall echoed");
   const p = m.read(m.sym("PARAM")) | (m.read(m.sym("PARAM") + 1) << 8);
   return String.fromCharCode(...Array.from({ length: m.read(m.sym("LINCNT")) }, (_, i) => m.read(p + 2 + i)));
 }
@@ -28,14 +29,16 @@ test("the bare prompt shows the drive and its volume, as the shell's does", () =
 test("CLS at the bare prompt clears the screen and puts the prompt on its top row", () => {
   const m = boot(standardCard());
   m.runUntil(() => m.ready(), 200_000_000, "the prompt");
-  const out = m.command("CLS");
+  m.mark = m.output.length;
+  m.type("CLS\r");
+  const out = m.expect(/A:SYSTEM>$/);
   assert.match(out, /\x1b\[H\x1b\[2JA:SYSTEM>$/, "ESC [H ESC [2J, then the prompt with no blank line");
   assert.deepEqual(m.violations, []);
 });
 
 for (const [name, setup, run] of [
   ["TYPE", (a) => a.write("L.TXT", LONG), "TYPE L.TXT"],
-  ["DIR", (a) => { for (let i = 0; i < 60; i += 1) a.write(`F${String(i).padStart(2, "0")}.DAT`, new Uint8Array(0)); }, "DIR"],
+  ["DIR", (a) => { for (let i = 0; i < 90; i += 1) a.write(`F${String(i).padStart(2, "0")}.DAT`, new Uint8Array(0)); }, "DIR"],
 ]) {
   test(`${name} at the bare prompt waits at [more] one row short of a full screen; a key goes on, and Q stops`, () => {
     const image = standardCard();
@@ -45,7 +48,7 @@ for (const [name, setup, run] of [
     m.mark = m.output.length;
     m.type(`${run}\r`);
     const first = m.expect(/\[more\]$/, { maxCycles: 900_000_000 });
-    assert.equal((first.match(/\r\n/g) ?? []).length, 23, "23 rows, then [more] on the 24th");
+    assert.equal((first.match(/\r\n/g) ?? []).length - 1, 23, "after the command's own row, 23 rows, then [more] on the 24th");
     m.type(" ");
     m.expect(/\[more\]$|>$/, { maxCycles: 900_000_000 });
     if (/\[more\]$/.test(m.text(0))) {
