@@ -767,10 +767,10 @@ const mon3Variant = memo(async (edits) => libVariant(edits));
 // Steps of drivers/mon3.asm that the IM and IOBYTE mutants name: the hook's IM 1,
 // and the IOBYTE's copy in the hook and in EXIT's restore.
 const HOOK_IM1 = "  im 1           ; TEC-OS's mode\n";
-const HOOK_IO = "  call RESETD    ; vectors rebuilt\n  ld hl,SAVE0\n  ld de,IOBYTE   ; and the drive\n";
-const REST_IO = "REST:\n  scf            ; CY: put back\n";
+const HOOK_IO = "  call resetD    ; vectors rebuilt\n  ld hl,Save0\n  ld de,IOBYTE   ; and the drive\n";
+const REST_IO = "rest:\n  scf            ; CY: put back\n";
 // EXIT's restore begun past PZTAB's first range and SAVE0's two bytes.
-const REST_SKIP_IO = "REST:\n  ld hl,PZTAB+3\n  ld de,SAVE0+2\n  scf\n  jr PZC1\n";
+const REST_SKIP_IO = "rest:\n  ld hl,PzTab+3\n  ld de,Save0+2\n  scf\n  jr pzc1\n";
 
 const SLOTS = [0x08, 0x10, 0x18, 0x20, 0x28, 0x30];
 const DEFAULT_SLOT = [0, 0, 0, 0, 0, 0, 0, 0xc9];
@@ -1054,7 +1054,7 @@ test("KG61 mutant: a hook without IM 1 leaves IM 2 after RST 00h", async () => {
 });
 
 test("KG61 mutant: an EXIT without IM 1 leaves IM 2", async () => {
-  const svc = await mon3Variant([["  im 1\n  call RESETD    ; the drives reset\n", "  call RESETD    ; the drives reset\n"]]);
+  const svc = await mon3Variant([["  im 1\n  call resetD    ; the drives reset\n", "  call resetD    ; the drives reset\n"]]);
   await assert.rejects(sixExits(svc, ["EXIT"]), /EXIT: IM 1/);
 });
 
@@ -1069,17 +1069,17 @@ test("KG61 mutant: an EXIT that skips the IOBYTE's copy leaves the program's", a
 });
 
 test("KG61 mutant: a hook that acts without the session form puts IOBYTE back after CON BAT", async () => {
-  const svc = await mon3Variant([["  ld a,($0010)\n  cp $E5         ; a form?\n  jr nz,HOOK1    ; no session\n  ld hl,($0012)\n  ld a,l\n  cp LOW(R10)    ; to our RST 10h?\n  jr nz,HOOK1\n  ld a,h\n  cp HIGH(R10)   ; and ours?\n  jr nz,HOOK1\n", ""]]);
+  const svc = await mon3Variant([["  ld a,($0010)\n  cp $E5         ; a form?\n  jr nz,hook1    ; no session\n  ld hl,($0012)\n  ld a,l\n  cp LOW(r10)    ; to our RST 10h?\n  jr nz,hook1\n  ld a,h\n  cp HIGH(r10)   ; and ours?\n  jr nz,hook1\n", ""]]);
   await assert.rejects(staleInactive(svc), /IOBYTE as CON set it/);
 });
 
 test("KG61 mutant: an entry that leaves a stale hook warm boots for ever", async () => {
-  const svc = await mon3Variant([["  call UNHOOK    ; a stale hook out\n", ""]]);
+  const svc = await mon3Variant([["  call unhook    ; a stale hook out\n", ""]]);
   await assert.rejects(staleThenEntry(svc), /within 100000000 cycles/);
 });
 
 test("KG61 mutant: without the recursion test a second session starts and the program's stack is lost", async () => {
-  const svc = await mon3Variant([["  call ACTIVE    ; Z: in a session\n  ld de,MBUSY    ; MON3 active\n  jr z,REFUSE    ; so refuse it\n", ""]]);
+  const svc = await mon3Variant([["  call active    ; Z: in a session\n  ld de,MBusy    ; MON3 active\n  jr z,refuse    ; so refuse it\n", ""]]);
   await assert.rejects(recursion(svc));
 });
 
@@ -1415,8 +1415,8 @@ test("KG62 expand in view", () => expandInView());
 
 test("KG62 mutant: without BDOS 37 at the program's return and at EXIT, a new file takes a used block", async () => {
   const svc = await mon3Variant([
-    ["  call FORMS     ; page zero again\n  call RESETD    ; and the vectors\n", "  call FORMS     ; page zero again\n"],
-    ["  im 1\n  call RESETD    ; the drives reset\n", "  im 1\n"],
+    ["  call forms     ; page zero again\n  call resetD    ; and the vectors\n", "  call forms     ; page zero again\n"],
+    ["  im 1\n  call resetD    ; the drives reset\n", "  im 1\n"],
   ]);
   await assert.rejects(vectorExchange(svc), /intact|cross-link/);
 });
@@ -1445,7 +1445,7 @@ test("KG62 mutant: GO clearing only EXPAND from SYS_MODE lets the overlay over p
 });
 
 test("KG62 mutant: a hook without BDOS 37 has a new file take a used block after JP 0000h", async () => {
-  const svc = await mon3Variant([["  call RESETD    ; vectors rebuilt\n", ""]]);
+  const svc = await mon3Variant([["  call resetD    ; vectors rebuilt\n", ""]]);
   await assert.rejects(vectorExchange(svc, true), /intact|cross-link/);
 });
 
@@ -1454,7 +1454,7 @@ test("KG62 mutant: a hook without BDOS 37 has a new file take a used block after
 // finds nothing left. On a card that refuses writes its answer is what
 // refuses GO: the case after this one.
 test("KG62 equivalent mutant: without GO's BDOS 48 the unclosed write is on the card, since MON3's line read writes every line", async () => {
-  const svc = await mon3Variant([["  push hl\n  ld c,48        ; flush\n  call BDOS\n  or a           ; a write failed?\n  jp nz,BAD      ; then no program\n", "  push hl\n"]]);
+  const svc = await mon3Variant([["  push hl\n  ld c,48        ; flush\n  call Bdos\n  or a           ; a write failed?\n  jp nz,bad      ; then no program\n", "  push hl\n"]]);
   await hangAndReset(svc);
 });
 
@@ -1515,13 +1515,13 @@ async function goWithWritePending(svc) {
 test("GO is refused while a write is pending and runs once the card has taken it", () => goWithWritePending());
 
 test("mutant: GO ignoring the flush's answer starts the program with the write still queued", async () => {
-  const svc = await mon3Variant([["  or a           ; a write failed?\n  jp nz,BAD      ; then no program\n", ""]]);
+  const svc = await mon3Variant([["  or a           ; a write failed?\n  jp nz,bad      ; then no program\n", ""]]);
   await assert.rejects(goWithWritePending(svc), /GO starts no program while the write is pending/);
 });
 
 test("KG62 mutant: without the 0800h-08FFh test a load into MON-3's stack is taken", async () => {
   const svc = await mon3Variant([
-    ["RNG1:\n  ld a,d\n  cp $08\n  jr z,RNGX      ; starts in 08xxh\n  ret nc         ; starts above it\n  ld a,h\n  cp $08\n  ccf\n  ret nc         ; ends below it\n  jr nz,RNGX     ; runs through it\n  ld a,l\n  cp 1\n  ccf            ; ends inside it\n  ret\n", "RNG1:\n  or a\n  ret\n"],
+    ["rng1:\n  ld a,d\n  cp $08\n  jr z,rngX      ; starts in 08xxh\n  ret nc         ; starts above it\n  ld a,h\n  cp $08\n  ccf\n  ret nc         ; ends below it\n  jr nz,rngX     ; runs through it\n  ld a,l\n  cp 1\n  ccf            ; ends inside it\n  ret\n", "rng1:\n  or a\n  ret\n"],
   ]);
   await assert.rejects(refusedLoads(svc), /LOAD THREE\.BIN 700: \?/);
 });
@@ -1545,7 +1545,7 @@ test("KG63 size and tpa", async () => {
   assert.ok(word(m, 6) - 0x100 >= C.tpa, `TPA ${word(m, 6) - 0x100}, at least ${C.tpa}`);
   console.log(`MON3.SVC: file ${svc.file.length} bytes, header and image ${svc.image}, ${pages} pages, TPA ${word(m, 6) - 0x100}`);
   // The fail input: buffers added to the ceiling and one byte more.
-  const big = await mon3Variant([["  DS 80\nMSTK:\n", `  DS 80+${C.bytes + 1 - svc.image}\nMSTK:\n`]]);
+  const big = await mon3Variant([["  DS 80\nMStk:\n", `  DS 80+${C.bytes + 1 - svc.image}\nMSTK:\n`]]);
   assert.equal(big.image, C.bytes + 1, "the larger build is one byte over the ceiling");
   const b = boot({ "MON3.SVC": big.file });
   installMon3(b);
@@ -1584,7 +1584,7 @@ async function unloads(svc) {
 test("KG63 unload", () => unloads());
 
 test("KG63 mutant: a REMOVE that leaves the hook has UNLOAD leave the target in freed pages", async () => {
-  const svc = await mon3Variant([["  res 0,(hl)     ; not ready first\n  jp UNHOOK\n", "  res 0,(hl)     ; not ready first\n  ret\n"]]);
+  const svc = await mon3Variant([["  res 0,(hl)     ; not ready first\n  jp unhook\n", "  res 0,(hl)     ; not ready first\n  ret\n"]]);
   await assert.rejects(unloads(svc), /XP\.BIN: the hook is out/);
 });
 
@@ -1608,7 +1608,7 @@ test("KG63 inactive", { timeout: 3_600_000 }, async () => {
   const svcPath = resolve(dir, "MON3.SVC");
   const log = resolve(dir, "inactive.log");
   // Installed only: with bit 1 clear the startup line installs it and enters nothing.
-  writeFileSync(svcPath, (await mon3Variant([["EXRDY: DB 2", "EXRDY: DB 0"]])).file);
+  writeFileSync(svcPath, (await mon3Variant([["ExRdy: DB 2", "ExRdy: DB 0"]])).file);
   writeFileSync(log, "");
   const escape = (n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const names = Object.values(INACTIVE).flat();
@@ -1681,8 +1681,9 @@ test("KG68 docs agree", async () => {
   for (const [n, name] of [["UINT", "USER_INT"], ["UNMI", "USER_NMI"], ["SYSMD", "SYS_MODE"], ["PROTM", "PROT_MODE"]])
     assert.ok(mon3.includes(`\`${name}\` (${h4(equ(n))})`), `mon3.md: ${name} at ${h4(equ(n))}`);
   // The calls the doc lists as built are those the service's table does not send to the error display.
-  const table = src.slice(src.indexOf("\nAPI:")).split("\n\n")[0];
-  const words = [...table.matchAll(/^\s+DW (.*)$/gm)].flatMap((x) => x[1].replace(/;.*$/, "").split(",").map((w) => w.trim()));
+  // Names are in any case (MD-16), so the table and its words are read without it.
+  const table = src.slice(src.search(/\nAPI:/i)).split("\n\n")[0];
+  const words = [...table.matchAll(/^\s+DW (.*)$/gm)].flatMap((x) => x[1].replace(/;.*$/, "").split(",").map((w) => w.trim().toUpperCase()));
   assert.equal(words.length, 63, "MON-3's 63 calls");
   // RTCAPI answers every function with carry, as MON-3 a missing one. The
   // translated calls run on TEC-OS's resources: the session and the latch.
@@ -1703,7 +1704,7 @@ test("KG68 docs agree", async () => {
   assert.ok(mon3.includes(`and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "the TPA with GLCD.SVC and no shell");
   // The graphics calls the doc lists as built are those of the service's
   // RST 18h table, and the refused ones the rest of MON-3's 34.
-  const gtable = src.slice(src.indexOf("\nGAPI:")).split("\n\n")[0];
+  const gtable = src.slice(src.indexOf("\nGApi:")).split("\n\n")[0];
   const gwords = [...gtable.matchAll(/^\s+DW (\S+)/gm)].map((x) => x[1]);
   assert.equal(gwords.length, 21, "RST 18h's table: 21 calls");
   const gbuilt = gwords.flatMap((w, i) => (w === "DERR" ? [] : [i]));
@@ -1713,7 +1714,7 @@ test("KG68 docs agree", async () => {
   assert.match(src, /^  cp 21          ; calls 0 to 20$/m, "RST 18h refuses 21 and above");
   // The GLCD console: GLCD.SVC's bytes, when CON: is UC1:.
   const glcmod = /^GLCMOD: DB (.*)$/m.exec(readFileSync(resolve(ROOT, "drivers/glcd.asm"), "utf8"))[1];
-  assert.equal(/^GMODE: DB (.*)$/m.exec(src)[1], glcmod, "the restore's bytes are GLCMOD's");
+  assert.equal(/^GMODE: DB (.*)$/im.exec(src)[1], glcmod, "the restore's bytes are GLCMOD's");
   assert.ok(mon3.includes(`mode bytes, ${glcmod.split(",").map((b) => `${b.slice(1)}h`).join(", ").replace(/, (\S+)$/, " and $1")}, the same as its \`GLCMOD\``), "mon3.md names GLCMOD's bytes");
   for (const s of ["when CON: is `UC1:` (IOBYTE AND 3 is 3)", "whatever driver holds it", "It reads no status", "On any other console the panel stays", "`CLRBUF` (0E0Ch) zero is the session's choice"]) assert.ok(mon3.includes(s), `mon3.md: ${s}`);
 });

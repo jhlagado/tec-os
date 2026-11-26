@@ -7,9 +7,9 @@
 
 ; RST 08h: wait for a key.
 
-R08:
+r08:
   pop hl         ; the caller's HL
-  jp KWAIT
+  jp kWait
 
 ; RST 10h: MON-3's API, C the call.
 ; AF, BC and HL reach the routine as
@@ -17,15 +17,15 @@ R08:
 ; in MON-3. A call past the table goes
 ; to the error display.
 
-R10:
+r10:
   pop hl         ; the caller's HL
   push af
   ld a,c         ; the call
   cp 63          ; MON-3's count
-  jr nc,R10X     ; not MON-3's
+  jr nc,r10X     ; not MON-3's
   push bc
   push hl        ; kept for the call
-  ld hl,API
+  ld hl,Api
   add a,a        ; two bytes a call
   ld c,a
   ld b,0         ; BC = the offset
@@ -41,29 +41,29 @@ R10:
   pop af         ; as the caller had
   jp (ix)
 
-R10X:
+r10X:
   pop af
-  jp DERR        ; MON-3's refusal
+  jp dErr        ; MON-3's refusal
 
 ; RST 20h: scan the digits at DE, then
 ; the keys, then wait for the LCD, as
 ; MON-3's slot runs on into RST 28h.
 ; A and the flags are the key scan's.
 
-R20:
+r20:
   pop hl         ; the caller's HL
-  call SCANS     ; the digits
-  call SKEYS     ; the keys
-  jr R28A
+  call scanS     ; the digits
+  call sKeys     ; the keys
+  jr r28A
 
 ; RST 28h: wait for the LCD.
 
-R28:
+r28:
   pop hl         ; the caller's HL
 
-R28A:
+r28A:
   push af
-  call LCDB      ; wait for the LCD
+  call lcdB      ; wait for the LCD
   pop af         ; keep the flags
   ret
 
@@ -72,19 +72,19 @@ R28A:
 ; the address. The digits go to HEXT,
 ; outside the summed bytes.
 
-R30:
+r30:
   pop hl
   pop hl         ; the return address
-  ld de,HEXT
-  call HLSTR     ; its digits
+  ld de,HexT
+  call hlStr     ; its digits
   ld a,'$'
   ld (de),a      ; for BDOS 9
-  ld (BRKF),a    ; nonzero: say BRK
-  jp MRET        ; as a return
+  ld (BrkF),a    ; nonzero: say BRK
+  jp mRet        ; as a return
 
 ; RST 38h: MON-3's interrupt dispatch.
 
-R38:
+r38:
   pop hl
   push hl        ; HL kept below
   ld hl,(UINT)   ; the user's handler
@@ -96,86 +96,86 @@ R38:
 ; display, as MON-3 sends a call it
 ; does not have.
 
-API:
-  DW SWID        ; 0 softwareID
-  DW VERID       ; 1 versionID
-  DW PREIN       ; 2 preInit
-  DW BEEP        ; 3 beepAlways
-  DW TOSEG       ; 4 convAToSeg
-  DW ATOAS       ; 5 regAToASCII
-  DW A2S         ; 6 ASCIItoSegment
-  DW SCMP        ; 7 stringCompare
-  DW HLSTR       ; 8 HLToString
-  DW HEXA        ; 9 AToString
-  DW SCANS       ; 10 scanSegments
-  DW DERR        ; 11 displayError
-  DW LCDB        ; 12 LCDBusy
-  DW LCDSTR      ; 13 stringToLCD
-  DW LCDCHR      ; 14 charToLCD
-  DW LCDCO       ; 15 commandToLCD
-  DW SKEYS       ; 16 scanKeys
-  DW KWAIT       ; 17 scanKeysWait
-  DW MSCAN       ; 18 matrixScan
-  DW JOYS        ; 19 joystickScan
-  DW SERON       ; 20 serialEnable
-  DW SEROFF      ; 21 serialDisable
-  DW TXB         ; 22 txByte
-  DW RXB         ; 23 rxByte
-  DW DERR        ; 24 intelHexLoad
-  DW SNDS        ; 25 sendToSerial
-  DW RCVS        ; 26 receiveFromSerial
-  DW DERR        ; 27 sendAssembly
-  DW SHEX        ; 28 sendHex
-  DW GDUMP       ; 29 genDataDump
-  DW CHKSE       ; 30 checkStartEnd
-  DW DERR        ; 31 menuDriver
-  DW DERR        ; 32 paramDriver
-  DW TDLY        ; 33 timeDelay
-  DW PNOTE       ; 34 playNote
-  DW PTUNE       ; 35 playTune
-  DW DERR        ; 36 playTuneMenu
-  DW GETCAP      ; 37 getCaps
-  DW GETSHD      ; 38 getShadow
-  DW GETPRT      ; 39 getProtect
-  DW GETEXP      ; 40 getExpand
-  DW SETCAP      ; 41 setCaps
-  DW DERR        ; 42 setShadow
-  DW SETPRT      ; 43 setProtect
-  DW DERR        ; 44 setExpand
-  DW STRSER      ; 45 stringToSerial
-  DW RTCAPI      ; 46 RTCAPI
-  DW DERR        ; 47 menuPop
-  DW TOGCAP      ; 48 toggleCaps
-  DW RAND        ; 49 random
-  DW DERR        ; 50 setDisStart
-  DW DERR        ; 51 getDisNext
-  DW DERR        ; 52 getDisassembly
-  DW MSASC       ; 53 matrixScanASCII
-  DW PMSCN       ; 54 parseMatrixScan
-  DW LCDCF       ; 55 LCDConfirm
-  DW GETGT       ; 56 getGLCDTerm
-  DW DERR        ; 57 setGLCDTerm
-  DW DERR        ; 58 loadFromDisk
-  DW DERR        ; 59 openFile
-  DW DERR        ; 60 readSector
-  DW DERR        ; 61 writeSector
-  DW RGBS        ; 62 RGBScan
+Api:
+  DW swId        ; 0 softwareID
+  DW verId       ; 1 versionID
+  DW preIn       ; 2 preInit
+  DW beep        ; 3 beepAlways
+  DW toSeg       ; 4 convAToSeg
+  DW aToAs       ; 5 regAToASCII
+  DW a2s         ; 6 ASCIItoSegment
+  DW sCmp        ; 7 stringCompare
+  DW hlStr       ; 8 HLToString
+  DW hexA        ; 9 AToString
+  DW scanS       ; 10 scanSegments
+  DW dErr        ; 11 displayError
+  DW lcdB        ; 12 LCDBusy
+  DW lcdStr      ; 13 stringToLCD
+  DW lcdChr      ; 14 charToLCD
+  DW lcdCo       ; 15 commandToLCD
+  DW sKeys       ; 16 scanKeys
+  DW kWait       ; 17 scanKeysWait
+  DW mScan       ; 18 matrixScan
+  DW joyS        ; 19 joystickScan
+  DW serOn       ; 20 serialEnable
+  DW serOff      ; 21 serialDisable
+  DW txB         ; 22 txByte
+  DW rxB         ; 23 rxByte
+  DW dErr        ; 24 intelHexLoad
+  DW sndS        ; 25 sendToSerial
+  DW rcvS        ; 26 receiveFromSerial
+  DW dErr        ; 27 sendAssembly
+  DW sHex        ; 28 sendHex
+  DW gDump       ; 29 genDataDump
+  DW chkSe       ; 30 checkStartEnd
+  DW dErr        ; 31 menuDriver
+  DW dErr        ; 32 paramDriver
+  DW tDly        ; 33 timeDelay
+  DW pNote       ; 34 playNote
+  DW pTune       ; 35 playTune
+  DW dErr        ; 36 playTuneMenu
+  DW getCap      ; 37 getCaps
+  DW getShd      ; 38 getShadow
+  DW getPrt      ; 39 getProtect
+  DW getExp      ; 40 getExpand
+  DW setCap      ; 41 setCaps
+  DW dErr        ; 42 setShadow
+  DW setPrt      ; 43 setProtect
+  DW dErr        ; 44 setExpand
+  DW strSer      ; 45 stringToSerial
+  DW rtcApi      ; 46 RTCAPI
+  DW dErr        ; 47 menuPop
+  DW togCap      ; 48 toggleCaps
+  DW rand        ; 49 random
+  DW dErr        ; 50 setDisStart
+  DW dErr        ; 51 getDisNext
+  DW dErr        ; 52 getDisassembly
+  DW msAsc       ; 53 matrixScanASCII
+  DW pmScn       ; 54 parseMatrixScan
+  DW lcdCf       ; 55 LCDConfirm
+  DW getGt       ; 56 getGLCDTerm
+  DW dErr        ; 57 setGLCDTerm
+  DW dErr        ; 58 loadFromDisk
+  DW dErr        ; 59 openFile
+  DW dErr        ; 60 readSector
+  DW dErr        ; 61 writeSector
+  DW rgbS        ; 62 RGBScan
 
 ; Call 3, beep: MON-3's tone, with the
 ; serial line held idle. A=0. Keeps BC.
 
-BEEP:
+beep:
   push bc        ; kept
   ld c,$40       ; half cycles
   ld a,TXI
 
-BEEP1:
+beep1:
   out (SDIG),a   ; the speaker's level
   ld b,$40
   djnz $         ; half a period
   xor $80        ; the speaker bit
   dec c
-  jr nz,BEEP1    ; each half cycle
+  jr nz,beep1    ; each half cycle
   pop bc
   ld a,TXI
   out (SDIG),a   ; speaker low
@@ -188,26 +188,26 @@ BEEP1:
 ; adds the digit to 1Fh, its table's
 ; place in its page.
 
-TOSEG:
+toSeg:
   push af        ; the low digit
   rlca
   rlca
   rlca
   rlca           ; the high digit
-  call TOSEG1    ; its segments
+  call toSeg1    ; its segments
   pop af
 
-TOSEG1:
+toSeg1:
   and $0F        ; one digit
   add a,$1F      ; F as MON-3 makes it
   push af
-  ld bc,SEGT-$1F
+  ld bc,SegT-$1F
   add a,c
   ld c,a         ; BC at its code
-  jr nc,TOSEG2
+  jr nc,toSeg2
   inc b          ; past a page
 
-TOSEG2:
+toSeg2:
   ld a,(bc)
   ld (de),a      ; the segments
   inc de
@@ -219,7 +219,7 @@ TOSEG2:
 
 ; MON-3's segment codes for 0 to F.
 
-SEGT:
+SegT:
   DB $EB,$28,$CD,$AD,$2E,$A7,$E7,$29
   DB $EF,$2F,$6F,$E6,$C3,$EC,$C7,$47
 
@@ -228,10 +228,10 @@ SEGT:
 ; DE+6, A=0, F as MON-3 leaves it.
 ; Clobbers B.
 
-SCANS:
+scanS:
   ld b,$20       ; the leftmost
 
-SCN1:
+scn1:
   ld a,(de)      ; its segments
   out (SSEG),a
   ld a,b
@@ -245,7 +245,7 @@ SCN1:
   ld a,TXI
   out (SDIG),a   ; off again
   rrc b          ; the next digit
-  jr nc,SCN1     ; six digits
+  jr nc,scn1     ; six digits
   ld a,0         ; not XOR A: keeps F
                  ; from RRC B, as MON-3
   out (SSEG),a   ; segments off
@@ -254,40 +254,40 @@ SCN1:
 ; Call 12, LCDBusy: wait for the LCD.
 ; Keeps every register.
 
-LCDB:
+lcdB:
   push af        ; kept
 
-LCDB1:
+lcdB1:
   in a,(LCDI)
   rlca           ; the busy flag
-  jr c,LCDB1     ; still busy
+  jr c,lcdB1     ; still busy
   pop af
   ret
 
 ; Call 13, stringToLCD: the zero-ended
 ; string at HL. HL ends past its zero.
 
-LCDSTR:
+lcdStr:
   ld a,(hl)
   inc hl         ; past it
   or a
   ret z          ; the string's end
-  call LCDB
+  call lcdB
   out (LCDD),a   ; the character
-  jr LCDSTR
+  jr lcdStr
 
 ; Call 14, charToLCD: A.
 
-LCDCHR:
-  call LCDB
+lcdChr:
+  call lcdB
   out (LCDD),a   ; the character
   ret
 
 ; Call 15, commandToLCD: B. Keeps AF.
 
-LCDCO:
+lcdCo:
   push af
-  call LCDB      ; wait for it
+  call lcdB      ; wait for it
   ld a,b
   out (LCDI),a   ; the command
   pop af
@@ -299,16 +299,16 @@ LCDCO:
 ; carry for a new press and none while
 ; it is held, as MON-3 answers.
 
-SKEYS:
+sKeys:
   in a,(SSYS)    ; the system input
   rrca
-  jr c,KBSCAN    ; bit 0: the matrix
+  jr c,kbScan    ; bit 0: the matrix
   and $20        ; the key-down bit
-  jr z,SK1
+  jr z,sk1
   ld (KPRESS),a  ; none: NZ
   ret
 
-SK1:
+sk1:
   ld a,(KPRESS)
   or a           ; Z: already down
   ld a,(KBUFF)   ; the key held
@@ -319,7 +319,7 @@ SK1:
   and $3F
   xor $20        ; MON-3's Fn bit
 
-SKEXIT:
+skExit:
   cp a           ; Z
   scf            ; a new press
   ld (KBUFF),a   ; the key held
@@ -331,53 +331,53 @@ SKEXIT:
 ; Fn with a key adds MON-3's Fn bit.
 ; Clobbers BC, DE and HL.
 
-KBSCAN:
-  call MSCAN     ; a key or two
-  jr z,KBF
+kbScan:
+  call mScan     ; a key or two
+  jr z,kbF
   ld (KPRESS),a  ; none: NZ
   ret
 
-KBF:
+kbF:
   ld a,d
   ld (KSEC),a    ; the second key
   ld a,e
   cp $2A
-  jr nc,KBBAD    ; past F
+  jr nc,kbBad    ; past F
   cp $24
-  jr c,KBNUM     ; below A
+  jr c,kbNum     ; below A
   sub $1A        ; A-F as 10-15
-  jr KBGOOD
+  jr kbGood
 
-KBNUM:
+kbNum:
   cp $1D
-  jr nc,KBBAD    ; past 9
+  jr nc,kbBad    ; past 9
   cp $13
-  jr c,KBSPEC    ; below 0
+  jr c,kbSpec    ; below 0
   sub $13        ; 0-9
-  jr KBGOOD
+  jr kbGood
 
-KBSPEC:
+kbSpec:
   cp $0C
-  jr nz,KBS1     ; not Esc
+  jr nz,kbS1     ; not Esc
   ld a,$13       ; AD
-  jr KBGOOD
+  jr kbGood
 
-KBS1:
+kbS1:
   cp $0A
-  jr nz,KBS2     ; not Enter
+  jr nz,kbS2     ; not Enter
   ld a,$12       ; GO
-  jr KBGOOD
+  jr kbGood
 
-KBS2:
+kbS2:
   cp $07
-  jr nc,KBBAD    ; no key of MON-3's
+  jr nc,kbBad    ; no key of MON-3's
   cp $05
-  jr c,KBBAD
+  jr c,kbBad
   sub 3          ; - and + as
   xor $03        ; 11h and 10h
   add a,$10
 
-KBGOOD:
+kbGood:
   ld e,a         ; the key
   ld a,(KPRESS)
   or a           ; Z: already down
@@ -388,14 +388,14 @@ KBGOOD:
   ld a,d
   cp $02         ; Fn the second key?
   ld a,0
-  jr nz,KBG1
+  jr nz,kbG1
   ld a,$20       ; MON-3's Fn bit
 
-KBG1:
+kbG1:
   add a,e
-  jr SKEXIT      ; a new press
+  jr skExit      ; a new press
 
-KBBAD:
+kbBad:
   or 1           ; NZ: not a key
   ret
 
@@ -411,33 +411,33 @@ KBBAD:
 ; program as new, and a host that holds
 ; a key until TEC-OS reads it lets go.
 
-MSCAN:
+mScan:
   ld l,$FF       ; a row's base, less 1
   ld de,0-1      ; no keys yet
   ld bc,SMATX*257
 
-MS1:
+ms1:
   in a,(c)       ; one row
   cpl
   and $FF        ; Z: no key down
-  jr z,MS3
+  jr z,ms3
   ld h,a         ; its keys
   ld a,l
 
-MS2:
+ms2:
   inc a          ; each key's number
   srl h
-  jr nc,MS2      ; until its bit
+  jr nc,ms2      ; until its bit
   ld d,e         ; the one before
   ld e,a         ; and this one
-  jr nz,MS2      ; more in the row
+  jr nz,ms2      ; more in the row
 
-MS3:
+ms3:
   ld a,8
   add a,l
   ld l,a         ; the next row's base
   rlc b          ; the next row's line
-  jr c,MS1       ; eight rows
+  jr c,ms1       ; eight rows
   ld a,e
   ld (KBLAST),a  ; the key read
   cp $40
@@ -456,28 +456,28 @@ MS3:
 ; wait for the keys to be up, then for
 ; a press. A = the key, Z.
 
-KWAIT:
-  call SKEYS     ; the keys
+kWait:
+  call sKeys     ; the keys
   ld a,(KPRESS)
   or a
-  jr z,KWAIT     ; still down
+  jr z,kWait     ; still down
 
-KW1:
-  call SKEYS     ; until a press
-  jr nz,KW1
+kw1:
+  call sKeys     ; until a press
+  jr nz,kw1
   ret
 
 ; Call 33, timeDelay: HL loops. Keeps
 ; every register.
 
-TDLY:
+tDly:
   push hl
   push de        ; kept
   ld de,1
 
-TD1:
+td1:
   sbc hl,de
-  jp nc,TD1      ; until it borrows
+  jp nc,td1      ; until it borrows
   pop de         ; both back
   pop hl
   ret
@@ -489,32 +489,32 @@ TD1:
 ; with A the key, Z and C, as a key
 ; press gives. Clobbers BC, DE and HL.
 
-DERR:
-  ld hl,ERRT
+dErr:
+  ld hl,ErrT
   ld de,DISPB
   ld bc,6
   ldir           ; Err into DISP_BUFF
 
-DERR0:
-  call SKEYS     ; the keys
+dErr0:
+  call sKeys     ; the keys
   ld a,(KPRESS)
   or a
-  jr z,DERR0     ; wait for key up
+  jr z,dErr0     ; wait for key up
 
-DERR1:
+dErr1:
   ld de,DISPB    ; Err on the digits
-  call SCANS     ; one scan
-  call SKEYS
-  jr nz,DERR1    ; until a press
+  call scanS     ; one scan
+  call sKeys
+  jr nz,dErr1    ; until a press
   ret
 
-ERRT: DB $C7,$4B,$4B,$EB,$4B,$00
+ErrT: DB $C7,$4B,$4B,$EB,$4B,$00
 
 ; Call 7, stringCompare: B bytes at HL
 ; and DE, 0 for 256. Z if they match.
 ; Clobbers A, BC, DE and HL.
 
-SCMP:
+sCmp:
   ld a,(hl)
   ld c,a
   ld a,(de)
@@ -522,7 +522,7 @@ SCMP:
   ret nz
   inc hl
   inc de
-  djnz SCMP      ; each byte
+  djnz sCmp      ; each byte
   ret
 
 ; Call 53, matrixScanASCII: the keys in
@@ -534,47 +534,47 @@ SCMP:
 ; Ctrl and Caps Lock. Clobbers BC and
 ; HL.
 
-MSASC:
+msAsc:
   ld a,e         ; the key
-  ld hl,KMODT
+  ld hl,KModT
   ld bc,5        ; five keys to find
 
-MSA1:
+msa1:
   cpi
-  jr z,MSA2      ; this one
+  jr z,msa2      ; this one
   inc hl         ; past its ASCII
-  jp pe,MSA1     ; until BC is 0
-  jr MSA3
+  jp pe,msa1     ; until BC is 0
+  jr msa3
 
-MSA2:
+msa2:
   ld a,(hl)      ; its ASCII
   cp $26
   ret c          ; Shift does not apply
   ld b,a
   ld a,d
   or a           ; Shift held?
-  jr nz,MSAE
+  jr nz,msaE
   ld a,$12       ; the shifted quote
   add a,c        ; or backslash
-  jr KSIDX
+  jr ksIdx
 
 ; The key's code, then its ASCII: Esc,
 ; Enter, space, quote and backslash.
 
-KMODT:
+KModT:
   DB $0A,$0D,$0C,$1B,$0D,$20
   DB $0E,$27,$3F,$5C
 
-MSA3:
+msa3:
   cp $21
-  jr nc,MSAL     ; past the digits
+  jr nc,msaL     ; past the digits
   cp $0F
-  jr c,MSAL      ; below the comma
+  jr c,msaL      ; below the comma
   add a,$1D      ; the digit or sign
   ld b,a
   ld a,d
   or a           ; Shift held?
-  jr nz,MSAE
+  jr nz,msaE
   ld a,b
   sub $2C        ; its place shifted
 
@@ -582,10 +582,10 @@ MSA3:
 ; to L at 10h of its table's page; F is
 ; that addition's, and A the entry.
 
-KSIDX:
+ksIdx:
   add a,$10      ; F as MON-3 makes it
   push af
-  ld hl,KSHT-$10
+  ld hl,KShT-$10
   add a,l        ; the entry's address
   ld l,a
   adc a,h        ; with the carry
@@ -598,39 +598,39 @@ KSIDX:
   pop af         ; the entry, that F
   ret
 
-MSAL:
+msaL:
   cp $24
   ret c          ; no letter: the key
   add a,$3D      ; a to z
   ld b,a
   ld a,d
   dec a          ; Ctrl held?
-  jr nz,MSAC
+  jr nz,msaC
   ld a,b
   sub $60        ; a control code
   ret
 
-MSAC:
-  call GETCAP    ; Caps Lock
+msaC:
+  call getCap    ; Caps Lock
   or a
-  jr nz,MSAU     ; on: upper case
+  jr nz,msaU     ; on: upper case
   ld a,d
   or a           ; Shift held?
-  jr nz,MSAE
+  jr nz,msaE
 
-MSAU:
+msaU:
   ld a,b
   sub $20        ; upper case
   ret
 
-MSAE:
+msaE:
   ld a,b         ; as it is
   ret
 
 ; Shifted: , - . / 0-9 ; = and the quote
 ; and backslash, from 2Ch.
 
-KSHT:
+KShT:
   DB $3C,$5F,$3E,$3F,$29,$21,$40,$23
   DB $24,$25,$5E,$26,$2A,$28,$20,$3A
   DB $20,$2B,$7C,$22
@@ -643,48 +643,48 @@ KSHT:
 ; Caps Lock, which toggles caps.
 ; Clobbers BC and HL.
 
-PMSCN:
+pmScn:
   ld hl,KREPT    ; the repeat time
-  jr z,PMK       ; a key down
+  jr z,pmK       ; a key down
   ld (hl),0
   xor a
   ld (KBUFF),a   ; no key held
 
-PMSP:
+pmSp:
   ld b,0
   djnz $         ; MON-3's delay
   djnz $
   or a           ; NC: no ASCII
   ret
 
-PMK:
+pmK:
   ld a,(KBUFF)
   cp e           ; the key held?
-  jr nz,PMN
+  jr nz,pmN
   dec (hl)
-  jr nz,PMSP     ; not yet repeated
+  jr nz,pmSp     ; not yet repeated
   ld (hl),$20    ; then faster
 
-PMN:
+pmN:
   ld a,e
   ld (KBUFF),a   ; this key held
   cp 3
-  jr c,PMSP      ; Shift, Ctrl or Fn
+  jr c,pmSp      ; Shift, Ctrl or Fn
   dec (hl)
   ld a,7         ; Caps Lock?
   cp e
-  jr nz,PMM
-  call TOGCAP
-  jr PMSP
+  jr nz,pmM
+  call togCap
+  jr pmSp
 
-PMM:
-  call MSASC     ; its ASCII
+pmM:
+  call msAsc     ; its ASCII
   scf
   ret
 
 ; Call 37, getCaps: A = CAPS_LOCK.
 
-GETCAP:
+getCap:
   ld a,(CAPSL)
   ret
 
@@ -692,7 +692,7 @@ GETCAP:
 ; SYS_MODE's bit 7 flipped, and the
 ; latch written. A = SYS_MODE.
 
-TOGCAP:
+togCap:
   ld a,(CAPSL)
   xor $80
   ld (CAPSL),a   ; flipped
@@ -703,7 +703,7 @@ TOGCAP:
 ; GO takes it, with LATCHV equal. Keeps
 ; A and F.
 
-LATSET:
+latSet:
   ld (SYSMD),a
   push af
   and GOKEEP     ; PROTECT and CAPS
@@ -715,16 +715,16 @@ LATSET:
 
 ; Call 0, softwareID: HL at "MON3.1G".
 
-SWID:
-  ld hl,SIG
+swId:
+  ld hl,Sig
   ret
 
 ; Call 1, versionID: HL at MON-3's own
 ; release, with its numbers in BC and
 ; DE as MON-3 gives them.
 
-VERID:
-  ld hl,VERS     ; "2025.16"
+verId:
+  ld hl,Vers     ; "2025.16"
   ld bc,$07E9    ; 2025
   ld de,$0016    ; 16
   ret
@@ -733,16 +733,16 @@ VERID:
 ; digits, the high in H, the low in L
 ; and A.
 
-ATOAS:
+aToAs:
   push af
   rrca
   rrca
   rrca
   rrca           ; the high digit
-  call HEXC
+  call hexC
   ld h,a
   pop af
-  call HEXC      ; the low digit
+  call hexC      ; the low digit
   ld l,a
   ret
 
@@ -753,21 +753,21 @@ ATOAS:
 ; its page, and 7Fh reads the byte
 ; after the table.
 
-A2S:
+a2s:
   sub $20
-  jr c,A2SX      ; below the space
+  jr c,a2sX      ; below the space
   cp $60
-  jr c,A2SL      ; in the table
+  jr c,a2sL      ; in the table
 
-A2SX:
+a2sX:
   xor a          ; none
   ret
 
-A2SL:
+a2sL:
   push hl
   add a,$4F      ; F as MON-3 makes it
   push af
-  ld hl,ASCT-$4F
+  ld hl,AscT-$4F
   add a,l        ; the entry's address
   ld l,a
   adc a,h        ; with the carry
@@ -784,7 +784,7 @@ A2SL:
 ; MON-3's segments for 20h to 7Eh, and
 ; the byte it reads for 7Fh.
 
-ASCT:
+AscT:
   DB $00,$18,$0A,$EE,$A7,$5C,$2C,$02
   DB $83,$89,$A3,$46,$40,$04,$10,$4C
   DB $EB,$28,$CD,$AD,$2E,$A7,$E7,$29
@@ -802,21 +802,21 @@ ASCT:
 ; at DE for B bytes from HL. DE ends at
 ; the zero, HL past the bytes.
 
-GDUMP:
+gDump:
   push bc
-  call HLSTR     ; the address
+  call hlStr     ; the address
   ld a,':'
   ld (de),a
   inc de
 
-GDUMP1:
+gDump1:
   ld a,' '
   ld (de),a      ; a space
   inc de
   ld a,(hl)
-  call HEXA      ; and the byte
+  call hexA      ; and the byte
   inc hl
-  djnz GDUMP1
+  djnz gDump1
   xor a
   ld (de),a      ; the end
   pop bc
@@ -827,7 +827,7 @@ GDUMP1:
 ; carry if END is below START.
 ; Clobbers DE.
 
-CHKSE:
+chkSe:
   ld e,(hl)
   inc hl
   ld d,(hl)      ; DE = START
@@ -847,7 +847,7 @@ CHKSE:
 ; Call 38, getShadow: A = (SYS_MODE AND
 ; 01h) XOR 01h, 0 in a session.
 
-GETSHD:
+getShd:
   ld a,(SYSMD)
   and $01        ; the overlay bit
   xor $01        ; active low
@@ -855,14 +855,14 @@ GETSHD:
 
 ; Call 39, getProtect: A = PROT_MODE.
 
-GETPRT:
+getPrt:
   ld a,(PROTM)
   ret
 
 ; Call 40, getExpand: A = SYS_MODE AND
 ; 04h, 0 in a session.
 
-GETEXP:
+getExp:
   ld a,(SYSMD)
   and $04
   ret
@@ -872,7 +872,7 @@ GETEXP:
 ; A = SYS_MODE. The latch takes it as
 ; GO does.
 
-SETCAP:
+setCap:
   push bc
   and $80
   ld (CAPSL),a
@@ -882,9 +882,9 @@ SETCAP:
 
 ; SYS_MODE = A OR B, and the latch.
 
-UPDMD:
+updMd:
   or b
-  call LATSET
+  call latSet
   pop bc
   ret
 
@@ -892,20 +892,20 @@ UPDMD:
 ; 02h, and SYS_MODE's bit 1 with it, in
 ; the latch at once, as in MON-3.
 
-SETPRT:
+setPrt:
   push bc
   and $02
   ld (PROTM),a
   ld b,a         ; the new bit
   ld a,(SYSMD)
   and $FD        ; the old one out
-  jr UPDMD
+  jr updMd
 
 ; Call 46, RTCAPI, not built: carry and
 ; A = B, as MON-3 answers a function it
 ; does not have. No port is touched.
 
-RTCAPI:
+rtcApi:
   ld a,b
   cp 19          ; MON-3's count
   scf
@@ -915,7 +915,7 @@ RTCAPI:
 ; RNG_SEED and B the new seed, A the
 ; seed plus R. Clobbers B.
 
-RAND:
+rand:
   ld a,(RNGSD)
   ld b,a
   sla b
@@ -932,20 +932,20 @@ RAND:
 ; clear LCD, then a key. Z if it is C.
 ; Clobbers B and HL.
 
-LCDCF:
-  ld hl,CONFT
+lcdCf:
+  ld hl,ConfT
   ld b,$01       ; clear the LCD
-  call LCDCO
-  call LCDSTR
+  call lcdCo
+  call lcdStr
   rst $08        ; a key
   cp $0C         ; C?
   ret
 
-CONFT: DB "Press 'C' to Confirm",0
+ConfT: DB "Press 'C' to Confirm",0
 
 ; Call 56, getGLCDTerm: A = GLCD_TERM,
 ; 0 until the GLCD terminal is built.
 
-GETGT:
+getGt:
   ld a,(GTERM)
   ret

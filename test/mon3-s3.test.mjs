@@ -106,7 +106,7 @@ test("KG67 size and tpa", async () => {
 test("KG67 mutant: one byte beyond the shared ceiling takes one more page", async () => {
   const C = MON3_CEILING;
   const svc = await mon3Build();
-  const big = await mon3Variant([["  DS 80\nMSTK:\n", `  DS 80+${C.bytes + 1 - svc.image}\nMSTK:\n`]]);
+  const big = await mon3Variant([["  DS 80\nMStk:\n", `  DS 80+${C.bytes + 1 - svc.image}\nMSTK:\n`]]);
   assert.equal(big.image, C.bytes + 1);
   await assert.rejects(sizeAndTpa(big), new RegExp(`within ${C.bytes}`));
   const m = boot({ "MON3.SVC": big.file });
@@ -147,12 +147,12 @@ async function workspace(svc) {
 
 test("KG67 graphics workspace", () => workspace());
 
-const STEP = "  ld (RUNOK),a   ; nothing to run\n  call GWS       ; and a clear GBUF\n";
+const STEP = "  ld (RunOk),a   ; nothing to run\n  call gWs       ; and a clear GBUF\n";
 for (const [name, edits, why] of [
-  ["the workspace step removed", [[STEP, "  ld (RUNOK),a   ; nothing to run\n"]], /install and enter/],
+  ["the workspace step removed", [[STEP, "  ld (RunOk),a   ; nothing to run\n"]], /install and enter/],
   ["the workspace step clearing 0E00h-0E19h only", [["  ld hl,GBUF\n  ld de,GBUF+1\n  ld bc,GVEND-GBUF-1\n", "  ld hl,$0E00\n  ld de,$0E01\n  ld bc,GVEND-$0E01\n"]], /0A00h-0E19h zero/],
   ["VPORT left unset", [["  ld hl,GBUF\n  ld (VPORT),hl  ; drawing into GBUF\n", ""]], /VPORT 0A00h/],
-  ["the workspace step moved to INIT", [[STEP, "  ld (RUNOK),a   ; nothing to run\n"], ["  ld hl,EXRDY\n  set 0,(hl)     ; ready, bit 1 kept\n", "  xor a\n  call GWS       ; at install\n  ld hl,EXRDY\n  set 0,(hl)     ; ready, bit 1 kept\n"]], /re-entry over FFh/],
+  ["the workspace step moved to INIT", [[STEP, "  ld (RunOk),a   ; nothing to run\n"], ["  ld hl,ExRdy\n  set 0,(hl)     ; ready, bit 1 kept\n", "  xor a\n  call gWs       ; at install\n  ld hl,ExRdy\n  set 0,(hl)     ; ready, bit 1 kept\n"]], /re-entry over FFh/],
 ]) {
   test(`KG67 mutant: ${name}`, async () => {
     const svc = await mon3Variant(edits);
@@ -208,25 +208,25 @@ test("KG67 rst 18h timing", async () => {
 // Each selector's mutant, a patch inside its routine, is caught by its rows.
 
 const MUTANTS = [
-  [0, "INIT_BASIC's 0Ch written 08h", [["GINITB: DB $30,$0C,$06,$01", "GINITB: DB $30,$08,$06,$01"]]],
+  [0, "INIT_BASIC's 0Ch written 08h", [["GInitB: DB $30,$0C,$06,$01", "GINITB: DB $30,$08,$06,$01"]]],
   [1, "clearGBUF's count 03FFh written 03FEh", [["  ld bc,$03FF\n  ldir           ; and the other 1,023\n", "  ld bc,$03FE\n  ldir           ; and the other 1,023\n"]]],
   [2, "clearGrLCD's CP 20H written CP 1FH", [["  cp $20         ; 32 pairs\n", "  cp $1F         ; 32 pairs\n"]]],
   [3, "clearTxtLCD's count 40h written 3Fh", [["  ld b,$40       ; 64 characters\n", "  ld b,$3F       ; 64 characters\n"]]],
   [4, "setGrMode's 36h written 34h", [["  ld a,$36       ; and graphics on\n", "  ld a,$34       ; and graphics on\n"]]],
   [5, "setTxtMode's 30h written 34h", [["  ld a,$30       ; the basic set\n", "  ld a,$34       ; the basic set\n"]]],
-  [6, "drawBox's right-hand loop removed", [["\nGBOX4:\n  call GPIX\n  ld a,e         ; Y1\n  inc c          ; the next Y\n  cp c\n  jr nc,GBOX4    ; up to Y1\n", "\n"]]],
+  [6, "drawBox's right-hand loop removed", [["\ngBox4:\n  call gPix\n  ld a,e         ; Y1\n  inc c          ; the next Y\n  cp c\n  jr nc,gBox4    ; up to Y1\n", "\n"]]],
   [7, "drawLine's ENDPT taken from BC, not DE", [["  ld (ENDPT),de  ; where the line ends\n", "  ld (ENDPT),bc  ; where the line ends\n"]]],
-  [8, "drawCircle's first-quadrant CALL drawPixel removed", [["  call GPIX      ; quadrant I\n", ""]]],
+  [8, "drawCircle's first-quadrant CALL drawPixel removed", [["  call gPix      ; quadrant I\n", ""]]],
   [9, "drawPixel's OR (HL) removed", [["  or (hl)        ; the bit set\n", ""]]],
-  [10, "fillBox's outer loop run once", [["  jr nc,GFBOX    ; up to X1\n", ""]]],
-  [11, "fillCircle stopping at radius E-1", [["  jr nc,GFCIR1   ; up to E\n", "  jr nz,GFCIR1   ; up to E\n"]]],
-  [12, "plotToLCD's CLRBUF test inverted", [["  jr z,GPLOT4    ; no: kept\n", "  jr nz,GPLOT4   ; no: kept\n"]]],
-  [13, "printString's ROWS index one higher", [["  ld hl,GROWS\n", "  ld hl,GROWS+1\n"]]],
+  [10, "fillBox's outer loop run once", [["  jr nc,gFBox    ; up to X1\n", ""]]],
+  [11, "fillCircle stopping at radius E-1", [["  jr nc,gFCir1   ; up to E\n", "  jr nz,gFCir1   ; up to E\n"]]],
+  [12, "plotToLCD's CLRBUF test inverted", [["  jr z,gPlot4    ; no: kept\n", "  jr nz,gPlot4   ; no: kept\n"]]],
+  [13, "printString's ROWS index one higher", [["  ld hl,GRows\n", "  ld hl,GRows+1\n"]]],
   [14, "printChars' ADD A,B removed", [["  add a,b        ; and the column\n", ""]]],
   [15, "V_DELAY_US 000Bh", [["VDLY EQU $000A", "VDLY EQU $000B"]]],
   [16, "delayMS's loop with a NOP", [["  dec de         ; one count\n", "  dec de         ; one count\n  nop\n"]]],
-  [17, "setBufClear's JP clearGBUF written RET", [["  jp GCLRB       ; and the buffer\n", "  ret\n"]]],
-  [18, "setBufNoClear writing 01h", [["GBKEEP:\n  xor a          ; zero\n", "GBKEEP:\n  ld a,1\n"]]],
+  [17, "setBufClear's JP clearGBUF written RET", [["  jp gClrB       ; and the buffer\n", "  ret\n"]]],
+  [18, "setBufNoClear writing 01h", [["gBKeep:\n  xor a          ; zero\n", "gBKeep:\n  ld a,1\n"]]],
   [19, "clearPixel's CPL removed", [["  cpl\n  and (hl)       ; the bit cleared\n", "  and (hl)       ; the bit cleared\n"]]],
   [20, "flipPixel's XOR (HL) written OR (HL)", [["  xor (hl)       ; the bit flipped\n", "  or (hl)        ; the bit flipped\n"]]],
 ];
@@ -264,7 +264,7 @@ test("KG67 mutant: the range test 22, selector 21 runs the word after the table"
 });
 
 test("KG67 mutant: one more instruction in the dispatch, 82 T", async () => {
-  const sides = await mutantSides(await mon3Variant([["  jp nc,DERR     ; the rest refused\n", "  jp nc,DERR     ; the rest refused\n  nop\n"]]));
+  const sides = await mutantSides(await mon3Variant([["  jp nc,dErr     ; the rest refused\n", "  jp nc,dErr     ; the rest refused\n  nop\n"]]));
   const r = compareCalls(sides, rowsOf([1]));
   assert.deepEqual([...r.extra[1]], [82], "82 T longer, not 78");
   await assert.rejects(glcdText(sides.ses.svc), /418,666/, "and glcd-text's DONE 6 x 4 T later");
@@ -397,7 +397,7 @@ test("KG67 mutant: the dispatch jumping with BC still pushed", async () => {
 });
 
 test("KG67 mutant: plotToLCD returning at once", { timeout: 600_000 }, async () => {
-  const svc = await mon3Variant([["GPLOT:\n  ld hl,(VPORT)  ; the buffer\n", "GPLOT:\n  ret\n  ld hl,(VPORT)  ; the buffer\n"]]);
+  const svc = await mon3Variant([["gPlot:\n  ld hl,(VPORT)  ; the buffer\n", "gPlot:\n  ret\n  ld hl,(VPORT)  ; the buffer\n"]]);
   const { R, S } = await bothRuns("glcd-mad", { svc });
   assert.notEqual(S.end.gdram, R.end.gdram, "glcd-mad's graphics RAM differs");
 });
@@ -519,17 +519,17 @@ async function serialKeeps(svc) {
 
 test("KG67 serial console keeps the panel", { timeout: 600_000 }, () => serialKeeps());
 
-const RESTORE = "  call GRST      ; the GLCD's modes\n";
+const RESTORE = "  call gRst      ; the GLCD's modes\n";
 for (const [name, edits, run, why] of [
   ["the restore removed", [[RESTORE, ""]], consoleAfterGo, /TXT: the panel at MON3>/],
-  ["the restore without its 01h", [["GMODE: DB $30,$0C,$01,$34,$36", "GMODE: DB $30,$0C,$0C,$34,$36"]], async (svc) => {
+  ["the restore without its 01h", [["GMode: DB $30,$0C,$01,$34,$36", "GMODE: DB $30,$0C,$0C,$34,$36"]], async (svc) => {
     const { bytes, symbols } = await glcdret();
     const { m } = await glcdGo(svc, bytes, symbols.GRT);
     assert.deepEqual(unreadable(m, "MON3>"), [], "GRT: the panel at MON3>");
   }, /DDRAM "MENU TEXT"/],
-  ["a mode byte that differs from GLCD.SVC's GLCMOD", [["GMODE: DB $30,$0C,$01,$34,$36", "GMODE: DB $30,$0C,$01,$34,$37"]], consoleAfterGo, /GLCD.SVC's GLCMOD/],
+  ["a mode byte that differs from GLCD.SVC's GLCMOD", [["GMode: DB $30,$0C,$01,$34,$36", "GMODE: DB $30,$0C,$01,$34,$37"]], consoleAfterGo, /GLCD.SVC's GLCMOD/],
   ["the restore made unconditional", [["  cp 3           ; CON: on UC1:?\n  ret nz         ; no: left alone\n", "  cp 3           ; CON: on UC1:?\n"]], serialKeeps, /TXT: text mode at MON3>|TEXT LEFT/],
-  ["the messages printed before the restore and the form feed", [[`${RESTORE}\n; Only CON: on`, "\n; Only CON: on"], ["KEYSUP:\n  ld de,MFF\n  call PRINT     ; a form feed\n  ld hl,DMG\n", "KEYSUP:\n  ld hl,DMG\n"], ["  or a           ; from RST 30h?\n  jp z,PROMPT    ; no\n", "  or a           ; from RST 30h?\n  jr z,MRET4     ; no\n"], ["  ld de,MCRLF\n  call PRINT\n  jp PROMPT\n", `  ld de,MCRLF\n  call PRINT\n\nMRET4:\n${RESTORE}  ld de,MFF\n  call PRINT     ; a form feed\n  jp PROMPT\n`]], consoleAfterGo, /the form feed, BRK 4001, then MON3>/],
+  ["the messages printed before the restore and the form feed", [[`${RESTORE}\n; Only CON: on`, "\n; Only CON: on"], ["keysUp:\n  ld de,MFf\n  call print     ; a form feed\n  ld hl,Dmg\n", "keysUp:\n  ld hl,Dmg\n"], ["  or a           ; from RST 30h?\n  jp z,prompt    ; no\n", "  or a           ; from RST 30h?\n  jr z,MRET4     ; no\n"], ["  ld de,MCrlf\n  call print\n  jp prompt\n", `  ld de,MCRLF\n  call PRINT\n\nMRET4:\n${RESTORE}  ld de,MFF\n  call PRINT     ; a form feed\n  jp PROMPT\n`]], consoleAfterGo, /the form feed, BRK 4001, then MON3>/],
 ]) {
   test(`KG67 mutant: ${name}`, { timeout: 600_000 }, async () => {
     await assert.rejects(run(await mon3Variant(edits)), why);
