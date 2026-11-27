@@ -21,11 +21,11 @@ Two further products are for particular readers:
 
 | Product | File | What it is |
 | --- | --- | --- |
-| BASIC | `BAZ.COM`, `BAZC.COM`, `BAZC.RTL` | BAZ, the BASIC interpreter, and the BASIC compiler, which turns a finished program into a faster `.COM` file |
+| BASIC | `BAZ.COM`, `BAZC.COM`, `BAZC.RTL` | BAZ, the BASIC interpreter, and BAZC, the compiler, which turns a finished program into a faster `.COM` file |
 | MON3 | `MON3.SVC` | Runs TEC-1G programs written for the MON-3 monitor under TEC-OS |
 
-The Baza repository is to be renamed Baz. The books call the language BAZ and
-treat the compiler as an advanced step: you develop a program in the
+The Baza repository is to be renamed Baz. The books call the language and the interpreter BAZ
+and treat BAZC, the compiler, as an advanced step: you develop a program in the
 interpreter and compile it once it works, to make it run faster.
 
 ## The books
@@ -59,8 +59,8 @@ In the order they are written:
 
 ### The specialist books
 
-5. **BASIC on TEC-OS.** One book for the interpreter and the compiler:
-   write and try programs in BAZ, then compile a finished program to speed
+5. **BASIC on TEC-OS.** One book for BAZ and BAZC: write and try programs
+   in BAZ, then compile a finished program with BAZC to speed
    it up. Caverns is the closing project.
 6. **MON3 programs under TEC-OS.** For readers writing TEC-1G programs that
    run under MON-3.
