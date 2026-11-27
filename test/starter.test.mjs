@@ -87,12 +87,12 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
     "CAVERNS.COM": caverns.comSha256,
     "BOUNCE.COM": "edecad40992fa899dcc758be077cd2cb7a3e00bb1eeb77b5c39992be6fb37884",
   };
-  const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
+  const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP", "TAS.COM"];
   const themes = {
-    SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
-    ASM: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
+    SYSTEM: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
+    ASM: ["SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
     BASIC: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
-    MON3: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
+    MON3: ["MON3.SVC", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
     GAMES: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"],
   };
   assert.equal(sha(bounceText()), "9d9092748d11be539c86e79ba591849191540812c4342f601ac9c1de065fc0d6", "the adapted CP/M source pin");

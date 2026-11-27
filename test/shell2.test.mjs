@@ -977,12 +977,12 @@ test("S2-12 volumes", () => {
   for (let i = 0; i < 6; i += 1) assert.equal(card[descriptorAt(i) + 15], 0, `volume ${i}'s byte 15`);
   assert.deepEqual(volume(card, "B").list(), [], "B: empty");
   // Every A: volume holds the core set, and each its theme.
-  const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
+  const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP", "TAS.COM"];
   const theme = {
-    SYSTEM: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
-    ASM: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
+    SYSTEM: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
+    ASM: ["SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
     BASIC: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
-    MON3: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
+    MON3: ["MON3.SVC", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
     GAMES: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"],
   };
   for (const [label, files] of Object.entries(theme))
