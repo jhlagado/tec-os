@@ -7,20 +7,20 @@ recovers creature scenes and applies a measured concision pass; see its exact
 qualification record before treating it as the public Viewer version.
 
 The starter card's GAMES volume holds **CAVERNS.COM**, compiled from
-**CAVERNS.BAS** by the pinned BAZA when the card is built, and its BASIC
-volume holds the source with BAZA and **CAVERNS.TXT**. `CD A:GAMES` then
+**CAVERNS.BAS** by the pinned BAZC when the card is built, and its BASIC
+volume holds the source with BAZC and **CAVERNS.TXT**. `CD A:GAMES` then
 `CAVERNS` plays it. At the TEC-OS prompt, `TYPE CAVERNS.TXT` shows the legend of Svartalfheim
-and the instructions. Rebuild the BASIC game with BAZA, after `CD A:BASIC`:
+and the instructions. Rebuild the BASIC game with BAZC, after `CD A:BASIC`:
 
 ```
 CON PICO 80
-BAZA CAVERNS
+BAZC CAVERNS
 CAVERNS
 ```
 
 The current executable is **37,888 bytes**, including its selected runtime.
 Compilation and play work with the shell resident (TPA 44,288 bytes); no UNLOAD
-is needed. BAZA.RTL is required for compilation, not beside the running game.
+is needed. BAZC.RTL is required for compilation, not beside the running game.
 Use the PICO9918 console at 80 columns and matrix keyboard input, as tested.
 Physical TEC-1G qualification remains outstanding.
 
@@ -35,7 +35,7 @@ Change the presentation banner (line 150 in this listing) from `DREAMCARDS prese
 `TEC-OS Book presents`. Keep the line number, PRINT and quotation marks.
 Ctrl-S saves, Ctrl-T B builds, and Ctrl-T R builds/runs. In the game, QUIT,
 then N, exits; dismiss TED's return pause to resume editing. Ctrl-Q leaves
-TED. Alternatively compile and run from the shell with `BAZA CAVBOOK` and
+TED. Alternatively compile and run from the shell with `BAZC CAVBOOK` and
 `CAVBOOK`. This changes presentation without requiring knowledge of the game.
 
 `test/caverns-ted.test.mjs` performs the exact copy, edit, explicit save, build,
@@ -72,7 +72,7 @@ unchanged. See the separate spoiler records below for the exact revisions.
 ## Evidence and remaining work
 
 The current native TEC-OS test drives keyboard commands through a real native
-BAZA rebuild, completes a first-discovery 126-point quest, visits all 54 rooms,
+BAZC rebuild, completes a first-discovery 126-point quest, visits all 54 rooms,
 checks their displayed descriptions, walks back from the castle without the
 magic word, and verifies the homecoming. No host-side game-state or RNG writes
 are used for that completion. Scenario tests separately verify complete state
@@ -107,10 +107,10 @@ The latter is retained in the repository for verification, omitted from starter
 recipe revision 17. `test/caverns-basic.json` records the full source, binary,
 compiler and RTL hashes, byte count and native compiler symbol addresses.
 
-Compiler/runtime pins in `test/inputs.json` resolve published BAZA commit
-`eee4ee6846add13c0ea120fbf2de8be0ec08c0b1`. BAZA.COM SHA-256:
+Compiler/runtime pins in `test/inputs.json` resolve published BAZC commit
+`eee4ee6846add13c0ea120fbf2de8be0ec08c0b1`. BAZC.COM SHA-256:
 `f8d4b8944be95451faa7aa0bc99e611f6793b7d4a8e413344e951e26ede07498`.
-BAZA.RTL SHA-256:
+BAZC.RTL SHA-256:
 `29c07740630069921f93581c8527d5db057c63a073a95b37c7a020df92ae5e38`.
 The structural rewrite itself required no compiler/runtime change. A subsequent
 compact source-location optimisation reduces the COM by 1,408 bytes on disk;

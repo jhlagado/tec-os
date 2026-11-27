@@ -1,4 +1,4 @@
-// Exact book exercise, using the starter disk and actual TED/BAZA executables.
+// Exact book exercise, using the starter disk and actual TED/BAZC executables.
 // All editing and compilation use matrix input; no editor/game state is patched.
 import {test} from 'node:test';
 import assert from 'node:assert/strict';

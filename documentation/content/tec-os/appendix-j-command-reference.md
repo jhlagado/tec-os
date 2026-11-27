@@ -129,7 +129,7 @@ installation have additional forms handled by the command processor.
 CP/M 2.2's SAVE, which wrote memory pages from `0100h` to a file, is not
 provided. The cited revision's table still held it. It has since left the
 ROM and `SAVE` is now an unknown command unless a program has that name.
-Nothing on the card needs it: TAS and BAZA write their COM files, TED saves
+Nothing on the card needs it: TAS and BAZC write their COM files, TED saves
 text and MON3.SVC loads and runs programs itself.
 
 CP/M 2.2's USER is not provided either, and left the ROM with SAVE. The
@@ -470,7 +470,7 @@ describes the session and
 The historical recovery-baseline starter card and browser page use the
 same thirteen files on A. This table retains that recipe revision14 scope.
 Nine are programs or sources used by name at the prompt. `SHELL.SVC`,
-`GLCD.SVC` and `STARTUP.CMD` provide startup setup. BAZA reads `BAZA.RTL`
+`GLCD.SVC` and `STARTUP.CMD` provide startup setup. BAZC reads `BAZC.RTL`
 and HELLO3.BIN is built from HELLO3.ASM before loading it at `MON3>`
 (`57a8c38:tools/media.mjs:29-31`, `57a8c38:tools/media.mjs:203-231`,
 `57a8c38:tools/lib/starter.mjs:10-22`, `57a8c38:README.md:165-211`,
@@ -480,11 +480,11 @@ and HELLO3.BIN is built from HELLO3.ASM before loading it at `MON3>`
 | --- | --- |
 | `TED.COM` | `TED [NAME.EXT [LINE]]` edits a text file, opening it at `LINE` when one is given. With no name it opens the project's file |
 | `TAS.COM` | `TAS NAME [OUT.TYP]` assembles `NAME.ASM` to `NAME.COM` and `NAME.DBG`, or to `OUT.TYP`, where a type of `SVC` makes a service and an explicit `HEX` writes genuine Intel HEX. A line may hold several statements with `\` between them |
-| `BAZA.COM` | `BAZA NAME` compiles `NAME.BAS` to `NAME.COM` on the same drive; `BAZA NAME.TYP` compiles that file as named |
-| `BAZA.RTL` | BAZA's runtime library, read from the current drive or from the drive `BAZA.COM` was loaded from |
+| `BAZC.COM` | `BAZC NAME` compiles `NAME.BAS` to `NAME.COM` on the same drive; `BAZC NAME.TYP` compiles that file as named |
+| `BAZC.RTL` | BAZC's runtime library, read from the current drive or from the drive `BAZC.COM` was loaded from |
 | `SAMPLE.ASM` | Assembly source for `TAS SAMPLE`, then `SAMPLE` |
-| `TIMES.BAS` | BASIC source for `BAZA TIMES`, then `TIMES` |
-| `BOUNCE.BAS` | A sprite game for the PICO9918, which it needs. `BAZA BOUNCE`, then `BOUNCE`. Tap W, A, S and D, or the arrow keys, to steer and Q to quit |
+| `TIMES.BAS` | BASIC source for `BAZC TIMES`, then `TIMES` |
+| `BOUNCE.BAS` | A sprite game for the PICO9918, which it needs. `BAZC BOUNCE`, then `BOUNCE`. Tap W, A, S and D, or the arrow keys, to steer and Q to quit |
 | `DEMO.ASM` | The source of DEMO. `TAS DEMO` builds DEMO.COM, then `DEMO` shows the LCD, the 7-segment digits, the 8 × 8 LEDs and the PICO9918. `TED DEMO.ASM` opens the source |
 | `MON3.SVC` | A resident service that runs MON-3 programs. `MON3.SVC` installs it and gives the `MON3>` line |
 | `HELLO3.ASM` | MON-3 example source. First `TAS HELLO3 HELLO3.BIN`, then `MON3.SVC`, `LOAD HELLO3.BIN` and `GO`. It writes the LCD and counts on the digits until Esc on the matrix keyboard, or AD on the keypad with Matrix off |
@@ -504,7 +504,7 @@ relocate embedded addresses. `GO ADDR` remains a one-run entry override
 `TEC-OS 54f1b102f7031d563c13c465747bc92157c803da:test/tas-hex.test.mjs:105-137`).
 
 TED's `^T B` and `^T R` build an `.ASM` file with `TAS NAME.ASM` and a
-`.BAS` file with `BAZA NAME.BAS`. `^T D` chains `TDB NAME` for an `.ASM`
+`.BAS` file with `BAZC NAME.BAS`. `^T D` chains `TDB NAME` for an `.ASM`
 file, which fails with `A:TDB?` on the starter card, and shows
 `No debugger` for a `.BAS` file
 (`Thorium 02b63d8:README.md:14-41`, `57a8c38:docs/compatibility.md:223`).
@@ -512,8 +512,8 @@ A file name and `TED.PRJ`'s `ARGS` end at `!` or at `&` after a blank.
 Those are the shell's line separators. `ARGS X &Y` therefore gives the
 program the tail ` X` and runs nothing after it
 (`Thorium 02b63d8:README.md:51-58`).
-`TAS` and `BAZA` both set the failure return code `FF00h` when a build
-fails. A failed BAZA compile leaves an existing `NAME.COM` unchanged, and a
+`TAS` and `BAZC` both set the failure return code `FF00h` when a build
+fails. A failed BAZC compile leaves an existing `NAME.COM` unchanged, and a
 failed TAS build normally keeps its earlier outputs
 (`57a8c38:docs/compatibility.md:225-226`, `Baza 5f6b58d:README.md:32-38`,
 `Thorium f71cf3d:docs/language.md:17-20`).

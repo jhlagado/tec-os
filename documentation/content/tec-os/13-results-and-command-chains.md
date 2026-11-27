@@ -470,13 +470,13 @@ reaches the shell.
 TED uses function 47 after its `^T` prefix. A build saves the editor state and
 supplies a line that runs the build tool followed by TED. The `!` separator
 reopens TED whether the build succeeds or fails. The new invocation restores
-the file and position. `.ASM` selects TAS and `.BAS` selects BAZA. For another
+the file and position. `.ASM` selects TAS and `.BAS` selects BAZC. For another
 type the build keys use the source named by `TED.PRJ`, if present. The prefix
 commands include the build and run operations from Chapters 2 and 3:
 
 | Keys | Effect |
 | --- | --- |
-| `^T B` | Saves the file and builds it with `TAS` or `BAZA`. A failed build opens at the error |
+| `^T B` | Saves the file and builds it with `TAS` or `BAZC`. A failed build opens at the error |
 | `^T R` | Builds the program as `^T B` does, then runs it |
 | `^T D` | For an `.ASM` file, runs the program under `TDB`, a debugger the starter card does not contain. For a `.BAS` file, shows `No debugger` and runs nothing |
 | `^T O` | Opens another file, named at a prompt |
@@ -498,7 +498,7 @@ An embedded `&` in `/M:&HE000` remains literal
 
 The load-drive byte at `0050h`, explained in Chapter 11, identifies TED's tool
 drive. With tools loaded from A and source on current drive B, TED supplies
-`A:TAS` or `A:BAZA` followed by `A:TED`. The files stay on their separate
+`A:TAS` or `A:BAZC` followed by `A:TED`. The files stay on their separate
 drives and each return to the editor is a new invocation through the command
 processor.
 

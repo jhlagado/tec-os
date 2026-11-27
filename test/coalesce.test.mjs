@@ -698,7 +698,7 @@ test("AC3 later public input repairs the private CPMOVE omission", { timeout: 30
 
 // The starter card's commands, as the Viewer runs them: the PICO9918 at 40
 // columns and the matrix keyboard.
-const PINS = ["BAZA.COM", "BAZA.RTL", "BOUNCE.BAS", "TAS.COM", "TED.COM"].map(pinned);
+const PINS = ["BAZC.COM", "BAZC.RTL", "BOUNCE.BAS", "TAS.COM", "TED.COM"].map(pinned);
 // A prompt, with or without the shell's volume label.
 const PROMPT = /\r\n\d*[A-P](:\S*)?>$/;
 const CARD_SKIP = PINS.some((p) => p.skip);
@@ -706,7 +706,7 @@ let starter;
 const starterCard = () => {
   if (!starter) {
     execFileSync(process.execPath, ["tools/media.mjs"], { cwd: ROOT, stdio: "ignore" });
-    // BOUNCE.BAS, BAZA and its runtime are on the BASIC volume: on A:, as CD A:BASIC leaves it.
+    // BOUNCE.BAS, BAZC and its runtime are on the BASIC volume: on A:, as CD A:BASIC leaves it.
     starter = starterOn("BASIC", new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))));
   }
   return new Uint8Array(starter);
@@ -826,8 +826,8 @@ function checkPutWrites(s) {
 }
 
 test("AC3 bounce writes", { skip: CARD_SKIP, timeout: 900_000 }, () => {
-  const b = onStarter("baza a:bounce"); checkBounceWrites(b);
-  console.log(`BAZA BOUNCE: ${b.writes.length} card writes`);
+  const b = onStarter("bazc a:bounce"); checkBounceWrites(b);
+  console.log(`BAZC BOUNCE: ${b.writes.length} card writes`);
 });
 
 test("AC3 put", { skip: CARD_SKIP, timeout: 300_000 }, () => {
@@ -1279,16 +1279,16 @@ test("AC6 bdos 40", () => {
 const BOUNCE_BASE = 103_285_677;
 
 test("AC7 bounce speed", { skip: CARD_SKIP, timeout: 900_000 }, () => {
-  const b = onStarter("baza a:bounce");
+  const b = onStarter("bazc a:bounce");
   assert.ok(b.cycles <= STARTER_COST.bounceB, `${b.cycles} T, ${(b.cycles / 4e6).toFixed(2)} s at 4 MHz`);
   assert.ok(b.mean <= 80_000, `BDOS 21: ${Math.round(b.mean)} T each, of ${b.w21.length}`);
-  console.log(`BAZA BOUNCE: ${b.cycles} T, ${((100 * b.cycles) / BOUNCE_BASE).toFixed(2)} % of the historical shell landing; ${b.w21.length} matched BDOS 21 calls, ${Math.round(b.mean)} T each`);
+  console.log(`BAZC BOUNCE: ${b.cycles} T, ${((100 * b.cycles) / BOUNCE_BASE).toFixed(2)} % of the historical shell landing; ${b.w21.length} matched BDOS 21 calls, ${Math.round(b.mean)} T each`);
 });
 
 // The starter's same compiler and PUT workflows, logged on A:SYSTEM.
 test("S2-11 starter workloads logged on A:", { skip: CARD_SKIP, timeout: 900_000 }, (t) => {
-  const b = onStarter("baza bounce", { logged: "A" }); checkBounceWrites(b);
-  assert.ok(b.cycles <= STARTER_COST.bounceA, `BAZA BOUNCE: ${b.cycles} T`);
+  const b = onStarter("bazc bounce", { logged: "A" }); checkBounceWrites(b);
+  assert.ok(b.cycles <= STARTER_COST.bounceA, `BAZC BOUNCE: ${b.cycles} T`);
   const s = onStarter("put 16 x.com", { logged: "A" }); checkPutWrites(s);
   t.diagnostic(JSON.stringify({ bounce: { seconds: +(b.cycles / 4e6).toFixed(2), writes: b.writes.length }, put16: { seconds: +(s.cycles / 4e6).toFixed(2), writes: s.writes.length } }));
 });

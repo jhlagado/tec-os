@@ -74,7 +74,7 @@ Return. The cursor moves to `L15 C1`. `^S` saves BANNER.ASM and displays
 
 `^T B` saves the source and runs TAS for an `.ASM` file. The keys form a
 sequence: press Ctrl and T together, release Ctrl and then press B.
-Chapter 3 uses the same sequence to build BASIC source with BAZA. This
+Chapter 3 uses the same sequence to build BASIC source with BAZC. This
 excerpt shows the rejected build before TED redraws its screen. The initial
 screen-clear controls, leading blank line and final editor redraw are omitted:
 

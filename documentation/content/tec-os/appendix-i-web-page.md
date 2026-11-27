@@ -37,7 +37,7 @@ saved 32-, 40- or 80-column choices are retained. That deployment had a
 sixteen-file starter including a precompiled BASIC Caverns game.
 
 The current repository starter has fifteen files and supplies Caverns as source.
-Choose PICO9918 at 80 columns, compile with `BAZA CAVERNS`, then run
+Choose PICO9918 at 80 columns, compile with `BAZC CAVERNS`, then run
 `CAVERNS`; read `CAVERNS.TXT` for instructions. A merge into main is not
 evidence that the live site has been redeployed. The live build details
 identify the version actually running there.
@@ -102,13 +102,13 @@ before restarting. The safe-copy procedure below applies before either one.
 The historical recovery-baseline page's card is the starter card, built
 from the same recipe, with thirteen files at recipe revision 14. The file
 account below retains that scope; later media needs separate receipts. Among them are the shell, SHELL.SVC,
-which its STARTUP.CMD loads, TIMES.BAS, BAZA.COM and BAZA.RTL for
+which its STARTUP.CMD loads, TIMES.BAS, BAZC.COM and BAZC.RTL for
 [Chapter 3](03-build-a-basic-program.md) and these demonstrations:
 
 | File | Use |
 | --- | --- |
 | `DEMO.ASM` | The source of DEMO, with no include file. `TAS DEMO` builds DEMO.COM and `DEMO` then runs it, showing the LCD, the digits, the 8 × 8 LEDs and the PICO9918, as [Chapter 12](12-use-the-boards-devices.md) describes. `TED DEMO.ASM` opens the source |
-| `BOUNCE.BAS` | A BASIC sprite game for the PICO9918. `BAZA BOUNCE` compiles it and `BOUNCE` runs it. Tap W, A, S and D, or the arrow keys, to steer and Q to quit |
+| `BOUNCE.BAS` | A BASIC sprite game for the PICO9918. `BAZC BOUNCE` compiles it and `BOUNCE` runs it. Tap W, A, S and D, or the arrow keys, to steer and Q to quit |
 | `MON3.SVC` | Runs MON-3 programs. `MON3.SVC` gives `MON3>`, as [Chapter 5](05-drives-and-user-areas.md#a-mon-3-session) describes |
 | `HELLO3.ASM` | A MON-3 program's source. At the CP/M prompt, `TAS HELLO3 HELLO3.BIN` builds its binary; then enter `MON3.SVC`. At `MON3>`, `LOAD HELLO3.BIN` and `GO` write four lines on the LCD and count on the digits. With the matrix keyboard enabled, as on this page, Esc returns to `MON3>`. With the Matrix switch off, AD on the keypad does. `EXIT` returns to `A:SYSTEM>` |
 

@@ -1,5 +1,5 @@
 // Actual TEC-OS ROM, starter card and matrix input; no state shortcuts in
-// either completion route. The BASIC symbol fixture comes from native BAZA.
+// either completion route. The BASIC symbol fixture comes from native BAZC.
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
@@ -9,7 +9,7 @@ import {ROOT,boot,starterOn,volume} from './lib/fixtures.mjs';
 const read=p=>readFileSync(resolve(ROOT,p));
 const json=p=>JSON.parse(read(p));
 const sha=b=>createHash('sha256').update(b).digest('hex');
-// The BASIC volume holds the source, BAZA and its runtime: on A:, as CD A:BASIC leaves it.
+// The BASIC volume holds the source, BAZC and its runtime: on A:, as CD A:BASIC leaves it.
 const card=()=>starterOn('BASIC');
 const reference=json('test/caverns-route.json');
 const map=json('test/caverns-map.json');
@@ -32,9 +32,9 @@ let compiled;
 function compileBasic(){
  if(!compiled){
   assert.equal(sha(read('programs/CAVERNS.BAS')),basic.sourceSha256,'regenerate BASIC debug fixture after source edits');
-  assert.equal(sha(read('.inputs/BAZA.COM')),basic.compilerSha256);
+  assert.equal(sha(read('.inputs/BAZC.COM')),basic.compilerSha256);
   const image=card(),m=boot(image,{tms:true,matrix:true,width:80});
-  assert.match(keys(m,'baza caverns'),/COM written/,'compiles with the shell resident');
+  assert.match(keys(m,'bazc caverns'),/COM written/,'compiles with the shell resident');
   compiled=volume(image,'A').read('CAVERNS.COM');
   assert.equal(sha(compiled),basic.comSha256);assert.ok(compiled.length<40000);
   assert.deepEqual(m.violations,[]);
@@ -54,7 +54,7 @@ test('revised map, the BASIC volume\'s source and GAMES\'s CAVERNS.COM match the
  assert.ok(!files.includes('CAVERNS.COM'));
  assert.ok(files.includes('CAVERNS.BAS'));
  const games=volume(card(),'GAMES').read('CAVERNS.COM');
- assert.equal(sha(games),basic.comSha256,'GAMES holds what BAZA compiles from the source');assert.equal(games.length,basic.comBytes);
+ assert.equal(sha(games),basic.comSha256,'GAMES holds what BAZC compiles from the source');assert.equal(games.length,basic.comBytes);
  const gates={'-1':11,'-2':19,'-3':38,'-4':43,'-5':39,'-6':49};
  const open=revised.exits.map(d=>gates[d]??d),unpaired=[];
  for(let r=1;r<=54;r++)for(let i=0;i<4;i++){

@@ -21,7 +21,7 @@ Two further products are for particular readers:
 
 | Product | File | What it is |
 | --- | --- | --- |
-| BASIC | `BAZ.COM`, `BAZA.COM`, `BAZA.RTL` | BAZ, the BASIC interpreter, and the BASIC compiler, which turns a finished program into a faster `.COM` file |
+| BASIC | `BAZ.COM`, `BAZC.COM`, `BAZC.RTL` | BAZ, the BASIC interpreter, and the BASIC compiler, which turns a finished program into a faster `.COM` file |
 | MON3 | `MON3.SVC` | Runs TEC-1G programs written for the MON-3 monitor under TEC-OS |
 
 The Baza repository is to be renamed Baz. The books call the language BAZ and

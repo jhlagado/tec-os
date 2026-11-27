@@ -17,8 +17,8 @@ export const STRICT = process.env.STRICT === "1";
 
 export { digest };
 
-// TIMES.COM as the pinned BAZA.COM and BAZA.RTL compile programs/TIMES.BAS:
-// 9,344 bytes. It moves with them, since it carries BAZA's runtime.
+// TIMES.COM as the pinned BAZC.COM and BAZC.RTL compile programs/TIMES.BAS:
+// 9,344 bytes. It moves with them, since it carries BAZC's runtime.
 export const TIMES_COM = "76c8a97860506dcd1f63658b6444d171d32be6ecc1371f2b9afb99d08afac007";
 
 /**

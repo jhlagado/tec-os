@@ -10,7 +10,7 @@ nav_group: "Using the machine"
 <!-- Source and test contracts checked at TEC-OS
      57a8c38b7f341433285e39c4bec14ecc486ffe26 (retained recovery baseline),
      programs/TIMES.BAS, test/times.test.mjs and test/ted-baza.test.mjs.
-     TED.COM is pinned at Thorium 02b63d8 and the compiler/runtime pair at Baza eee4ee6. The BAZA
+     TED.COM is pinned at Thorium 02b63d8 and the compiler/runtime pair at Baza eee4ee6. The BAZC
      screen was retaken with the landed firmware; outputs taken from strict
      test assertions are labelled as source-derived excerpts, not captures.
      Current compiler/card qualification is retained in docs/evidence/caverns-baza-shared-publish; earlier source/test citations remain historical.
@@ -20,11 +20,11 @@ nav_group: "Using the machine"
 
 BASIC provides another way to write programs on the TEC-1G. The card's
 TIMES.BAS reads a name and number, then prints a multiplication table.
-You compile it with BAZA and run the resulting program. Changing it in
+You compile it with BAZC and run the resulting program. Changing it in
 TED uses the same edit, build and run cycle as BANNER.
 
 These results use the same software TEC-1G host model as Chapters 1 and 2.
-BAZA and TED's BASIC build keys still need a recorded physical-board run.
+BAZC and TED's BASIC build keys still need a recorded physical-board run.
 
 ## The BASIC source
 
@@ -36,7 +36,7 @@ controls. The complete source is:
      card stores it with CRLF line ends and a final ^Z (tools/media.mjs). -->
 ```text
 10 REM TIMES.BAS, a first BASIC program
-20 REM Build it with BAZA TIMES,
+20 REM Build it with BAZC TIMES,
 30 REM then type TIMES to run it.
 40 PRINT "HELLO FROM BASIC ON TEC-OS."
 50 INPUT "WHAT IS YOUR NAME"; n$
@@ -69,28 +69,28 @@ row and adds its product to `t`. `TAB` aligns the output in columns.
 
 ## A compiler and its library
 
-BAZA compiles classic Microsoft BASIC source into a CP/M executable.
-`BAZA TIMES` reads the whole TIMES.BAS file and writes TIMES.COM. You can
+BAZC compiles classic Microsoft BASIC source into a CP/M executable.
+`BAZC TIMES` reads the whole TIMES.BAS file and writes TIMES.COM. You can
 then run it like SAMPLE.COM, with no compiler or library needed on the
-card. BAZA has no interactive `list` or `run` command. You edit the text
+card. BAZC has no interactive `list` or `run` command. You edit the text
 file and compile it again. A repeated or decreasing line number produces
 an error. Source is compiled as a whole, with no line-replacement operation.
 
-The two compiler files are on A. `BAZA.COM` runs the compiler and
-`BAZA.RTL` contains routines copied into the executable. BAZA reads this
-library from the current drive. If it is absent there, BAZA reads it from
-the drive that supplied `BAZA.COM`. Source on B can therefore be compiled
+The two compiler files are on A. `BAZC.COM` runs the compiler and
+`BAZC.RTL` contains routines copied into the executable. BAZC reads this
+library from the current drive. If it is absent there, BAZC reads it from
+the drive that supplied `BAZC.COM`. Source on B can therefore be compiled
 with both tools left on A.
 
 ## Compiling and running TIMES
 
-At `A:SYSTEM>`, `BAZA TIMES` compiles TIMES.BAS into TIMES.COM on A.
+At `A:SYSTEM>`, `BAZC TIMES` compiles TIMES.BAS into TIMES.COM on A.
 The name needs no type, as with `TAS SAMPLE`. During compilation a mark
 cycles through `|`, `/`, `-` and `\` at the start of the line. Each is
 followed by a backspace. Completion prints `COM written` over the last
 mark and returns to the prompt:
 
-<!-- TEC-OS 57a8c38: node tools/capture.mjs --board pico --screen 'BAZA TIMES'. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 57a8c38: node tools/capture.mjs --board pico --screen 'BAZC TIMES'. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -102,7 +102,7 @@ A>SHELL.SVC
 
 A:SYSTEM>GLCD.SVC
 
-A:SYSTEM>BAZA TIMES
+A:SYSTEM>BAZC TIMES
 COM written
 
 A:SYSTEM>
@@ -155,16 +155,16 @@ finishes the program and returns to the prompt.
 
 `TED TIMES.BAS` opens the source for editing. Arrow keys, Backspace and
 `^G` work as they did in BANNER.ASM. `^S` saves and `^Q` quits. The file
-type selects the build tool: TAS for `.ASM` and BAZA for `.BAS`. The
+type selects the build tool: TAS for `.ASM` and BAZC for `.BAS`. The
 `^T` sequences are otherwise the same:
 
 | Keys | `.ASM` file | `.BAS` file |
 | --- | --- | --- |
-| `^T B` | Saves and builds with `TAS` | Saves and builds with `BAZA` |
-| `^T R` | Builds with `TAS`, then runs the program | Builds with `BAZA`, then runs the program |
+| `^T B` | Saves and builds with `TAS` | Saves and builds with `BAZC` |
+| `^T R` | Builds with `TAS`, then runs the program | Builds with `BAZC`, then runs the program |
 | `^T D` | Chains `TDB`, which the starter card does not contain, so the CCP prints `A:TDB?` and TED returns | Shows `No debugger` and runs nothing |
 
-`^T B` saves TIMES.BAS and runs `A:BAZA TIMES.BAS`. The A prefix is the
+`^T B` saves TIMES.BAS and runs `A:BAZC TIMES.BAS`. The A prefix is the
 drive that supplied TED. The console displays this command and
 `COM written` before TED reopens the source at your previous position.
 After the first successful build, `TED.PRJ: TIMES.BAS` appears on the
@@ -177,7 +177,7 @@ at the same position. `^T D` instead displays `No debugger` in the editor.
 It performs no external command or file write.
 
 The same build works with a source file on B. From `B:WORK>`, TED and
-BAZA load from A and BAZA reads A's `BAZA.RTL`. The result, TIMES.COM,
+BAZC load from A and BAZC reads A's `BAZC.RTL`. The result, TIMES.COM,
 is written beside TIMES.BAS on B.
 
 ## A change of your own
@@ -199,7 +199,7 @@ and both quotes:
 40 PRINT "HELLO FROM MY FIRST BASIC."
 ```
 
-`^S` saves the change and `^T B` compiles it with A's BAZA, writing
+`^S` saves the change and `^T B` compiles it with A's BAZC, writing
 TIMES.COM on B. `^T R` builds and runs it with the new greeting. Answering
 the questions completes the program and a further key returns to TED.
 The host-model tests cover `^T R` with TIMES.BAS on A and a build with it
@@ -216,35 +216,35 @@ reset or power-off. Its read attempts pending writes, but a prompt after
 A syntax error stops compilation and returns TED to the faulty line.
 In the model test, inserting `95 PRINT (` before file line 10 placed it
 between BASIC lines 90 and 100. Its number is in order but its expression
-is unfinished. After `^T B` saved the file, BAZA printed this message
+is unfinished. After `^T B` saved the file, BAZC printed this message
 over the last progress mark:
 
 <!-- TEC-OS de6216f test/ted-baza.test.mjs:94-101, the asserted console
      text with the spinner's marks taken out (:29-31). Not a separate
      capture. -->
 ```text
-A:SYSTEM>A:BAZA TIMES.BAS
+A:SYSTEM>A:BAZC TIMES.BAS
 ?SYNTAX ERROR IN 95
 ```
 
 The message names BASIC line 95. TED reopens at file line 10, where that
-BASIC line occurs, and displays the message on its status row. BAZA writes the file position to `TED.ERR`
+BASIC line occurs, and displays the message on its status row. BAZC writes the file position to `TED.ERR`
 when `TED.SES` is on the current drive. These examples keep both beside
 the source. TED reads and removes the error record. Correcting or deleting
 the faulty line allows another build.
 
-The failed compile leaves the earlier TIMES.COM unchanged. BAZA writes
+The failed compile leaves the earlier TIMES.COM unchanged. BAZC writes
 to a temporary file and renames it TIMES.COM only after a successful
 compile. A failure therefore leaves the previous complete program in place
 until a successful compile replaces it.
 
 Running TIMES after a failed compile would run that earlier version.
 You can prevent this by making execution depend on a successful compile.
-BAZA sets a failure return code, as TAS does, so this conditional command
+BAZC sets a failure return code, as TAS does, so this conditional command
 line works at the prompt. Chapter 13 explains return codes and chains:
 
 ```text
-A:SYSTEM>BAZA TIMES &TIMES
+A:SYSTEM>BAZC TIMES &TIMES
 ```
 
 `&` after a space separates a command that runs only after success.
@@ -257,21 +257,21 @@ executes these conditional lines.
 The following details describe source layout and compiler limits. They are
 not needed to compile and change TIMES.
 
-BAZA includes some later Microsoft BASIC-80 forms for CP/M. `&H`
+BAZC includes some later Microsoft BASIC-80 forms for CP/M. `&H`
 introduces hexadecimal constants and `HEX$` is also supported. `MOD` computes
 a remainder and `\` performs whole-number division. The additions
 also include `XOR`, `WAIT port, mask` for waiting on a port bit and
 `SWAP a, b` for exchanging variables
 (`Baza 5f6b58d:docs/mbasic.md:10-12`, `:38-50`).
 
-`BAZA.COM` is a 13,440-byte packed file. Each invocation unpacks it into
+`BAZC.COM` is a 13,440-byte packed file. Each invocation unpacks it into
 the 17,408-byte compiler image. The compiler uses the same 20,679 bytes of
 memory as before (`Baza eee4ee6:dist/compiler-build.json`,
 `Baza eee4ee6:docs/size-account.md`).
 
 TIMES.BAS uses capital keywords, lower-case variable names and spaces
 between words. Its remarks are sentences and its quoted text is in
-capitals. BOUNCE.BAS uses the same layout. BAZA's lexer folds other
+capitals. BOUNCE.BAS uses the same layout. BAZC's lexer folds other
 letters to capitals and ignores spaces and tabs. Quotes, `REM` remarks
 and `DATA` items retain their original bytes
 (`Baza 5f6b58d:src/lex.asm:17-19`). Thus `PRINT` and `print` select the
@@ -282,7 +282,7 @@ the same TIMES.COM as its earlier all-lower-case source. Text inside
 quotes is preserved, so its greeting prints in capitals
 (`Baza 5f6b58d:docs/language.md:19`). The book's prompt commands use
 capitals, but lower case also works. The host-model test types
-`baza times` (`57a8c38:test/times.test.mjs:79`).
+`bazc times` (`57a8c38:test/times.test.mjs:79`).
 
 On the four-drive starter card TED has 28,182 bytes of text room with
 the shell loaded. Leaving a MON-3 session with `EXIT` keeps `MON3.SVC`
@@ -295,7 +295,7 @@ measurements with the seventeen-page shell and the nineteen-page monitor
 
 BASIC source can also call the board's devices through machine code.
 This optional route uses a ROM service, a resident service entry or a
-routine at an address because BAZA has no graphics or sound statements.
+routine at an address because BAZC has no graphics or sound statements.
 `DEF CALL` names the routine, `CALL` runs it with specified registers and
 `REG` reads a resulting register value (`Baza 5f6b58d:docs/call.md:1-6`).
 Chapter 12 describes these ROM services for assembly programs.
@@ -337,7 +337,7 @@ entry 10 of the PICO console record for copying RAM to VRAM
 takes lines 40, 50 and 170 through service 17 instead
 (`TEC-OS 6c31d32:tools/lib/bounce-source.mjs:1-12`).
 
-Ordinary BAZA numbers use 32-bit floating point. An addition takes
+Ordinary BAZC numbers use 32-bit floating point. An addition takes
 about 3,000 T-states on the Z80, close to a millisecond at 4 MHz. A
 name ending in `%`, such as `x%`, instead holds a whole number from
 -32768 to 32767.
@@ -375,7 +375,7 @@ printing, so the message shows at the prompt. The host-model test checks
 this with a program that claims the display and then divides by zero
 (`Baza 5f6b58d:docs/call.md:66-70`, `57a8c38:test/times.test.mjs:213-233`).
 
-On the card, `BAZA BOUNCE` compiles it and `BOUNCE` runs it on
+On the card, `BAZC BOUNCE` compiles it and `BOUNCE` runs it on
 the PICO9918, which it needs. Tap W, A, S and D, or the arrow keys, to steer
 the ship. The matrix arrows send Esc, `[` and a letter from `A` to `D`.
 Lines 950 to 999 translate these sequences to W, S, D or A. Q ends the

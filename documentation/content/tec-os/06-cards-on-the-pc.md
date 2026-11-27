@@ -147,8 +147,8 @@ project and session files:
 
 <!-- Source-derived worked-card summary: starter payload from ROM 41c87b73, card 7c5c6202; TED project/session rows retained from the historical worked card. -->
 ```text
- 0 BAZA.COM        13440
- 0 BAZA.RTL        13056
+ 0 BAZC.COM        13440
+ 0 BAZC.RTL        13056
  0 BOUNCE.BAS       5376
  0 CAVERNS.BAS     27264
  0 CAVERNS.TXT      4864

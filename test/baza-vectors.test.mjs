@@ -27,7 +27,7 @@ for(const mode of ['input','paused FF output'])test('Baza gives restart vectors 
   if(!exits.length&&(m.pc===0||m.pc===m.sym('WBOOTR')))exits.push(vectors(m));
   return step();
  };
- assert.match(drive(m,'baza breakin\r',()=>m.ready()),/COM written/);
+ assert.match(drive(m,'bazc breakin\r',()=>m.ready()),/COM written/);
  assert.deepEqual(exits.at(-1),original,'compiler restored all six vectors before exit');
  exits.length=0;
  if(mode==='input'){

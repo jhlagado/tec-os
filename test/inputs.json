@@ -14,39 +14,39 @@
     "TED.COM": {
       "env": "TED_COM",
       "default": "../ted/dist/TED.COM",
-      "source": "jhlagado/ted dbcffc1, dist/TED.COM",
+      "source": "jhlagado/ted b2f98bc, dist/TED.COM",
       "repo": "jhlagado/ted",
-      "commit": "dbcffc12a2fc0e53dbf6bd0cea13281fc4b7429a",
+      "commit": "b2f98bce48e1d1b8f8e19f1532c3a1e91ecce74f",
       "path": "dist/TED.COM",
       "bytes": 16199,
-      "sha256": "350845670175557ef655e55e4bc85b1f95c189898b97f37b5564109b727438d3"
+      "sha256": "2f5bfb21f46ad155253f2dd30c0f95167f05e06e005466fd600e48759c2f5e8e"
     },
-    "BAZA.COM": {
-      "env": "BAZA_COM",
-      "default": "../baza/dist/BAZA.COM",
-      "source": "jhlagado/baza 184db08, dist/BAZA.COM",
+    "BAZC.COM": {
+      "env": "BAZC_COM",
+      "default": "../baza/dist/BAZC.COM",
+      "source": "jhlagado/baza 3f31488, dist/BAZC.COM",
       "repo": "jhlagado/baza",
-      "commit": "184db08b142baeb69ecb49a11e618a974060647e",
-      "path": "dist/BAZA.COM",
+      "commit": "3f31488041961b1d0a1ee3aac46d91f61955f6ee",
+      "path": "dist/BAZC.COM",
       "bytes": 13824,
-      "sha256": "bd937973e0433a07c8826a105652d189274ce590d653f4e681ddd61a75754e92"
+      "sha256": "05e81d71703e9d49a76cc2ad0d864769753dfee1c327f6fe400aa85d31806895"
     },
-    "BAZA.RTL": {
-      "env": "BAZA_RTL",
-      "default": "../baza/dist/BAZA.RTL",
-      "source": "jhlagado/baza 184db08, dist/BAZA.RTL",
+    "BAZC.RTL": {
+      "env": "BAZC_RTL",
+      "default": "../baza/dist/BAZC.RTL",
+      "source": "jhlagado/baza 3f31488, dist/BAZC.RTL",
       "repo": "jhlagado/baza",
-      "commit": "184db08b142baeb69ecb49a11e618a974060647e",
-      "path": "dist/BAZA.RTL",
+      "commit": "3f31488041961b1d0a1ee3aac46d91f61955f6ee",
+      "path": "dist/BAZC.RTL",
       "bytes": 13568,
       "sha256": "27196de6b4babe56286d8d900ad9d077131530f534359a88f56ed00b8322915d"
     },
     "BAZ.COM": {
       "env": "BAZ_COM",
       "default": "../baza/dist/BAZ.COM",
-      "source": "jhlagado/baza 184db08, dist/BAZ.COM",
+      "source": "jhlagado/baza 3f31488, dist/BAZ.COM",
       "repo": "jhlagado/baza",
-      "commit": "184db08b142baeb69ecb49a11e618a974060647e",
+      "commit": "3f31488041961b1d0a1ee3aac46d91f61955f6ee",
       "path": "dist/BAZ.COM",
       "bytes": 22272,
       "sha256": "4e2631d2bb9145b444071c583f4f0e1d441f32ac934163c72f8ea3d2488ef4fc"

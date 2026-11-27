@@ -85,8 +85,8 @@ TED.COM        12416
 SAMPLE.ASM      4608
 TIMES.BAS        640
 TAS.COM        11136
-BAZA.COM       13440
-BAZA.RTL       13056
+BAZC.COM       13440
+BAZC.RTL       13056
 BOUNCE.BAS      5376
 CAVERNS.TXT     4864
 DEMO.ASM       15360
@@ -105,12 +105,12 @@ SAMPLE is the name and ASM is the type. The `.ASM` file contains source
 text. A `.COM` file contains an executable program.
 
 The supplied assembler, `TAS`, turns assembly source into an executable.
-`TED` edits text files. `BAZA` compiles BASIC source such as `TIMES.BAS`
-and uses the library `BAZA.RTL`. The startup files are `SHELL.SVC`,
+`TED` edits text files. `BAZC` compiles BASIC source such as `TIMES.BAS`
+and uses the library `BAZC.RTL`. The startup files are `SHELL.SVC`,
 `GLCD.SVC` and `STARTUP.CMD`. Leave them as supplied for this session.
 The current card also includes `CAVERNS.BAS` and `CAVERNS.TXT`, the BASIC
 Caverns source and its instructions. Select `CON PICO 80`, compile it with
-`BAZA CAVERNS`, then run `CAVERNS`. The remaining
+`BAZC CAVERNS`, then run `CAVERNS`. The remaining
 demonstrations are optional and are listed under
 [More on the card](#more-on-the-card).
 
@@ -167,8 +167,8 @@ TED.COM        12416
 SAMPLE.ASM      4608
 TIMES.BAS        640
 TAS.COM        11136
-BAZA.COM       13440
-BAZA.RTL       13056
+BAZC.COM       13440
+BAZC.RTL       13056
 BOUNCE.BAS      5376
 CAVERNS.TXT     4864
 DEMO.ASM       15360
@@ -285,7 +285,7 @@ other files on A use the same build-and-run sequence at `A:SYSTEM>`:
 | Commands | Result |
 | --- | --- |
 | `TAS DEMO`, then `DEMO` | Builds and runs a tour of the hardware on the LCD, the digits, the 8 × 8 LEDs and the PICO9918, until you press a key. [Chapter 12](12-use-the-boards-devices.md) describes it |
-| `BAZA BOUNCE`, then `BOUNCE` | Compiles and runs a sprite game on the PICO9918. Tap W, A, S and D, or the arrow keys, to steer and Q to quit. [Chapter 3](03-build-a-basic-program.md) describes it |
+| `BAZC BOUNCE`, then `BOUNCE` | Compiles and runs a sprite game on the PICO9918. Tap W, A, S and D, or the arrow keys, to steer and Q to quit. [Chapter 3](03-build-a-basic-program.md) describes it |
 
 `TED DEMO.ASM` and `TED BOUNCE.BAS` open the demonstration sources.
 The longest line in BOUNCE.BAS is 79 columns wide. TED scrolls sideways

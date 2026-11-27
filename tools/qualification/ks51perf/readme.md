@@ -69,6 +69,6 @@ Retain all partial files, absent facts, raw captures, waits, preflight, authorit
 source and provider bytes and every external response. The thirty 2 MiB cards,
 fifteen complete readings and status retain their original generated names.
 Their names are result evidence rather than maintained source names. No card
-power-loss durability, physical timing, optimisation, BAZA, native build,
+power-loss durability, physical timing, optimisation, BAZC, native build,
 consumer pin or programme closure follows. The two accepted DIR cells and all
 older failures/diagnostics remain unchanged; 33 other cells remain afterwards.

@@ -979,9 +979,9 @@ test("S2-12 volumes", () => {
   // Every A: volume holds the core set, and each its theme.
   const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP", "TAS.COM"];
   const theme = {
-    SYSTEM: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
+    SYSTEM: ["BAZC.COM", "BAZC.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
     ASM: ["SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
-    BASIC: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
+    BASIC: ["BAZC.COM", "BAZC.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
     MON3: ["MON3.SVC", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
     GAMES: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"],
   };
@@ -993,7 +993,7 @@ test("S2-12 no mount.com", () => {
   const names = volume(starterImage(), "A").list().map((f) => f.name);
   assert.ok(!names.includes("MOUNT.COM"));
   assert.ok(!starterRecipe().components.some((c) => c.name === "MOUNT.COM"));
-  for (const n of ["SHELL.SVC", "STARTUP.CMD", "TED.COM", "TAS.COM", "BAZA.COM", "MON3.SVC"]) assert.ok(names.includes(n), `A: still holds ${n}`);
+  for (const n of ["SHELL.SVC", "STARTUP.CMD", "TED.COM", "TAS.COM", "BAZC.COM", "MON3.SVC"]) assert.ok(names.includes(n), `A: still holds ${n}`);
   for (const label of ["ASM", "MON3"]) {
     const on = volume(starterImage(), label).list().map((f) => f.name);
     assert.ok(on.includes("HELLO3.ASM") && !on.includes("HELLO3.BIN"), `${label}: HELLO3 as source only`);

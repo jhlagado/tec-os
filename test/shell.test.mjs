@@ -1297,7 +1297,7 @@ test("SH15 docs agree", () => {
 test("SH15 compatibility departures", () => {
   const t = doc("docs/compatibility.md");
   assert.match(t, /TED X\.ASM!TAS X &X/);
-  assert.match(t, /BAZA BAD &TIMES/);
+  assert.match(t, /BAZC BAD &TIMES/);
   assert.match(t, /`&`/);
   assert.match(t, /`:`/);
 });

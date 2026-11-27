@@ -11649,8 +11649,8 @@
       "sha256": "5bd6a0e6d9236b38998877a94f52a6b6b98d524347f0d87ceaf38261c83ce685"
     },
     {
-      "path": "/workspace/scratch/ks51perf-data01/packet/p7-offer/compiler/BAZA.COM",
-      "realpath": "/workspace/scratch/ks51perf-data01/packet/p7-offer/compiler/BAZA.COM",
+      "path": "/workspace/scratch/ks51perf-data01/packet/p7-offer/compiler/BAZC.COM",
+      "realpath": "/workspace/scratch/ks51perf-data01/packet/p7-offer/compiler/BAZC.COM",
       "bytes": 7680,
       "mode": "0o600",
       "sha256": "b39b883f635bd53f2c93422471485cba725a3d9c56bcf8be560ec84c5de6d31d"
@@ -12610,7 +12610,7 @@
         "p7-offer/cases/records129/HELLO.BAS",
         "p7-offer/cases/records129/expected-stdout.bin",
         "p7-offer/cases/records129/source-lf.txt",
-        "p7-offer/compiler/BAZA.COM",
+        "p7-offer/compiler/BAZC.COM",
         "p7-offer/manifest.json",
         "p7-offer/qualification/build.json",
         "p7-offer/qualification/native-inputs.json",

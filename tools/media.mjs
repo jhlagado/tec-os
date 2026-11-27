@@ -38,9 +38,9 @@ const PROGRAMS = [];
 // files of its theme. B: is the WORK disk and C: a spare drive for any of them.
 const CORE = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP", "TAS.COM"];
 const THEMES = [
-  { label: "SYSTEM", files: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"] },
+  { label: "SYSTEM", files: ["BAZC.COM", "BAZC.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"] },
   { label: "ASM", files: ["SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"] },
-  { label: "BASIC", files: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"] },
+  { label: "BASIC", files: ["BAZC.COM", "BAZC.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"] },
   { label: "MON3", files: ["MON3.SVC", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"] },
   { label: "GAMES", files: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"] },
 ];
@@ -151,7 +151,7 @@ ${rows(census.rom.regions)}
 RST 1 to RST 5 are the running program's: it starts after a warm boot, with
 them at their defaults, writes the ones it uses and saves nothing, and the
 warm boot it ends with sweeps them. RST 6 is kept for the
-debugger's breakpoints, and no one else's: \`BAZA.COM\` takes only RST 1 to
+debugger's breakpoints, and no one else's: \`BAZC.COM\` takes only RST 1 to
 RST 5 while it compiles. RST 7 is the interrupt
 vector, and the only one a service may claim (Origo KD-434). Every warm boot,
 unload and failed \`INIT\` gives RST 1 to RST 6 seven zeros and a RET,
@@ -239,8 +239,8 @@ async function main() {
   });
   const tas = pinnedBytes("TAS.COM");
   const ted = pinnedBytes("TED.COM");
-  const baza = pinnedBytes("BAZA.COM");
-  const rtl = pinnedBytes("BAZA.RTL");
+  const baza = pinnedBytes("BAZC.COM");
+  const rtl = pinnedBytes("BAZC.RTL");
   const run = await tasAssembler();
   const program = (name) => assembleDistributionCom(ROOT, run, name);
   const files = [];
@@ -250,22 +250,22 @@ async function main() {
   files.push(...await displayFiles(ROOT, { assembleGlcd: () => assembleGlcd(ROOT, run), assembleShell: () => assembleShell(ROOT, run) }));
   files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM or NAME.BAS, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
   // SAMPLE.ASM, a first program for TAS, and TIMES.BAS, a first program for
-  // BAZA, as CP/M text files.
+  // BAZC, as CP/M text files.
   const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
   const text = (name) => textAt(`programs/${name}`);
   files.push({ name: "SAMPLE.ASM", description: "a first program to build: TAS SAMPLE, then SAMPLE", bytes: text("SAMPLE.ASM") });
-  files.push({ name: "TIMES.BAS", description: "a first BASIC program: BAZA TIMES, then TIMES", bytes: text("TIMES.BAS") });
+  files.push({ name: "TIMES.BAS", description: "a first BASIC program: BAZC TIMES, then TIMES", bytes: text("TIMES.BAS") });
   files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
-  files.push({ name: "BAZA.COM", description: "BAZA, the BASIC compiler: BAZA NAME, NAME.BAS to NAME.COM", bytes: baza });
+  files.push({ name: "BAZC.COM", description: "BAZC, the BASIC compiler: BAZC NAME, NAME.BAS to NAME.COM", bytes: baza });
   files.push({ name: "BAZ.COM", description: "BAZ, the BASIC interpreter, a preview: BAZ NAME.BAS runs it; a statement it doesn't run yet stops with NOT IMPLEMENTED", bytes: pinnedBytes("BAZ.COM") });
-  files.push({ name: "BAZA.RTL", description: "BAZA's runtime library, which it copies into each program", bytes: rtl });
+  files.push({ name: "BAZC.RTL", description: "BAZC's runtime library, which it copies into each program", bytes: rtl });
   // The pinned example's font access
   // is adapted to the glyph service
   // before conversion to CP/M text.
   const bounce = Buffer.from(bounceSource(ROOT).toString("latin1").replace(/\n/g, "\r\n") + "\x1a", "latin1");
-  files.push({ name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D or the arrow keys steer, Q quits", bytes: bounce });
-  files.push({ name: "CAVERNS.BAS", description: "Caverns source for BAZA: BAZA CAVERNS rebuilds the adventure; TED CAVERNS.BAS reads it", bytes: text("CAVERNS.BAS") });
-  files.push({ name: "CAVERNS.TXT", description: "Playing Caverns and rebuilding it with BAZA", bytes: text("CAVERNS.TXT") });
+  files.push({ name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZC BOUNCE, then BOUNCE; W/A/S/D or the arrow keys steer, Q quits", bytes: bounce });
+  files.push({ name: "CAVERNS.BAS", description: "Caverns source for BAZC: BAZC CAVERNS rebuilds the adventure; TED CAVERNS.BAS reads it", bytes: text("CAVERNS.BAS") });
+  files.push({ name: "CAVERNS.TXT", description: "Playing Caverns and rebuilding it with BAZC", bytes: text("CAVERNS.TXT") });
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
   const demo = await program("DEMO.COM");
   // DEMO.COM is built and checked here, but the card holds only its source:
@@ -285,7 +285,7 @@ async function main() {
     files.push({ name, description, bytes: pinnedBytes(name) });
   }
 
-  // The GAMES volume's finished programs, compiled by the pinned BAZA from
+  // The GAMES volume's finished programs, compiled by the pinned BAZC from
   // the sources on the BASIC volume, on this ROM.
   const tecos = builds.find(({ profile }) => profile === "tecos");
   const compiled = (name) => compileBasic({ rom: tecos.rom, map: JSON.parse(tecos.mapBytes), baza, rtl, name, source: files.find((f) => f.name === `${name}.BAS`).bytes });
@@ -300,7 +300,7 @@ async function main() {
     id: "starter",
     revision: "23",
     name: "TEC-OS starter",
-    instruction: "A: holds SYSTEM, the volume for the first chapters. CD ? lists the volumes; CD NAME puts one on the drive you are on and CD A:NAME on A: (CD A:ASM, CD A:BASIC, CD A:MON3 or CD A:GAMES), and CD A:SYSTEM brings this one back. Every A: volume has the shell, TED, GLCD.SVC and the TBUG debugger. B: (WORK) is your work disk: type B:, copy an example there (COPY A:SAMPLE.ASM B:) and build and run it there; programs come from A:. C: is a spare drive: CD C:NAME puts a volume on it. At A:SYSTEM>, TAS SAMPLE then SAMPLE builds and runs a first program, BAZA TIMES then TIMES one in BASIC, and TED SAMPLE.ASM or TED TIMES.BAS reads one. On GAMES, CAVERNS plays the adventure (TYPE CAVERNS.TXT for instructions), BOUNCE plays a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), and MON3.SVC, LOAD SNAKE9.BIN, then GO plays Snake9; click the RGB panel for matrix arrow controls. On BASIC, BAZA CAVERNS and BAZA BOUNCE rebuild them. On ASM, TAS DEMO then DEMO shows the hardware (TED DEMO.ASM to read it). On MON3, TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO runs a MON-3 program on the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to the prompt; TAS SNAKE9 SNAKE9.BIN rebuilds Snake9. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. Power off (Power cycle on the page) gives the card's own drives again.",
+    instruction: "A: holds SYSTEM, the volume for the first chapters. CD ? lists the volumes; CD NAME puts one on the drive you are on and CD A:NAME on A: (CD A:ASM, CD A:BASIC, CD A:MON3 or CD A:GAMES), and CD A:SYSTEM brings this one back. Every A: volume has the shell, TED, GLCD.SVC and the TBUG debugger. B: (WORK) is your work disk: type B:, copy an example there (COPY A:SAMPLE.ASM B:) and build and run it there; programs come from A:. C: is a spare drive: CD C:NAME puts a volume on it. At A:SYSTEM>, TAS SAMPLE then SAMPLE builds and runs a first program, BAZC TIMES then TIMES one in BASIC, and TED SAMPLE.ASM or TED TIMES.BAS reads one. On GAMES, CAVERNS plays the adventure (TYPE CAVERNS.TXT for instructions), BOUNCE plays a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), and MON3.SVC, LOAD SNAKE9.BIN, then GO plays Snake9; click the RGB panel for matrix arrow controls. On BASIC, BAZC CAVERNS and BAZC BOUNCE rebuild them. On ASM, TAS DEMO then DEMO shows the hardware (TED DEMO.ASM to read it). On MON3, TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO runs a MON-3 program on the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to the prompt; TAS SNAKE9 SNAKE9.BIN rebuilds Snake9. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. Power off (Power cycle on the page) gives the card's own drives again.",
     profile: "tecos",
     drives: 3,
     volumes: [

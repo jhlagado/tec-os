@@ -88,7 +88,7 @@ function smallFixture(rt,cell){
   if(cell.workflow==='baza'){
     requireReading(cell.nativeCase==='hello','small native fixture must use exact qualified hello');
     const offer=json(path.join(HERE,'p7-offer/manifest.json'));const c=offer.cases.find(c=>c.id===cell.nativeCase);requireReading(c,'unknown qualified native case');
-    a.write('BAZA.COM',checkFile(path.join(HERE,'p7-offer',offer.compiler.path),{bytes:offer.compiler.fileBytes,sha256:offer.compiler.sha256}));
+    a.write('BAZC.COM',checkFile(path.join(HERE,'p7-offer',offer.compiler.path),{bytes:offer.compiler.fileBytes,sha256:offer.compiler.sha256}));
     a.write('HELLO.BAS',checkFile(path.join(HERE,`p7-offer/cases/${c.id}/HELLO.BAS`),{bytes:c.sourceDiskBytes,sha256:c.sourceSha256}));
     requireReading(!a.find('HELLO.COM')&&a.g.payloadBytes-a.usedBlocks().size*a.blockBytes>=65536,'native clean output/scratch precondition');
   }
@@ -112,7 +112,7 @@ function fixture(rt,cell){
   if(cell.workflow==='baza'){
     const offer=json(path.join(HERE,'p7-offer/manifest.json'));const c=offer.cases.find(c=>c.id===cell.nativeCase);requireReading(c,'unknown qualified native case');
     const compiler=checkFile(path.join(HERE,'p7-offer',offer.compiler.path),{bytes:offer.compiler.fileBytes,sha256:offer.compiler.sha256});
-    a.write('BAZA.COM',compiler);const source=checkFile(path.join(HERE,`p7-offer/cases/${c.id}/HELLO.BAS`),{bytes:c.sourceDiskBytes,sha256:c.sourceSha256});b.write('HELLO.BAS',source);
+    a.write('BAZC.COM',compiler);const source=checkFile(path.join(HERE,`p7-offer/cases/${c.id}/HELLO.BAS`),{bytes:c.sourceDiskBytes,sha256:c.sourceSha256});b.write('HELLO.BAS',source);
     requireReading(!b.find('HELLO.COM')&&b.g.payloadBytes-b.usedBlocks().size*b.blockBytes>=65536,'native clean output/scratch precondition');
   }
   return image;
@@ -153,7 +153,7 @@ function workload(rt,m,cell,phase){
     requireReading(!b.find('HELLO.COM'),'owned output must be absent before measured native compile');
     measured('compiler-select-drive',()=>publicCommand(m,`${workDrive(cell)}:`));
     let loaded=false,sourceOpened=false,statusSet=false;const calls=[];m.mark=m.output.length;m.enqueueInput(c.invocation+'\r','matrix');phase('compiler-command-load');
-    const compiler=fs.readFileSync(path.join(HERE,'p7-offer/compiler/BAZA.COM'));
+    const compiler=fs.readFileSync(path.join(HERE,'p7-offer/compiler/BAZC.COM'));
     m.runUntil(()=>{m.pumpInput();const cpu=m.cpu.cpu;
       if(!loaded&&m.pc===256){equal(Uint8Array.from({length:compiler.length},(_,i)=>m.read(256+i)),compiler,'native loaded image mismatch');loaded=true;phase('compiler-native-initialisation');}
       if(loaded&&m.pc===5){const de=(cpu.d<<8)|cpu.e;const fcb=String.fromCharCode(...Array.from({length:11},(_,i)=>m.read(de+1+i)&127));calls.push({cycle:m.cycles,function:cpu.c,de});
@@ -172,7 +172,7 @@ function workload(rt,m,cell,phase){
     const ted=fs.readFileSync(path.join(HERE,'frozen/TED.COM'));const padded=Buffer.alloc(Math.ceil(ted.length/128)*128);padded.set(ted);
     equal(a.read('TED.COM'),padded,'colocated editor image changed');
   }
-  if(cell.fixture===SMALL_FIXTURE&&cell.workflow==='baza')equal(a.read('BAZA.COM'),fs.readFileSync(path.join(HERE,'p7-offer/compiler/BAZA.COM')),'colocated compiler image changed');
+  if(cell.fixture===SMALL_FIXTURE&&cell.workflow==='baza')equal(a.read('BAZC.COM'),fs.readFileSync(path.join(HERE,'p7-offer/compiler/BAZC.COM')),'colocated compiler image changed');
   equal(b.read('NEIGH.DAT'),neighbor,'neighbor changed');a.usedBlocks();b.usedBlocks();requireReading(m.violations.length===0,'memory write violation');return details;
 }
 async function sample(rt,input,cell,mode,index){
@@ -199,7 +199,7 @@ async function sample(rt,input,cell,mode,index){
     const offer=json(path.join(HERE,'p7-offer/manifest.json'));const c=offer.cases.find(c=>c.id===cell.nativeCase);
     const standalone=rt.createContainer([{geometry:'G1M',label:'SYSTEM',mount:'A'},{geometry:'G8M',label:'WORK',mount:'B',writeBehind:cell.policy==='behind'}]);
     volume(rt,standalone,'A').write('STARTUP.CMD',Buffer.from('CON PICO 40\r\n\x1a','latin1'));volume(rt,standalone,'B').write('HELLO.COM',volume(rt,image,workDrive(cell)).read('HELLO.COM'));
-    requireReading(!volume(rt,standalone,'A').find('BAZA.COM')&&!volume(rt,standalone,'B').find('HELLO.BAS'),'standalone compiler/source present');
+    requireReading(!volume(rt,standalone,'A').find('BAZC.COM')&&!volume(rt,standalone,'B').find('HELLO.BAS'),'standalone compiler/source present');
     const run=machine(rt,input,standalone);boot(run);publicCommand(run,'B:');const text=publicCommand(run,c.runGenerated);const body=text.replace(/^HELLO\r\r\n/,'').replace(/\r\nB>$/,'');
     equal(Buffer.from(body,'latin1'),fs.readFileSync(path.join(HERE,`p7-offer/cases/${c.id}/expected-stdout.bin`)),'generated standalone stdout differs');
     requireReading(run.read(run.sym('PRGCODE'))===c.programExit&&run.read(run.sym('PRGCODE')+1)===0,'generated standalone status differs');

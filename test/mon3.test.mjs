@@ -1007,19 +1007,19 @@ async function recursion(svc) {
 }
 test("KG61 recursion", () => recursion());
 
-const BAZA = pinned("BAZA.COM");
-const RTL = pinned("BAZA.RTL");
+const BAZC = pinned("BAZC.COM");
+const RTL = pinned("BAZC.RTL");
 
-test("KG61 baza and 0038h after", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, async () => {
-  check(BAZA);
+test("KG61 bazc and 0038h after", { skip: BAZC.skip || RTL.skip, timeout: 900_000 }, async () => {
+  check(BAZC);
   check(RTL);
-  const image = card({ "MON3.SVC": await mon3File(), "BAZA.COM": readFileSync(BAZA.path), "BAZA.RTL": readFileSync(RTL.path), ...(await claimFiles([0x38])) });
+  const image = card({ "MON3.SVC": await mon3File(), "BAZC.COM": readFileSync(BAZC.path), "BAZC.RTL": readFileSync(RTL.path), ...(await claimFiles([0x38])) });
   volume(image, "A").write("TIMES.BAS", readFileSync(resolve(ROOT, "programs/TIMES.BAS")), { text: true });
   const m = countOpens(machine(image));
   const r = typed(m, "MON3.SVC");
   assert.ok(r.mon3);
   leave(m, r);
-  assert.match(line(m, "BAZA TIMES", { maxCycles: 2_000_000_000 }).out, /COM written\r\n/, "BAZA compiles TIMES after a session");
+  assert.match(line(m, "BAZC TIMES", { maxCycles: 2_000_000_000 }).out, /COM written\r\n/, "BAZC compiles TIMES after a session");
   assert.equal(sha(volume(image, "A").read("TIMES.COM")), TIMES_COM, "TIMES.COM's bytes");
   const ask = (text, want) => {
     m.mark = m.output.length;
@@ -1595,10 +1595,10 @@ const INACTIVE = {
   "test/system.test.mjs": ["BDOS file functions pass the probe", "warm boot clears RST 1 to 6 whatever they hold, a jump into ROM too, and a stale RST returns"],
   "test/tas.test.mjs": ["TAS assembles a program on TEC-OS and the program runs"],
   "test/svc.test.mjs": ["a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h"],
-  "test/times.test.mjs": ["with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it compiles and gives the JP back before it exits, TIMES runs, and the GLCD is still the console"],
+  "test/times.test.mjs": ["with GLCD.SVC loaded and a JP held in RST 1, BAZC takes RST 1 while it compiles and gives the JP back before it exits, TIMES runs, and the GLCD is still the console"],
   "test/ted-baza.test.mjs": [
-    "TED on TIMES.BAS: F9 builds with BAZA and comes back clean, F5 runs TIMES.BAS under BAZ, and a syntax error brings TED back on its line",
-    "a project on B: builds with A:'s BAZA, which finds BAZA.RTL on its load drive",
+    "TED on TIMES.BAS: F9 builds with BAZC and comes back clean, F5 runs TIMES.BAS under BAZ, and a syntax error brings TED back on its line",
+    "a project on B: builds with A:'s BAZC, which finds BAZC.RTL on its load drive",
   ],
 };
 

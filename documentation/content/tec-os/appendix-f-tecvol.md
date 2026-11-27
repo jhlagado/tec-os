@@ -192,8 +192,8 @@ node tools/tecvol.mjs dir dist/starter.img A
 
 <!-- TEC-OS with the sized DIR (ROM 41c87b73, starter card 7c5c6202): host-tool output of the command above. -->
 ```text
- 0 BAZA.COM        13440
- 0 BAZA.RTL        13056
+ 0 BAZC.COM        13440
+ 0 BAZC.RTL        13056
  0 BOUNCE.BAS       5376
  0 CAVERNS.BAS     27264
  0 CAVERNS.TXT      4864

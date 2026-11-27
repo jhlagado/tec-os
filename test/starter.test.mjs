@@ -1,5 +1,5 @@
 // The starter card built by tools/media.mjs is also the Viewer's card:
-// seventeen source/pinned files on A:, booting to the shell. BAZA builds
+// seventeen source/pinned files on A:, booting to the shell. BAZC builds
 // BOUNCE's game, TAS builds DEMO and HELLO3 from source, and MON3.SVC loads
 // HELLO3's generated image. The web host upgrades older system services.
 // Emulator evidence; external programs are pinned in test/inputs.json.
@@ -21,12 +21,12 @@ import { needsStarter, prepareCard } from "../host/card.mjs";
 
 const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
-const BAZA = pinned("BAZA.COM");
-const RTL = pinned("BAZA.RTL");
+const BAZC = pinned("BAZC.COM");
+const RTL = pinned("BAZC.RTL");
 const BAZ = pinned("BAZ.COM");
 const BOUNCE = pinned("BOUNCE.BAS");
 const TBUG = ["TBUG.SVC", "TBUG.HLP"].map(pinned);
-const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BAZ.skip || BOUNCE.skip || TBUG.some((p) => p.skip);
+const PAGE_SKIP = TED.skip || TAS.skip || BAZC.skip || RTL.skip || BAZ.skip || BOUNCE.skip || TBUG.some((p) => p.skip);
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 const text = (name) => textAt(`programs/${name}`);
@@ -53,7 +53,7 @@ function starter() {
 test("each A: volume holds the core set and its theme's files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
-  check(BAZA);
+  check(BAZC);
   check(RTL);
   check(BAZ);
   check(BOUNCE);
@@ -70,8 +70,8 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
     "TBUG.SVC": sha(readFileSync(TBUG[0].path)),
     "TBUG.HLP": sha(readFileSync(TBUG[1].path)),
     "TAS.COM": sha(readFileSync(TAS.path)),
-    "BAZA.COM": sha(readFileSync(BAZA.path)),
-    "BAZA.RTL": sha(readFileSync(RTL.path)),
+    "BAZC.COM": sha(readFileSync(BAZC.path)),
+    "BAZC.RTL": sha(readFileSync(RTL.path)),
     "BAZ.COM": sha(readFileSync(BAZ.path)),
     "SAMPLE.ASM": sha(text("SAMPLE.ASM")),
     "TIMES.BAS": sha(text("TIMES.BAS")),
@@ -83,15 +83,15 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
     "HELLO3.ASM": sha(textAt("test/programs/hello3.asm")),
     "SNAKE9.ASM": sha(text("SNAKE9.ASM")),
     "SNAKE9.BIN": sha(snake.bytes),
-    // Compiled by the pinned BAZA as the card is built: the Caverns record's, and Bounce's.
+    // Compiled by the pinned BAZC as the card is built: the Caverns record's, and Bounce's.
     "CAVERNS.COM": caverns.comSha256,
     "BOUNCE.COM": "edecad40992fa899dcc758be077cd2cb7a3e00bb1eeb77b5c39992be6fb37884",
   };
   const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP", "TAS.COM"];
   const themes = {
-    SYSTEM: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
+    SYSTEM: ["BAZC.COM", "BAZC.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"],
     ASM: ["SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"],
-    BASIC: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
+    BASIC: ["BAZC.COM", "BAZC.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"],
     MON3: ["MON3.SVC", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
     GAMES: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"],
   };
@@ -138,7 +138,7 @@ test("the web page's card is the starter card, byte for byte, its instruction na
   assert.deepEqual(readdirSync(resolve(ROOT, "dist/files")).sort(), [...new Set(recipe.components.map((c) => c.name))].sort(), "dist/files holds the recipe's files");
   assert.match(recipe.instruction, /TAS DEMO then DEMO/);
   assert.match(recipe.instruction, /BOUNCE plays a game on the PICO9918/);
-  assert.match(recipe.instruction, /BAZA CAVERNS and BAZA BOUNCE rebuild them/);
+  assert.match(recipe.instruction, /BAZC CAVERNS and BAZC BOUNCE rebuild them/);
   assert.match(recipe.instruction, /TAS HELLO3 HELLO3\.BIN, then MON3\.SVC, LOAD HELLO3\.BIN and GO/);
   assert.match(recipe.instruction, /tap W\/A\/S\/D or the arrow keys, Q to quit/);
   assert.doesNotMatch(recipe.instruction, /CHAIN/);
@@ -163,13 +163,13 @@ function bounceRound(card) {
   const text = (registers) => Array.from(registers.slice(0, 8));
   const console40 = text(vdp().registers);
   let mark = m.output.length;
-  keys("baza bounce\r", "BAZA's build", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
+  keys("bazc bounce\r", "BAZC's build", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
   assert.match(m.text(mark), /COM written\r\n/);
   const com = Buffer.from(volume(card, "A").read("BOUNCE.COM"));
   // The adapted source's compiled length and hash, retaken from the build;
   // 16,640 bytes since Baza 184db08's integer words (16,000 before).
   assert.equal(com.length, 16640, "adapted BOUNCE.COM's length");
-  assert.equal(sha(com), "edecad40992fa899dcc758be077cd2cb7a3e00bb1eeb77b5c39992be6fb37884", "adapted BOUNCE.COM as the pinned BAZA compiles it");
+  assert.equal(sha(com), "edecad40992fa899dcc758be077cd2cb7a3e00bb1eeb77b5c39992be6fb37884", "adapted BOUNCE.COM as the pinned BAZC compiles it");
   m.enqueueInput("bounce\r", "matrix");
   m.runUntil(() => (m.pumpInput(), !m.pending?.length), 50_000_000, "the command line");
   run(150_000_000);
@@ -225,7 +225,7 @@ function bounceRound(card) {
   assert.deepEqual(m.violations, []);
 }
 
-test("on the card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with sprites, W/A/S/D and the arrow keys move the ship, ESC [ Z moves nothing, and Q gives the display back at A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
+test("on the card, BAZC BOUNCE compiles, BOUNCE takes Graphics I with sprites, W/A/S/D and the arrow keys move the ship, ESC [ Z moves nothing, and Q gives the display back at A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
   check(BOUNCE);
   bounceRound(starter().on("BASIC"));
 });

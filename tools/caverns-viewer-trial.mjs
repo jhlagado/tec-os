@@ -18,7 +18,7 @@ async function cmd(p,s,game=true){await p.locator('#tms').click();await p.keyboa
 const a=await setup();
 const suppliedFiles=await a.page.locator('#filelist').textContent();
 assert.ok(suppliedFiles.includes('CAVERNS.BAS'));assert.ok(!suppliedFiles.includes('CAVERNS.COM'));
-await cmd(a.page,'baza caverns',false);
+await cmd(a.page,'bazc caverns',false);
 await a.page.waitForFunction(()=>tecos.screen().join(' ').includes('COM written'),null,{timeout:120000});await ready(a.page);
 await a.page.waitForFunction(()=>document.querySelector('#filelist').textContent.includes('CAVERNS.COM'));
 const builtDownload=a.page.waitForEvent('download');await a.page.locator('#filelist tr').filter({hasText:'CAVERNS.COM'}).getByRole('button',{name:'Download'}).click();

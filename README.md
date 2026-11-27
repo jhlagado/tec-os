@@ -39,7 +39,7 @@ Node.js 20 or later.
   tas_stage=
   trap 'if [ -n "$tas_stage" ]; then rm -rf "$tas_stage"; fi' EXIT
   npm ci
-  npm run inputs   # pinned TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
+  npm run inputs   # pinned TED.COM, TAS.COM, BAZC.COM, BAZC.RTL and BOUNCE.BAS
   mkdir -p .inputs
   if [ -d .inputs/tas-host ]; then
     node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
@@ -79,10 +79,10 @@ page; no test here drives a browser. `playwright` stays pinned in
 the browser that version expects.
 
 Assembly, media and tests select each application input, TED from TED, TAS
-from TAS and `BAZA.COM`, `BAZA.RTL` and `BOUNCE.BAS` from Baza, from an
-explicit `TED_COM`, `TAS_COM`, `BAZA_COM`, `BAZA_RTL` or `BOUNCE_BAS`, then
+from TAS and `BAZC.COM`, `BAZC.RTL` and `BOUNCE.BAS` from Baza, from an
+explicit `TED_COM`, `TAS_COM`, `BAZC_COM`, `BAZC_RTL` or `BOUNCE_BAS`, then
 `.inputs/NAME`, then the sibling paths `../ted/dist/TED.COM`,
-`../tas/dist/TAS.COM`, `../baza/dist/BAZA.COM`, `../baza/dist/BAZA.RTL`
+`../tas/dist/TAS.COM`, `../baza/dist/BAZC.COM`, `../baza/dist/BAZC.RTL`
 and `../baza/examples/BOUNCE.BAS`. `npm run media` needs all five to build
 the card. Baza's repository is private: without access to it, put the three
 pinned files, from someone who has it, in `.inputs/`. A selected override
@@ -192,14 +192,14 @@ writing the LCD, lighting the digits and beeping through the ROM's services by
 `abi.inc`'s names. `TIMES.BAS` beside it is a first BASIC program, with its
 keywords in capitals and its names in lower case: it asks a name and a number
 and prints that number's times table.
-`BAZA TIMES` compiles it with the card's `BAZA.COM` and `BAZA.RTL` and `TIMES`
-runs it; in `TED TIMES.BAS`, F9 builds it with BAZA as it builds an `.ASM` with
+`BAZC TIMES` compiles it with the card's `BAZC.COM` and `BAZC.RTL` and `TIMES`
+runs it; in `TED TIMES.BAS`, F9 builds it with BAZC as it builds an `.ASM` with
 TAS, and F5 runs the source under `BAZ.COM`, the interpreter, a preview that
 runs Caverns' 26.8 KB source with the shell resident and stops a statement it
 doesn't run yet with `NOT IMPLEMENTED`.
 
 The starter card also includes the author-refined Caverns BASIC source and
-`CAVERNS.TXT`. Select `CON PICO 80`, compile with `BAZA CAVERNS`, then run
+`CAVERNS.TXT`. Select `CON PICO 80`, compile with `BAZC CAVERNS`, then run
 `CAVERNS`. Its executable is created by the user; the separate assembly
 comparison remains development-only. [Caverns](docs/caverns.md) records the
 current rules, qualification and provenance.
@@ -216,7 +216,7 @@ at 4000h, or at an address given after the name, as in `LOAD NAME.BIN 2000`,
 and a bare `GO` starts where the last load went. `TAS NAME NAME.HEX` writes
 Intel HEX, which `LOAD NAME.HEX` places at the addresses in the file, or
 moved to an address given after the name. `BOUNCE.BAS` is Baza's sprite
-game: `BAZA BOUNCE` compiles it, showing a spinner while it works, and
+game: `BAZC BOUNCE` compiles it, showing a spinner while it works, and
 `BOUNCE` takes the PICO9918 in Graphics I through `CALL`; tap W, A, S and D,
 or the arrow keys, to steer the ship, and Q gives the display back. A BASIC
 program that has claimed the display and stops on an error gives it back

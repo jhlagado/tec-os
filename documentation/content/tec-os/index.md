@@ -31,7 +31,7 @@ retrieve it.
 TEC-OS uses the SD card as a disk containing source files, executable programs
 and data. From its command prompt you can find and run a program or open a
 file for editing. Programs use operating-system calls to read and write files
-on the card. TED supplies the text editor, TAS the assembler and BAZA the
+on the card. TED supplies the text editor, TAS the assembler and BAZC the
 BASIC compiler. You can edit, build and test a program on the board without
 transferring each revision from a PC.
 
@@ -83,7 +83,7 @@ card-saving rules are in [Appendix I](appendix-i-web-page.md).
 | --- | --- |
 | [1. First session](01-first-session.md) | Power on, find files, run supplied SAMPLE and the card's other programs and preserve work |
 | [2. Make a small program](02-make-a-small-program.md) | Enter, save, build, change and run a banner |
-| [3. Build a BASIC program](03-build-a-basic-program.md) | Compile and run TIMES.BAS with BAZA and build it from TED |
+| [3. Build a BASIC program](03-build-a-basic-program.md) | Compile and run TIMES.BAS with BAZC and build it from TED |
 | [4. Work with files](04-work-with-files.md) | Read, copy, rename and erase files and control long listings |
 | [5. Drives and user areas](05-drives-and-user-areas.md) | Locate programs, select volumes, use resident services and run MON-3 programs |
 | [6. Cards on the PC](06-cards-on-the-pc.md) | Copy, check, recover and prepare card images |

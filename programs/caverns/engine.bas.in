@@ -1,5 +1,5 @@
 # Authoring source: @LABEL targets and {UPPERCASE_CONSTANTS} are resolved by
-# tools/caverns-source.mjs. Distributed CAVERNS.BAS needs only native BAZA.
+# tools/caverns-source.mjs. Distributed CAVERNS.BAS needs only native BAZC.
 REM CAVERNS - John Hardy (c) 1982-83. Microbee edition copyright 1983.
 REM Dreamcards. GNU GPL release 2019; see CAVERNS.TXT and repository LICENSE.
 REM Original prose: github.com/jhlagado/caverns src/protected/caverns.basic.

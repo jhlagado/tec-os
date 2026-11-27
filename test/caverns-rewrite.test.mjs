@@ -166,7 +166,7 @@ test('a reader can insert a BASIC line in the ten-step gap and compile without r
  const banner=source.split('\n').find(l=>l.startsWith(number+' '));
  const experiment=source.replace(banner,banner+'\n'+(number+1)+' PRINT "An inserted experiment works."');
  const original=a.read('CAVERNS.BAS');a.write('CAVTRY.BAS',Buffer.from(experiment),{text:true});
- const m=boot(image,{tms:true,matrix:true,width:80});assert.match(keys(m,'baza cavtry'),/COM written/);
+ const m=boot(image,{tms:true,matrix:true,width:80});assert.match(keys(m,'bazc cavtry'),/COM written/);
  assert.ok(a.read('CAVTRY.COM').length<40000);
  const out=keys(m,'cavtry');assert.match(out,/An inserted experiment works/);assert.match(out,/bark hut/);
  keys(m,'quit');keys(m,'n');assert.ok(m.ready());assert.deepEqual(a.read('CAVERNS.BAS'),original);

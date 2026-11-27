@@ -1,5 +1,5 @@
 10 REM TIMES.BAS, a first BASIC program
-20 REM Build it with BAZA TIMES,
+20 REM Build it with BAZC TIMES,
 30 REM then type TIMES to run it.
 40 PRINT "HELLO FROM BASIC ON TEC-OS."
 50 INPUT "WHAT IS YOUR NAME"; n$

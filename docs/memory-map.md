@@ -36,7 +36,7 @@ BF00h.
 RST 1 to RST 5 are the running program's: it starts after a warm boot, with
 them at their defaults, writes the ones it uses and saves nothing, and the
 warm boot it ends with sweeps them. RST 6 is kept for the
-debugger's breakpoints, and no one else's: `BAZA.COM` takes only RST 1 to
+debugger's breakpoints, and no one else's: `BAZC.COM` takes only RST 1 to
 RST 5 while it compiles. RST 7 is the interrupt
 vector, and the only one a service may claim (Origo KD-434). Every warm boot,
 unload and failed `INIT` gives RST 1 to RST 6 seven zeros and a RET,

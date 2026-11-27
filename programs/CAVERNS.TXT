@@ -109,8 +109,8 @@ STARTING THE GAME
 From the TEC-OS SYSTEM volume, type:
 
   CON PICO 80
-  BAZA CAVERNS
+  BAZC CAVERNS
   CAVERNS
 
-BAZA compiles CAVERNS.BAS into CAVERNS.COM. Once compiled, type CAVERNS
+BAZC compiles CAVERNS.BAS into CAVERNS.COM. Once compiled, type CAVERNS
 to play again.

@@ -23,9 +23,9 @@ const otherData=rows.filter(l=>Number(l.split(' ')[0])>=map.labels.EXIT_DATA).ma
 const source=prefix.concat([...roomData,...otherData].map((s,i)=>`${(prefix.length+i+1)*10} ${s}`)).join('\n')+'\n';
 fs.mkdirSync(ROOT+'/build/caverns',{recursive:true});fs.writeFileSync(ROOT+'/build/caverns/CAVFULL.BAS',source);
 const image=new Uint8Array(read('dist/starter.img')),a=volume(image,'A');
-assert.equal(sha(a.read('BAZA.COM')),fixture.compilerSha256);assert.equal(sha(a.read('BAZA.RTL')),fixture.librarySha256);
+assert.equal(sha(a.read('BAZC.COM')),fixture.compilerSha256);assert.equal(sha(a.read('BAZC.RTL')),fixture.librarySha256);
 a.write('CAVFULL.BAS',Buffer.from(source),{text:true});
-const m=boot(image,{tms:true,matrix:true,width:80});m.enqueueInput('baza cavfull\r','matrix');m.runUntilChecked(()=>{m.pumpInput();return !m.pending?.length&&m.ready();},800_000_000,'compile full-room control');assert.match(m.text(),/COM written/);assert.deepEqual(m.violations,[]);
+const m=boot(image,{tms:true,matrix:true,width:80});m.enqueueInput('bazc cavfull\r','matrix');m.runUntilChecked(()=>{m.pumpInput();return !m.pending?.length&&m.ready();},800_000_000,'compile full-room control');assert.match(m.text(),/COM written/);assert.deepEqual(m.violations,[]);
 const com=Buffer.from(a.read('CAVFULL.COM')),footer=runtimeFooter(com),logical=footer.address+10-256;
 assert.ok(Number.isFinite(logical));fs.writeFileSync(ROOT+'/build/caverns/CAVFULL.COM',com);
 const edited=read('programs/CAVERNS.COM'),editedFooter=runtimeFooter(edited);
