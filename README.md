@@ -69,8 +69,11 @@ verifies the runner, lock, runtime and TAS executable before moving the
 temporary host into place. Repeating setup verifies the prepared host
 without reinstalling it. `npm run inputs` validates the application pins
 and fetches missing inputs into verified temporary files before replacement.
-A failed preparation keeps previous verified files. Assembly uses local
-inputs and makes no downloads.
+A failed preparation keeps previous verified files. A file in `.inputs/`
+that isn't the pinned one, such as one left from an earlier pin, is refused
+rather than replaced; `npm run inputs -- --refresh` moves it aside as
+`NAME.unpinned-HASH` and fetches the pinned file. Assembly uses local inputs
+and makes no downloads.
 
 The web page's browser tests moved to TEC-OS Viewer (KD-239), which owns the
 page; no test here drives a browser. `playwright` stays pinned in

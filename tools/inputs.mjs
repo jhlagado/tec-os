@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 // Prepare missing pinned application files. Selected overrides and local files
 // must validate. A stale legacy sibling is replaced only by a verified local pin.
+// With --refresh, a local file in .inputs/ that isn't the pinned one, such as
+// one left from an earlier pin, is moved aside as NAME.unpinned-HASH and the
+// pinned file is fetched in its place. A link there, and an override in an
+// environment variable, are still refused.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { inputExists, inputsDir } from "./lib/pins.mjs";
@@ -13,6 +17,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = inputsDir(ROOT);
 const args = process.argv.slice(2);
 const only = args.filter((a) => !a.startsWith("--"));
+const refresh = args.includes("--refresh");
 const inputs = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs;
 
 const git = (cwd, ...a) => execFileSync("git", a, { cwd, encoding: "latin1", maxBuffer: 1 << 26, stdio: ["ignore", "pipe", "pipe"] });
@@ -36,12 +41,19 @@ for (const [name, entry] of Object.entries(inputs)) {
   try {
     const override = process.env[entry.env];
     const target = resolve(OUT, name);
-    const local = inputExists(target);
+    let local = inputExists(target);
+    const pinned = (path) => existsSync(path) && digest(entry, path) === entry.sha256 && readFileSync(path).length === entry.bytes;
+    if (refresh && override === undefined && local && lstatSync(target).isFile() && !pinned(target)) {
+      const aside = `${target}.unpinned-${digest(entry, target).slice(0, 8)}`;
+      renameSync(target, aside);
+      console.log(`${name}: ${target} isn't the pinned file; moved aside as ${aside}`);
+      local = false;
+    }
     if (override !== undefined && !override) throw new Error(`${entry.env} is empty: unset it or select the pinned ${name}`);
     const selected = override !== undefined ? resolve(override) : local ? target : resolve(ROOT, entry.default);
     if (override !== undefined || local) {
       if (!existsSync(selected) || digest(entry, selected) !== entry.sha256 || readFileSync(selected).length !== entry.bytes) {
-        throw new Error(`selected ${name} at ${selected} is missing or not pinned; no fallback`);
+        throw new Error(`selected ${name} at ${selected} is missing or not pinned; no fallback${override === undefined ? " (npm run inputs -- --refresh replaces a file in .inputs/ left from another pin)" : ""}`);
       }
       console.log(`${name}: ${selected}, as pinned`);
       continue;
