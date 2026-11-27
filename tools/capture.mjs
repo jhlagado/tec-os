@@ -13,6 +13,10 @@
 // on for 50 million T-states without waiting for a prompt, for a program that
 // runs until a key. "@run N" runs N million T-states. "@reset" presses the
 // reset button, which keeps RAM and the card, and waits for the prompt.
+// On a board with the matrix keyboard, "@fn D" presses Fn with digit D, F1 to
+// F9 or, for 0, F10, and "@arrow KEYS" presses the matrix's arrow keys in turn,
+// each of KEYS U, D, L or R; like "@press", each goes on once the machine has
+// taken its keys.
 //
 // A listing that fills the screen stops at [more] and waits for a key; the
 // run stops there too, and the next LINE is "@key X" for the next screen or
@@ -43,6 +47,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { getMatrixCombosForAscii } from "@jhlagado/debug80-runtime/platforms/tec1g/matrix-keymap";
 import { Machine, symbolsFromD8 } from "../host/machine.mjs";
 import { fontBytes } from "./lib/font.mjs";
 
@@ -104,6 +109,15 @@ for (const line of lines) {
     m.runUntil(() => (m.pumpInput(), !m.pending?.length), LIMIT, line);
     const end = m.cycles + 50_000_000;
     m.runUntil(() => m.cycles >= end, LIMIT, line);
+  } else if (/^@fn \d$/.test(line) || /^@arrow [UDLR]+$/.test(line)) {
+    if (!m.videoConsole()) throw new Error(`${line}: the matrix keyboard needs --board pico or glcd`);
+    if (line.startsWith("@fn ")) {
+      const c = getMatrixCombosForAscii(line.charCodeAt(4)).find((x) => !x.modifier && !x.capsLock);
+      m.enqueueKey(c.row * 8 + c.col, 2); // Fn is matrix key 2.
+    } else {
+      for (const k of line.slice(7)) m.enqueueKey({ U: 3, D: 4, L: 5, R: 6 }[k]);
+    }
+    m.runUntil(() => (m.pumpInput(), !m.pending?.length), LIMIT, line);
   } else if (line.startsWith("@press ")) {
     m.enqueueInput(line.slice(7), via);
     m.runUntil(() => (m.pumpInput(), !m.pending?.length), LIMIT, line);

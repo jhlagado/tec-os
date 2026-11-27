@@ -1,12 +1,13 @@
 // tools/capture.mjs, the book's capture tool: "@press X" sends a key with no
-// wait for a prompt (KB-25), so a line can be built a key at a time.
+// wait for a prompt (KB-25), so a line can be built a key at a time, and
+// "@fn D" and "@arrow KEYS" press the matrix's Fn chords and arrow keys.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ROOT, standardCard } from "./lib/fixtures.mjs";
+import { ROOT, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 test("capture follows named prompts after a drive change and CD A:, then GAMES's own startup after reset", () => {
   const out = execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--", "B:", "A:", "CD A:GAMES", "@reset"], { encoding: "utf8", timeout: 120_000 });
@@ -24,6 +25,22 @@ test("@press sends a key and goes on without a prompt: D, I, R, then Return run 
   assert.match(out, /A(:\S*)?>DIR\n/, "the three keys made one line");
   assert.match(out, /A(:\S*)?>DIR\nNO FILE\nA(:\S*)?>/, "and Return ran it, on an empty card");
   assert.doesNotMatch(out, /@PRESS/i);
+});
+
+test("@fn and @arrow press the matrix's Fn chords and arrow keys: F1 and Left reach a program, Up recalls a line", async () => {
+  const dir = mkdtempSync(resolve(ROOT, "build/capture-"));
+  const card = resolve(dir, "card.img");
+  const image = standardCard();
+  volume(image, "A").write("KEYS.COM", (await program("keys")).bytes);
+  writeFileSync(card, image);
+  const run = (...lines) => execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--rom", resolve(ROOT, "build/tecos/tecos.rom"), "--card", card, "--board", "pico", "--", ...lines], { encoding: "utf8", timeout: 120_000 });
+  const keys = run("@start KEYS", "@fn 1", "@arrow L", "@run 20");
+  const history = run("ECHO ONE", "@arrow U", "^M");
+  rmSync(dir, { recursive: true });
+  assert.match(keys, /1B 4F 50 1B 5B 44 /, "F1 as ESC O P, then Left as ESC [ D, from Fn+1 and the Left key");
+  // The bare prompt has no ECHO, so each run answers ECHO?: what counts is the line Up brings back.
+  assert.match(history, /A(:\S*)?>ECHO ONE\nECHO\?\n[^]*A(:\S*)?>ECHO ONE\nECHO\?\n/, "Up brings ECHO ONE back, and Return runs it again");
+  assert.throws(() => execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--", "@fn 1"], { encoding: "utf8", stdio: "pipe", timeout: 120_000 }), /matrix keyboard needs --board pico or glcd/);
 });
 
 test("--card none reaches DIAG's prompt, R retry>, and stops there with the LCD's rows (KE-172)", () => {
