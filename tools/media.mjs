@@ -33,15 +33,15 @@ const sha = (b) => createHash("sha256").update(b).digest("hex");
 // CD puts a volume on a drive and lists them.
 const PROGRAMS = [];
 
-// Every A: volume carries the core set, so the shell, the editor and the
-// debugger are there whichever volume is on A:, plus the files of its theme.
-// B: is the WORK disk and C: a spare drive for any of them.
-const CORE = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP"];
+// Every A: volume carries the core set, so the shell, the editor, the
+// assembler and the debugger are there whichever volume is on A:, plus the
+// files of its theme. B: is the WORK disk and C: a spare drive for any of them.
+const CORE = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP", "TAS.COM"];
 const THEMES = [
-  { label: "SYSTEM", files: ["TAS.COM", "BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"] },
-  { label: "ASM", files: ["TAS.COM", "SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"] },
+  { label: "SYSTEM", files: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "MON3.SVC", "SAMPLE.ASM", "TIMES.BAS"] },
+  { label: "ASM", files: ["SAMPLE.ASM", "DEMO.ASM", "HELLO3.ASM"] },
   { label: "BASIC", files: ["BAZA.COM", "BAZA.RTL", "BAZ.COM", "TIMES.BAS", "BOUNCE.BAS", "CAVERNS.BAS", "CAVERNS.TXT"] },
-  { label: "MON3", files: ["MON3.SVC", "TAS.COM", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"] },
+  { label: "MON3", files: ["MON3.SVC", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"] },
   { label: "GAMES", files: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"] },
 ];
 
