@@ -54,12 +54,12 @@
     "BOUNCE.BAS": {
       "env": "BOUNCE_BAS",
       "default": "../baza/examples/BOUNCE.BAS",
-      "source": "jhlagado/baza 5f6b58d, examples/BOUNCE.BAS",
+      "source": "jhlagado/baza 7beac04, examples/BOUNCE.BAS",
       "repo": "jhlagado/baza",
-      "commit": "5f6b58d07b70e570bc993cfc430ec0196f4855d0",
+      "commit": "7beac04497888664c7d092b9d168ef538c0d9346",
       "path": "examples/BOUNCE.BAS",
-      "bytes": 5189,
-      "sha256": "615693a55fb29fd9fd831836443461f82fddca65ae983337e52ecae5b529744c"
+      "bytes": 5187,
+      "sha256": "b886676a13d5a3f7de57d765acbc00bd0b1c025d1c913125d013ff56cc396eb3"
     },
     "MON3.BIN": {
       "env": "MON3_BIN",

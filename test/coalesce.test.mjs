@@ -784,7 +784,7 @@ function onStarter(command, { logged = "B" } = {}) {
     assert.equal(file.length, 4096); assert.deepEqual(file, putBytes(16), "all sixteen pages hold PUT's known bytes");
   } else {
     assert.match(text, /COM written\r\n/); assert.equal(file.length, 16640); // Baza 184db08's integer words (16,000 before)
-    assert.equal(sha(file), "edecad40992fa899dcc758be077cd2cb7a3e00bb1eeb77b5c39992be6fb37884", "the complete pinned compiler result (BOUNCE.BAS lines 40, 50 and 170 call GLYPH)");
+    assert.equal(sha(file), "bd9e1b38c9abd7cb365e38fc6fef2441e63744ee49f1a4dc3fd53857b922d9ff", "the complete pinned compiler result (BOUNCE.BAS lines 40, 50 and 170 call GLYPH)");
   }
   for (const c of t.commits) {
     assert.ok(c.published.length <= file.length);

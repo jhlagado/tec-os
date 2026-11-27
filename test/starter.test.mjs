@@ -85,7 +85,7 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
     "SNAKE9.BIN": sha(snake.bytes),
     // Compiled by the pinned BAZC as the card is built: the Caverns record's, and Bounce's.
     "CAVERNS.COM": caverns.comSha256,
-    "BOUNCE.COM": "edecad40992fa899dcc758be077cd2cb7a3e00bb1eeb77b5c39992be6fb37884",
+    "BOUNCE.COM": "bd9e1b38c9abd7cb365e38fc6fef2441e63744ee49f1a4dc3fd53857b922d9ff",
   };
   const core = ["STARTUP.CMD", "SHELL.SVC", "GLCD.SVC", "TED.COM", "TBUG.SVC", "TBUG.HLP", "TAS.COM"];
   const themes = {
@@ -95,7 +95,7 @@ test("each A: volume holds the core set and its theme's files, each by its hash,
     MON3: ["MON3.SVC", "SNAKE9.ASM", "SNAKE9.BIN", "HELLO3.ASM"],
     GAMES: ["CAVERNS.COM", "CAVERNS.TXT", "BOUNCE.COM", "MON3.SVC", "SNAKE9.BIN"],
   };
-  assert.equal(sha(bounceText()), "9d9092748d11be539c86e79ba591849191540812c4342f601ac9c1de065fc0d6", "the adapted CP/M source pin");
+  assert.equal(sha(bounceText()), "4d0bbdd86d0ae06a02ab86c286aa571a4cdec3247c6c1f17b8f61dcc95a58328", "the adapted CP/M source pin");
   assert.equal(volume(card, "A").list().length, core.length + themes.SYSTEM.length, "SYSTEM is on A:");
   const placed = [];
   for (const [label, theme] of Object.entries(themes)) {
@@ -169,14 +169,14 @@ function bounceRound(card) {
   // The adapted source's compiled length and hash, retaken from the build;
   // 16,640 bytes since Baza 184db08's integer words (16,000 before).
   assert.equal(com.length, 16640, "adapted BOUNCE.COM's length");
-  assert.equal(sha(com), "edecad40992fa899dcc758be077cd2cb7a3e00bb1eeb77b5c39992be6fb37884", "adapted BOUNCE.COM as the pinned BAZC compiles it");
+  assert.equal(sha(com), "bd9e1b38c9abd7cb365e38fc6fef2441e63744ee49f1a4dc3fd53857b922d9ff", "adapted BOUNCE.COM as the pinned BAZC compiles it");
   m.enqueueInput("bounce\r", "matrix");
   m.runUntil(() => (m.pumpInput(), !m.pending?.length), 50_000_000, "the command line");
   run(150_000_000);
   let s = vdp();
   assert.deepEqual(text(s.registers), [0, 0xc2, 6, 0x80, 0, 0x36, 7, 1], "Graphics I with 16 x 16 sprites");
   assert.deepEqual(Array.from(s.vram.slice(0x100, 0x400)), Array.from(fontBytes(ROOT)), "the ROM's font at 0100h, glyph by glyph through service 17");
-  const title = " BAZA BASIC ON THE PICO9918 ";
+  const title = " BAZ BASIC ON THE PICO9918 ";
   assert.equal(Buffer.from(s.vram.slice(0x1802, 0x1802 + title.length)).toString("latin1"), title, "the title in the name table");
   const attrs = (v) => Array.from(v.slice(0x1b00, 0x1b18));
   const first = attrs(s.vram);
