@@ -65,7 +65,7 @@ Four Z80 instructions just ran in a fraction of a millisecond. `LD DE,MSG` point
 
 Ordinary `.COM` programs load at `0100h` and grow upwards into free RAM. Resident services load from the top down, right below the TEC-OS ROM at `C000h`, and lower the address stored at `0006h` so transient programs stay underneath them.
 
-On the starter card, `SHELL.SVC` is already loaded at boot and uses enough upper RAM that TBUG may not fit beside it. Switch back to drive A and run `UNLOAD` to drop the shell and return to the bare `A>` prompt. If your card loads other services at boot, unload or omit them when you need space for TBUG.
+On the starter card, `SHELL.SVC` is already loaded at boot and uses enough upper RAM that TBUG may not fit beside it. Switch back to drive A and run `UNLOAD` to drop the shell and return to the bare `A:SYSTEM>` prompt. If your card loads other services at boot, unload or omit them when you need space for TBUG.
 
 ![TBUG is loaded at the top of RAM below the ROM and uses only the 20 × 4 character LCD and matrix keyboard while the program keeps the console.](/images/tbug/first-stop.svg)
 
@@ -73,10 +73,10 @@ Once resident, TBUG survives warm boots and works transparently alongside the re
 
 ## Install TBUG and catch the first stop
 
-At the `A>` prompt, type `TBUG.SVC` on its own to install the service:
+At the `A:SYSTEM>` prompt, type `TBUG.SVC` on its own to install the service:
 
 ```text
-A>TBUG.SVC
+A:SYSTEM>TBUG.SVC
 ```
 
 The LCD displays the ready screen and the prompt returns on the console:
@@ -93,8 +93,8 @@ That screen confirms TBUG is resident, shows its version and tells you whether a
 Switch back to drive B and start `HELLO` under TBUG:
 
 ```text
-A>B:
-B>TBUG.SVC HELLO
+A:SYSTEM>B:
+B:WORK>TBUG.SVC HELLO
 ```
 
 `TBUG.SVC HELLO` arms the debugger and hands the command line back to the command processor, which locates and loads `HELLO.COM` at `0100h` itself. TBUG then catches the launch before the first instruction runs. On the console, your launch line sits alone with no greeting underneath it. On the LCD, `TBUG Tab Next H Help` flashes briefly and gives way to the Registers screen:
@@ -135,4 +135,4 @@ Both arguments for BDOS function 9 are now sitting in the CPU, with `CALL $0005`
 
 Now press `F5` to let the program finish at full speed. `CALL $0005` prints `Hello from TEC-OS` onto the console just as it did in your standalone run. Then `RET` pops TBUG's exit return address off the stack, raising `SP` from `98FE` to `9900`. Instead of vanishing back to CP/M, TBUG catches the exit and shows `>PC ----  SP 9900 EX` on row 1.
 
-Press `Q` to leave TBUG. The LCD displays `Quit TBUG? Y/N`. Press `Y` or `Q` to confirm (any other key keeps you inside TBUG). Your `B>` prompt returns on the console, and TBUG stays resident at the top of RAM for the next run.
+Press `Q` to leave TBUG. The LCD displays `Quit TBUG? Y/N`. Press `Y` or `Q` to confirm (any other key keeps you inside TBUG). Your `B:WORK>` prompt returns on the console, and TBUG stays resident at the top of RAM for the next run.

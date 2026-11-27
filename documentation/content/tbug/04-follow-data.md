@@ -27,9 +27,9 @@ BUF:    DS 4
 Assemble it and bring it up in TBUG:
 
 ```text
-B>TAS FILL
+B:WORK>TAS FILL
 FILL.COM written
-B>TBUG.SVC FILL
+B:WORK>TBUG.SVC FILL
 ```
 
 `FILL.COM` points `HL` at the four-byte `BUF` reservation at `010Ah`, loads `4` into `B` and loops four times. Each pass stores `B` at `(HL)`, advances `HL` and decrements `B` with `DJNZ`. At `RET`, `BUF` should hold `04 03 02 01`.

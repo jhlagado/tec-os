@@ -32,7 +32,7 @@ When the `.TBG` file is absent or stale, TBUG ignores it quietly, `SY` stays off
 
 ## Labels in Code
 
-Start `TBUG.SVC FILL` from `B>` and tap `F8` (`Fn+8`) four times (`LD HL,BUF`, `LD B,4`, `LD (HL),B`, `INC HL`) so `PC` lands on `0107h`. Press `C` to jump to Code:
+Start `TBUG.SVC FILL` from `B:WORK>` and tap `F8` (`Fn+8`) four times (`LD HL,BUF`, `LD B,4`, `LD (HL),B`, `INC HL`) so `PC` lands on `0107h`. Press `C` to jump to Code:
 
 ```text
 >→0107 DJNZ FILL

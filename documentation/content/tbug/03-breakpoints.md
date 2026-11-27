@@ -23,7 +23,7 @@ That single habit makes jumping past a loop effortless: scroll `>` to the instru
 
 When you want to stop at the same line on every pass through a loop or every call to a routine, set a persistent breakpoint with `Space`.
 
-Start `TBUG.SVC STEP` from `B>` and press `C` to open Code. `>` and `→` sit together on `0100 LD HL,1234`. Move `>` down twice to `0104 POP DE`, leaving `→` back at `0100`:
+Start `TBUG.SVC STEP` from `B:WORK>` and press `C` to open Code. `>` and `→` sit together on `0100 LD HL,1234`. Move `>` down twice to `0104 POP DE`, leaving `→` back at `0100`:
 
 ```text
  →0100 LD HL,1234
@@ -85,7 +85,7 @@ Two boundaries limit `Ctrl+Esc`:
 `TBUG.SVC STEP` hands the command line back to the command processor, which loads the program itself. When you want to run a command normally later in the session, or catch a program launched from `STARTUP.CMD`, arm TBUG explicitly first:
 
 ```text
-B>TBUG.SVC ARM
+B:WORK>TBUG.SVC ARM
 ```
 
 Now run any `.COM` program normally, such as `STEP` or `HELLO`. TEC-OS routes the launch through `COMVEC` (added in TEC-OS ABI 5.3) and stops the program at `0100h` with its ordinary command tail intact in page zero (`0080h`).

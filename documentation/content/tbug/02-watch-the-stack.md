@@ -11,7 +11,7 @@ Stepping through `HELLO.COM` proved you could watch registers change while the c
 
 ## A six-byte stack target
 
-Still on drive B (`B>`), open `STEP.ASM` in `TED` (`TED STEP.ASM`), type these six bytes of Z80 code, save with `^S` and quit with `^Q`:
+Still on drive B (`B:WORK>`), open `STEP.ASM` in `TED` (`TED STEP.ASM`), type these six bytes of Z80 code, save with `^S` and quit with `^Q`:
 
 ```asm
         ORG $0100
@@ -21,12 +21,12 @@ TAKE:   POP DE
         RET
 ```
 
-Assemble it with `TAS STEP` so `STEP.COM` and `STEP.TBG` land on drive B. If you run `STEP` on its own, nothing prints and `B>` comes right back. All of its work happens inside the CPU and on the stack, which gives you a quiet, clean target where every instruction alters one visible piece of state.
+Assemble it with `TAS STEP` so `STEP.COM` and `STEP.TBG` land on drive B. If you run `STEP` on its own, nothing prints and `B:WORK>` comes right back. All of its work happens inside the CPU and on the stack, which gives you a quiet, clean target where every instruction alters one visible piece of state.
 
-Launch it under TBUG (if you rebooted since Chapter 1, unload `SHELL.SVC` and run `TBUG.SVC` on `A>` first, then switch to `B:`):
+Launch it under TBUG (if you rebooted since Chapter 1, unload `SHELL.SVC` and run `TBUG.SVC` on `A:SYSTEM>` first, then switch to `B:`):
 
 ```text
-B>TBUG.SVC STEP
+B:WORK>TBUG.SVC STEP
 ```
 
 Registers opens on the LCD with `>PC 0100  SP 98FE ST` and all six register pairs zeroed.
@@ -103,7 +103,7 @@ The first two bytes read `34 12`, not `12 34`. Because the Z80 is little-endian,
 
 ![F8 executes PUSH HL, moving SP down two bytes from 98FEh to 98FCh. Stack displays the word 1234 while Memory displays the bytes in address order as 34 12.](/images/tbug/stack-step.svg)
 
-Hit `Esc` to step back to Stack, then press `C` to return to Code, where `→` now sits on `0104 POP DE`. Tap `F8` to execute the pop, then press `R` to return to Registers. `DE` holds `1234`, `HL` still holds `1234` and `SP` has returned to `98FE`. Press `F5` to let `RET` end `STEP.COM` (`PC ----`, `SP 9900`, `EX`), then `Q` and `Y` to return to `B>`.
+Hit `Esc` to step back to Stack, then press `C` to return to Code, where `→` now sits on `0104 POP DE`. Tap `F8` to execute the pop, then press `R` to return to Registers. `DE` holds `1234`, `HL` still holds `1234` and `SP` has returned to `98FE`. Press `F5` to let `RET` end `STEP.COM` (`PC ----`, `SP 9900`, `EX`), then `Q` and `Y` to return to `B:WORK>`.
 
 ## Stepping into, over and out of calls
 
