@@ -16,7 +16,9 @@
 // On a board with the matrix keyboard, "@fn D" presses Fn with digit D, F1 to
 // F9 or, for 0, F10, and "@arrow KEYS" presses the matrix's arrow keys in turn,
 // each of KEYS U, D, L or R; like "@press", each goes on once the machine has
-// taken its keys.
+// taken its keys. A key that TEC-OS's own scan doesn't take within a tenth
+// of a second, as when TBUG reads the matrix itself, is let go then, and
+// the run goes on for a quarter of a second more.
 //
 // A listing that fills the screen stops at [more] and waits for a key; the
 // run stops there too, and the next LINE is "@key X" for the next screen or
@@ -117,7 +119,21 @@ for (const line of lines) {
     } else {
       for (const k of line.slice(7)) m.enqueueKey({ U: 3, D: 4, L: 5, R: 6 }[k]);
     }
-    m.runUntil(() => (m.pumpInput(), !m.pending?.length), LIMIT, line);
+    while (m.pending?.length) {
+      const until = m.cycles + 400_000;
+      m.runUntil(() => (m.pumpInput(), !m.pending?.length || m.cycles >= until), LIMIT, line);
+      const head = m.pending?.[0];
+      if (!head || m.cycles < until) continue;
+      // Not taken by TEC-OS's scan: a program reading the matrix itself has
+      // had it down for a tenth of a second, so let it go and move on.
+      if (head.down) {
+        m.tec1g.applyMatrixKey(head.combo.row, head.combo.col, false);
+        if (head.mod !== undefined) m.tec1g.applyMatrixKey(0, head.mod, false);
+      }
+      m.pending.shift();
+      const after = m.cycles + 1_000_000;
+      m.runUntil(() => m.cycles >= after, LIMIT, line);
+    }
   } else if (line.startsWith("@press ")) {
     m.enqueueInput(line.slice(7), via);
     m.runUntil(() => (m.pumpInput(), !m.pending?.length), LIMIT, line);

@@ -43,6 +43,13 @@ test("@fn and @arrow press the matrix's Fn chords and arrow keys: F1 and Left re
   assert.throws(() => execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--", "@fn 1"], { encoding: "utf8", stdio: "pipe", timeout: 120_000 }), /matrix keyboard needs --board pico or glcd/);
 });
 
+test("@fn and @arrow reach TBUG, which reads the matrix itself: F8 steps SAMPLE and Down moves Code's selection", () => {
+  const out = execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--board", "pico", "--lcd", "--", "UNLOAD", "TBUG.SVC", "TAS SAMPLE", "@start TBUG.SVC SAMPLE", "@run 20", "@fn 8", "@arrow D"], { encoding: "utf8", timeout: 300_000 });
+  const lcd = out.slice(out.lastIndexOf("--- LCD"));
+  assert.match(lcd, /\n \x7e0103 /, "F8 ran SAMPLE's first instruction: PC, marked by the LCD's arrow, is on 0103");
+  assert.match(lcd, /\n> 0106 /, "Down moved the selection to the next instruction");
+});
+
 test("--card none reaches DIAG's prompt, R retry>, and stops there with the LCD's rows (KE-172)", () => {
   const out = execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--rom", resolve(ROOT, "build/tecos/tecos.rom"), "--card", "none", "--lcd"], { encoding: "utf8", timeout: 120_000 });
   assert.match(out, /R retry> /, "the diagnostic prompt");
