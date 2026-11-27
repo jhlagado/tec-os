@@ -101,6 +101,19 @@ test("the matrix keyboard types at the prompt", () => {
   assert.deepEqual(m.violations, []);
 });
 
+test("the host model types 01h, 02h and 07h on the matrix as Ctrl with A, B and G, not as the Ctrl, Fn or Caps Lock key", async () => {
+  const card = standardCard();
+  volume(card, "A").write("KEYS.COM", (await program("keys")).bytes);
+  const m = boot(card, { tms: true, matrix: true });
+  const from = m.output.length;
+  m.typeMatrix("keys\r");
+  m.runUntil(() => m.waitingForInput(), 50_000_000, "KEYS's first read");
+  m.typeMatrix("\x01\x02\x07\x08\x0dz");
+  m.runUntil(() => m.ready(), 50_000_000, "the prompt after KEYS");
+  // z as 7Ah, not 5Ah, also shows that ^G left Caps Lock alone.
+  assert.match(m.text(from), /01 02 07 08 0D 7A /, "^A, ^B and ^G as Ctrl with A, B and G; Backspace, Return and z as their own keys");
+});
+
 test("the video terminal implements its ANSI subset", async () => {
   const image = standardCard();
   volume(image, "A").write("TERM.COM", (await program("term")).bytes);

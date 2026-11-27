@@ -23,6 +23,21 @@ const ARROW_HOLD_CYCLES = 200_000;
 
 const MODIFIER_KEY = { shift: 0, ctrl: 1, fn: 2 };
 
+/**
+ * The matrix key, and its modifier, that types CODE as TEC-OS reads the
+ * matrix, with no Caps Lock or Alt. The runtime's table gives 01h-07h first
+ * as keys 1-7, the key of that number. 03h-06h stay the arrow keys 3-6, which
+ * the tests and the Viewer type that way; Ctrl with C to F goes through
+ * enqueueKey. But keys 1, 2 and 7 are Ctrl, Fn and Caps Lock, which type
+ * nothing, so 01h, 02h and 07h are typed as Ctrl with A, B and G, as on the
+ * board: 07h never toggles Caps Lock.
+ */
+const CTRL_LETTER = new Set([0x01, 0x02, 0x07]);
+function matrixCombo(code) {
+  const combos = getMatrixCombosForAscii(code).filter((c) => !c.capsLock && c.modifier !== "alt");
+  return (CTRL_LETTER.has(code) && combos.find((c) => c.modifier === "ctrl" && c.row > 0)) || combos[0];
+}
+
 const SD_PORT = 0xfd;
 const RTC_PORT = 0xfc;
 
@@ -503,7 +518,7 @@ export class Machine {
   typeMatrix(text, maxCycles = 50_000_000) {
     const kblast = this.sym("KBLAST");
     for (const ch of text) {
-      const combo = getMatrixCombosForAscii(ch.charCodeAt(0)).find((c) => !c.capsLock && c.modifier !== "alt");
+      const combo = matrixCombo(ch.charCodeAt(0));
       if (!combo) throw new Error(`no matrix key for ${JSON.stringify(ch)}`);
       const key = combo.row * 8 + combo.col;
       const mod = combo.modifier === undefined ? undefined : MODIFIER_KEY[combo.modifier];
@@ -544,7 +559,7 @@ export class Machine {
       const kblast = this.sym("KBLAST");
       if (!head.down) {
         if (!head.combo) {
-          const combo = getMatrixCombosForAscii(head.code).find((c) => !c.capsLock && c.modifier !== "alt");
+          const combo = matrixCombo(head.code);
           if (!combo) {
             head.via = "serial";
             return;
