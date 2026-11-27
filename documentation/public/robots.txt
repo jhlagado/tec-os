@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://tec-os.org/sitemap.xml

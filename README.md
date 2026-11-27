@@ -235,6 +235,9 @@ Do not press the hex keypad while a CP/M program is running; see
 
 ## Documents
 
+The books, tutorials first, are published at [tec-os.org](https://tec-os.org/)
+from jhlagado/tec-os-books. The notes below are TEC-OS's own design records.
+
 - [Memory map](docs/memory-map.md), generated from the build
 - [Container format](docs/container-format.md)
 - [The ROM table](docs/rom-services.md) (the table at `C003h` and the 9 hardware services)
