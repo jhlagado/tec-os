@@ -199,7 +199,7 @@ for (const kind of ["serial", "glcd"]) {
 test("KG60 mutant: RST 20h returning the digit scan's flags loses key 5's beep", { skip }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, (b, at) => {
-    const i = find(b, at("R20"), [0xe1, 0xcd, null, null, 0xcd, null, null, 0x18], 16);
+    const i = find(b, at("RST20"), [0xe1, 0xcd, null, null, 0xcd, null, null, 0x18], 16);
     const scan = [b[i + 2], b[i + 3]];
     [b[i + 2], b[i + 3]] = [b[i + 5], b[i + 6]];
     [b[i + 5], b[i + 6]] = scan;
@@ -211,7 +211,7 @@ test("KG60 mutant: RST 20h returning the digit scan's flags loses key 5's beep",
 test("KG60 mutant: GO without its beep has no edges at 4000h", { skip }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, (b, at) => {
-    const i = find(b, at("CGO"), [0x3a, 0x8d, 0x08, 0xb7, 0xcc], 128);
+    const i = find(b, at("CMDGO"), [0x3a, 0x8d, 0x08, 0xb7, 0xcc], 128);
     b[i + 4] = 0xc4; // CALL NZ: never, with the beep on
   });
   const s = await slice("serial", file);
@@ -222,7 +222,7 @@ test("KG60 mutant: GO without its beep has no edges at 4000h", { skip }, async (
 test("KG60 mutant: scanKeys without carry on a new press gives no key beep", { skip }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, (b, at) => {
-    const i = find(b, at("SKEYS"), [0xbf, 0x37, 0x32, 0x89, 0x08, 0xc9], 64);
+    const i = find(b, at("SCANKEYS"), [0xbf, 0x37, 0x32, 0x89, 0x08, 0xc9], 64);
     b[i + 1] = 0x00;
   });
   const s = await slice("serial", file);
@@ -244,7 +244,7 @@ test("KG60 mutant: the return without its key-up wait gives MON3> while Esc is h
 test("KG60 mutant: EXIT's restore skipping 0041h-004Fh leaves page zero changed", { skip }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, (b, at) => {
-    const i = find(b, at("PZTAB"), [0x0f, 0x41, 0x00], 16);
+    const i = find(b, at("ZEROTAB"), [0x0f, 0x41, 0x00], 16);
     b[i + 1] = 0x80; // 0080h's 15 bytes in its place: 0041h-004Fh never put back
   });
   const s = await slice("serial", file);

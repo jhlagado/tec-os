@@ -183,7 +183,7 @@ read it, lets it go. And while CON: is a matrix console, `CRT:` or `UC1:`
 Each pass runs MON-3's `scanKeys`, then scans the matrix itself, whatever
 `scanKeys` took as its input, so `KBLAST` is fresh. It then asks `KBLAST`
 for no matrix key at all, chords and keys outside the keypad's set
-included, and `KPRESS` for no keypad key. TEC-OS reads the matrix into a
+included, and `KEYPRESS` for no keypad key. TEC-OS reads the matrix into a
 line by the switch as it was at cold boot, so a matrix key held while the
 keypad ends a program, after the Matrix switch has gone off, is recorded
 as held and holds `MON3>` back too. While a key is

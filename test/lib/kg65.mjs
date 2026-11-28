@@ -50,7 +50,7 @@ export function fixedImage() {
 
 /** The routine that RST 10h selector N runs on SIDE: the word in its API table. */
 export function routineOf(side, n) {
-  const table = side.kind === "reference" ? 0xc000 + 0x1300 : side.at("API");
+  const table = side.kind === "reference" ? 0xc000 + 0x1300 : side.at("APITABLE");
   return side.m.read(table + 2 * n) | (side.m.read(table + 2 * n + 1) << 8);
 }
 

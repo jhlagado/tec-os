@@ -34,8 +34,8 @@ async function goCarries(svc) {
 
 test("KG65 go carries protect and caps", () => goCarries());
 
-test("KG65 mutant: GOKEEP EQU $00 drops PROTECT and CAPS at GO", async () => {
-  const svc = await mon3Variant([["GOKEEP EQU $82\n", "GOKEEP EQU $00\n"]]);
+test("KG65 mutant: GO_KEEP EQU $00 drops PROTECT and CAPS at GO", async () => {
+  const svc = await mon3Variant([["GO_KEEP EQU $82\n", "GO_KEEP EQU $00\n"]]);
   await assert.rejects(goCarries(svc), /the latch at 4000h/);
 });
 
@@ -88,7 +88,7 @@ test("KG65 bdos page damaged", async () => {
 });
 
 test("KG65 mutant: the hook's BDOS 37 through 0005h hangs after RST 00h", async () => {
-  const svc = await mon3Variant([["resetD:\n  ld de,0-1\n  ld c,37\n  jp Bdos\n", "resetD:\n  ld de,0-1\n  ld c,37\n  jp $0005\n"]]);
+  const svc = await mon3Variant([["resetDrv:\n  ld de,0-1\n  ld c,37\n  jp Bdos\n", "resetDrv:\n  ld de,0-1\n  ld c,37\n  jp $0005\n"]]);
   await assert.rejects(bdosDamaged(svc), /A(:\S*)?> after R0\.BIN/);
 });
 
@@ -302,7 +302,7 @@ async function hexDiskError(writing) {
   const fcb = p + svc.symbols.FCB;
   m.mark = m.output.length;
   m.type(`LOAD BIG16K.HEX${writing === 1 ? " 4000" : ""}\r`);
-  m.runUntil(() => m.read(p + svc.symbols.HWRT) === writing && m.read(fcb + 12) === 1, 200_000_000, `the ${["scan", "check", "copy"][writing]} pass's second extent`);
+  m.runUntil(() => m.read(p + svc.symbols.HXMODE) === writing && m.read(fcb + 12) === 1, 200_000_000, `the ${["scan", "check", "copy"][writing]} pass's second extent`);
   const sd = m.sd;
   m.sd = null; // the card taken out
   const from = m.mark;
@@ -332,14 +332,14 @@ const hexMutant = (name, edits, run, pattern) =>
   });
 
 hexMutant("single-pass loading leaves the bad-checksum file's good records written", [["  xor a          ; scan and check first\n", "  ld a,2\n"]], hexRefused, /LOAD BADSUM\.HEX: nothing written/);
-hexMutant("the data-record test removed loads ENDONLY.HEX", [["  ld a,(HAny)\n  or a\n  jp z,lFail     ; no data was loaded\n", ""]], hexRefused, /LOAD ENDONLY\.HEX: \?/);
-hexMutant("the checksum test removed loads BADSUM.HEX", [["  ld a,c\n  or a\n  jp z,hp1       ; zero sum: next record\n  scf\n  ret\n", "  jr hp1\n"]], hexRefused, /LOAD BADSUM\.HEX: \?/);
+hexMutant("the data-record test removed loads ENDONLY.HEX", [["  ld a,(HxData)\n  or a\n  jp z,loadFail  ; no data was loaded\n", ""]], hexRefused, /LOAD ENDONLY\.HEX: \?/);
+hexMutant("the checksum test removed loads BADSUM.HEX", [["  ld a,c\n  or a\n  jp z,hxNext    ; zero sum: next record\n  scf\n  ret\n", "  jr hxNext\n"]], hexRefused, /LOAD BADSUM\.HEX: \?/);
 hexMutant("the type test removed loads type 02h as data", [["  or a\n  scf\n  ret nz         ; other types refused\n", ""]], hexRefused, /LOAD TYPE2\.HEX: \?/);
 hexMutant("the per-record range test removed loads into 0800h-08FFh", [["  jp range       ; full destination span\n", "  add hl,de\n  ret\n"]], hexRefused, /LOAD UNDER\.HEX: \?/);
-hexMutant("the end-record requirement removed loads NOEND.HEX", [["  jr z,hp1\n  scf\n", "  jr z,hp1       ; LF\n  cp $1A\n  ret z\n  scf\n"]], hexRefused, /LOAD NOEND\.HEX: \?/);
-hexMutant("the after-the-end test removed loads AFTEREND.HEX", [["  jr z,he1\n  scf\n  ret\n", "  jr z,he1       ; LF\n  jr he1\n"]], hexRefused, /LOAD AFTEREND\.HEX: \?/);
-hexMutant("the lower-case path removed refuses the lower-case HELLO3.HEX", [["  cp 'a'\n  jr c,hexD1     ; not lower case\n  sub $20        ; a to A\n", ""]], hexLoads, /LOAD LOWER\.HEX/);
-hexMutant("the 00h acceptance after the end record removed refuses the binary-written HELLO3.HEX", [["  ret z\n  or a\n  jr z,he1\n", "  ret z\n"]], hexLoads, /LOAD BINARY\.HEX/);
+hexMutant("the end-record requirement removed loads NOEND.HEX", [["  jr z,hxNext\n  scf\n", "  jr z,hxNext    ; LF\n  cp $1A\n  ret z\n  scf\n"]], hexRefused, /LOAD NOEND\.HEX: \?/);
+hexMutant("the after-the-end test removed loads AFTEREND.HEX", [["  jr z,.pad\n  scf\n  ret\n", "  jr z,.pad      ; LF\n  jr .pad\n"]], hexRefused, /LOAD AFTEREND\.HEX: \?/);
+hexMutant("the lower-case path removed refuses the lower-case HELLO3.HEX", [["  cp 'a'\n  jr c,.value    ; not lower case\n  sub $20        ; a to A\n", ""]], hexLoads, /LOAD LOWER\.HEX/);
+hexMutant("the 00h acceptance after the end record removed refuses the binary-written HELLO3.HEX", [["  ret z\n  or a\n  jr z,.pad\n", "  ret z\n"]], hexLoads, /LOAD BINARY\.HEX/);
 hexMutant("the loader reading the file three times misses the time", [["  ld a,2         ; plain files: copy\n", "  ld a,1         ; an extra checking pass\n"]], hexTime, /at most 70,000,000/);
 
 // The matrix keyboard, read at port FEh, against MON-3 with the matrix
@@ -446,7 +446,7 @@ test("KG64 matrix keys", async () => {
 });
 
 test("KG64 mutant: scanKeys without its matrix branch sees no matrix key", async () => {
-  const svc = await mon3Variant([["  rrca\n  jr c,kbScan    ; bit 0: the matrix\n", "  rrca\n"]]);
+  const svc = await mon3Variant([["  rrca\n  jr c,matKeys   ; bit 0: the matrix\n", "  rrca\n"]]);
   // Call 16's rows differ first; the waiting calls then never see a key.
   const ses = await sessionSide({ svc, matrix: true });
   const bad = compareRows(await referenceSide({ matrix: true }), ses, matrixRows("call 16", call(16)));
@@ -646,8 +646,8 @@ test("KG65 refusals", async () => {
   assert.deepEqual(await refusals(), []);
 });
 
-test("KG65 mutant: a deferred selector's word pointed at TDLY returns as a success", async () => {
-  const svc = await mon3Variant([["  DW dErr        ; 24 intelHexLoad\n", "  DW tDly        ; 24 intelHexLoad\n"]]);
+test("KG65 mutant: a deferred selector's word pointed at DELAY returns as a success", async () => {
+  const svc = await mon3Variant([["  DW dispErr     ; 24 intelHexLoad\n", "  DW delay       ; 24 intelHexLoad\n"]]);
   const bad = compareRows((await theKeypadSides()).ref, await sessionSide({ svc }), [refusalRow(24)]);
   assert.ok(bad.length, "call 24 caught");
 });
@@ -682,7 +682,7 @@ test("KG65 latch calls", async () => {
 });
 
 test("KG65 mutant: setCaps writing the latch without LATCHV", async () => {
-  const svc = await mon3Variant([["  or LATSHD      ; the overlay off\n  ld (LATCH),a\n  out (SYSLAT),a\n  pop af\n", "  or LATSHD      ; the overlay off\n  out (SYSLAT),a\n  pop af\n"]]);
+  const svc = await mon3Variant([["  or OVL_OFF     ; the overlay off\n  ld (LATCH),a\n  out (SYSLAT),a\n  pop af\n", "  or OVL_OFF     ; the overlay off\n  out (SYSLAT),a\n  pop af\n"]]);
   await assert.rejects(latchCalls(svc), /LATCHV equal/);
 });
 
@@ -699,7 +699,7 @@ async function preInit(svc) {
   assert.deepEqual(bytesAt(m, 0x800, 16), [...Buffer.from("MON3.1G\u00002025.16\u0000", "latin1")], "ROMSIG set again");
   assert.deepEqual(bytesAt(m, 0x886, 0x0c), [...fixedImage().subarray(0x86, 0x92)], "MON-3's defaults from 0886h");
   assert.deepEqual([m.read(0x8b1), m.read(0x8b2)], [0x1b, 0x00], "BAUD 001Bh");
-  assert.equal(m.read(ses.at("RUNOK")), 0, "nothing runnable");
+  assert.equal(m.read(ses.at("RUNNABLE")), 0, "nothing runnable");
   assert.doesNotMatch(out, /Tables damaged/, "no warning");
   assert.ok(refused(line(m, "GO")), "GO refused");
   assert.ok(!line(m, "EXIT").mon3);
@@ -748,7 +748,7 @@ const gaps = (x, port) => {
 };
 
 /** The restart handlers' first instruction after POP HL, in the session. */
-const HANDLERS = { 0x08: "R08", 0x10: "R10", 0x18: "R18", 0x20: "R20", 0x28: "R28", 0x30: "R30", 0x38: "R38" };
+const HANDLERS = { 0x08: "RST08", 0x10: "RST10", 0x18: "RST18", 0x20: "RST20", 0x28: "RST28", 0x30: "RST30", 0x38: "RST38" };
 
 async function timing(sides) {
   const { ref, ses } = sides ?? (await theKeypadSides());
@@ -783,7 +783,7 @@ async function timing(sides) {
   }
   for (const [n, t] of Object.entries(out.rst)) assert.equal(t, 101, `RST ${Number(n).toString(16)}h: ${t} T to the handler after POP HL`);
   const irq = (nmi, stop) => ({ name: nmi ? "the NMI" : "the interrupt", op: 0xfb, next: "WAIT", events: [{ at: 200, fire: (side) => side.interrupt(nmi) }], mem: [nmi ? 0x0894 : 0x0892, [ref.sym.INTH & 0xff, ref.sym.INTH >> 8]], stopAt: stop });
-  const SI = ses.run(irq(false, ses.at("R38") + 1), image);
+  const SI = ses.run(irq(false, ses.at("RST38") + 1), image);
   out.irq = SI.end - SI.irqAt;
   assert.equal(out.irq, 103, `the interrupt: ${out.irq} T from its acknowledge`);
   const [RN, SN] = [ref.run(irq(true, ref.sym.INTH), image), ses.run(irq(true, ref.sym.INTH), image)];
@@ -806,14 +806,14 @@ const timingMutant = (name, edits, pattern) =>
 timingMutant("scanSegments's on-delay 41h takes 5,682 T", [["  ld b,$40\n  djnz $         ; on for a while\n", "  ld b,$41\n  djnz $         ; on for a while\n"]], /the session's scanSegments/);
 timingMutant("txByte reading BAUD plus one", [["  ld hl,(BAUD)   ; the bit's delay\n", "  ld hl,(BAUD)   ; the bit's delay\n  inc hl\n"]], /txByte 0: its port 01h writes/);
 timingMutant("one more instruction in the latch stub takes 105 T", [
-  ["GORET EQU $0049", "GORET EQU $004A"],
-  ["NRETN EQU $004E", "NRETN EQU $004F"],
+  ["GO_RET EQU $0049", "GO_RET EQU $004A"],
+  ["NMI_RETN EQU $004E", "NMI_RETN EQU $004F"],
   ["  pop af\n  jp (hl)        ; to the handler\n", "  pop af\n  nop\n  jp (hl)        ; to the handler\n"],
   ["  DB $18,$F3     ; JR 0041h\n", "  DB $18,$F2     ; JR 0041h\n"],
 ], /RST 8h: 105 T/);
 timingMutant("the 0066h stub with one more instruction", [
   ["  ret            ; and run\n\n; MON-3's variables", "  nop\n  ret            ; and run\n\n; MON-3's variables"],
-  ["  ld de,NMIV     ; MON-3's NMI code\n  ld c,6\n", "  ld de,NMIV     ; MON-3's NMI code\n  ld c,7\n"],
+  ["  ld de,NMI_VEC  ; MON-3's NMI code\n  ld c,6\n", "  ld de,NMI_VEC  ; MON-3's NMI code\n  ld c,7\n"],
 ], /the NMI/);
 
 // KG65's mutants, one for each implemented or translated selector
@@ -827,7 +827,7 @@ function shim(sel, lines) {
   const word = new RegExp(`^  DW \\S+ +; ${sel} \\S+\\n`, "m").exec(apiText())[0];
   return [
     [word, `  DW SHIMX       ; ${sel} shim\n`],
-    ["\nApi:\n", `\nSHIMX:\n${lines.map((l) => `  ${l}\n`).join("")}\nAPI:\n`],
+    ["\nApiTable:\n", `\nSHIMX:\n${lines.map((l) => `  ${l}\n`).join("")}\nApiTable:\n`],
   ];
 }
 const flipBits = (bits) => ["push af", "ex (sp),hl", "ld a,l", `xor ${bits}`, "ld l,a", "ex (sp),hl", "pop af", "ret"];
@@ -837,52 +837,52 @@ const after = (routine, ...ops) => [`call ${routine}`, ...ops, "ret"];
 const before = (routine, ...ops) => [...ops, `jp ${routine}`];
 
 const API_MUTANTS = [
-  [0, "HL + 1 on return", shim(0, after("SWID", "inc hl"))],
+  [0, "HL + 1 on return", shim(0, after("SOFTID", "inc hl"))],
   [1, "BC + 1", shim(1, after("VERID", "inc bc"))],
-  [2, "WSINIT skipped", [["  call wsInit    ; the workspace anew\n", ""]]],
-  [3, "the first port 01h write's value + 1", [["  ld c,$40       ; half cycles\n  ld a,TXI\n", "  ld c,$40       ; half cycles\n  ld a,TXI+1\n"]]],
-  [4, "the first byte written at DE + 1", shim(4, firstAtDE("TOSEG"))],
-  [5, "H + 1", shim(5, after("ATOAS", "inc h"))],
-  [6, "A + 1", shim(6, after("A2S", "inc a"))],
-  [7, "Z flipped", shim(7, [`call SCMP`, ...flipBits("$40")])],
-  [8, "the first byte written at DE + 1", shim(8, firstAtDE("HLSTR"))],
-  [9, "the first byte written at DE + 1", shim(9, firstAtDE("HEXA"))],
-  [10, "the first port 02h write's value + 1", [["scn1:\n  ld a,(de)      ; its segments\n  out (SSEG),a\n", "scn1:\n  ld a,(de)      ; its segments\n  inc a\n  out (SSEG),a\n"]]],
-  [11, "the first byte of DISP_BUFF + 1", shim(11, after("DERR", "push hl", "ld hl,DISPB", "inc (hl)", "pop hl"))],
+  [2, "WORKINIT skipped", [["  call workInit  ; the workspace anew\n", ""]]],
+  [3, "the first port 01h write's value + 1", [["  ld c,$40       ; half cycles\n  ld a,TX_IDLE\n", "  ld c,$40       ; half cycles\n  ld a,TX_IDLE+1\n"]]],
+  [4, "the first byte written at DE + 1", shim(4, firstAtDE("ATOSEG"))],
+  [5, "H + 1", shim(5, after("ATOASCII", "inc h"))],
+  [6, "A + 1", shim(6, after("ASCTOSEG", "inc a"))],
+  [7, "Z flipped", shim(7, [`call STRCMP`, ...flipBits("$40")])],
+  [8, "the first byte written at DE + 1", shim(8, firstAtDE("HLTOSTR"))],
+  [9, "the first byte written at DE + 1", shim(9, firstAtDE("ATOSTR"))],
+  [10, "the first port 02h write's value + 1", [[".digit:\n  ld a,(de)      ; its segments\n  out (SEGMENTS),a\n", ".digit:\n  ld a,(de)      ; its segments\n  inc a\n  out (SEGMENTS),a\n"]]],
+  [11, "the first byte of DISP_BUFF + 1", shim(11, after("DISPERR", "push hl", "ld hl,DISP_BUF", "inc (hl)", "pop hl"))],
   [12, "returns without reading port 04h", shim(12, ["ret"])],
-  [13, "the first LCD data write's value + 1", [["  out (LCDD),a   ; the character\n  jr lcdStr\n", "  inc a\n  out (LCDD),a   ; the character\n  dec a\n  jr lcdStr\n"]]],
-  [14, "the LCD data write's value + 1", shim(14, before("LCDCHR", "inc a"))],
-  [15, "the LCD command write's value + 1", shim(15, ["inc b", "call LCDCO", "dec b", "ret"])],
-  [16, "A + 1", shim(16, after("SKEYS", "inc a"))],
-  [17, "A + 1", shim(17, after("KWAIT", "inc a"))],
-  [18, "E + 1", shim(18, after("MSCAN", "inc e"))],
-  [19, "A + 1", shim(19, after("JOYS", "inc a"))],
-  [20, "the port 01h write's value + 1", [["serOn:\n  ld a,TXI\n", "serOn:\n  ld a,TXI+1\n"]]],
+  [13, "the first LCD data write's value + 1", [["  out (LCD_DATA),a  ; the character\n  jr strToLcd\n", "  inc a\n  out (LCD_DATA),a  ; the character\n  dec a\n  jr strToLcd\n"]]],
+  [14, "the LCD data write's value + 1", shim(14, before("CHRTOLCD", "inc a"))],
+  [15, "the LCD command write's value + 1", shim(15, ["inc b", "call CMDTOLCD", "dec b", "ret"])],
+  [16, "A + 1", shim(16, after("SCANKEYS", "inc a"))],
+  [17, "A + 1", shim(17, after("KEYSWAIT", "inc a"))],
+  [18, "E + 1", shim(18, after("MATSCAN", "inc e"))],
+  [19, "A + 1", shim(19, after("JOYSCAN", "inc a"))],
+  [20, "the port 01h write's value + 1", [["serOn:\n  ld a,TX_IDLE\n", "serOn:\n  ld a,TX_IDLE+1\n"]]],
   [21, "the port 01h write's value + 1", [["serOff:\n  xor a          ; all low\n", "serOff:\n  ld a,1\n"]]],
-  [22, "the byte sent + 1", shim(22, before("TXB", "inc a"))],
-  [23, "A + 1", shim(23, after("RXB", "inc a"))],
-  [25, "the first byte sent + 1", shim(25, before("SNDS", "inc (hl)"))],
-  [26, "the first byte stored + 1", shim(26, ["push hl", "call RCVS", "ex (sp),hl", "inc (hl)", "pop hl", "ret"])],
-  [28, "the first character sent + 1", [["  jr z,sHex4     ; the text's end\n  call txB\n", "  jr z,sHex4     ; the text's end\n  inc a\n  call txB\n"]]],
-  [29, "the first byte written at DE + 1", shim(29, firstAtDE("GDUMP"))],
-  [30, "C flipped", shim(30, after("CHKSE", "ccf"))],
-  [33, "HL + 1 before the routine", shim(33, before("TDLY", "inc hl"))],
-  [34, "HL + 1 before the routine", shim(34, before("PNOTE", "inc hl"))],
-  [35, "DE + 1 before the routine", shim(35, before("PTUNE", "inc de"))],
-  [37, "A + 1", shim(37, after("GETCAP", "inc a"))],
-  [38, "A + 1", shim(38, after("GETSHD", "inc a"))],
-  [39, "A + 1", shim(39, after("GETPRT", "inc a"))],
-  [40, "A + 1", shim(40, after("GETEXP", "inc a"))],
-  [41, "the latch value with bit 7 flipped", shim(41, latchFlip("SETCAP", "$80"))],
-  [43, "the latch value with bit 1 flipped", shim(43, latchFlip("SETPRT", "$02"))],
-  [45, "the first byte sent + 1", shim(45, before("STRSER", "inc (hl)"))],
-  [48, "the latch value with bit 7 flipped", shim(48, latchFlip("TOGCAP", "$80"))],
-  [49, "B + 1", shim(49, after("RAND", "inc b"))],
-  [53, "A + 1", shim(53, after("MSASC", "inc a"))],
-  [54, "A + 1", shim(54, after("PMSCN", "inc a"))],
-  [55, "Z flipped", shim(55, [`call LCDCF`, ...flipBits("$40")])],
-  [56, "A + 1", shim(56, after("GETGT", "inc a"))],
-  [62, "the first port 06h write's value + 1", [["  ld a,(iy+0)\n  out (SRED),a   ; the row's red\n", "  ld a,(iy+0)\n  inc a\n  out (SRED),a   ; the row's red\n"]]],
+  [22, "the byte sent + 1", shim(22, before("TXBYTE", "inc a"))],
+  [23, "A + 1", shim(23, after("RXBYTE", "inc a"))],
+  [25, "the first byte sent + 1", shim(25, before("SENDDATA", "inc (hl)"))],
+  [26, "the first byte stored + 1", shim(26, ["push hl", "call RECVDATA", "ex (sp),hl", "inc (hl)", "pop hl", "ret"])],
+  [28, "the first character sent + 1", [["  jr z,.eol      ; the text's end\n  call txByte\n", "  jr z,.eol      ; the text's end\n  inc a\n  call txByte\n"]]],
+  [29, "the first byte written at DE + 1", shim(29, firstAtDE("DATADUMP"))],
+  [30, "C flipped", shim(30, after("STARTEND", "ccf"))],
+  [33, "HL + 1 before the routine", shim(33, before("DELAY", "inc hl"))],
+  [34, "HL + 1 before the routine", shim(34, before("PLAYNOTE", "inc hl"))],
+  [35, "DE + 1 before the routine", shim(35, before("PLAYTUNE", "inc de"))],
+  [37, "A + 1", shim(37, after("GETCAPS", "inc a"))],
+  [38, "A + 1", shim(38, after("GETSHAD", "inc a"))],
+  [39, "A + 1", shim(39, after("GETPROT", "inc a"))],
+  [40, "A + 1", shim(40, after("GETEXPND", "inc a"))],
+  [41, "the latch value with bit 7 flipped", shim(41, latchFlip("SETCAPS", "$80"))],
+  [43, "the latch value with bit 1 flipped", shim(43, latchFlip("SETPROT", "$02"))],
+  [45, "the first byte sent + 1", shim(45, before("STRTOSER", "inc (hl)"))],
+  [48, "the latch value with bit 7 flipped", shim(48, latchFlip("FLIPCAPS", "$80"))],
+  [49, "B + 1", shim(49, after("RANDOM", "inc b"))],
+  [53, "A + 1", shim(53, after("MATASCII", "inc a"))],
+  [54, "A + 1", shim(54, after("PARSEMAT", "inc a"))],
+  [55, "Z flipped", shim(55, [`call CONFIRM`, ...flipBits("$40")])],
+  [56, "A + 1", shim(56, after("GETGTERM", "inc a"))],
+  [62, "the first port 06h write's value + 1", [["  ld a,(iy+0)\n  out (LED_RED),a   ; the row's red\n", "  ld a,(iy+0)\n  inc a\n  out (LED_RED),a   ; the row's red\n"]]],
 ];
 
 const MATRIX_SELS = [18, 53, 54];
@@ -922,7 +922,7 @@ async function damaged(svc, where) {
   const { m, svc: s } = await inSession({ "CHG.BIN": CHG, "ONE.BIN": bin(0xc9) }, { svc });
   const p = pageOf(m) << 8;
   const table = word(m, 1) - 3;
-  const target = { LISTST: table + 15 * 3 + 1, BRK: p + s.symbols.MBRK, OLDWB: p + s.symbols.OLDWB }[where];
+  const target = { LISTST: table + 15 * 3 + 1, BRK: p + s.symbols.MSGBRK, OLDWB: p + s.symbols.OLDBOOT }[where];
   assert.ok(ok(line(m, "LOAD CHG.BIN")));
   const out = goChange(m, target);
   assert.ok(out.includes(WARN), `${where}: the warning (${JSON.stringify(out)})`);
@@ -951,7 +951,7 @@ async function clean(svc) {
   m.type("GO\r");
   assert.doesNotMatch(toMon3(m), /Tables damaged/, "RET: no warning");
   assert.ok(ok(line(m, "LOAD CHG.BIN")));
-  assert.doesNotMatch(goChange(m, p + s.symbols.LBUF + 10), /Tables damaged/, "the line buffer: no warning");
+  assert.doesNotMatch(goChange(m, p + s.symbols.LINEBUF + 10), /Tables damaged/, "the line buffer: no warning");
   assert.ok(ok(line(m, "LOAD BRK.BIN")));
   for (let i = 0; i < 2; i += 1) {
     m.mark = m.output.length;
@@ -976,11 +976,11 @@ const sumMutant = (name, edits, run, pattern) =>
   });
 
 sumMutant("the checksum's compare removed gives no warning", [["  sbc hl,de      ; Z: as at GO\n  ret z\n", "  sbc hl,de      ; Z: as at GO\n  ret\n"]], (svc) => damaged(svc, "LISTST"), /LISTST: the warning/);
-sumMutant("the sum's range cut to the header's 25 bytes misses the BRK text", [["SUMLEN EQU SumEnd-Hdr\n", "SUMLEN EQU 25\n"]], (svc) => damaged(svc, "BRK"), /BRK: the warning/);
-sumMutant("the range ending before HOOKAT misses OLDWB", [["SUMLEN EQU SumEnd-Hdr\n", "SUMLEN EQU HOOKAT-HDR\n"]], (svc) => damaged(svc, "OLDWB"), /OLDWB: the warning/);
-sumMutant("RST 30h's digits written into its text warn on a clean RST 30h", [["  ld de,HexT\n  call hlStr     ; its digits\n", "  ld de,MBrk\n  call hlStr     ; its digits\n"]], clean, /RST 30h 1/);
-sumMutant("the flag cleared at entry gives no warning at re-entry", [["  ld a,(Dmg)\n  or a           ; damaged before?\n", "  xor a\n  ld (Dmg),a\n  ld a,(Dmg)\n  or a           ; damaged before?\n"]], (svc) => damaged(svc, "LISTST"), /the warning at re-entry/);
-sumMutant("call 2's checksum checked after WSINIT warns", [["  call check     ; before RUNOK goes\n  call wsInit    ; the workspace anew\n", "  call wsInit    ; the workspace anew\n  call check     ; before RUNOK goes\n"]], preInit, /no warning/);
+sumMutant("the sum's range cut to the header's 25 bytes misses the BRK text", [["SUM_LEN EQU SumEnd-Header\n", "SUM_LEN EQU 25\n"]], (svc) => damaged(svc, "BRK"), /BRK: the warning/);
+sumMutant("the range ending before HOOKAT misses OLDWB", [["SUM_LEN EQU SumEnd-Header\n", "SUM_LEN EQU HOOKAT-Header\n"]], (svc) => damaged(svc, "OLDWB"), /OLDWB: the warning/);
+sumMutant("RST 30h's digits written into its text warn on a clean RST 30h", [["  ld de,HexText\n  call hlToStr   ; its digits\n", "  ld de,MsgBrk\n  call hlToStr   ; its digits\n"]], clean, /RST 30h 1/);
+sumMutant("the flag cleared at entry gives no warning at re-entry", [["  ld a,(Damage)\n  or a           ; damaged before?\n", "  xor a\n  ld (Damage),a\n  ld a,(Damage)\n  or a           ; damaged before?\n"]], (svc) => damaged(svc, "LISTST"), /the warning at re-entry/);
+sumMutant("call 2's checksum checked after workInit warns", [["  call sumCheck  ; before Runnable goes\n  call workInit  ; the workspace anew\n", "  call workInit  ; the workspace anew\n  call sumCheck  ; before Runnable goes\n"]], preInit, /no warning/);
 
 // KG66: the real programs at the pin, converted, loaded by LOAD, run by GO
 // and compared with the same binary under MON-3's GO. A reset ends each.
@@ -1102,7 +1102,7 @@ test("KG66 reset after", async () => {
 });
 
 test("KG66 mutant: the HEX loader's second pass writing each record one byte high", async () => {
-  const svc = await mon3Variant([["  ld ix,(HTarg)  ; this record\n", "  ld ix,(HTarg)  ; this record\n  inc ix\n"]]);
+  const svc = await mon3Variant([["  ld ix,(HxTarget)  ; this record\n", "  ld ix,(HxTarget)  ; this record\n  inc ix\n"]]);
   await assert.rejects(matrixProgram("matrixz80", { hex: true, svc }), (error) => {
     assert.match(error.message, /from MZ80\.HEX: the first 4,096.*write \d+/);
     assert.ok(Array.isArray(error.actual) && Array.isArray(error.expected));
@@ -1113,7 +1113,7 @@ test("KG66 mutant: the HEX loader's second pass writing each record one byte hig
 });
 
 test("KG66 mutant: LOAD's BIN read starting one record late", async () => {
-  const svc = await mon3Variant([["  jr c,lFail     ; it would not fit\n  ld hl,(LdAt)\n", "  jr c,lFail     ; it would not fit\n  ld hl,(LdAt)\n  ld de,128\n  add hl,de\n"]]);
+  const svc = await mon3Variant([["  jr c,loadFail  ; it would not fit\n  ld hl,(LoadAt)\n", "  jr c,loadFail  ; it would not fit\n  ld hl,(LoadAt)\n  ld de,128\n  add hl,de\n"]]);
   await assert.rejects(lcdTest(svc), /lcd-test's DONE|the LCD as under MON-3/);
 });
 
@@ -1123,7 +1123,7 @@ test("KG66 mutant: a conversion that leaves ORG blocks in source order", async (
 
 test("KG66 mutant: RST 20h without its flags, HELLO3 never quits", async () => {
   // RST 20h's flags taken from the digit scan, as KG60's mutant does.
-  const svc = await mon3Variant([["  call scanS     ; the digits\n  call sKeys     ; the keys\n", "  call sKeys     ; the keys\n  call scanS     ; the digits\n"]]);
+  const svc = await mon3Variant([["  call scanSegs  ; the digits\n  call scanKeys  ; the keys\n", "  call scanKeys  ; the keys\n  call scanSegs  ; the digits\n"]]);
   const { m } = await inSession({ "HELLO3.BIN": await hello3() }, { svc });
   assert.ok(ok(line(m, "LOAD HELLO3.BIN")));
   goTo(m, "GO", 0x4000, 20_000_000);
@@ -1180,7 +1180,7 @@ test("KG64 size and tpa", async () => {
 test("KG64 mutant: the build with buffers added to 3,841 bytes takes 16 pages", async () => {
   const C = MON3_CEILING;
   const svc = await mon3Build();
-  const big = await mon3Variant([["  DS 80\nMStk:\n", `  DS 80+${C.bytes + 1 - svc.image}\nMSTK:\n`]]);
+  const big = await mon3Variant([["  DS 80\nStackTop:\n", `  DS 80+${C.bytes + 1 - svc.image}\nStackTop:\n`]]);
   assert.equal(big.image, C.bytes + 1);
   await assert.rejects(sizeAndTpa(big), new RegExp(`within ${C.bytes}`));
   const m = boot({ "MON3.SVC": big.file });
