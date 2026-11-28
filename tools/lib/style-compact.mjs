@@ -26,7 +26,7 @@ function headerLines(lines, at) {
 }
 
 /**
- * The inline comment's column (Origo MD-18): 18, or 21 when the code runs
+ * The inline comment's column (Origo MD-19): 18, or 21 when the code runs
  * past column 15 and two spaces before 18 can't be had. Code past column 18
  * takes no inline comment.
  */

@@ -56,7 +56,7 @@ Names (`checkNames` in `tools/lib/style-compact.mjs`).
 - Target 40 columns. Inline semicolons start at column 18, with at least two
   spaces after code and one after the semicolon. Where the code runs past
   column 15, so two spaces before column 18 can't be had, the semicolon goes
-  at column 21 instead (Origo MD-18). Code past column 18 takes no inline
+  at column 21 instead (Origo MD-19). Code past column 18 takes no inline
   comment. Align an inline continuation with its first semicolon. Move longer
   explanations to the left margin.
 - Break prose at useful phrases. Preserve paragraphs, tables, examples and
