@@ -66,7 +66,7 @@ export const tpaBytes = (m) => Uint8Array.from(bytesAt(m, 0x100, (word(m, 6) & 0
 /** MON3.SVC's state byte NAME, read in the installed service. */
 export const state = (m, svc, name) => m.read((pageOf(m) << 8) + svc.symbols[name]);
 /** Nonzero after a good load. */
-export const runnable = (m, svc) => state(m, svc, "RUNOK");
+export const runnable = (m, svc) => state(m, svc, "RUNNABLE");
 
 /** A session on a card with FILES and TEXT files, MON3.SVC (SVC, or the build) installed and entered. */
 export async function inSession(files = {}, { svc, machine: opts, text } = {}) {

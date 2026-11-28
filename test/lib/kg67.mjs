@@ -122,7 +122,7 @@ export async function callSides({ svc } = {}) {
   logGlcd(m);
   const page = pageOf(m) << 8;
   const ses = { kind: "session", m, svc: built, at: (n) => page + built.symbols[n] };
-  ses.routine = (a) => m.read(ses.at("GAPI") + 2 * a) | (m.read(ses.at("GAPI") + 2 * a + 1) << 8);
+  ses.routine = (a) => m.read(ses.at("GFXTABLE") + 2 * a) | (m.read(ses.at("GFXTABLE") + 2 * a + 1) << 8);
   return { ref, ses };
 }
 

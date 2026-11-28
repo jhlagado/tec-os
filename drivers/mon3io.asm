@@ -7,7 +7,7 @@
 ; Call 19, joystickScan: port FEh with
 ; A11 low, complemented. Z for none.
 
-joyS:
+joyScan:
   push bc        ; kept
   ld bc,0-$0802  ; B F7h, C FEh
   in a,(c)
@@ -20,10 +20,10 @@ joyS:
 ; the LEDs blue. A = 44h.
 
 serOn:
-  ld a,TXI
-  out (SDIG),a   ; TX idle
+  ld a,TX_IDLE
+  out (DIGITS),a    ; TX idle
   ld a,$44
-  out (SSEG),a   ; the LEDs
+  out (SEGMENTS),a  ; the LEDs
   ret
 
 ; Call 21, serialDisable: TX low until
@@ -31,40 +31,40 @@ serOn:
 
 serOff:
   xor a          ; all low
-  out (SDIG),a   ; TX and digits off
-  out (SSEG),a
+  out (DIGITS),a    ; TX and digits off
+  out (SEGMENTS),a
   ret
 
 ; Call 22, txByte: A sent at 4800 8N2,
 ; each bit BAUD's delay long, MON-3's
 ; loop unchanged. Keeps every register.
 
-txB:
+txByte:
   push af
   push bc
   push hl        ; all kept
   ld hl,(BAUD)   ; the bit's delay
   ld c,a         ; the byte
   xor a          ; the start bit
-  out (SDIG),a
-  out (SSEG),a   ; and on the LEDs
-  call tDly      ; one bit's time
+  out (DIGITS),a
+  out (SEGMENTS),a  ; and on the LEDs
+  call delay     ; one bit's time
   ld b,8         ; eight data bits
   rrc c          ; bit 0 to bit 6 next
 
-txB1:
+.bit:
   rrc c          ; the next to bit 6
   ld a,c
-  and TXI        ; it alone
-  out (SDIG),a   ; the bit
-  out (SSEG),a
-  call tDly
-  djnz txB1      ; each bit
-  ld a,TXI       ; two stop bits
-  out (SDIG),a
-  out (SSEG),a
-  call tDly
-  call tDly      ; two bits' time
+  and TX_IDLE    ; it alone
+  out (DIGITS),a    ; the bit
+  out (SEGMENTS),a
+  call delay
+  djnz .bit      ; each bit
+  ld a,TX_IDLE   ; two stop bits
+  out (DIGITS),a
+  out (SEGMENTS),a
+  call delay
+  call delay     ; two bits' time
   pop hl
   pop bc
   pop af         ; all as they were
@@ -74,30 +74,30 @@ txB1:
 ; 03h's bit 7, each bit sampled in its
 ; middle. A = the byte, NC.
 
-rxB:
+rxByte:
   push bc
   push hl        ; kept
 
-rxB1:
-  in a,(SSYS)
+.start:
+  in a,(SYS_IN)
   rlca           ; bit 7: the line
-  jr c,rxB1      ; idle
+  jr c,.start    ; idle
   ld hl,(BAUD)   ; a bit's time
   srl h
   rr l           ; half a bit
-  call tDly
-  in a,(SSYS)    ; the start bit still?
+  call delay
+  in a,(SYS_IN)  ; the start bit still?
   rlca
-  jr c,rxB1      ; too short: again
+  jr c,.start    ; too short: again
   ld b,8         ; eight bits
 
-rxB2:
+.bit:
   ld hl,(BAUD)
-  call tDly      ; to the next bit
-  in a,(SSYS)
+  call delay     ; to the next bit
+  in a,(SYS_IN)
   rlca           ; bit 7 to carry
   rr c           ; it in
-  djnz rxB2
+  djnz .bit
   ld a,c
   or a           ; NC
   pop hl         ; both back
@@ -107,41 +107,41 @@ rxB2:
 ; MON-3's readyToTransmit: TX high, then
 ; a delay. Clobbers A.
 
-txRdy:
+txReady:
   call serOn     ; TX high
   push hl
   ld hl,$2000
-  call tDly      ; the line settles
+  call delay     ; the line settles
   pop hl         ; kept
   ret
 
 ; Call 25, sendToSerial: DE bytes from
 ; HL, 0 for 65,536. BC 0, HL past them.
 
-sndS:
+sendData:
   push de
   pop bc         ; BC = the count
-  call txRdy     ; TX high first
+  call txReady   ; TX high first
 
-sndS1:
+.byte:
   ld a,(hl)      ; the next byte
-  call txB       ; one byte
+  call txByte    ; one byte
   cpi            ; HL on, BC down
-  jp pe,sndS1    ; until BC is 0
+  jp pe,.byte    ; until BC is 0
   ret
 
 ; Call 26, receiveFromSerial: DE bytes
 ; to HL, written where the program asks.
 
-rcvS:
+recvData:
   push de
   pop bc         ; BC = the count
 
-rcvS1:
-  call rxB       ; one byte
+.byte:
+  call rxByte    ; one byte
   ld (hl),a      ; stored
   cpi            ; HL on, BC down
-  jp pe,rcvS1
+  jp pe,.byte
   ret
 
 ; Call 28, sendHex: DE bytes from HL as
@@ -149,87 +149,87 @@ rcvS1:
 ; line, each made at DATA_ROW (0900h),
 ; the end at DATA_TO (08C2h).
 
-sHex:
+sendHex:
   push de
   pop bc         ; BC = the count
   ex de,hl
   add hl,de      ; HL + DE
-  ld (DATTO),hl  ; the end
+  ld (DUMP_END),hl  ; the end
   ex de,hl       ; HL the start again
-  call txRdy
+  call txReady
 
-sHex1:
+.line:
   push hl        ; the line's start
   push bc
   pop hl         ; the bytes left
   ld de,0-16
   add hl,de      ; carry: 16 or more
   ld e,16        ; a full line
-  jr c,sHex2
+  jr c,.text
   push bc
   pop hl         ; fewer: all of them
   ld e,c
 
-sHex2:
+.text:
   ex (sp),hl     ; HL the start, and
   ld b,e         ; the rest kept
-  ld de,DROW
-  call gDump     ; the line's text
+  ld de,DUMP_ROW
+  call dataDump  ; the line's text
   push hl        ; the next line's start
-  ld hl,DROW     ; to send it
+  ld hl,DUMP_ROW    ; to send it
 
-sHex3:
+.byte:
   ld a,(hl)
   inc hl
   or a
-  jr z,sHex4     ; the text's end
-  call txB
-  jr sHex3       ; each character
+  jr z,.eol      ; the text's end
+  call txByte
+  jr .byte       ; each character
 
-sHex4:
+.eol:
   ld a,13
-  call txB       ; CR
+  call txByte    ; CR
   ld a,10
-  call txB       ; LF
+  call txByte    ; LF
   pop de         ; the next start
   pop bc         ; the bytes left
-  ld hl,(DATTO)
+  ld hl,(DUMP_END)
   or a
   sbc hl,de      ; past the end?
   ret z          ; at it, or
   ret c          ; past it
   ex de,hl
-  jr sHex1       ; the next line
+  jr .line       ; the next line
 
 ; Call 34, playNote: HL half cycles
 ; times 4 of B's length on the speaker,
 ; TX held idle. A = 0. Clobbers BC, HL.
 
-pNote:
+playNote:
   add hl,hl
   add hl,hl      ; for 4 MHz
   xor a
-  or TXI         ; TX idle, NC
+  or TX_IDLE     ; TX idle, NC
   push de
   ld de,1        ; to count down
   ld c,b         ; the wavelength
 
-pn1:
-  out (SDIG),a   ; the speaker's level
+.cycle:
+  out (DIGITS),a    ; speaker's level
   ld b,3
 
-pn2:
+.three:
   push bc        ; the three's count
   ld b,c
   djnz $         ; one wavelength
   pop bc
-  djnz pn2       ; three of them
+  djnz .three    ; three of them
   xor $80        ; the speaker bit
   sbc hl,de
-  jr nz,pn1      ; each half cycle
+  jr nz,.cycle   ; each half cycle
   pop de
-  ld a,TXI       ; TX still idle
-  out (SDIG),a   ; speaker low
+  ld a,TX_IDLE   ; TX still idle
+  out (DIGITS),a    ; speaker low
   xor a          ; A=0, as MON-3's
   ret
 
@@ -237,14 +237,14 @@ pn2:
 ; 01h-18h, 00h a pause, 19h or more the
 ; end. DE ends past it. Clobbers A, HL.
 
-pTune:
+playTune:
   ld a,(de)
   inc de         ; the next note
   cp $19
   ret nc         ; the end
   or a
-  jr z,ptP       ; a pause
-  ld hl,FreqT
+  jr z,.note     ; a pause
+  ld hl,NoteTab
   dec a          ; from 01h
   add a,a        ; two bytes a note
   add a,l
@@ -259,27 +259,27 @@ pTune:
   ld a,(hl)
   ld l,a
   ld h,0         ; its half cycles
-  call pNote     ; played
+  call playNote  ; played
   pop bc
-  jr pTune
+  jr playTune
 
-ptP:
+.note:
   push hl
   ld hl,$2000    ; MON-3's pause
   push de
   ld de,1        ; to count down
 
-ptP1:
+.wait:
   sbc hl,de
-  jp nc,ptP1     ; until it borrows
+  jp nc,.wait    ; until it borrows
   pop de
   pop hl
-  jr pTune       ; the next note
+  jr playTune    ; the next note
 
 ; MON-3's notes: a wavelength and half
 ; cycles for each, G to F sharp.
 
-FreqT:
+NoteTab:
   DB $8C,$19,$83,$1A,$7C,$1C,$75,$1D
   DB $70,$1E,$67,$20,$62,$23,$5C,$25
   DB $57,$27,$52,$29,$4E,$2C,$48,$2E
@@ -291,42 +291,42 @@ FreqT:
 ; at HL, zero-ended. HL ends past the
 ; zero.
 
-strSer:
-  call txRdy     ; TX high first
+strToSer:
+  call txReady   ; TX high first
 
-strS1:
+.char:
   ld a,(hl)
   inc hl
   or a
   ret z          ; the end
-  call txB       ; the character
-  jr strS1
+  call txByte    ; the character
+  jr .char
 
 ; Call 62, RGBScan: one scan of the 8x8
 ; LEDs, IY at eight rows each of red,
 ; green and blue. Keeps BC and IY.
 
-rgbS:
+rgbScan:
   push bc
   push iy        ; both kept
   ld c,$01       ; row 1's bit
 
-rgb1:
+.row:
   ld a,(iy+0)
-  out (SRED),a   ; the row's red
+  out (LED_RED),a   ; the row's red
   ld a,(iy+8)
-  out (SGRN),a   ; green
+  out (LED_GRN),a   ; green
   ld a,(iy+16)
-  out (SBLU),a   ; and blue
+  out (LED_BLUE),a  ; and blue
   ld a,c
-  out (SLED),a   ; the row on
+  out (LED_ROW),a   ; the row on
   ld b,$40
   djnz $         ; for a while
   xor a
-  out (SLED),a   ; and off
+  out (LED_ROW),a   ; and off
   inc iy         ; the next row's data
   rl c           ; the next row
-  jr nc,rgb1     ; eight rows
+  jr nc,.row     ; eight rows
   pop iy
   pop bc
   ret

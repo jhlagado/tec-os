@@ -10,167 +10,167 @@
 ; data: an entry record in the file is
 ; read and passed over.
 
-cHex:
+loadHex:
   xor a
-  ld (HOvr),a    ; no base override
+  ld (HxRebase),a   ; no base override
   call skip      ; optional destination
-  jr z,hxArgs    ; retain file addresses
-  call hexW      ; the binary-load form
+  jr z,.args     ; retain file addresses
+  call hexWord   ; the binary-load form
   jp c,bad
-  ld (HBase),de  ; destination anchor
+  ld (HxBase),de    ; destination anchor
   ld a,1
-  ld (HOvr),a    ; rebase requested
+  ld (HxRebase),a   ; rebase requested
 
-hxArgs:
+.args:
   ld hl,0-1      ; no lower address yet
-  ld (HMin),hl   ; initial minimum
-  call dma80
+  ld (HxLowest),hl  ; initial minimum
+  call dmaReset
   xor a          ; scan and check first
 
-cHex1:
-  ld (HWrt),a    ; scan, check, copy
+.pass:
+  ld (HxMode),a  ; scan, check, copy
   xor a
   ld (Fcb+12),a  ; first extent
   ld (Fcb+32),a  ; first record
-  ld (HAny),a    ; no data byte yet
+  ld (HxData),a  ; no data byte yet
   call open
-  jp z,lFail     ; no file at this pass
-  call hPass     ; whole file, to EOF
-  jp c,lFail
-  ld a,(HAny)
+  jp z,loadFail  ; no file at this pass
+  call hxPass    ; whole file, to EOF
+  jp c,loadFail
+  ld a,(HxData)
   or a
-  jp z,lFail     ; no data was loaded
-  ld a,(HWrt)
+  jp z,loadFail  ; no data was loaded
+  ld a,(HxMode)
   or a
-  jr nz,hxAfter  ; a later pass
-  call hSetGo    ; GO's address, once
-  ld a,(HOvr)
+  jr nz,.after   ; a later pass
+  call hxSetGo   ; GO's address, once
+  ld a,(HxRebase)
   or a           ; a base override?
   ld a,2         ; plain files: copy
-  jr z,cHex1
+  jr z,.pass
   dec a          ; check rebased ranges
-  jr cHex1
+  jr .pass
 
-hxAfter:
+.after:
   cp 1           ; validating or copied?
-  jr nz,hxDone
+  jr nz,.done
   ld a,2         ; final copying pass
-  jr cHex1
+  jr .pass
 
-hxDone:
-  ld hl,(HGo)    ; GO's address
-  jp lGood
+.done:
+  ld hl,(HxGo)   ; GO's address
+  jp loadGood
 
 ; GO uses the lowest data address, or
 ; the requested base when the data is
 ; rebased. Changes AF and HL.
 
-hSetGo:
-  ld hl,(HMin)   ; original lowest byte
-  ld a,(HOvr)
+hxSetGo:
+  ld hl,(HxLowest)  ; original lowest
+  ld a,(HxRebase)
   or a
-  jr z,hBase1    ; keep original base
-  ld hl,(HBase)  ; lowest destination
+  jr z,.store    ; keep original base
+  ld hl,(HxBase)    ; lowest destination
 
-hBase1:
-  ld (HGo),hl    ; remember it
+.store:
+  ld (HxGo),hl   ; remember it
   ret
 
 ; DE's logical address rebased without
 ; wrapping. The subtraction cannot
 ; borrow for a valid data record.
 
-hDest:
-  ld a,(HOvr)
+hxDest:
+  ld a,(HxRebase)
   or a
   ret z          ; original addresses
   ex de,hl
-  ld de,(HMin)   ; source anchor
+  ld de,(HxLowest)  ; source anchor
   or a
   sbc hl,de      ; offset from lowest
   ret c
-  ld de,(HBase)  ; destination anchor
+  ld de,(HxBase)    ; destination anchor
   add hl,de      ; carry: wrapped base
   ex de,hl
   ret
 
 ; A pass reads text through DE. Deep
-; syntax faults unwind to HSP.
+; syntax faults unwind to HxStack.
 
-hPass:
-  ld (HSp),sp
-  call hRead     ; first text record
+hxPass:
+  ld (HxStack),sp
+  call hxRead    ; first text record
 
-hp1:
-  call getC
+hxNext:
+  call hxChar
   cp ':'
-  jr z,hRec
+  jr z,hxRecord
   cp 13          ; inter-record CR
-  jr z,hp1
+  jr z,hxNext
   cp 10          ; inter-record LF
-  jr z,hp1
+  jr z,hxNext
   scf
   ret
 
 ; A record sums bytes in C, with its
 ; data length in B and text at DE.
 
-hRec:
+hxRecord:
   ld c,0         ; checksum accumulator
-  call getB
+  call hxByte
   ld b,a         ; bytes in this record
-  call getB
-  ld (HAdr+1),a  ; high address byte
-  call getB
-  ld (HAdr),a    ; low address byte
-  call getB
+  call hxByte
+  ld (HxAddr+1),a   ; high address byte
+  call hxByte
+  ld (HxAddr),a  ; low address byte
+  call hxByte
   cp 1           ; end-of-file record
-  jp z,hEnd
+  jp z,hxEnd
   cp 5           ; an entry record is
-  jr z,hSkip     ; read, not acted on
+  jr z,.entry    ; read, not acted on
   or a
   scf
   ret nz         ; other types refused
   or b           ; any data bytes?
   scf
   ret z          ; empty data refused
-  ld (HAny),a    ; at least one byte
+  ld (HxData),a  ; at least one byte
   push de
-  call hRange
+  call hxRange
   pop de
   ret c
-  ld ix,(HTarg)  ; this record
-  ld a,(HWrt)
+  ld ix,(HxTarget)  ; this record
+  ld a,(HxMode)
   cp 2           ; only copying writes
-  jr z,hw1
+  jr z,.write
 
-hc1:
-  call getB      ; validate, do not copy
-  djnz hc1
-  jr hSum
+.check:
+  call hxByte    ; validate, do not copy
+  djnz .check
+  jr .sum
 
 ; An entry record's bytes are summed
 ; like any record's and then dropped:
 ; its length and address fields may
 ; hold anything.
 
-hSkip:
+.entry:
   inc b
   dec b          ; no bytes to read?
-  jr nz,hc1
-  jr hSum
+  jr nz,.check
+  jr .sum
 
-hw1:
-  call getB      ; already checked
+.write:
+  call hxByte    ; already checked
   ld (ix+0),a    ; final destination
   inc ix
-  djnz hw1
+  djnz .write
 
-hSum:
-  call getB      ; include checksum
+.sum:
+  call hxByte    ; include checksum
   ld a,c
   or a
-  jp z,hp1       ; zero sum: next record
+  jp z,hxNext    ; zero sum: next record
   scf
   ret
 
@@ -179,39 +179,39 @@ hSum:
 ; With an override, only destination
 ; protection is relevant.
 
-hRange:
-  ld a,(HWrt)
+hxRange:
+  ld a,(HxMode)
   or a
-  jr nz,hrMap    ; source checked
-  ld hl,(HAdr)
+  jr nz,.map     ; source checked
+  ld hl,(HxAddr)
   ld e,b         ; record length
   ld d,0         ; unsigned byte length
   add hl,de
-  jr nc,hrMin    ; source did not wrap
+  jr nc,.lowest  ; source did not wrap
   ld a,h
   or l           ; exactly 10000h is OK
   scf
   ret nz         ; beyond 10000h
 
-hrMin:
-  ld hl,(HAdr)
-  ld de,(HMin)   ; source anchor
+.lowest:
+  ld hl,(HxAddr)
+  ld de,(HxLowest)  ; source anchor
   or a
   sbc hl,de      ; compare source starts
-  jr nc,hrKeep   ; current minimum wins
-  ld hl,(HAdr)
-  ld (HMin),hl   ; new lowest address
+  jr nc,.keep    ; current minimum wins
+  ld hl,(HxAddr)
+  ld (HxLowest),hl  ; new lowest address
 
-hrKeep:
-  ld a,(HOvr)
+.keep:
+  ld a,(HxRebase)
   or a
   ret nz         ; no writing this pass
 
-hrMap:
-  ld de,(HAdr)
-  call hDest
+.map:
+  ld de,(HxAddr)
+  call hxDest
   ret c
-  ld (HTarg),de  ; resolved destination
+  ld (HxTarget),de  ; the destination
   ld l,b
   ld h,0
   jp range       ; full destination span
@@ -220,32 +220,32 @@ hrMap:
 ; it only line ends and CP/M padding
 ; are accepted, up to the text's end.
 
-hEnd:
+hxEnd:
   ld a,b         ; EOF holds no data
   or a
   scf
   ret nz         ; wrong record length
-  ld hl,(HAdr)   ; record address
+  ld hl,(HxAddr)    ; record address
   ld a,h
   or l
   scf
   ret nz         ; EOF address not zero
-  call getB      ; EOF checksum
+  call hxByte    ; EOF checksum
   ld a,c
   or a
   scf
   ret nz
 
-he1:
-  call getC      ; padding after EOF
+.pad:
+  call hxChar    ; padding after EOF
   cp $1A         ; CP/M text end
   ret z
   or a
-  jr z,he1
+  jr z,.pad
   cp 13          ; permitted line ending
-  jr z,he1
+  jr z,.pad
   cp 10          ; permitted LF
-  jr z,he1
+  jr z,.pad
   scf
   ret
 
@@ -253,18 +253,18 @@ he1:
 ; added to C. A fault returns from the
 ; pass with carry. Clobbers H.
 
-getB:
-  call getC
-  call hexD      ; the high digit
-  jr c,hBad      ; not a digit
+hxByte:
+  call hxChar
+  call hexDigit  ; the high digit
+  jr c,.bad      ; not a digit
   add a,a
   add a,a
   add a,a
   add a,a        ; to the high half
   ld h,a
-  call getC
-  call hexD      ; the low digit
-  jr c,hBad
+  call hxChar
+  call hexDigit  ; the low digit
+  jr c,.bad
   or h           ; the byte
   ld h,a
   add a,c
@@ -272,8 +272,8 @@ getB:
   ld a,h         ; the byte again
   ret
 
-hBad:
-  ld sp,(HSp)    ; out of the pass
+.bad:
+  ld sp,(HxStack)   ; out of the pass
   scf
   ret
 
@@ -281,12 +281,12 @@ hBad:
 ; record buffer, the next record read
 ; when this one is used up.
 
-getC:
+hxChar:
   ld a,(de)      ; the byte
   inc e          ; past 00FFh: E is 0
   ret nz
   push af
-  call hRead     ; the next record
+  call hxRead    ; the next record
   pop af
   ret
 
@@ -295,7 +295,7 @@ getC:
 ; 1Ah there ends the text. Keeps BC, HL
 ; and IX.
 
-hRead:
+hxRead:
   push bc
   push hl
   push ix        ; kept over BDOS
@@ -314,15 +314,15 @@ hRead:
 
 ; HEX scan and rebase state.
 
-HAdr: DW 0       ; a HEX record's start
-HWrt: DB 0       ; scan, check or copy
-HAny: DB 0       ; a data record read
-HSp: DW 0        ; the HEX pass's stack
-HMin: DW 0       ; lowest data address
-HBase: DW 0      ; requested new base
-HGo: DW 0        ; GO's address
-HTarg: DW 0      ; this record's target
-HOvr: DB 0       ; a base was supplied
+HxAddr: DW 0     ; a HEX record's start
+HxMode: DB 0     ; scan, check or copy
+HxData: DB 0     ; a data record read
+HxStack: DW 0    ; the HEX pass's stack
+HxLowest: DW 0   ; lowest data address
+HxBase: DW 0     ; requested new base
+HxGo: DW 0       ; GO's address
+HxTarget: DW 0   ; this record's target
+HxRebase: DB 0   ; a base was supplied
 
 ; Read a hex word of one to four digits
 ; at HL into DE. Carry if it has no
@@ -330,14 +330,14 @@ HOvr: DB 0       ; a base was supplied
 ; trailing spaces and the line's end
 ; after it. Clobbers A and B.
 
-hexW:
+hexWord:
   ld de,0
   ld b,4         ; at most four digits
   ld a,(hl)
-  call hexD
+  call hexDigit
   ret c          ; no digit
 
-hexW1:
+.digit:
   ex de,hl       ; HL = the word
   add hl,hl
   add hl,hl
@@ -348,13 +348,13 @@ hexW1:
   ex de,hl
   inc hl
   ld a,(hl)
-  call hexD
-  jr c,hexW2     ; the number's end
-  djnz hexW1
+  call hexDigit
+  jr c,.end      ; the number's end
+  djnz .digit
   scf            ; a fifth digit
   ret
 
-hexW2:
+.end:
   ld a,(hl)
   cp ' '+1       ; a space or the end
   ccf            ; carry: text joined
@@ -367,12 +367,12 @@ hexW2:
 ; A hex digit's value from A, either
 ; case. Carry if it is none.
 
-hexD:
+hexDigit:
   cp 'a'
-  jr c,hexD1     ; not lower case
+  jr c,.value    ; not lower case
   sub $20        ; a to A
 
-hexD1:
+.value:
   sub '0'
   ret c          ; below 0
   cp 10
@@ -386,24 +386,24 @@ hexD1:
   ret
 
 ; Write HL as four hex digits at DE,
-; or A as two at HEXA. DE steps on.
+; or A as two at aToStr. DE steps on.
 
-hlStr:
+hlToStr:
   ld a,h
-  call hexA      ; the high byte
+  call aToStr    ; the high byte
   ld a,l
 
-hexA:
+aToStr:
   push af        ; the low digit
   rrca
   rrca
   rrca
   rrca           ; the high digit
-  call hexN
+  call .nibble
   pop af
 
-hexN:
-  call hexC
+.nibble:
+  call hexChar
   ld (de),a      ; the character
   inc de
   ret
@@ -411,7 +411,7 @@ hexN:
 ; A's low four bits as a hex digit's
 ; character. Clobbers F.
 
-hexC:
+hexChar:
   and $0F
   add a,$90      ; DAA's hex trick
   daa

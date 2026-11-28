@@ -25,6 +25,13 @@ function headerLines(lines, at) {
   return count;
 }
 
+/**
+ * The inline comment's column (Origo MD-19): 18, or 21 when the code runs
+ * past column 15 and two spaces before 18 can't be had. Code past column 18
+ * takes no inline comment.
+ */
+const inlineCol = (p) => (p.code.trimEnd().length <= 15 ? 18 : 21);
+
 /** Check compact layout. Entry names come from the routine inventory. */
 export function checkCompactSource(text, name, entries = [], exceptions = {}) {
   const lines = text.replace(/\r\n/g, '\n').replace(/\n$/, '').split('\n');
@@ -38,12 +45,12 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
   const longHeaders = { ...exceptions.headers };
   let codeLines = 0, commented = 0, run = 0, longestRun = 0;
   let routines = 0, headless = 0;
-  let inlineNote = false;
+  let inlineNote = 0; // the column of the inline note a continuation may follow
   for (const [i, line] of lines.entries()) {
     const p = parsed[i];
     const n = i + 1;
     const isBlock = p.kind === 'comment' && p.commentCol === 1;
-    const isContinuation = p.kind === 'comment' && p.commentCol === 18;
+    const isContinuation = p.kind === 'comment' && (p.commentCol === 18 || p.commentCol === 21);
     const label = p.label?.replace(/:$/, '');
     if (line.length > 40 && !wide.includes(line)) fault('end', n, 'line exceeds 40 columns');
     if (wide.includes(line)) used.add(line);
@@ -53,7 +60,7 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
     if (p.mnemonic?.toUpperCase() === '%INCLUDE' && !/^%include\b/i.test(p.code)) {
       fault('column', n, '%INCLUDE begins at column 1');
     }
-    if (isContinuation && !inlineNote) fault('continuation', n, 'continue an inline note');
+    if (isContinuation && inlineNote !== p.commentCol) fault('continuation', n, 'continue an inline note at its column');
     if (p.kind === 'label') {
       if (labels.has(i) && i > 0 && lines[i - 1] !== '') fault('blank', n, 'put a blank line above every code label');
       if (expected.delete(label)) {
@@ -86,14 +93,14 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
     if (p.comment >= 0) {
       if (p.kind === 'comment') {
         if (!isBlock && !isContinuation) fault('column', n, 'comment begins at column 1 or 18');
-      } else if (p.commentCol !== 18 || p.code.length - p.code.trimEnd().length < 2) {
-        fault('column', n, 'inline semicolon at column 18 with two spaces after code');
+      } else if (p.commentCol !== inlineCol(p) || p.code.length - p.code.trimEnd().length < 2) {
+        fault('column', n, 'inline semicolon at column 18, or 21 for code past column 15, two spaces after code');
       }
       if (p.comment + 1 < line.length && line[p.comment + 1] !== ' ') fault('spacing', n, 'space after semicolon');
     }
     if (p.kind === 'comment') run = 0;
-    inlineNote = isContinuation ? inlineNote : p.kind !== 'comment' && p.commentCol === 18
-      && p.code.length - p.code.trimEnd().length >= 2;
+    inlineNote = isContinuation ? inlineNote : p.kind !== 'comment' && p.commentCol === inlineCol(p)
+      && p.code.length - p.code.trimEnd().length >= 2 ? p.commentCol : 0;
   }
   for (const entry of expected) fault('inventory', 0, `missing routine label ${entry}`);
   for (const line of wide) if (!used.has(line)) fault('exception', 0, `unused line exception: ${line}`);

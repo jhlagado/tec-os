@@ -304,7 +304,7 @@ test("on the card, MON3.SVC, LOAD HELLO3.BIN and GO write HELLO3's four lines on
 
 /** The service's matrix scan without its LD (KBLAST),A: Tecos's held-key byte left as it was. */
 function noRecord(b, at) {
-  const i = find(b, at("MS3"), [0x7b, 0x32, 0xef, 0xbf, 0xfe, 0x40], 16);
+  const i = find(b, at("MATNEXT"), [0x7b, 0x32, 0xef, 0xbf, 0xfe, 0x40], 16);
   b.fill(0, i + 1, i + 4);
 }
 

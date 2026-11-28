@@ -181,7 +181,7 @@ test("MON3 damaged-table LOAD refusal also clears the previous bare GO target", 
   const before = tpaDigest(m);
   // Inject the monitor's already-latched damage flag, not damage to the
   // tables themselves, to isolate this refusal branch.
-  m.write((pageOf(m) << 8) + svc.symbols.DMG, 1);
+  m.write((pageOf(m) << 8) + svc.symbols.DAMAGE, 1);
   const opens = m.opens.length;
   assert.ok(refused(line(m, "LOAD RET.BIN 5000")));
   assert.equal(m.opens.length, opens, "damaged state refuses before opening the file");

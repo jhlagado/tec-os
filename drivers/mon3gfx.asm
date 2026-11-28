@@ -12,9 +12,9 @@
 ; and the GLCD console's modes set at a
 ; program's return.
 
-GLCDI EQU $07    ; the ST7920's command
-GLCDD EQU $87    ; and data ports
-VDLY EQU $000A   ; delayUS's count
+GLCD_CMD EQU $07    ; ST7920 command
+GLCD_DAT EQU $87    ; and data ports
+US_DELAY EQU $000A  ; delayUS's count
 
 ; MON-3's graphics workspace: the
 ; buffer the drawing calls use, then
@@ -22,7 +22,7 @@ VDLY EQU $000A   ; delayUS's count
 ; plotToLCD clear what it sends.
 
 GBUF EQU $0A00   ; 128x64, a bit a pixel
-ENDPT EQU $0E00  ; drawLine's end
+END_PT EQU $0E00    ; drawLine's end
 SX EQU $0E02     ; steps and position
 SY EQU $0E03
 DX EQU $0E04     ; drawLine's deltas
@@ -31,7 +31,7 @@ ERR EQU $0E08    ; the error term
 RAD EQU $0E0A    ; drawCircle's radius
 CLRBUF EQU $0E0C
 VPORT EQU $0E13  ; the buffer in use
-GVEND EQU $0E1A  ; the variables' end
+GVAR_END EQU $0E1A  ; the variables' end
 
 ; RST 18h: MON-3's graphics API, A the
 ; call. BC, DE and HL reach the routine
@@ -43,13 +43,13 @@ GVEND EQU $0E1A  ; the variables' end
 ; return address. A call past 20 goes
 ; to the error display.
 
-r18:
+rst18:
   pop hl         ; the caller's HL
   cp 21          ; calls 0 to 20
-  jp nc,dErr     ; the rest refused
+  jp nc,dispErr  ; the rest refused
   push bc
   push hl        ; kept for the call
-  ld hl,GApi
+  ld hl,GfxTable
   add a,a        ; two bytes a call
   ld c,a
   ld b,0         ; BC = the offset
@@ -67,28 +67,28 @@ r18:
 ; The calls, by number and MON-3's
 ; name.
 
-GApi:
-  DW gInit       ; 0 initLCD
-  DW gClrB       ; 1 clearGBUF
-  DW gClrG       ; 2 clearGrLCD
-  DW gClrT       ; 3 clearTxtLCD
-  DW gGrM        ; 4 setGrMode
-  DW gTxM        ; 5 setTxtMode
+GfxTable:
+  DW gInitLcd    ; 0 initLCD
+  DW gClrBuf     ; 1 clearGBUF
+  DW gClrGfx     ; 2 clearGrLCD
+  DW gClrTxt     ; 3 clearTxtLCD
+  DW gGfxMode    ; 4 setGrMode
+  DW gTxtMode    ; 5 setTxtMode
   DW gBox        ; 6 drawBox
   DW gLine       ; 7 drawLine
-  DW gCirc       ; 8 drawCircle
-  DW gPix        ; 9 drawPixel
-  DW gFBox       ; 10 fillBox
-  DW gFCirc      ; 11 fillCircle
+  DW gCircle     ; 8 drawCircle
+  DW gPixel      ; 9 drawPixel
+  DW gFillBox    ; 10 fillBox
+  DW gFillCir    ; 11 fillCircle
   DW gPlot       ; 12 plotToLCD
-  DW gPStr       ; 13 printString
-  DW gPChr       ; 14 printChars
-  DW gDlyUs      ; 15 delayUS
-  DW gDlyMs      ; 16 delayMS
-  DW gBClr       ; 17 setBufClear
-  DW gBKeep      ; 18 setBufNoClear
-  DW gPClr       ; 19 clearPixel
-  DW gPFlip      ; 20 flipPixel
+  DW gPrtStr     ; 13 printString
+  DW gPrtChrs    ; 14 printChars
+  DW gDelayUs    ; 15 delayUS
+  DW gDelayMs    ; 16 delayMS
+  DW gBufClr     ; 17 setBufClear
+  DW gBufKeep    ; 18 setBufNoClear
+  DW gPixClr     ; 19 clearPixel
+  DW gPixFlip    ; 20 flipPixel
 
 ; The workspace as every MON-3 reset
 ; leaves it, through initLCD: GBUF and
@@ -97,10 +97,10 @@ GApi:
 ; as no reset writes it. A holds 0.
 ; Clobbers BC, DE and HL.
 
-gWs:
+gWork:
   ld hl,GBUF
   ld de,GBUF+1
-  ld bc,GVEND-GBUF-1
+  ld bc,GVAR_END-GBUF-1
   ld (hl),a      ; the first zero
   ldir           ; and the rest
   ld hl,GBUF
@@ -120,55 +120,55 @@ gWs:
 ; it, as under MON-3. Clobbers A, B, DE
 ; and HL.
 
-gRst:
+gRestore:
   ld a,(IOBYTE)
   and 3
   cp 3           ; CON: on UC1:?
   ret nz         ; no: left alone
-  ld hl,GMode
+  ld hl,GlcdMode
   ld b,5         ; five bytes
 
-gRst1:
+.mode:
   ld a,(hl)
-  out (GLCDI),a  ; a mode byte
+  out (GLCD_CMD),a  ; a mode byte
   ld de,$0140    ; and 2.1 ms
-  call gDlyMs
+  call gDelayMs
   inc hl
-  djnz gRst1     ; each of them
+  djnz .mode     ; each of them
   ret
 
 ; GLCD.SVC's GLCMOD bytes: the basic
 ; set, display on, DDRAM clear, the
 ; extended set, graphics on.
 
-GMode: DB $30,$0C,$01,$34,$36
+GlcdMode: DB $30,$0C,$01,$34,$36
 
 ; Call 0, initLCD: the ST7920 set up,
 ; VPORT at GBUF, graphics mode with its
 ; RAM cleared, then on into clearGBUF.
 ; Clobbers A, BC, DE and HL.
 
-gInit:
-  ld hl,GInitB   ; the commands
+gInitLcd:
+  ld hl,GlcdInit    ; the commands
   ld b,$04       ; four of them
 
-gInit1:
+.cmd:
   ld a,(hl)      ; the next command
-  out (GLCDI),a  ; to the panel
-  call gDlyUs    ; and its wait
+  out (GLCD_CMD),a  ; to the panel
+  call gDelayUs  ; and its wait
   inc hl
-  djnz gInit1    ; each of them
+  djnz .cmd      ; each of them
   ld de,$0140    ; 2.1 ms: the clear
-  call gDlyMs
+  call gDelayMs
   ld hl,GBUF     ; the default buffer
   ld (VPORT),hl  ; drawing into GBUF
-  call gClrG     ; the panel's RAM
+  call gClrGfx   ; the panel's RAM
 
 ; Call 1, clearGBUF: the buffer at
 ; VPORT zeroed. Clobbers A, BC, DE and
 ; HL.
 
-gClrB:
+gClrBuf:
   ld hl,(VPORT)  ; from the buffer
   ld de,(VPORT)
   inc de         ; to one byte on
@@ -182,69 +182,69 @@ gClrB:
 ; its RAM zero, 32 row pairs of 16
 ; words. Clobbers A, BC and DE.
 
-gClrG:
-  call gGrM      ; graphics mode
+gClrGfx:
+  call gGfxMode  ; graphics mode
   ld c,$00       ; the row pair
 
-gClrG1:
+.row:
   ld a,$80       ; set the address
   or c
-  out (GLCDI),a  ; its row address
-  call gDlyUs
+  out (GLCD_CMD),a  ; its row address
+  call gDelayUs
   ld a,$80       ; and the column
-  out (GLCDI),a  ; column 0
-  call gDlyUs
+  out (GLCD_CMD),a  ; column 0
+  call gDelayUs
   xor a          ; a clear byte
   ld b,$10       ; 16 words a row
 
-gClrG2:
-  out (GLCDD),a  ; a word's two bytes
-  call gDlyUs
-  out (GLCDD),a
-  call gDlyUs
-  djnz gClrG2    ; across the row
+.word:
+  out (GLCD_DAT),a  ; a word's two bytes
+  call gDelayUs
+  out (GLCD_DAT),a
+  call gDelayUs
+  djnz .word     ; across the row
   inc c          ; the next pair
   ld a,c
   cp $20         ; 32 pairs
-  jr nz,gClrG1
+  jr nz,.row
   ret
 
 ; Call 3, clearTxtLCD: text mode, and
 ; 64 spaces from DDRAM's first address.
 ; Clobbers A, B and DE.
 
-gClrT:
-  call gTxM      ; text mode
+gClrTxt:
+  call gTxtMode  ; text mode
   ld a,$80       ; DDRAM address 0
-  out (GLCDI),a  ; DDRAM's start
-  call gDlyUs
+  out (GLCD_CMD),a  ; DDRAM's start
+  call gDelayUs
   ld b,$40       ; 64 characters
 
-gClrT1:
+.space:
   ld a,' '       ; a space
-  out (GLCDD),a  ; to the panel
-  call gDlyUs
-  djnz gClrT1    ; each of them
+  out (GLCD_DAT),a  ; to the panel
+  call gDelayUs
+  djnz .space    ; each of them
   ret
 
 ; Call 4, setGrMode: the extended set,
 ; then graphics on. Clobbers A and DE.
 
-gGrM:
+gGfxMode:
   ld a,$34       ; the extended set
-  out (GLCDI),a
-  call gDlyUs
+  out (GLCD_CMD),a
+  call gDelayUs
   ld a,$36       ; and graphics on
-  out (GLCDI),a
-  jp gDlyUs      ; its wait
+  out (GLCD_CMD),a
+  jp gDelayUs    ; its wait
 
 ; Call 5, setTxtMode: the basic set.
 ; Clobbers A and DE.
 
-gTxM:
+gTxtMode:
   ld a,$30       ; the basic set
-  out (GLCDI),a
-  jp gDlyUs      ; its wait
+  out (GLCD_CMD),a
+  jp gDelayUs    ; its wait
 
 ; Call 6, drawBox: the outline from
 ; X0,Y0 in BC to X1,Y1 in DE, by
@@ -254,41 +254,41 @@ gTxM:
 gBox:
   push bc        ; X0,Y0 kept
 
-gBox1:
-  call gPix      ; the top, X0 to X1
+.top:
+  call gPixel    ; the top, X0 to X1
   ld a,d         ; X1
   inc b          ; the next X
   cp b
-  jr nc,gBox1    ; up to X1
+  jr nc,.top     ; up to X1
   pop bc         ; X0,Y0
   push bc
   ld c,e         ; the bottom, at Y1
 
-gBox2:
-  call gPix
+.bottom:
+  call gPixel
   ld a,d         ; X1
   inc b          ; the next X
   cp b
-  jr nc,gBox2    ; up to X1
+  jr nc,.bottom  ; up to X1
   pop bc         ; X0,Y0
   push bc
 
-gBox3:
-  call gPix      ; the left, Y0 to Y1
+.left:
+  call gPixel    ; the left, Y0 to Y1
   ld a,e         ; Y1
   inc c          ; the next Y
   cp c
-  jr nc,gBox3    ; up to Y1
+  jr nc,.left    ; up to Y1
   pop bc         ; X0,Y0
   push bc
   ld b,d         ; the right, at X1
 
-gBox4:
-  call gPix
+.right:
+  call gPixel
   ld a,e         ; Y1
   inc c          ; the next Y
   cp c
-  jr nc,gBox4    ; up to Y1
+  jr nc,.right   ; up to Y1
   pop bc         ; X0,Y0 back
   ret
 
@@ -296,20 +296,20 @@ gBox4:
 ; X0,Y0 in BC to X1,Y1 in DE, a column
 ; at a time. Clobbers A, B and HL.
 
-gFBox:
+gFillBox:
   push bc        ; the column's top
 
-gFBox1:
-  call gPix      ; down the column
+.column:
+  call gPixel    ; down the column
   ld a,e         ; Y1
   inc c          ; the next Y
   cp c
-  jr nc,gFBox1   ; up to Y1
+  jr nc,.column  ; up to Y1
   pop bc         ; the column's top
   ld a,d         ; X1
   inc b          ; the next column
   cp b
-  jr nc,gFBox    ; up to X1
+  jr nc,gFillBox    ; up to X1
   ret
 
 ; Call 7, drawLine: Bresenham's line
@@ -317,7 +317,7 @@ gFBox1:
 ; Nothing is drawn if either end is off
 ; the panel. SX and SY are the steps,
 ; DX and DY the deltas, DY negative,
-; ERR the error, ENDPT the end.
+; ERR the error, END_PT the end.
 ; Clobbers A, BC, DE and HL.
 
 gLine:
@@ -336,22 +336,22 @@ gLine:
   ld h,$01       ; SX: 1 if X0 < X1
   ld a,b
   cp d
-  jr c,gLsX
+  jr c,.stepx
   ld h,$FF       ; else -1
 
-gLsX:
+.stepx:
   ld a,h
   ld (SX),a      ; the X step
   ld h,$01       ; SY: 1 if Y0 < Y1
   ld a,c
   cp e
-  jr c,gLsY
+  jr c,.stepy
   ld h,$FF       ; else -1
 
-gLsY:
+.stepy:
   ld a,h
   ld (SY),a      ; the Y step
-  ld (ENDPT),de  ; where the line ends
+  ld (END_PT),de    ; the line's end
   push bc        ; X0,Y0 kept
   ld l,d
   ld h,0         ; X1
@@ -381,23 +381,23 @@ gLsY:
   add hl,de
   ld (ERR),hl    ; ERR = DX+DY
 
-gLine1:
-  call gPix      ; the point at BC
-  ld a,(ENDPT+1)
+.point:
+  call gPixel    ; the point at BC
+  ld a,(END_PT+1)
   cp b           ; X at X1?
-  jr nz,gLine4   ; not the end
-  ld a,(ENDPT)   ; Y1
+  jr nz,.error   ; not the end
+  ld a,(END_PT)  ; Y1
   cp c
   ret z          ; the end point
 
-gLine4:
+.error:
   ld hl,(ERR)
   add hl,hl      ; E2 = 2*ERR
   ld de,(DY)
   or a           ; no carry in
   sbc hl,de      ; E2 less DY
   add hl,de      ; E2 again
-  jp m,gLine2    ; E2 < DY: X stays
+  jp m,.movex    ; E2 < DY: X stays
   push hl
   ld hl,(ERR)
   add hl,de
@@ -407,22 +407,22 @@ gLine4:
   ld b,a         ; X += SX
   pop hl         ; E2 again
 
-gLine2:
+.movex:
   ld de,(DX)
   or a           ; no carry in
   sbc hl,de      ; E2 less DX
   add hl,de
-  jr z,gLine3    ; E2 = DX: step Y
-  jp p,gLine1    ; E2 > DX: Y stays
+  jr z,.movey    ; E2 = DX: step Y
+  jp p,.point    ; E2 > DX: Y stays
 
-gLine3:
+.movey:
   ld hl,(ERR)
   add hl,de
   ld (ERR),hl    ; ERR += DX
   ld a,(SY)
   add a,c
   ld c,a         ; Y += SY
-  jr gLine1      ; the next point
+  jr .point      ; the next point
 
 ; HL made positive. Clobbers A.
 
@@ -444,7 +444,7 @@ gAbs:
 ; error and RAD R. Off-panel points
 ; are dropped. Clobbers A, DE and HL.
 
-gCirc:
+gCircle:
   xor a          ; 0 less R
   sub e
   ld (SX),a      ; X = -R
@@ -461,7 +461,7 @@ gCirc:
   sbc hl,de
   ld (ERR),hl    ; ERR = 2-2R
 
-gCirc1:
+.point:
   push bc        ; the centre kept
   ld a,(SX)      ; -X
   neg
@@ -470,7 +470,7 @@ gCirc1:
   ld a,(SY)
   add a,c
   ld c,a         ; YM+Y
-  call gPix      ; quadrant I
+  call gPixel    ; quadrant I
   pop bc         ; the centre
   push bc
   ld a,(SX)
@@ -480,7 +480,7 @@ gCirc1:
   neg
   add a,c
   ld c,a         ; YM-Y
-  call gPix      ; quadrant III
+  call gPixel    ; quadrant III
   pop bc         ; the centre
   push bc
   ld a,(SY)      ; -Y
@@ -491,7 +491,7 @@ gCirc1:
   neg
   add a,c
   ld c,a         ; YM-X
-  call gPix      ; quadrant II
+  call gPixel    ; quadrant II
   pop bc         ; the centre
   push bc
   ld a,(SY)
@@ -500,7 +500,7 @@ gCirc1:
   ld a,(SX)
   add a,c
   ld c,a         ; YM+X
-  call gPix      ; quadrant IV
+  call gPixel    ; quadrant IV
   pop bc         ; the centre
   ld hl,(ERR)
   ld (RAD),hl    ; R = ERR
@@ -510,10 +510,10 @@ gCirc1:
   or a
   sbc hl,de      ; R less Y
   add hl,de
-  jr z,gCirc5    ; R = Y: step Y
-  jp p,gCirc2    ; R > Y: Y stays
+  jr z,.ypart    ; R = Y: step Y
+  jp p,.radius   ; R > Y: Y stays
 
-gCirc5:
+.ypart:
   ld a,(SY)      ; Y
   inc a
   ld (SY),a      ; Y += 1
@@ -525,7 +525,7 @@ gCirc5:
   add hl,de
   ld (ERR),hl    ; added to ERR
 
-gCirc2:
+.radius:
   ld hl,(RAD)    ; R
   ld a,(SX)
   ld d,$FF
@@ -533,10 +533,10 @@ gCirc2:
   or a
   sbc hl,de      ; R less X
   add hl,de
-  jr z,gCirc6    ; R = X: test ERR
-  jp p,gCirc3    ; R > X: step X
+  jr z,.error    ; R = X: test ERR
+  jp p,.xstep    ; R > X: step X
 
-gCirc6:
+.error:
   ld hl,(ERR)    ; ERR
   ld a,(SY)
   ld d,0
@@ -544,10 +544,10 @@ gCirc6:
   or a
   sbc hl,de      ; ERR less Y
   add hl,de
-  jr z,gCirc4    ; ERR = Y: X stays
-  jp m,gCirc4    ; ERR < Y: X stays
+  jr z,.test     ; ERR = Y: X stays
+  jp m,.test     ; ERR < Y: X stays
 
-gCirc3:
+.xstep:
   ld a,(SX)      ; X
   inc a
   ld (SX),a      ; X += 1
@@ -559,35 +559,35 @@ gCirc3:
   add hl,de
   ld (ERR),hl    ; added to ERR
 
-gCirc4:
+.test:
   ld a,(SX)      ; X reached 0?
   or a
-  jp nz,gCirc1   ; until X is 0
+  jp nz,.point   ; until X is 0
   ret
 
 ; Call 11, fillCircle: circles of
 ; radius 1 to E about BC. Clobbers A, D
 ; and HL.
 
-gFCirc:
+gFillCir:
   ld d,$01       ; the first radius
 
-gFCir1:
+.ring:
   push de        ; E: the last
   ld e,d
-  call gCirc     ; radius D
+  call gCircle   ; radius D
   pop de
   ld a,e
   inc d          ; the next radius
   cp d
-  jr nc,gFCir1   ; up to E
+  jr nc,.ring    ; up to E
   ret
 
 ; Call 9, drawPixel: the pixel at X in
 ; B (0-127), Y in C (0-63) set; nothing
 ; off the panel. Clobbers A and HL.
 
-gPix:
+gPixel:
   ld a,c
   cp $40         ; 64 rows
   ret nc         ; Y off the panel
@@ -595,7 +595,7 @@ gPix:
   cp $80         ; 128 columns
   ret nc         ; X off it
   push de        ; kept
-  call gSetB     ; its byte and bit
+  call gPixAddr  ; its byte and bit
   ld a,d
   or (hl)        ; the bit set
   ld (hl),a      ; back in the buffer
@@ -605,7 +605,7 @@ gPix:
 ; Call 19, clearPixel: the same, the
 ; bit cleared. Clobbers A and HL.
 
-gPClr:
+gPixClr:
   ld a,c
   cp $40         ; 64 rows
   ret nc         ; Y off the panel
@@ -613,7 +613,7 @@ gPClr:
   cp $80         ; 128 columns
   ret nc         ; X off it
   push de        ; kept
-  call gSetB     ; its byte and bit
+  call gPixAddr  ; its byte and bit
   ld a,d
   cpl
   and (hl)       ; the bit cleared
@@ -624,7 +624,7 @@ gPClr:
 ; Call 20, flipPixel: the same, the bit
 ; flipped. Clobbers A and HL.
 
-gPFlip:
+gPixFlip:
   ld a,c
   cp $40         ; 64 rows
   ret nc         ; Y off the panel
@@ -632,7 +632,7 @@ gPFlip:
   cp $80         ; 128 columns
   ret nc         ; X off it
   push de        ; kept
-  call gSetB     ; its byte and bit
+  call gPixAddr  ; its byte and bit
   ld a,d
   xor (hl)       ; the bit flipped
   ld (hl),a      ; back in the buffer
@@ -644,7 +644,7 @@ gPFlip:
 ; its bit, the leftmost bit 7.
 ; Clobbers A and E.
 
-gSetB:
+gPixAddr:
   ld l,c
   ld h,$00       ; HL = Y
   add hl,hl
@@ -657,19 +657,19 @@ gSetB:
   ld a,b
   ld d,$08       ; 8 pixels a byte
 
-gSetB1:
+.right:
   inc hl         ; a byte to the right
   sub d
-  jr nc,gSetB1   ; for each 8 of X
+  jr nc,.right   ; for each 8 of X
   cpl            ; 7 less X mod 8
   ld d,$01       ; bit 0
   or a
   ret z          ; it is bit 0
 
-gSetB2:
+.shift:
   sla d          ; one bit up
   dec a
-  jr nz,gSetB2   ; the bit moved up
+  jr nz,.shift   ; the bit moved up
   ret
 
 ; Call 12, plotToLCD: the buffer at
@@ -682,36 +682,36 @@ gPlot:
   ld hl,(VPORT)  ; the buffer
   ld c,$80       ; row 0
 
-gPlot1:
+.row:
   ld a,c         ; the row
   and $9F
-  out (GLCDI),a  ; the row, 0 to 31
-  call gDlyUs
+  out (GLCD_CMD),a  ; the row, 0 to 31
+  call gDelayUs
   ld a,$80       ; column 0
   bit 5,c        ; rows 32 to 63?
-  jr z,gPlot3    ; the upper half
+  jr z,.column   ; the upper half
   or $08         ; or the lower
 
-gPlot3:
-  out (GLCDI),a  ; its column
-  call gDlyUs
+.column:
+  out (GLCD_CMD),a  ; its column
+  call gDelayUs
   ld b,$10       ; 16 bytes a row
 
-gPlot2:
+.byte:
   ld a,(hl)      ; the buffer's byte
-  out (GLCDD),a  ; out to the panel
-  call gDlyUs
+  out (GLCD_DAT),a  ; out to the panel
+  call gDelayUs
   ld a,(CLRBUF)  ; clear it?
   or a
-  jr z,gPlot4    ; no: kept
+  jr z,.next     ; no: kept
   ld (hl),$00    ; or cleared
 
-gPlot4:
+.next:
   inc hl
-  djnz gPlot2    ; across the row
+  djnz .byte     ; across the row
   inc c          ; the next row
   bit 6,c
-  jr z,gPlot1    ; until row 64
+  jr z,.row      ; until row 64
   ret
 
 ; Call 13, printString: the zero-ended
@@ -719,83 +719,84 @@ gPlot4:
 ; row C, 0 to 3. It returns past the
 ; zero. A row of 4 to 7 reads
 ; INIT_BASIC's bytes as the address,
-; as in MON-3, so GINITB follows GROWS.
+; as in MON-3, so GlcdInit follows
+; GlcdRows.
 ; Clobbers A, B, DE and HL.
 
-gPStr:
+gPrtStr:
   ld b,c         ; the row
-  call gTxM      ; text mode
-  ld hl,GRows
+  call gTxtMode  ; text mode
+  ld hl,GlcdRows
   ld a,b
   add a,l        ; the row's entry
-  jr nc,gPStr1
+  jr nc,.addr
   inc h          ; with its carry
 
-gPStr1:
+.addr:
   ld l,a
   ld a,(hl)      ; the row's address
-  out (GLCDI),a  ; its DDRAM address
-  call gDlyUs
+  out (GLCD_CMD),a  ; its DDRAM address
+  call gDelayUs
   pop hl         ; the text
 
-gPStr2:
+.char:
   ld a,(hl)      ; the next character
   inc hl
   or a
-  jr z,gPStr3    ; its zero
-  out (GLCDD),a  ; a character
-  call gDlyUs
-  jr gPStr2
+  jr z,.back     ; its zero
+  out (GLCD_DAT),a  ; a character
+  call gDelayUs
+  jr .char
 
-gPStr3:
+.back:
   jp (hl)        ; back past the text
 
 ; Call 14, printChars: the zero-ended
 ; text at HL in text mode, from column
 ; word B (0-7) of row C (0-3). HL ends
-; past the zero and DE in GROWS.
+; past the zero and DE in GlcdRows.
 ; Clobbers A and DE.
 
-gPChr:
-  call gTxM      ; text mode
-  ld de,GRows
+gPrtChrs:
+  call gTxtMode  ; text mode
+  ld de,GlcdRows
   ld a,c
   add a,e        ; the row's entry
-  jr nc,gPChr1
+  jr nc,.addr
   inc d          ; with its carry
 
-gPChr1:
+.addr:
   ld e,a
   ld a,(de)      ; the row's address
   add a,b        ; and the column
-  out (GLCDI),a  ; the DDRAM address
-  call gDlyUs
+  out (GLCD_CMD),a  ; the DDRAM address
+  call gDelayUs
 
-gPChr2:
+.char:
   ld a,(hl)      ; the next character
   inc hl
   or a
   ret z          ; its zero
-  out (GLCDD),a  ; a character
-  call gDlyUs
-  jr gPChr2
+  out (GLCD_DAT),a  ; a character
+  call gDelayUs
+  jr .char
 
 ; Call 15, delayUS: the wait the ST7920
 ; needs after a byte, about 70 us at
 ; 4 MHz, by delayMS. Clobbers A and DE.
 
-gDlyUs:
-  ld de,VDLY     ; 10 counts
+gDelayUs:
+  ld de,US_DELAY    ; 10 counts
 
 ; Call 16, delayMS: DE counts, 26 T
 ; each, 0 for 65,536. Clobbers A and
 ; DE.
 
-gDlyMs:
+gDelayMs:
   dec de         ; one count
   ld a,d
   or e
-  jr nz,gDlyMs   ; until DE is 0
+  jr nz,gDelayMs    ; until DE is 0
   ret
 
 ; Call 17, setBufClear: plotToLCD
@@ -803,15 +804,15 @@ gDlyMs:
 ; the buffer is cleared. Clobbers A,
 ; BC, DE and HL.
 
-gBClr:
+gBufClr:
   ld a,$FF       ; nonzero
   ld (CLRBUF),a  ; clear after a plot
-  jp gClrB       ; and the buffer
+  jp gClrBuf     ; and the buffer
 
 ; Call 18, setBufNoClear: plotToLCD
 ; keeps the buffer. Clobbers A.
 
-gBKeep:
+gBufKeep:
   xor a          ; zero
   ld (CLRBUF),a  ; keep after a plot
   ret
@@ -822,5 +823,5 @@ gBKeep:
 ; no cursor; cursor right; DDRAM
 ; clear.
 
-GRows: DB $80,$90,$88,$98
-GInitB: DB $30,$0C,$06,$01
+GlcdRows: DB $80,$90,$88,$98
+GlcdInit: DB $30,$0C,$06,$01
