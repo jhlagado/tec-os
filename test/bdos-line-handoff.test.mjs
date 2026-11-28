@@ -31,8 +31,8 @@ function readLine({ leak = false, tbg } = {}) {
     return String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(row * 20, row * 20 + 20));
   }
   if (tbg) {
-    m.type("TBUG.SVC BDOSLINE\r");
-    m.runUntil(() => /^.PC 0100/.test(lcd()), 45_000_000, "TBUG entry stop");
+    m.type("tbug bdosline\r");
+    m.runUntil(() => [0, 1, 2, 3].some((r) => /^>→0100 /.test(lcd(r).replace("\x7e", "→"))), 45_000_000, "TBUG entry stop, in Code");
     runFor(m, 150_000);
     setKey(m, 2, true); press(m, 24); setKey(m, 2, false); runFor(m, 100_000); // F5: Fn+5.
   } else {
