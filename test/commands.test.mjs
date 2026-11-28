@@ -186,6 +186,26 @@ test("bare search preserves named drives and COM fallback to A before SVC", asyn
   }
 });
 
+test("an SVC falls back to A: as a COM does: bare and .SVC names from B: install A:'s, an explicit B: doesn't", async () => {
+  const svc = await executableService();
+  for (const shell of [false, true]) {
+    for (const line of ["JOB P", "JOB.SVC P"]) {
+      const m = await machine({ "JOB.SVC": svc }, { shell });
+      const run = (text) => shell ? shellAt(m, text) : m.command(text);
+      run("B:");
+      assert.match(run(line), /EXEC/, `${line} at B: finds A:JOB.SVC`);
+      assert.match(run("JOB P"), /EXEC/, "and enters the installed one from B:");
+      assert.deepEqual(m.violations, []);
+    }
+    const named = await machine({ "JOB.SVC": svc }, { shell });
+    const run = (text) => shell ? shellAt(named, text) : named.command(text);
+    run("B:");
+    assert.match(run("B:JOB P"), /B:JOB\?/, "a named drive is searched alone");
+    assert.match(run("B:JOB.SVC P"), /B:JOB\.SVC\?/, "for an explicit .SVC too");
+    assert.deepEqual(named.violations, []);
+  }
+});
+
 test("bare search retains resident execution precedence after the SVC file is removed", async () => {
   const m = await machine({ "JOB.SVC": await executableService(), "JOB.CMD": startupFile("ECHO WRONG_SCRIPT") }, { shell: true });
   assert.match(shellAt(m, "JOB"), /EXEC/);

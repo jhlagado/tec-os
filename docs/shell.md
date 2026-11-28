@@ -46,8 +46,9 @@ The bare prompt behaves as a CP/M 2.2 CCP:
 - `COPY`, `DEL` and `SERVICES` are names like any other: `NAME?` with FF00h,
   unless a `.COM` of the name exists.
 - A bare `NAME` tries `NAME.COM` then `NAME.SVC`. COM searches the current
-  drive then A: unless a drive was named. SVC uses the named or current
-  drive. With the shell, a missing executable also allows `NAME.CMD`.
+  drive then A: unless a drive was named, and so does SVC: `tbug step` at
+  `B:WORK>` finds `A:TBUG.SVC`. With the shell, a missing executable also
+  allows `NAME.CMD`, from the named or current drive only.
   A built-in always wins: `TYPE`, `ERA`, `REN`, `CON`, `UNLOAD` and `CLS` go
   to the ROM, `COPY`, `DEL`, `SERVICES`, `CD`, `DIR`, `ECHO` and `PAUSE` to
   the shell, and a script of the same name runs only as `NAME.CMD`.

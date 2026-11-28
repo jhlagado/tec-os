@@ -719,7 +719,9 @@ REGF3:
 ; service whose ready record asks to be
 ; entered and holds CMDFCB's name, with
 ; no file read. With none, install the
-; file; if its record asks, enter it,
+; file, from the current drive or, with
+; no drive named, A:, as FINDCOM reads
+; a COM; if its record asks, enter it,
 ; removing it if it never became ready.
 ; Two or more are refused. Text after
 ; the name is the entry's tail.
@@ -885,7 +887,7 @@ GLCLD:
 SVCGO:
   xor a          ; clear load status
   ld (SVCRC),a
-  call LOADCOM   ; stage at 0100h
+  call FINDCOM   ; stage at 0100h, A: too
   ret c
   call SVCLOAD
   ret c

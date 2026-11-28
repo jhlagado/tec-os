@@ -117,8 +117,9 @@ record's name play no part, and nor does the drive: `B:MON3.SVC` enters a
 
 1. **One match** is entered. No file is opened, so the file need not still be
    on the card.
-2. **None:** the file is read from the drive named, or the current one, with
-   no fallback to A:, and installs as `NAME.SVC` always has, the console step
+2. **None:** the file is read from the drive named or, with no drive named,
+   from the current drive and then A:, as a `.COM` is, and installs as
+   `NAME.SVC` always has, the console step
    included. If the new service's record has bit 1, it is entered when its
    `INIT` set it ready with that name; otherwise the line ends, installed only.
 3. **Two or more** are refused, `NAME.SVC?` with FF00h, and neither is chosen.

@@ -397,9 +397,10 @@ KEYSK:
   jp c,BADCMD
 
 ; Exact type SVC enters the loader's
-; SVCRUN, without CMDCOM's fallback to
-; A: it enters a service that is
-; in, or installs the file. CMDCOM
+; SVCRUN: it enters a service that is
+; in, or installs the file, read as a
+; COM is, from A: too when no drive is
+; named (SVCGO's FINDCOM). CMDCOM
 ; checks every other explicit type
 ; before loading application memory.
 
