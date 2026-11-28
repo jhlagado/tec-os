@@ -22,7 +22,7 @@
   },
   "after": {
     "rows": [
-      "MON-3 ON TEC-OS     ",
+      "MON-3 ON TECOS      ",
       "LCD BY RST 10H      ",
       "DIGITS BY RST 20H   ",
       "KEY BEEPS, AD QUITS "

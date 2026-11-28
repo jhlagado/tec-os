@@ -257,7 +257,7 @@ test("on the card, TAS DEMO builds DEMO.COM and DEMO runs it until a key", { ski
   assert.deepEqual(m.violations, []);
 });
 
-const HELLO3_ROWS = ["MON-3 ON TEC-OS     ", "LCD BY RST 10H      ", "DIGITS BY RST 20H   ", "KEY BEEPS, AD QUITS "];
+const HELLO3_ROWS = ["MON-3 ON TECOS      ", "LCD BY RST 10H      ", "DIGITS BY RST 20H   ", "KEY BEEPS, AD QUITS "];
 
 // HELLO3 as the card's instruction gives it, on the card as the web page runs
 // it: the PICO9918 at 40 columns and the matrix keyboard, whose Esc MON-3
