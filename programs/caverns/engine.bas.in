@@ -5,7 +5,7 @@ REM Dreamcards. GNU GPL release 2019; see CAVERNS.TXT and repository LICENSE.
 REM Original prose: github.com/jhlagado/caverns src/protected/caverns.basic.
 REM Origins: ZX81; VIC-20 port with Ken Stone; Microbee MicroWorld BASIC.
 REM Recovery: Microbee Software Preservation Project; Alan Laughton (ChickenMan).
-REM Author-approved Tecos rewrite. The archival listing is unchanged.
+REM Author-approved TEC-OS rewrite. The archival listing is unchanged.
 REM Insert experimental lines between these ten-step line numbers.
 REM State: rm room, ob objects, db drawbridge, ht hatch, sh shaft, td door.
 REM State: cr crypt, cl crystal glow, ft fatigue, tu turns, rp tied rope, gt gate.

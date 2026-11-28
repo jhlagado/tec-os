@@ -7,7 +7,7 @@ Released under the GNU General Public License in 2019.
 Caverns is a text adventure written in 1982 for the Sinclair ZX81.
 John Hardy and Ken Stone ported it to the VIC-20, and the Microbee
 edition followed in 1983. The recovered MicroWorld BASIC version is
-the basis of this Tecos edition, revised with the original author.
+the basis of this TEC-OS edition, revised with the original author.
 
 
 THE LEGEND OF SVARTALFHEIM
@@ -98,7 +98,7 @@ or after typing Y to start again. The slot lasts while Caverns is
 running. It disappears when you exit the game or power off. A restored
 fight can play out differently.
 
-At the end of an adventure, Y starts again, N returns to Tecos and
+At the end of an adventure, Y starts again, N returns to TEC-OS and
 RESTORE resumes your saved game. HELP, LOOK, INVENTORY, SCORE, SAVE
 and RESTORE cost no turns.
 
@@ -106,7 +106,7 @@ and RESTORE cost no turns.
 STARTING THE GAME
 -----------------
 
-From the Tecos SYSTEM volume, type:
+From the TEC-OS SYSTEM volume, type:
 
   CON PICO 80
   BAZC CAVERNS

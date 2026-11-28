@@ -27,7 +27,7 @@ NOABI:	LD	DE,NOABIM
 	LD	C,9
 	JP	BDOS
 ABITAG:	DB	"TNA"
-NOABIM:	DB	"MOUNT needs Tecos with ABI 5.",13,10,"$"
+NOABIM:	DB	"MOUNT needs TEC-OS with ABI 5.",13,10,"$"
 ABIOK:
         LD      HL,TAIL
         CALL    SKIP

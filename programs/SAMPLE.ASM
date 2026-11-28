@@ -190,7 +190,7 @@ PLACE3:
 ; Tecos's signature, text and patterns.
 
 TNA:      DB    "TNA"
-HELLO:    DB    "Hello from Tecos."
+HELLO:    DB    "Hello from TEC-OS."
   DB 13,10,"$"
 
 ; The size, as "80 by 24".

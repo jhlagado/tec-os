@@ -199,7 +199,7 @@ test('KS40 DEMO and VIDMODE retain baseline native bytes and DEMO equals actual 
  }
  // DEMO.ASM's exact text: the card ships it, comments and all, so a
  // change to any line, not only to the code, must be seen.
- assert.equal(sha(readFileSync(root+'/programs/DEMO.ASM')),'0c8efeeddf6816ad0a9f5e87c8d4f4c1a068eb7a5ef9627bb827fe63f28f85a2');
+ assert.equal(sha(readFileSync(root+'/programs/DEMO.ASM')),'57dbdd3bd56b047ca58b7a56b15f2b17614410c05279ae10fdaea7201c48272e');
  // HELLO3.ASM's too: the card ships test/programs/hello3.asm as it is.
  assert.equal(sha(readFileSync(root+'/test/programs/hello3.asm')),'e59f019fde7694b32a14db2c4e8f1b571e8845ac4d0dd2ca3f5d1096cb9f3da5');
 });

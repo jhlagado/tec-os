@@ -638,7 +638,7 @@ VWA:
 ; Tecos's signature, then the messages.
 
 ABITAG:   DB    "TNA"
-TITLE:    DB    13,10,"Tecos hardware "
+TITLE:    DB    13,10,"TEC-OS hardware "
   DB "services demo",13,10,"$"
 PICOMSG:  DB    "PICO9918: $"
 GLCDMSG:  DB    "   GLCD: $"
@@ -652,12 +652,12 @@ KEYMSG:   DB    13,10,"Watch the LCD, "
 BYE:      DB    13,10,"Demo stopped."
   DB 13,10,"$"
 NOHWMSG:  DB    13,10,"DEMO needs "
-  DB "Tecos with ABI 5.",13,10,"$"
+  DB "TEC-OS with ABI 5.",13,10,"$"
 
 ; The LCD's four rows, 20 characters
 ; each.
 
-LCDTXT:   DB    "Tecos hardware demo"
+LCDTXT:   DB    "TEC-OS hardware demo"
   DB "7-seg: hex counter  "
   DB "8x8: moving rainbow "
   DB "PICO9918: Graphics I"

@@ -3,7 +3,7 @@
 30 REM Original prose: github.com/jhlagado/caverns src/protected/caverns.basic.
 40 REM Origins: ZX81; VIC-20 port with Ken Stone; Microbee MicroWorld BASIC.
 50 REM Recovery: Microbee Software Preservation Project; Alan Laughton (ChickenMan).
-60 REM Author-approved Tecos rewrite. The archival listing is unchanged.
+60 REM Author-approved TEC-OS rewrite. The archival listing is unchanged.
 70 REM Insert experimental lines between these ten-step line numbers.
 80 REM State: rm room, ob objects, db drawbridge, ht hatch, sh shaft, td door.
 90 REM State: cr crypt, cl crystal glow, ft fatigue, tu turns, rp tied rope, gt gate.

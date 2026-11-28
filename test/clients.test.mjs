@@ -27,7 +27,7 @@ async function machine(edit = () => {}) {
 
 const MAJOR3 = (r) => (r[6] = 3);
 const NOTAG = (r) => (r[3] = 0x58);
-const WORDS = { DEMO: "DEMO needs Tecos with ABI 5.", "MOUNT B:": "MOUNT needs Tecos with ABI 5.", MOUNT: "MOUNT needs Tecos with ABI 5." };
+const WORDS = { DEMO: "DEMO needs TEC-OS with ABI 5.", "MOUNT B:": "MOUNT needs TEC-OS with ABI 5.", MOUNT: "MOUNT needs TEC-OS with ABI 5." };
 
 for (const [line, word] of Object.entries(WORDS)) {
   for (const [why, edit] of [["major 3", MAJOR3], ["no TNA tag", NOTAG]]) {

@@ -250,14 +250,14 @@ test("on the card, TAS DEMO builds DEMO.COM and DEMO runs it until a key", { ski
   const end = m.cycles + 100_000_000;
   m.runUntil(() => m.cycles >= end, 101_000_000, "the demo running");
   assert.deepEqual(Array.from(m.tec1g.state.display.tms9918.stateSnapshot().registers.slice(0, 8)), [0, 0xc2, 6, 0x80, 0, 0x36, 7, 1], "Graphics I on the PICO9918");
-  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20)), "Tecos hardware demo", "the LCD's first row");
+  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20)), "TEC-OS hardware demo", "the LCD's first row");
   m.enqueueInput(" ", "matrix");
   m.runUntilChecked(() => (m.pumpInput(), m.ready() && /Demo stopped\.\r\n[^]*A(:\S*)?>$/.test(m.text(mark))), 400_000_000, "the prompt after a key");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
   assert.deepEqual(m.violations, []);
 });
 
-const HELLO3_ROWS = ["MON-3 ON Tecos     ", "LCD BY RST 10H      ", "DIGITS BY RST 20H   ", "KEY BEEPS, AD QUITS "];
+const HELLO3_ROWS = ["MON-3 ON TEC-OS     ", "LCD BY RST 10H      ", "DIGITS BY RST 20H   ", "KEY BEEPS, AD QUITS "];
 
 // HELLO3 as the card's instruction gives it, on the card as the web page runs
 // it: the PICO9918 at 40 columns and the matrix keyboard, whose Esc MON-3

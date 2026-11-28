@@ -64,7 +64,7 @@ test("DEMO.COM drives the LCD, clock, digits, its own LED scan and a claimed PIC
   assert.match(m.text(m.mark), /PICO9918: yes/);
   assert.match(m.text(m.mark), /clock: yes/);
   const p = serializeTec1gUpdateFromRuntimeState(m.tec1g.state);
-  assert.equal(String.fromCharCode(...p.lcd.slice(0, 20)), "Tecos hardware demo");
+  assert.equal(String.fromCharCode(...p.lcd.slice(0, 20)), "TEC-OS hardware demo");
   assert.match(String.fromCharCode(...p.lcd.slice(60, 80)), /^Time     12:00:0\d   $/, "the clock on the last row, from TEST_CLOCK");
   assert.ok(p.digits.some((d) => d !== 0), "the counter is on the digits");
   assert.ok((p.matrixScanCycles?.length ?? 0) > 0, "complete scans of the 8 x 8 LEDs");

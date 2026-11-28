@@ -26,7 +26,7 @@ const LIMIT = 400_000_000;
 // and TAB(9) line up the X and the = whatever the numbers' widths.
 const TABLE = Array.from({ length: 12 }, (_, i) => `${` ${i + 1} `.padEnd(4)}X 7 `.padEnd(9) + `= ${(i + 1) * 7} `);
 const RUN = [
-  "HELLO FROM BASIC ON Tecos.",
+  "HELLO FROM BASIC ON TEC-OS.",
   "WHAT IS YOUR NAME? TEC",
   "HI, TEC.",
   "PICK A NUMBER, 1 TO 12? 13",
@@ -179,7 +179,7 @@ test("a failed compile's return code stops a chained line: BAZC BAD &TIMES runs 
   const m = boot(image, { tms: true, matrix: true });
   let mark = m.output.length;
   keys(m, "bazc times &times\r", "the good chain", () => /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
-  assert.match(m.text(mark), /COM written\r\n[^]*HELLO FROM BASIC ON Tecos\./, "TIMES ran after a good compile");
+  assert.match(m.text(mark), /COM written\r\n[^]*HELLO FROM BASIC ON TEC-OS\./, "TIMES ran after a good compile");
   keys(m, "TEC\r7\r", "the prompt", () => m.ready());
   mark = m.output.length;
   keys(m, "bazc bad &times\r", "the failed chain", () => (m.ready() && /A(:\S*)?>$/.test(m.text(mark))) || /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
