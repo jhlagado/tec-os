@@ -204,12 +204,12 @@
     "TBUG.SVC": {
       "env": "TBUG_SVC",
       "default": "../tbug/dist/TBUG.SVC",
-      "source": "jhlagado/tbug f31249a, dist/TBUG.SVC",
+      "source": "jhlagado/tbug 167f7f0, dist/TBUG.SVC",
       "repo": "jhlagado/tbug",
-      "commit": "f31249a64b91c19ea5c8b68bc67ebb45c34e6efc",
+      "commit": "167f7f04a7af5fe859d4b3f4c1885ae4ce4d78e6",
       "path": "dist/TBUG.SVC",
-      "bytes": 9139,
-      "sha256": "997363d9792a537edcf2b1c2910d942566c8c86f80d8e153ac1a7cf11cb36da6"
+      "bytes": 9085,
+      "sha256": "24d7ceb91b87821dd4355d1403796182fe5024291297a24e6b5ad2ebe9a30048"
     },
     "TBUG.HLP": {
       "env": "TBUG_HLP",
