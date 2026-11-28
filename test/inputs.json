@@ -204,22 +204,22 @@
     "TBUG.SVC": {
       "env": "TBUG_SVC",
       "default": "../tbug/dist/TBUG.SVC",
-      "source": "jhlagado/tbug 167f7f0, dist/TBUG.SVC",
+      "source": "jhlagado/tbug bce0e9f, dist/TBUG.SVC",
       "repo": "jhlagado/tbug",
-      "commit": "167f7f04a7af5fe859d4b3f4c1885ae4ce4d78e6",
+      "commit": "bce0e9fc8d7a2e32a1fba3b9cec6447e7aeb0099",
       "path": "dist/TBUG.SVC",
-      "bytes": 9085,
-      "sha256": "24d7ceb91b87821dd4355d1403796182fe5024291297a24e6b5ad2ebe9a30048"
+      "bytes": 9463,
+      "sha256": "11eb875b083dff9744be0b664387e2d232844a73860b84a958935e92eb30c0cf"
     },
     "TBUG.HLP": {
       "env": "TBUG_HLP",
       "default": "../tbug/dist/TBUG.HLP",
-      "source": "jhlagado/tbug a4d1da8, dist/TBUG.HLP",
+      "source": "jhlagado/tbug bce0e9f, dist/TBUG.HLP",
       "repo": "jhlagado/tbug",
-      "commit": "a4d1da82d2b5239b3154e910351dbe403ac1ab58",
+      "commit": "bce0e9fc8d7a2e32a1fba3b9cec6447e7aeb0099",
       "path": "dist/TBUG.HLP",
-      "bytes": 3584,
-      "sha256": "e3c269629fa73279503feff5e3e84630fd075b1e1c3f2f83f6b35ac05ae6d032"
+      "bytes": 3712,
+      "sha256": "a98060cc2371e3e2fc140ca8688f273089782518195dc2c01bdeb099bcf62933"
     }
   }
 }

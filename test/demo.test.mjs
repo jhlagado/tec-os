@@ -13,7 +13,7 @@ import { check, pinned } from "./lib/inputs.mjs";
 
 const TAS = pinned("TAS.COM");
 const SOURCE = readFileSync(resolve(ROOT, "programs/DEMO.ASM"), "utf8");
-// The pinned DEMO.COM: 1,191 bytes.
+// The pinned DEMO.COM: 1,189 bytes.
 const SHIPPED = "c868a5a0ca24314f7c5dd0d6d0ddedaed48f720540dbc7ac6e3db779a460575c";
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 
