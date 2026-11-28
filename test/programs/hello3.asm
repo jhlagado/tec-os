@@ -2,7 +2,7 @@
 ; shows it is alive. It loads and runs
 ; at 4000h, as MON-3 programs do.
 
-; On TEC-OS, type MON3.SVC, then
+; On Tecos, type MON3.SVC, then
 ; LOAD HELLO3.BIN and GO at MON3>.
 ; TAS HELLO3 HELLO3.BIN builds it.
 
@@ -97,7 +97,7 @@ NOKEY:
 
 LINES:
   DB $80
-  DB "MON-3 ON TEC-OS",0
+  DB "MON-3 ON TECOS",0
   DB $C0
   DB "LCD BY RST 10H",0
   DB $94

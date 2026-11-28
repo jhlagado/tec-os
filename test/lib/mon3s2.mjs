@@ -131,7 +131,7 @@ export const hexFile = (blocks) => lines([...dataRecords(blocks), END]);
 export const BIG16K = Uint8Array.from({ length: 16384 }, (_, i) => (7 * i + 3) & 0xff);
 
 export const HASHES = {
-  "HELLO3.HEX": "b05cec7bf24806e790033e7a0b262dea4a9ef696746a302107df33709705a89d",
+  "HELLO3.HEX": "b64f3d7c49a9983fab04d0a3fc2cc784b0a0123abd8bed58409c660f842c18fc",
   "BIG16K.HEX": "cdfb67f69f9ac473a370e6ba5e1d0b7a5380958100ffabce446402e04f8a64ec",
   "BIG16K.BIN": "ab571d12466f75ae481bdbbbfec70a0c53bf78e2849862addfa9a049d8f6fbc0",
   "MZ80.HEX": "cd2369448e27e0653274a1f36e3dab21ac73162dd42abde9cfe449acabafd950",

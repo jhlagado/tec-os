@@ -19,10 +19,10 @@ import { check, pinned } from "./inputs.mjs";
 import { run as censusRun, watch } from "./census.mjs";
 
 export const MON3_BIN = pinned("MON3.BIN");
-export const HELLO3_SHA = "666ca183a9014e3bb170033afaaf4c6397917dcf3719aa4b43ffb6897ed4d913";
+export const HELLO3_SHA = "fe62ecd3a3110a972185f9c8b89c8a0326273b3289c95ea6f109398b4a5b75ef";
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 
-/** HELLO3.BIN, built from test/programs/hello3.asm at 4000h: 173 bytes, by its hash. */
+/** HELLO3.BIN, built from test/programs/hello3.asm at 4000h: 172 bytes, by its hash. */
 export async function hello3() {
   const { bytes } = await program("hello3", { base: 0x4000 });
   assert.equal(sha(bytes), HELLO3_SHA, "HELLO3.BIN is the pinned program");

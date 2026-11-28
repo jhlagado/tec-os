@@ -12,7 +12,7 @@ import { PUT_COM, ROOT, program, putBytes, volume } from "./lib/fixtures.mjs";
 import { KEY5, KEYAD, MON3, MON3_BIN, bytesAt, card, digitsOf, find, hello3, lcdRows, line, machine, mon3Svc, reference, runFor, runTo, svcMutant, warmTarget } from "./lib/mon3.mjs";
 
 const RECORDED = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/mon3/hello3-reference.json"), "utf8"));
-const ROWS = ["MON-3 ON TEC-OS     ", "LCD BY RST 10H      ", "DIGITS BY RST 20H   ", "KEY BEEPS, AD QUITS "];
+const ROWS = ["MON-3 ON TECOS      ", "LCD BY RST 10H      ", "DIGITS BY RST 20H   ", "KEY BEEPS, AD QUITS "];
 const TEXT = Buffer.from("ONE\r\nTWO\r\nTHREE\r\n\x1a", "latin1");
 const BIG = Uint8Array.from({ length: 300 * 128 }, (_, i) => (i * 7 + (i >> 8)) & 0xff);
 const skip = MON3_BIN.skip;
