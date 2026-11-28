@@ -193,13 +193,13 @@ test('KS40 PICO version4 keeps width minimum3 ABI5.4 and every public state offs
 });
 
 test('KS40 DEMO and VIDMODE retain baseline native bytes and DEMO equals actual TAS media',async()=>{
- for(const [name,length,hash]of [['demo',1191,'7514c21df1dfabe11ddfa5ba94df9a40871f197e3e9b9d2e239c2b4988a9482d'],['vidmode',61,'db1ea487e5cd573149bdfa61853366efefc19e450b0920094ab111dc2ba665df']]){
+ for(const [name,length,hash]of [['demo',1189,'c868a5a0ca24314f7c5dd0d6d0ddedaed48f720540dbc7ac6e3db779a460575c'],['vidmode',61,'db1ea487e5cd573149bdfa61853366efefc19e450b0920094ab111dc2ba665df']]){
   const {bytes}=await assembleProgram(root+(name==='demo'?'/programs/DEMO.ASM':'/test/programs/'+name+'.asm'));assert.equal(bytes.length,length);assert.equal(sha(bytes),hash,'exact measured baseline native '+name);
   if(name==='demo')assert.ok(Buffer.from(bytes).equals(readFileSync(root+'/dist/DEMO.COM')),'actual TAS media DEMO');
  }
  // DEMO.ASM's exact text: the card ships it, comments and all, so a
  // change to any line, not only to the code, must be seen.
- assert.equal(sha(readFileSync(root+'/programs/DEMO.ASM')),'57dbdd3bd56b047ca58b7a56b15f2b17614410c05279ae10fdaea7201c48272e');
+ assert.equal(sha(readFileSync(root+'/programs/DEMO.ASM')),'55ae93f314bd992c4b2f6b91768e4acbff1a2d7c885019f413996488cd18035c');
  // HELLO3.ASM's too: the card ships test/programs/hello3.asm as it is.
  assert.equal(sha(readFileSync(root+'/test/programs/hello3.asm')),'e59f019fde7694b32a14db2c4e8f1b571e8845ac4d0dd2ca3f5d1096cb9f3da5');
 });

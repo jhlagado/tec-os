@@ -243,14 +243,14 @@ test("on the card, TAS DEMO builds DEMO.COM and DEMO runs it until a key", { ski
   keys("tas demo\r", "TAS's build", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
   assert.match(m.text(mark), /DEMO\.COM written/);
   const built = Buffer.from(volume(card, "A").read("DEMO.COM"));
-  assert.equal(sha(built.subarray(0, 1191)), "7514c21df1dfabe11ddfa5ba94df9a40871f197e3e9b9d2e239c2b4988a9482d", "the pinned DEMO.COM");
-  assert.ok(built.subarray(1191).every((b) => b === 0 || b === 0x1a), "nothing after the program but the record's padding");
+  assert.equal(sha(built.subarray(0, 1189)), "c868a5a0ca24314f7c5dd0d6d0ddedaed48f720540dbc7ac6e3db779a460575c", "the pinned DEMO.COM");
+  assert.ok(built.subarray(1189).every((b) => b === 0 || b === 0x1a), "nothing after the program but the record's padding");
   mark = m.output.length;
   keys("demo\r", "the demo's loop", () => /Press any key to stop\./.test(m.text(mark)));
   const end = m.cycles + 100_000_000;
   m.runUntil(() => m.cycles >= end, 101_000_000, "the demo running");
   assert.deepEqual(Array.from(m.tec1g.state.display.tms9918.stateSnapshot().registers.slice(0, 8)), [0, 0xc2, 6, 0x80, 0, 0x36, 7, 1], "Graphics I on the PICO9918");
-  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20)), "TEC-OS hardware demo", "the LCD's first row");
+  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20)), "Tecos hardware demo ", "the LCD's first row");
   m.enqueueInput(" ", "matrix");
   m.runUntilChecked(() => (m.pumpInput(), m.ready() && /Demo stopped\.\r\n[^]*A(:\S*)?>$/.test(m.text(mark))), 400_000_000, "the prompt after a key");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
