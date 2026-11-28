@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { fontPackage } from "./lib/font-package.mjs";
-// Build the TEC-OS ROM images.
+// Build the Tecos ROM images.
 //
 // For each hardware profile: generate the configuration and format equates,
 // assemble once to measure the resident workspace, place TPATOP as high as

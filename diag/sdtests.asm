@@ -1,5 +1,5 @@
 ; Checks SD5 and SD6, reads across the
-; card and read speed, with TEC-OS's
+; card and read speed, with Tecos's
 ; SDREAD, and the helpers SD7-SD9 share.
 
 ; SDLBA = BLK. Changes BC/DE/HL.
@@ -40,7 +40,7 @@ CM1:
 ; block and its code (FFh for a
 ; difference). A block an SDSC card
 ; can't address counts in RNGN instead:
-; TEC-OS refuses it with SDERNG.
+; Tecos refuses it with SDERNG.
 
 RD2:
   ld hl,BUFA     ; the first copy
@@ -68,7 +68,7 @@ R2E:
   jp CPY32       ; kept
 
 R2R:
-  ld hl,RNGN     ; refused by TEC-OS
+  ld hl,RNGN     ; refused by Tecos
   inc (hl)       ; one more refused
   ret
 

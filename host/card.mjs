@@ -41,11 +41,11 @@ export function cardProblem(image, display) {
   if (!files.some((f) => f.name === name)) {
     const asked = name.replace(".SVC", ".DRV");
     const old = files.find((f) => f.name === asked) ?? files.find((f) => OLD_DISPLAY.test(f.name));
-    if (old) return `This card is from an older TEC-OS: this ROM doesn't load ${old.name}, so the card boots as its STARTUP.CMD says. A new starter card has ${name}.`;
+    if (old) return `This card is from an older Tecos: this ROM doesn't load ${old.name}, so the card boots as its STARTUP.CMD says. A new starter card has ${name}.`;
     return `This card has no ${name}: it boots as its STARTUP.CMD says. A new starter card has it.`;
   }
   const version = a.read(name)[1];
-  if (version !== FORMAT) return `This card's ${name} is format ${version}, from an older TEC-OS, and this ROM refuses it. A new starter card has the driver.`;
+  if (version !== FORMAT) return `This card's ${name} is format ${version}, from an older Tecos, and this ROM refuses it. A new starter card has the driver.`;
   return null;
 }
 
@@ -113,7 +113,7 @@ const failedNote = (e) => `This card is from before the shell, and the page coul
  * gets the starter's system files, and the note says which. If they can't be
  * written, a full A: for one, the display's line is set alone, as for a card
  * with no starter, and the note says the shell wasn't added. Nothing else is
- * written; a card from an older TEC-OS keeps its own files.
+ * written; a card from an older Tecos keeps its own files.
  */
 export function prepareCard(image, display, width = 80, starter = null) {
   // The changes are made on a copy, and reach the card only when all are made:

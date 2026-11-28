@@ -1,5 +1,5 @@
 ; Portable CP/M BDOS with the CP/M 2.2
-; interface, adapted for TEC-OS ROM
+; interface, adapted for Tecos ROM
 ; residency. Provenance: PROVENANCE.md.
 ; Code and constant text stay in ROM.
 ; The BDOS workspace and stack are in

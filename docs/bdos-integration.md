@@ -21,7 +21,7 @@ FCB offset-helper reuse 3, three-byte record publication 15, and allocation-map
 walkers 32. No feature was added or removed. The ROM SHA-256 is
 `9e51269ab611b44fd5cb5e4d7de10b83584f768e4d93b71550f20e16965e30e2`.
 
-Preservation compares the current TEC-OS baseline, including its error
+Preservation compares the current Tecos baseline, including its error
 precedence and retry behavior. Original CP/M differences remain advisory;
 this work does not claim complete original-BDOS parity. The proofs observe
 actual CALL 0005h return PC/SP and A/L/B/H, complete FCBs, DMA/canaries, user

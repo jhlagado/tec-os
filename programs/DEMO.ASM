@@ -1,5 +1,5 @@
 ; A tour of the TEC-1G's hardware for
-; TEC-OS. Build it with TAS DEMO. Run it
+; Tecos. Build it with TAS DEMO. Run it
 ; with DEMO; any key stops it.
 
 ; It beeps, writes the LCD, counts in
@@ -12,7 +12,7 @@
 ; The ROM drives the digits, the LCD,
 ; the tone and the clock. The LEDs have
 ; no service, so this program scans them
-; itself. It needs TEC-OS with ABI 5.
+; itself. It needs Tecos with ABI 5.
 
 ; The ABI table: "TNA", then the major
 ; version. CALL ABICALL with the
@@ -52,7 +52,7 @@ LEDB      EQU   $F9
 
   ORG $0100
 
-; Check for TEC-OS: the table starts
+; Check for Tecos: the table starts
 ; "TNA", and its major version must be
 ; 5, since service numbers can move.
 
@@ -63,7 +63,7 @@ LEDB      EQU   $F9
 CHKTAG:
   ld a,(de)
   cp (hl)
-  jp nz,NOHW     ; not TEC-OS
+  jp nz,NOHW     ; not Tecos
   inc hl         ; the next letters
   inc de
   djnz CHKTAG
@@ -635,10 +635,10 @@ VWA:
   out (VDPCTL),a
   ret
 
-; TEC-OS's signature, then the messages.
+; Tecos's signature, then the messages.
 
 ABITAG:   DB    "TNA"
-TITLE:    DB    13,10,"TEC-OS hardware "
+TITLE:    DB    13,10,"Tecos hardware "
   DB "services demo",13,10,"$"
 PICOMSG:  DB    "PICO9918: $"
 GLCDMSG:  DB    "   GLCD: $"
@@ -652,12 +652,12 @@ KEYMSG:   DB    13,10,"Watch the LCD, "
 BYE:      DB    13,10,"Demo stopped."
   DB 13,10,"$"
 NOHWMSG:  DB    13,10,"DEMO needs "
-  DB "TEC-OS with ABI 5.",13,10,"$"
+  DB "Tecos with ABI 5.",13,10,"$"
 
 ; The LCD's four rows, 20 characters
 ; each.
 
-LCDTXT:   DB    "TEC-OS hardware demo"
+LCDTXT:   DB    "Tecos hardware demo"
   DB "7-seg: hex counter  "
   DB "8x8: moving rainbow "
   DB "PICO9918: Graphics I"

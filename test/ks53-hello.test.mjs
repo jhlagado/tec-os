@@ -1,7 +1,7 @@
 // HELLO3 under MON3.SVC against MON-3 itself: the vertical slice. A MON-3
 // program is loaded and run from the MON3> line, its registers at entry, its
 // LCD, digits, beeps and keys compared with the same program under MON-3's
-// own ROM, and TEC-OS checked afterwards. On the serial console and on a
+// own ROM, and Tecos checked afterwards. On the serial console and on a
 // board whose console is the GLCD. Emulator evidence.
 
 import { test } from "node:test";
@@ -12,7 +12,7 @@ import { PUT_COM, ROOT, program, putBytes, volume } from "./lib/fixtures.mjs";
 import { KEY5, KEYAD, MON3, MON3_BIN, bytesAt, card, digitsOf, find, hello3, lcdRows, line, machine, mon3Svc, reference, runFor, runTo, svcMutant, warmTarget } from "./lib/mon3.mjs";
 
 const RECORDED = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/mon3/hello3-reference.json"), "utf8"));
-const ROWS = ["MON-3 ON TEC-OS     ", "LCD BY RST 10H      ", "DIGITS BY RST 20H   ", "KEY BEEPS, AD QUITS "];
+const ROWS = ["MON-3 ON Tecos     ", "LCD BY RST 10H      ", "DIGITS BY RST 20H   ", "KEY BEEPS, AD QUITS "];
 const TEXT = Buffer.from("ONE\r\nTWO\r\nTHREE\r\n\x1a", "latin1");
 const BIG = Uint8Array.from({ length: 300 * 128 }, (_, i) => (i * 7 + (i >> 8)) & 0xff);
 const skip = MON3_BIN.skip;

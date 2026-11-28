@@ -2,7 +2,7 @@
 ; latch's bit 0. Latch changes go
 ; through MON3's set calls where MON3
 ; has one, and LATCHV follows them for
-; TEC-OS's SD routines, which write the
+; Tecos's SD routines, which write the
 ; latch.
 
 ; Set PROTECT (A = 0 or LATPROT), or
@@ -99,7 +99,7 @@ MBAD:
 ; 8000h-BFFFh window with EXPAND off and
 ; on. PROTECT is off meanwhile. A tag in
 ; each EXPAND setting must survive the
-; other: TEC-OS keeps its cache in
+; other: Tecos keeps its cache in
 ; EXPAND 1, so the two must be different
 ; RAM.
 
@@ -330,7 +330,7 @@ PK1:
 ; C000h-C7FFh with the bit 0, with it 1,
 ; and with MON3's setShadow "on" (01h).
 ; None differ where the ROM shows.
-; TEC-OS expects the ROM with the bit 0.
+; Tecos expects the ROM with the bit 0.
 ; Interrupts are off: the vectors at
 ; 0038h and 0066h are the ROM's
 ; meanwhile.
@@ -374,7 +374,7 @@ SHDCHK:
   out (SYSLAT),a
 
 ; PASS: bit 0 clear shows the ROM and
-; set shows RAM, as TEC-OS's /SHADOW.
+; set shows RAM, as Tecos's /SHADOW.
 ; Any other result is a WARN naming what
 ; was found; the other checks go on,
 ; with LATCHV as measured at the start.
@@ -386,7 +386,7 @@ SHDCHK:
   ld hl,(SH1)    ; set: RAM?
   ld a,h
   or l
-  ld hl,CVTEC    ; as TEC-OS expects
+  ld hl,CVTEC    ; as Tecos expects
   ld c,RPASS
   jr nz,SH1L
   ld hl,CVNONE   ; the ROM both ways

@@ -72,4 +72,4 @@ There are eleven carrying slots. A complete 126-point quest needs an earlier
 banking trip for side treasures before collecting all four vault treasures.
 Equipment stays carried; its counted value doubles while at home. At 126 the
 homecoming announces the completed quest. Lower scores still allow a voluntary
-ending or more exploration. QUIT prints the final ranking; N exits to TEC-OS.
+ending or more exploration. QUIT prints the final ranking; N exits to Tecos.

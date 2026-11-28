@@ -195,7 +195,7 @@ function bounceRound(card) {
   assert.deepEqual([moved[16], moved[17]], [150 - 18 + 6, 120 + 24 - 12], "the ship after DDDD AA WWW S");
   assert.notDeepEqual(moved.slice(0, 16), first.slice(0, 16), "the balls move");
   // The arrow keys as the Viewer sends them from the PICO9918's screen: the
-  // matrix's own arrow keys, which TEC-OS turns into ESC [ A, B, C or D.
+  // matrix's own arrow keys, which Tecos turns into ESC [ A, B, C or D.
   const ship = () => {
     const a = attrs(vdp().vram);
     return [a[16], a[17]];
@@ -250,18 +250,18 @@ test("on the card, TAS DEMO builds DEMO.COM and DEMO runs it until a key", { ski
   const end = m.cycles + 100_000_000;
   m.runUntil(() => m.cycles >= end, 101_000_000, "the demo running");
   assert.deepEqual(Array.from(m.tec1g.state.display.tms9918.stateSnapshot().registers.slice(0, 8)), [0, 0xc2, 6, 0x80, 0, 0x36, 7, 1], "Graphics I on the PICO9918");
-  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20)), "TEC-OS hardware demo", "the LCD's first row");
+  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20)), "Tecos hardware demo", "the LCD's first row");
   m.enqueueInput(" ", "matrix");
   m.runUntilChecked(() => (m.pumpInput(), m.ready() && /Demo stopped\.\r\n[^]*A(:\S*)?>$/.test(m.text(mark))), 400_000_000, "the prompt after a key");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
   assert.deepEqual(m.violations, []);
 });
 
-const HELLO3_ROWS = ["MON-3 ON TEC-OS     ", "LCD BY RST 10H      ", "DIGITS BY RST 20H   ", "KEY BEEPS, AD QUITS "];
+const HELLO3_ROWS = ["MON-3 ON Tecos     ", "LCD BY RST 10H      ", "DIGITS BY RST 20H   ", "KEY BEEPS, AD QUITS "];
 
 // HELLO3 as the card's instruction gives it, on the card as the web page runs
 // it: the PICO9918 at 40 columns and the matrix keyboard, whose Esc MON-3
-// takes as AD. Esc goes in as the page sends a key, held until TEC-OS's
+// takes as AD. Esc goes in as the page sends a key, held until Tecos's
 // console has read it: the service waits for it to go up, and the line
 // after MON3> must not see it.
 function hello3Round(card) {
@@ -302,7 +302,7 @@ test("on the card, MON3.SVC, LOAD HELLO3.BIN and GO write HELLO3's four lines on
   hello3Round(starter().on("MON3"));
 });
 
-/** The service's matrix scan without its LD (KBLAST),A: TEC-OS's held-key byte left as it was. */
+/** The service's matrix scan without its LD (KBLAST),A: Tecos's held-key byte left as it was. */
 function noRecord(b, at) {
   const i = find(b, at("MS3"), [0x7b, 0x32, 0xef, 0xbf, 0xfe, 0x40], 16);
   b.fill(0, i + 1, i + 4);
@@ -323,7 +323,7 @@ test("mutant: a MON3.SVC that doesn't wait for release or record keys delivers E
   assert.throws(() => hello3Round(card), /no held Escape reaches monitor line input/);
 });
 
-// The same after CON TTY, the console the page's serial terminal gives: TEC-OS
+// The same after CON TTY, the console the page's serial terminal gives: Tecos
 // reads no matrix key there, so the page never lets Esc go, and the return
 // must not wait for it.
 function hello3OnTty(card) {
@@ -364,7 +364,7 @@ test("mutant: a MON3.SVC that waits for the keys whatever the console, and doesn
 });
 
 // A key, then Esc, on the card at 40 columns on CRT:, each held as the page
-// holds a key, until TEC-OS's held-key byte shows it. While HELLO3 runs, only
+// holds a key, until Tecos's held-key byte shows it. While HELLO3 runs, only
 // MON3.SVC's scan reads the matrix, so it must record the key there too, or
 // the 1 is never let go and the Esc never comes.
 function hello3KeyThenEsc(card) {

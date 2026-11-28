@@ -1,7 +1,7 @@
-// TAS.COM, the assembler the starter card carries, on TEC-OS: a program
+// TAS.COM, the assembler the starter card carries, on Tecos: a program
 // assembled on the TEC and run; the card's copy, by its pinned hash, with a
 // missing or wrong file refused by the media tool; and drivers/ and svcdemo.asm
-// assembling under TAS on TEC-OS to their pinned flat images under a .COM
+// assembling under TAS on Tecos to their pinned flat images under a .COM
 // type; a .SVC that loads; a failed build's FF00h stopping a chained line; and a
 // read-only output refused. Emulator evidence. TAS.COM is a pinned input
 // (test/inputs.json). And the ROM's map refusing a source line that holds
@@ -23,7 +23,7 @@ const HELLO = 'ORG $100\nLD DE,MESSAGE\nLD C,9\nCALL 5\nRET\nMESSAGE: DB "HELLO 
 const LONG = { maxCycles: 4_000_000_000 };
 const text = (p) => Buffer.from(readFileSync(resolve(ROOT, p)));
 
-test("TAS assembles a program on TEC-OS and the program runs", { skip: TAS.skip, timeout: 900_000 }, () => {
+test("TAS assembles a program on Tecos and the program runs", { skip: TAS.skip, timeout: 900_000 }, () => {
   check(TAS);
   const image = standardCard();
   const a = volume(image, "A");
@@ -139,7 +139,7 @@ async function onHost(source, opt) {
 
 test("GLCD.SVC's source assembles under TAS to its pinned image", { skip: TAS.skip, timeout: 900_000 }, async () => {
   const tas = underTas({}, "GLCD.ASM", { ...COMMON, "GLCD.ASM": text("drivers/glcd.asm") }, GLCD_FLAT.bytes);
-  assert.deepEqual([...tas.subarray(DHLEN)], [...(await onHost("drivers/glcd.asm", {}))], "TAS on TEC-OS gives the host's body");
+  assert.deepEqual([...tas.subarray(DHLEN)], [...(await onHost("drivers/glcd.asm", {}))], "TAS on Tecos gives the host's body");
   assert.equal(sha(tas), GLCD_FLAT.sha256);
 });
 
@@ -150,7 +150,7 @@ test("svcdemo.asm assembles under TAS to its pinned image", { skip: TAS.skip, ti
   const source = readFileSync(resolve(ROOT, "test/programs/svcdemo.asm"), "latin1").replaceAll("HDRNAME", name).replaceAll("RECNAME", name);
   const tas = underTas(numbers, "SVCDEMO.ASM", { ...COMMON, "SVCDEMO.ASM": Buffer.from(source, "latin1") }, SVCDEMO_FLAT.bytes);
   const host = await onHost("test/programs/svcdemo.asm", { defs: { ...numbers, HDRNAME: name, RECNAME: name } });
-  assert.deepEqual([...tas.subarray(DHLEN)], [...host], "TAS on TEC-OS gives the host's body");
+  assert.deepEqual([...tas.subarray(DHLEN)], [...host], "TAS on Tecos gives the host's body");
   assert.equal(sha(tas), SVCDEMO_FLAT.sha256);
 });
 

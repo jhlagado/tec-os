@@ -17,7 +17,7 @@ authorize a layout migration; names move as Names says.
 
 Names come first. A source is read more often than it is written, and a name
 more often than any comment. Origo's `bindings/z80-cpm/assembly-style.md`,
-Names (MD-16), is the source of truth; this is how TEC-OS applies it.
+Names (MD-16), is the source of truth; this is how Tecos applies it.
 
 | Kind of name | Case | Examples |
 |---|---|---|

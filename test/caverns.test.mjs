@@ -1,4 +1,4 @@
-// Actual TEC-OS ROM, starter card and matrix input; no state shortcuts in
+// Actual Tecos ROM, starter card and matrix input; no state shortcuts in
 // either completion route. The BASIC symbol fixture comes from native BAZC.
 import {test} from 'node:test';
 import assert from 'node:assert/strict';

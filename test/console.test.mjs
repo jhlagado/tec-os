@@ -18,7 +18,7 @@ const putCard = () => {
 test("with a PICO9918 and the matrix keyboard the screen is the console from the banner on, with no file, and nothing goes to serial (KS39)", () => {
   const m = boot(standardCard(), { tms: true, matrix: true, width: 40 });
   const screen = m.screen();
-  assert.deepEqual(screen.slice(0, 4), ["", "TEC-OS 0.1 for TEC-1G", "A: SYSTEM", "B: WORK"], "the banner and volumes on the screen");
+  assert.deepEqual(screen.slice(0, 4), ["", "Tecos 0.1 for TEC-1G", "A: SYSTEM", "B: WORK"], "the banner and volumes on the screen");
   const at = screen.indexOf("A:SYSTEM>");
   assert.ok(at >= 0, "the prompt on the screen");
   assert.equal(m.cell(at, 9), 0xa0, "cursor is the reverse image of a space, after A:SYSTEM>");
@@ -141,7 +141,7 @@ test("the 20 x 4 LCD shows the banner and mounted drives", () => {
   const m = boot(standardCard());
   const lcd = serializeTec1gUpdateFromRuntimeState(m.tec1g.state).lcd;
   const row = (r) => String.fromCharCode(...lcd.slice(r * 20, r * 20 + 20)).trimEnd();
-  assert.equal(row(0), "TEC-OS 0.1  TEC-1G");
+  assert.equal(row(0), "Tecos 0.1  TEC-1G");
   assert.equal(row(1), "A: SYSTEM");
   assert.equal(row(2), "B: WORK");
 });
@@ -174,7 +174,7 @@ test("the GLCD is the console when no TMS9918 answers", () => {
   const m = boot(putCard(), { matrix: true });
   // The banner and the volumes go to serial and the LCD; the CCP's first
   // startup loads GLCD.SVC, and the GLCD is the console from its next prompt.
-  assert.match(m.serialText(), /TEC-OS 0\.1 for TEC-1G\r\nA: SYSTEM *\r\nB: WORK/);
+  assert.match(m.serialText(), /Tecos 0\.1 for TEC-1G\r\nA: SYSTEM *\r\nB: WORK/);
   assert.equal(m.glcdScreen().find((l) => l !== ""), "A:SYSTEM>");
   m.mark = m.output.length;
   m.typeMatrix("put 1 g.com\r");
@@ -299,7 +299,7 @@ test("Fn with an arrow sends Page Up, Page Down, Home and End, Shift with one xt
   assert.deepEqual(m.violations, []);
 });
 
-/** Press Fn and digit key D (0-9) together on M's matrix until TEC-OS takes it. */
+/** Press Fn and digit key D (0-9) together on M's matrix until Tecos takes it. */
 
 test("Fn with a digit key sends F1 to F10 as xterm does, and Fn with another key its plain character", async () => {
   const image = standardCard();

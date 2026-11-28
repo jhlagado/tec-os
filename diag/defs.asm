@@ -1,6 +1,6 @@
 ; Ports, latch bits, MON3 calls and the
 ; memory the diagnostics use. Ports
-; follow TEC-OS's own sources and the
+; follow Tecos's own sources and the
 ; TEC-1G port list; docs/diagnostics.md
 ; records what each check assumes.
 
@@ -15,7 +15,7 @@ SDIO      EQU   $FD
 MTXP      EQU   $FE
 SYSLAT    EQU   $FF
 
-; The names TEC-OS's src/tms.asm uses.
+; The names Tecos's src/tms.asm uses.
 
 VDPDAT    EQU   VDPD
 VDPCTL    EQU   VDPC
@@ -27,7 +27,7 @@ VDPCTL    EQU   VDPC
 TXIDLE    EQU   $40
 DIGSEL    EQU   $01
 
-; System latch bits, as TEC-OS names
+; System latch bits, as Tecos names
 ; them. Bit 0 is /SHADOW: 1 removes the
 ; boot overlay at 0000h-07FFh.
 

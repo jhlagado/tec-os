@@ -1,11 +1,11 @@
 ; Counted SD routines and checks
-; SD1-SD4. TEC-OS's driver (src/sd.asm)
+; SD1-SD4. Tecos's driver (src/sd.asm)
 ; does the card work but keeps no poll
 ; counts, so these routines repeat its
 ; sequences with its own primitives
 ; (SDCMD, SPIR, SPIW, SPIEND, SDRBLK,
 ; SDWBLK) and count each wait against
-; TEC-OS's bound.
+; Tecos's bound.
 
 ; Send command A as SDCMD does, and
 ; raise R1MAX to the R1 polls it used.
@@ -15,7 +15,7 @@
 ; BC/DE/HL.
 
 XCMD:
-  call SDCMD     ; TEC-OS's command
+  call SDCMD     ; Tecos's command
   push af        ; its answer
   ld a,17        ; the polls used:
   sub d          ; 17 - D
@@ -93,7 +93,7 @@ BSYCNT:
 CINIT:
   ld a,SDIDLE    ; deselected, CLK low
   out (SDIO),a   ; idle
-  ld d,10        ; TEC-OS's ten CMD0
+  ld d,10        ; Tecos's ten CMD0
                  ; tries
 
 CI0:
@@ -125,7 +125,7 @@ CICK:
 ; R7 bytes, whose third's low nibble
 ; must be 1 and fourth AAh. Any other R1
 ; goes on to ACMD41 without R7, as
-; TEC-OS does.
+; Tecos does.
 
 CI8:
   ld de,0        ; the argument 1AAh
@@ -164,7 +164,7 @@ CI8X:
 
 ; Up to 256 tries of CMD55 then ACMD41
 ; with HCS, each failed try followed by
-; TEC-OS's 256-turn pause.
+; Tecos's 256-turn pause.
 
 CI41:
   ld c,0         ; 256 tries
@@ -188,7 +188,7 @@ CI41L:
   pop bc
   or a           ; 00h: ready
   jr z,CI58
-  ld b,0         ; TEC-OS's pause
+  ld b,0         ; Tecos's pause
 
 CI41W:
   djnz CI41W     ; 256 turns
@@ -254,7 +254,7 @@ CIOK:
 ; does, counting the R1 and data-token
 ; polls. Returns as SDREAD: A=0/Z or
 ; SDE*/NZ, also in SDERR. The token loop
-; takes about as long as a TEC-OS poll.
+; takes about as long as a Tecos poll.
 ; Changes F/BC/DE/HL/IX.
 
 MREAD:
@@ -294,7 +294,7 @@ MRBAD:
 
 MRDAT:
   call TOKCNT    ; count the polls
-  call SDRBLK    ; TEC-OS's 512 bytes
+  call SDRBLK    ; Tecos's 512 bytes
   call SPIR      ; two CRC bytes
   call SPIR      ; the second CRC byte
   call SPIEND
@@ -328,7 +328,7 @@ MWRITE:
   call SPIW      ; sent
   ld c,$FE       ; the start token
   call SPIW
-  call SDWBLK    ; TEC-OS's 512 bytes
+  call SDWBLK    ; Tecos's 512 bytes
   ld c,$FF       ; two CRC bytes:
   call SPIW      ; SPIW keeps C
   call SPIW      ; the first CRC byte
@@ -337,7 +337,7 @@ MWRITE:
 
 MWR:
   push de        ; SPIR keeps D, but
-  call SPIR      ; TEC-OS saves DE too
+  call SPIR      ; Tecos saves DE too
   pop de
   inc ix         ; one more poll
   cp $FF         ; not FFh: the response
@@ -388,7 +388,7 @@ MWDON:
   jp SDIOK
 
 ; Read the 16-byte CSD (A=9) or CID
-; (A=10) into HL. TEC-OS has no routine
+; (A=10) into HL. Tecos has no routine
 ; for these, so this one uses its
 ; primitives and token bound. Returns
 ; A=0/Z or SDE*/NZ.
@@ -500,7 +500,7 @@ S1B:
   jp ENDL
 
 ; SD2: the counted initialisation, then
-; TEC-OS's SDINIT, which must succeed.
+; Tecos's SDINIT, which must succeed.
 ; SDINIT's result decides the status; a
 ; counted run that differs from it is a
 ; WARN.
@@ -510,8 +510,8 @@ SD2:
   call BEGIN     ; SD2's record
   call CINIT     ; counted
   ld (CIERR),a
-  call SDINIT    ; TEC-OS's own
-  ld (INERR),a   ; TEC-OS's result
+  call SDINIT    ; Tecos's own
+  ld (INERR),a   ; Tecos's result
   or a
   jr nz,S2F      ; it failed
   inc a          ; the card is ready
@@ -524,7 +524,7 @@ SD2:
   jr S2R
 
 S2F:
-  ld a,RFAIL     ; TEC-OS's failed
+  ld a,RFAIL     ; Tecos's failed
 
 S2R:
   call RESULT
@@ -571,7 +571,7 @@ S2B:
 
 ; SD3: 64 counted reads of blocks 0-63.
 ; Shows the most polls each wait took
-; against TEC-OS's bound, and WARNs when
+; against Tecos's bound, and WARNs when
 ; one used more than a quarter of it.
 
 SD3:

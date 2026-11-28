@@ -6,7 +6,7 @@
 // pending block written at each flush point, logged on B: and logged on A:, the card taking writes and refusing them. Every memory write
 // is watched; the lowest address written in each stack (other than by an
 // LDIR, which clears the workspace) gives its depth. A keypad NMI is pressed
-// whenever SP reaches a new low in a stack while 0066h holds RETN. TEC-OS
+// whenever SP reaches a new low in a stack while 0066h holds RETN. Tecos
 // writes no handler there, so none is taken; a ROM with one would have
 // each depth include the NMI's frame. Emulator evidence; the figures go to
 // build/stack-census.json.

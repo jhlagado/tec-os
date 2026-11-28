@@ -20,7 +20,7 @@ is preserved as CAVASM.COM, outside the starter card, to avoid a name collision.
 The card still supplies only source and instructions, not the compiled game.
 
 The final native build is 37,248 bytes (37,177 logical), below the 40,000-byte
-ceiling. Both independent full strict TEC-OS runs pass all 1,433 checks, with
+ceiling. Both independent full strict Tecos runs pass all 1,433 checks, with
 no failures or skips. The Viewer passes all 202 checks with unchanged timing
 and copy limits. A fresh Chromium context compiles the byte-identical game,
 plays the opening and restores an exported checkpoint in independent storage.
@@ -42,7 +42,7 @@ The host-copy timing failure under concurrent CPU load is retained by the
 Viewer; CPU isolation passed the same limits, with no gate weakened. Physical
 TEC-1G and the author's final read-through remain human-stage checks.
 
-The qualified work is on main in TEC-OS and the Viewer. The exact main-built,
+The qualified work is on main in Tecos and the Viewer. The exact main-built,
 fresh-browser-tested standalone is pushed to the hosting branch with matching
 build details. The executor's CONNECT proxy refuses the public URL, so uploaded
 bytes are verified via Git and the live HTTP response is not claimed as seen.

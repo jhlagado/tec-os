@@ -1,4 +1,4 @@
-// Actual TEC-OS launch + complete externally generated state, including RNG.
+// Actual Tecos launch + complete externally generated state, including RNG.
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';

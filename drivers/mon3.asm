@@ -1,4 +1,4 @@
-; MON3.SVC: a MON-3 session on TEC-OS.
+; MON3.SVC: a MON-3 session on Tecos.
 ; MON3.SVC installs it and gives a
 ; MON3> line: LOAD name.BIN [addr],
 ; GO [addr] and EXIT. A loaded program
@@ -51,7 +51,7 @@ DROW EQU $0900   ; a dump's line
 
 ; The latch bits GO takes from SYS_MODE:
 ; PROTECT and CAPS. EXPAND and the bank
-; would hide these pages and TEC-OS's
+; would hide these pages and Tecos's
 ; cache, and the overlay page zero.
 
 GOKEEP EQU $82
@@ -951,7 +951,7 @@ hook:
   ld a,h
   cp HIGH(r10)   ; and ours?
   jr nz,hook1
-  im 1           ; TEC-OS's mode
+  im 1           ; Tecos's mode
   ld a,TXI
   out (SDIG),a   ; TX idle
   ld sp,MStk     ; our own stack

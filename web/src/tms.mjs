@@ -1,6 +1,6 @@
 // TMS9918 screen rendering from VRAM and registers: text mode (40 columns of
 // 6-pixel cells) and Graphics I (32 columns) with its sprites, the modes the
-// TEC-OS console and its programs use. Other modes use the framebuffer the
+// Tecos console and its programs use. Other modes use the framebuffer the
 // runtime renders itself.
 
 const PALETTE = [

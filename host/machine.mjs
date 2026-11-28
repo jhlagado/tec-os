@@ -1,4 +1,4 @@
-// A TEC-1G running a TEC-OS ROM in the Debug80 runtime. This module has no
+// A TEC-1G running a Tecos ROM in the Debug80 runtime. This module has no
 // Node dependencies: the tests and the web page both use it.
 //
 // The Debug80 TEC-1G runtime supplies the CPU, latch decoding, overlay,
@@ -24,7 +24,7 @@ const ARROW_HOLD_CYCLES = 200_000;
 const MODIFIER_KEY = { shift: 0, ctrl: 1, fn: 2 };
 
 /**
- * The matrix key, and its modifier, that types CODE as TEC-OS reads the
+ * The matrix key, and its modifier, that types CODE as Tecos reads the
  * matrix, with no Caps Lock or Alt. The runtime's table gives 01h-07h first
  * as keys 1-7, the key of that number. 03h-06h stay the arrow keys 3-6, which
  * the tests and the Viewer type that way; Ctrl with C to F goes through
@@ -295,7 +295,7 @@ export class Machine {
     return this.tec1g.state.system.sysCtrl & 0xff;
   }
 
-  /** True while 8000h-BFFFh holds the classic bank, TEC-OS's own RAM. */
+  /** True while 8000h-BFFFh holds the classic bank, Tecos's own RAM. */
   get classicBankIn() {
     return this.classicOnly || (this.sysCtrl & 0x04) === 0;
   }
@@ -416,7 +416,7 @@ export class Machine {
   }
 
   /** Type text one character at a time, as a terminal user would: each byte
-   *  is sent only when TEC-OS is waiting and the next waits until it has been
+   *  is sent only when Tecos is waiting and the next waits until it has been
    *  received. */
   type(text, maxCycles = 100_000_000) {
     if (this.videoConsole()) return this.typeMatrix(text, maxCycles);
@@ -514,7 +514,7 @@ export class Machine {
   }
 
 
-  /** Type text on the matrix keyboard: each key goes down until TEC-OS takes it. */
+  /** Type text on the matrix keyboard: each key goes down until Tecos takes it. */
   typeMatrix(text, maxCycles = 50_000_000) {
     const kblast = this.sym("KBLAST");
     for (const ch of text) {
@@ -533,8 +533,8 @@ export class Machine {
 
   /**
    * Queue keystrokes for delivery without blocking: call pumpInput() between
-   * steps. "serial" sends each byte when TEC-OS is waiting for one; "matrix"
-   * holds each key down until TEC-OS has seen it, then releases it.
+   * steps. "serial" sends each byte when Tecos is waiting for one; "matrix"
+   * holds each key down until Tecos has seen it, then releases it.
    */
   enqueueInput(text, via = "serial") {
     this.pending ??= [];
@@ -574,7 +574,7 @@ export class Machine {
         head.down = true;
         return;
       }
-      // KBLAST is TEC-OS's byte in the classic bank: while a program has
+      // KBLAST is Tecos's byte in the classic bank: while a program has
       // EXPAND 1 in, the byte there is the bank's, so the key stays down.
       if (!this.classicBankIn) return;
       if (!head.up && this.read(kblast) === head.key) {

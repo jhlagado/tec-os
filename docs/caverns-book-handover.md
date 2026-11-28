@@ -1,4 +1,4 @@
-# TEC-OS Book: BASIC Caverns handover
+# Tecos Book: BASIC Caverns handover
 
 The worked example uses restored original prose with the author-approved modern
 map and puzzles. Walkthrough spoilers remain in [the walkthrough](caverns-walkthrough.md)
@@ -65,7 +65,7 @@ COPY CAVERNS.BAS CAVBOOK.BAS
 TED CAVBOOK.BAS
 ```
 
-Edit the presentation banner at line 150 to `TEC-OS Book presents`, retaining
+Edit the presentation banner at line 150 to `Tecos Book presents`, retaining
 PRINT and its quotes. Ctrl-S saves, Ctrl-T B builds, Ctrl-T R builds/runs.
 QUIT followed by N exits the game. Dismiss TED's return pause, then Ctrl-Q
 leaves TED. The shell alternative is BAZA CAVBOOK followed by CAVBOOK.

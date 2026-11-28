@@ -1,9 +1,9 @@
-# MON3.SVC: MON-3 programs on TEC-OS
+# MON3.SVC: MON-3 programs on Tecos
 
 Status: **S3**, 2026-11-11 (KS53): install and entry, `LOAD` of a `.BIN` or a
 `.HEX`, `GO`, `EXIT` and re-entry; MON-3's restarts, 46 of its 63
 `RST 10h` calls (42 implemented, 4 translated) and 21 of its 34 `RST 18h`
-graphics calls, the matrix keyboard, the checksum of TEC-OS's tables on a
+graphics calls, the matrix keyboard, the checksum of Tecos's tables on a
 program's return, MON-3's graphics workspace at each entry, and the GLCD
 console given back after a program draws. `test/mon3.test.mjs`,
 `test/ks53-hello.test.mjs`, `test/mon3-s2.test.mjs` and
@@ -11,7 +11,7 @@ console given back after a program draws. `test/mon3.test.mjs`,
 MON-3's own ROM on the same emulator. All of it is emulator evidence.
 
 `MON3.SVC` is a service (`docs/services.md`) that runs programs written for
-MON-3, the TEC-1G's own monitor, under TEC-OS. The MON-3 it follows is
+MON-3, the TEC-1G's own monitor, under Tecos. The MON-3 it follows is
 `jhlagado/debug80-tec1g-mon3` at `000c052`, whose ROM is the pinned
 `MON3.BIN` the tests compare it with (`test/inputs.json`). Media builds it
 with TAS into `dist/MON3.SVC`, beside the ROM, and puts it on the starter
@@ -22,7 +22,7 @@ on the card to build the image that MON-3 loads at 4000h
 
 ## What the service is for
 
-Use `MON3.SVC` to run finished MON-3 programs on TEC-OS. For example,
+Use `MON3.SVC` to run finished MON-3 programs on Tecos. For example,
 enter `MON3.SVC`, then type `LOAD SNAKE9.BIN` and `GO` at `MON3>` on
 the Viewer starter card. A BIN normally loads at 4000h. The load
 commands below also cover explicit addresses and Intel HEX files.
@@ -147,7 +147,7 @@ It does not relocate absolute addresses embedded in machine code or data.
   off, the latch written from `SYS_MODE` with `PROT_MODE`, and `KEY_BUFF` set
   to FFh. Only the PROTECT and CAPS bits are taken: whatever a program left
   in `SYS_MODE`, GO never sets EXPAND or a bank bit, which would hide the
-  service and TEC-OS's cache, and never lets the boot overlay over page zero.
+  service and Tecos's cache, and never lets the boot overlay over page zero.
   The same value goes to `LATCHV`. The program starts with interrupts off and:
 
   | Register | Value |
@@ -176,14 +176,14 @@ again, every drive's allocation vector is rebuilt from its directory at its
 next use (BDOS 37), and the GLCD console's panel is set again ("The GLCD
 console", below). Two things keep the key that ended the program, AD or
 Esc, off the `MON3>` line. Each read of the matrix records the key in
-`KBLAST` ("Coverage in S2", below), so TEC-OS's scan takes a key still held
+`KBLAST` ("Coverage in S2", below), so Tecos's scan takes a key still held
 as held, not new, and the Viewer, which holds a key until that scan has
 read it, lets it go. And while CON: is a matrix console, `CRT:` or `UC1:`
 (IOBYTE bit 0 set), the return holds `MON3>` back until no key is down.
 Each pass runs MON-3's `scanKeys`, then scans the matrix itself, whatever
 `scanKeys` took as its input, so `KBLAST` is fresh. It then asks `KBLAST`
 for no matrix key at all, chords and keys outside the keypad's set
-included, and `KPRESS` for no keypad key. TEC-OS reads the matrix into a
+included, and `KPRESS` for no keypad key. Tecos reads the matrix into a
 line by the switch as it was at cold boot, so a matrix key held while the
 keypad ends a program, after the Matrix switch has gone off, is recorded
 as held and holds `MON3>` back too. While a key is
@@ -260,8 +260,8 @@ FCB and the stack lie outside the summed bytes, which the monitor rewrites.
 MON-3's workspace is where MON-3 keeps it, set at each entry: the signature
 `MON3.1G` at 0800h, the stack top at 0880h, MON-3's defaults from 0886h,
 `USER_INT` (0892h) at a `RETI`, `USER_NMI` (0894h) at the `RETN` at 004Eh,
-`SYS_MODE` (089Dh) the latch's shadow, and `PROT_MODE` (089Eh) 0. TEC-OS's own
-page zero and `LATCHV` stay TEC-OS's: MON-3's first 256 ROM bytes are never
+`SYS_MODE` (089Dh) the latch's shadow, and `PROT_MODE` (089Eh) 0. Tecos's own
+page zero and `LATCHV` stay Tecos's: MON-3's first 256 ROM bytes are never
 copied down.
 
 MON-3's graphics workspace is set at each entry too, as every MON-3 reset
@@ -320,7 +320,7 @@ The next entry takes it out first, and `UNLOAD` does too.
 
 | Entry | MON-3 | In S2 |
 | --- | --- | --- |
-| `RST 00h` | monitor reset | ends the session at the prompt through TEC-OS's warm boot |
+| `RST 00h` | monitor reset | ends the session at the prompt through Tecos's warm boot |
 | `RST 08h` | `scanKeysWait` | implemented, keypad and matrix |
 | `RST 10h` | API, selector in C | the calls below; a selector of 63 or more shows `displayError` |
 | `RST 18h` | GLCD API, selector in A | calls 0 to 20, MON-3's own routines; 21 and above show `displayError` |
@@ -347,7 +347,7 @@ after its acknowledge.
 keyboard fitted (port 03h's bit 0 set), calls 16 and 17, `RST 08h` and
 `RST 20h` read it at port FEh as MON-3 does, a row at a time.
 
-Translated, on TEC-OS's resources, 4 of them: 2 `preInit`, 41 `setCaps`,
+Translated, on Tecos's resources, 4 of them: 2 `preInit`, 41 `setCaps`,
 43 `setProtect` and 48 `toggleCaps`. Call 2 sets the workspace up again and
 returns to `MON3>` with nothing runnable, after checking the tables. MON-3's
 `preInit` is a hard restart that sets the GLCD up again through `initLCD`;
@@ -391,12 +391,12 @@ Where the session differs from MON-3, by design:
   keypad.
 - Each read of the matrix, by `scanKeys`, `scanKeysWait`, `RST 20h` or
   `matrixScan` (call 18) and the calls built on it, also records the key it
-  found, or FFh for none, in TEC-OS's last matrix key, `KBLAST`, which
-  `abi.inc` publishes (`docs/services.md`), as TEC-OS's own scan records
-  it. MON-3 has no such byte, and nothing a program sees changes. While a program runs, TEC-OS's scan
-  doesn't run, so without this a host that holds a matrix key until TEC-OS
+  found, or FFh for none, in Tecos's last matrix key, `KBLAST`, which
+  `abi.inc` publishes (`docs/services.md`), as Tecos's own scan records
+  it. MON-3 has no such byte, and nothing a program sees changes. While a program runs, Tecos's scan
+  doesn't run, so without this a host that holds a matrix key until Tecos
   has read it, as the Viewer does, would never let it go, and no later key
-  would come. Back at `MON3>`, or after `EXIT`, TEC-OS's scan finds a key
+  would come. Back at `MON3>`, or after `EXIT`, Tecos's scan finds a key
   still held recorded and doesn't take it as a new one.
 
 ## RST 18h: the graphics calls
@@ -481,12 +481,12 @@ its two `LD A,R` on both sides. The console's return is tested with
   BDOS entry through BFFFh (`B736h` on the starter, `B8F6h` on the two-volume
   reference card) can damage the allocation vectors, workspace and RAM BIOS
   table. It can
-  damage TEC-OS's disk tables. The protections are the flush before `GO`,
+  damage Tecos's disk tables. The protections are the flush before `GO`,
   BDOS 37 on every return, at `EXIT` and at every other way out but the
   EXPAND one, the latch stub, and the tables' checksum on return. Every BDOS
   call the service makes goes through its own header, so a program that
-  clears 0005h–0007h does not misdirect it. Nothing snapshots TEC-OS's state
+  clears 0005h–0007h does not misdirect it. Nothing snapshots Tecos's state
   around a program.
-- **EXPAND 1 is TEC-OS's cache.** The service doesn't use it, and a program
+- **EXPAND 1 is Tecos's cache.** The service doesn't use it, and a program
   that sets EXPAND sees the cache. A call through a restart sets the latch
   back first.

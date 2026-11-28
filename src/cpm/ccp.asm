@@ -5,7 +5,7 @@
 ; against the public CP/M interfaces and
 ; reviewed black-box CCP fixtures.
 ;
-; TEC-OS ROM-resident adaptation (see
+; Tecos ROM-resident adaptation (see
 ; PROVENANCE.md). The code and text are
 ; in ROM; the command buffers, scratch
 ; FCBs and stack are in src/ram.asm. The

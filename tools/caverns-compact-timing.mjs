@@ -15,5 +15,5 @@ function run(path){
  const startup=keys('caverns');const events=commands.map(keys);assert.deepEqual(m.violations,[]);return {startup,events,totalGarbageCollections:events.reduce((n,e)=>n+e.gcCalls,0),totalCommandCycles:events.reduce((n,e)=>n+e.cycles,0)};
 }
 const a=run(baseline),b=run(candidate);assert.equal(a.startup.output,b.startup.output);assert.deepEqual(a.events.map(e=>e.output),b.events.map(e=>e.output));
-const result={baseline:a,candidate:b,commandCycleIncrease:b.totalCommandCycles-a.totalCommandCycles,commandPercentIncrease:100*(b.totalCommandCycles/a.totalCommandCycles-1),scope:'Native TEC-OS console command-to-prompt timings; includes console and OS work. No combat or clock-seed equivalence claim.'};
+const result={baseline:a,candidate:b,commandCycleIncrease:b.totalCommandCycles-a.totalCommandCycles,commandPercentIncrease:100*(b.totalCommandCycles/a.totalCommandCycles-1),scope:'Native Tecos console command-to-prompt timings; includes console and OS work. No combat or clock-seed equivalence claim.'};
 fs.writeFileSync(output,JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify({baselineCycles:a.totalCommandCycles,candidateCycles:b.totalCommandCycles,percentIncrease:result.commandPercentIncrease}));

@@ -139,7 +139,7 @@ const leave = (m, r) => {
 
 // The ROM's size, hash and ABI against the baseline.
 
-// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back), restated at ABI 5.2 for TNGLYPH (17) and TNCOUNT 18, at ABI 5.4 for TNPARSE (18) and TNCOUNT 19, at ABI 5.5 for EXRMV, the execution record's state bit 2, and at ABI 5.6 for TNPAGE (19), TNPRMPT (20) and TNCOUNT 21. The ROM figure is the CCP primitives' build's 16,144 (ABI 5.6: back-tab, the pager, the history, CLS and the prompt's volume), restated as John decided on 2026-11-26 to raise the cap for EXRMV and the CCP's growth, from EXRMV's build's 15,728 (ABI 5.5, TEC-OS e371fee), from the COMVEC build's 15,600 (ABI 5.3, TEC-OS 8d6c09b), itself restated from the packed-font build's 15,549 (decided 2026-11-24); the cap is a ceiling on growth from it.
+// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back), restated at ABI 5.2 for TNGLYPH (17) and TNCOUNT 18, at ABI 5.4 for TNPARSE (18) and TNCOUNT 19, at ABI 5.5 for EXRMV, the execution record's state bit 2, and at ABI 5.6 for TNPAGE (19), TNPRMPT (20) and TNCOUNT 21. The ROM figure is the CCP primitives' build's 16,144 (ABI 5.6: back-tab, the pager, the history, CLS and the prompt's volume), restated as John decided on 2026-11-26 to raise the cap for EXRMV and the CCP's growth, from EXRMV's build's 15,728 (ABI 5.5, Tecos e371fee), from the COMVEC build's 15,600 (ABI 5.3, Tecos 8d6c09b), itself restated from the packed-font build's 15,549 (decided 2026-11-24); the cap is a ceiling on growth from it.
 const BASELINE = { used: 16144, cap: 128, tpa: 47273, abi: "c44f8d6f85d3cbc627079e13eafc8708682dce05caee3209608d44861ebc617c" };
 
 test("KG58 rom cap", () => {
@@ -554,7 +554,7 @@ test("key-up wait mutant: release judged by KPRESS alone gives MON3> while g is 
 });
 
 // The Matrix switch goes off mid-session, so the keypad is scanKeys's input,
-// while TEC-OS, which latched the matrix at cold boot, still reads it into
+// while Tecos, which latched the matrix at cold boot, still reads it into
 // the line. g is held on the matrix and keypad AD ends KPROG. The wait scans
 // the matrix on every pass whatever the input, so it records g as held and
 // holds MON3> back until g is up too, and g never reaches the line.
@@ -766,7 +766,7 @@ const mon3Variant = memo(async (edits) => libVariant(edits));
 
 // Steps of drivers/mon3.asm that the IM and IOBYTE mutants name: the hook's IM 1,
 // and the IOBYTE's copy in the hook and in EXIT's restore.
-const HOOK_IM1 = "  im 1           ; TEC-OS's mode\n";
+const HOOK_IM1 = "  im 1           ; Tecos's mode\n";
 const HOOK_IO = "  call resetD    ; vectors rebuilt\n  ld hl,Save0\n  ld de,IOBYTE   ; and the drive\n";
 const REST_IO = "rest:\n  scf            ; CY: put back\n";
 // EXIT's restore begun past PZTAB's first range and SAVE0's two bytes.
@@ -1527,7 +1527,7 @@ test("KG62 mutant: without the 0800h-08FFh test a load into MON-3's stack is tak
 });
 
 // MON3.SVC's size, its life over warm boot, reset and UNLOAD, and
-// TEC-OS with it installed and no session.
+// Tecos with it installed and no session.
 
 test("KG63 size and tpa", async () => {
   const C = MON3_CEILING;
@@ -1593,7 +1593,7 @@ test("KG63 mutant: a REMOVE that leaves the hook has UNLOAD leave the target in 
 // (test/lib/machine.mjs).
 const INACTIVE = {
   "test/system.test.mjs": ["BDOS file functions pass the probe", "warm boot clears RST 1 to 6 whatever they hold, a jump into ROM too, and a stale RST returns"],
-  "test/tas.test.mjs": ["TAS assembles a program on TEC-OS and the program runs"],
+  "test/tas.test.mjs": ["TAS assembles a program on Tecos and the program runs"],
   "test/svc.test.mjs": ["a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h"],
   "test/times.test.mjs": ["with GLCD.SVC loaded and a JP held in RST 1, BAZC takes RST 1 while it compiles and gives the JP back before it exits, TIMES runs, and the GLCD is still the console"],
   "test/ted-baza.test.mjs": [
@@ -1686,13 +1686,13 @@ test("KG68 docs agree", async () => {
   const words = [...table.matchAll(/^\s+DW (.*)$/gm)].flatMap((x) => x[1].replace(/;.*$/, "").split(",").map((w) => w.trim().toUpperCase()));
   assert.equal(words.length, 63, "MON-3's 63 calls");
   // RTCAPI answers every function with carry, as MON-3 a missing one. The
-  // translated calls run on TEC-OS's resources: the session and the latch.
+  // translated calls run on Tecos's resources: the session and the latch.
   const TRANSLATED = { 2: "PREIN", 41: "SETCAP", 43: "SETPRT", 48: "TOGCAP" };
   for (const [n, w] of Object.entries(TRANSLATED)) assert.equal(words[n], w, `call ${n} is ${w} in the table`);
   const built = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [] : [i]));
   const listedIn = (head) => [...mon3.slice(mon3.indexOf(head)).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
   assert.deepEqual(listedIn("calls implemented, 42 of them:"), built.filter((i) => !(i in TRANSLATED)), "the implemented calls");
-  assert.deepEqual(listedIn("Translated, on TEC-OS's resources, 4 of them:"), Object.keys(TRANSLATED).map(Number), "the translated calls");
+  assert.deepEqual(listedIn("Translated, on Tecos's resources, 4 of them:"), Object.keys(TRANSLATED).map(Number), "the translated calls");
   assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes from the bare BDOS entry through BFFFh \(`B736h` on the starter, `B8F6h` on the two-volume reference card\)/);
   // The refused calls the doc lists are those the table sends to the error display, and RTCAPI.
   const refusedCalls = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [i] : []));

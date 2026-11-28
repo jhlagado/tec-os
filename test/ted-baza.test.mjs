@@ -88,7 +88,7 @@ test("TED on TIMES.BAS: F9 builds with BAZC and comes back clean, F5 runs TIMES.
   mark = m.output.length;
   fkey(m, 5, "TIMES's first question", () => /WHAT IS YOUR NAME\? $/.test(since()));
   keys(m, "TEC\r7\r", "the table and the wait", () => /Press a key/.test(since()));
-  assert.match(since(), /A(:\S*)?>A:BAZ TIMES\.BAS\r\nHELLO FROM BASIC ON TEC-OS\.\r\n[^]* 12 X 7  = 84 \r\n[^]*GOODBYE, TEC!\r\n[^]*A(:\S*)?>A:TED\r\n/, "F5 ran TIMES.BAS under A:'s BAZ, then TED");
+  assert.match(since(), /A(:\S*)?>A:BAZ TIMES\.BAS\r\nHELLO FROM BASIC ON Tecos\.\r\n[^]* 12 X 7  = 84 \r\n[^]*GOODBYE, TEC!\r\n[^]*A(:\S*)?>A:TED\r\n/, "F5 ran TIMES.BAS under A:'s BAZ, then TED");
   assert.doesNotMatch(since(), /BAZC TIMES/, "F5 interprets the source: no build")
   keys(m, " ", "TED again", () => /L1 C1/.test(status()));
   assert.equal(word(m, CURSOR), 0, "the same place as before F5");

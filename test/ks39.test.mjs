@@ -55,12 +55,12 @@ function find(m, least) {
 test("on a PICO9918 board with no PICO.SVC the banner, volumes and prompt are on the screen; with no matrix keyboard the console is serial", () => {
   const m = start(standardCard());
   const screen = m.screen();
-  assert.deepEqual(screen.slice(1, 4), ["TEC-OS 0.1 for TEC-1G", "A: SYSTEM", "B: WORK"]);
+  assert.deepEqual(screen.slice(1, 4), ["Tecos 0.1 for TEC-1G", "A: SYSTEM", "B: WORK"]);
   assert.ok(screen.some((l) => /^A:\S*>$/.test(l.trimEnd())));
   assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD")), m.serialText()], [CRT, CRT, ""]);
   const serial = start(standardCard(), { matrix: false });
   assert.deepEqual([serial.read(3) & 3, serial.read(m.sym("CONMOD")), word(serial, m.sym("PIVEC"))], [0, 0, 0], "serial, and no table");
-  assert.match(serial.serialText(), /TEC-OS 0\.1 for TEC-1G\r\nA: SYSTEM/);
+  assert.match(serial.serialText(), /Tecos 0\.1 for TEC-1G\r\nA: SYSTEM/);
 });
 
 test("TNFIND finds PICO at version 3, its table PIBLK, and TNLIST returns its record last", () => {
@@ -102,7 +102,7 @@ test("UNLOAD of a GLCD.SVC that gave way to CRT: leaves the PICO9918's screen as
   assert.doesNotMatch(say(m, "UNLOAD"), /UNLOAD\?/);
   assert.equal(m.read(m.sym("SVCHEAD")), 0, "unloaded");
   const screen = m.screen();
-  assert.equal(screen[1], "TEC-OS 0.1 for TEC-1G", "the banner still there: no clear");
+  assert.equal(screen[1], "Tecos 0.1 for TEC-1G", "the banner still there: no clear");
   assert.ok(screen.some((row) => /^A:\S*>GLCD\.SVC/.test(row)), "and the line that loaded it");
   assert.ok(screen.some((row) => /^A:\S*>UNLOAD/.test(row)), "and the UNLOAD");
   assert.deepEqual([m.read(m.sym("CONMOD")), m.read(3) & 3, word(m, m.sym("GLVEC"))], [CRT, CRT, 0]);

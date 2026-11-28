@@ -1,4 +1,4 @@
-; The clock, the devices TEC-OS looks
+; The clock, the devices Tecos looks
 ; for, interrupts and the keys.
 
 ; Read DS1302 register D, a read
@@ -38,7 +38,7 @@ RTR:
   ld a,d
   ret            ; the value in A and D
 
-; Find the RTC as TEC-OS does (RTCHAS in
+; Find the RTC as Tecos does (RTCHAS in
 ; src/services.asm): a seconds byte
 ; below 60h. Sets RTCOK.
 
@@ -85,7 +85,7 @@ SCTO:
 
 ; CLK: the CPU clock from one RTC
 ; second, reads x KSEC T-states.
-; TEC-OS's serial and SD timing assume 4
+; Tecos's serial and SD timing assume 4
 ; MHz; WARN outside 2% of it.
 
 CLKCHK:
@@ -155,7 +155,7 @@ CKTO:
   DB "rtc-stopped",0
   ret
 
-; VDP: TEC-OS's probe (TMSINIT in
+; VDP: Tecos's probe (TMSINIT in
 ; src/tms.asm), then the frame length
 ; from eight frame flags, and the frame
 ; rate at the measured clock, or at 4
@@ -264,7 +264,7 @@ FCTO:
 
 ; LCD: set two DDRAM addresses through
 ; MON3 and read each back from the busy
-; flag's port, 04h. TEC-OS only writes
+; flag's port, 04h. Tecos only writes
 ; the LCD; a read-back shows it is
 ; there.
 

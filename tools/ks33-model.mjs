@@ -304,7 +304,7 @@ function docs(landed) {
     "say.asm": !has("test/programs/say.asm", /must relocate/),
     "container-format RAM cost": has("docs/container-format.md", /`DPHTAB` is a fixed 64 bytes/),
     "console.md 7Fh to FFh": has("docs/console.md", /drops output bytes 7Fh to\s+FFh/),
-    "board-run T26 and step 3": !has("docs/board-run.md", /answers an NMI with RETN/) && !has("docs/board-run.md", /A reset with TEC-OS in RAM keeps/),
+    "board-run T26 and step 3": !has("docs/board-run.md", /answers an NMI with RETN/) && !has("docs/board-run.md", /A reset with Tecos in RAM keeps/),
     "T01's timing": has("diag/boot.asm", /about 6\.8 s/) && has("docs/diagnostics.md", /about every 6\.8 s/),
     "diagnostics' first person": !has("docs/diagnostics.md", /\bI (wrote|checked)\b/),
     "CFLALL": has("docs/recovery.md", /A flush stops at the\s+first line/),

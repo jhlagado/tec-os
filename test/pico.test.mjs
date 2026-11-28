@@ -255,7 +255,7 @@ test("a good retry clears CARD?, and a failed one shows it again", () => {
   m.type("R");
   m.expect(/A(:\S*)?>$/, { maxCycles: 400_000_000 });
   assert.equal(lcdRow(m, 3), "");
-  assert.match(lcdRow(m, 0), /^TEC-OS/);
+  assert.match(lcdRow(m, 0), /^Tecos/);
   assert.match(lcdRow(m, 1), /^A: /);
 });
 
@@ -798,7 +798,7 @@ test("the web host: a card with .DRV files is refused in its own words and left 
   a.write("STARTUP.CMD", startupFile("PICO.DRV", "GLCD.DRV", "MY.DRV"));
   const before = image.slice();
   const { problem, changed } = prepareCard(image, "glcd");
-  assert.match(problem, /older TEC-OS: this ROM doesn't load GLCD\.DRV.*A new starter card has GLCD\.SVC/);
+  assert.match(problem, /older Tecos: this ROM doesn't load GLCD\.DRV.*A new starter card has GLCD\.SVC/);
   assert.equal(changed, false);
   assert.deepEqual(image, before);
 });

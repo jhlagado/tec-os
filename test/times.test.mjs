@@ -1,7 +1,7 @@
 // TIMES.BAS, the starter's first BASIC program: print, input, a for loop
 // and a little arithmetic, in the dialect BAZC compiles: numbered lines in
 // ascending order, spaced out within 80 columns, with keywords in capitals
-// and names in lower case. BAZC builds it on TEC-OS and TIMES runs on the
+// and names in lower case. BAZC builds it on Tecos and TIMES runs on the
 // PICO9918 at 40 columns, turns away a number outside 1 to 12 and returns
 // to the prompt. With GLCD.SVC loaded and a JP held in RST 1, BAZC takes
 // RST 1 while it compiles and gives the held JP back before it exits, TIMES runs, and the
@@ -26,7 +26,7 @@ const LIMIT = 400_000_000;
 // and TAB(9) line up the X and the = whatever the numbers' widths.
 const TABLE = Array.from({ length: 12 }, (_, i) => `${` ${i + 1} `.padEnd(4)}X 7 `.padEnd(9) + `= ${(i + 1) * 7} `);
 const RUN = [
-  "HELLO FROM BASIC ON TEC-OS.",
+  "HELLO FROM BASIC ON Tecos.",
   "WHAT IS YOUR NAME? TEC",
   "HI, TEC.",
   "PICK A NUMBER, 1 TO 12? 13",
@@ -129,7 +129,7 @@ test("TIMES.BAS has ascending line numbers, fits 80 columns, and has its keyword
   });
 });
 
-test("BAZC builds TIMES on TEC-OS, and TIMES runs at 40 columns and returns to the prompt", { skip: BAZC.skip || RTL.skip, timeout: 900_000 }, () => {
+test("BAZC builds TIMES on Tecos, and TIMES runs at 40 columns and returns to the prompt", { skip: BAZC.skip || RTL.skip, timeout: 900_000 }, () => {
   const image = card();
   const m = boot(image, { tms: true, matrix: true, width: 40 });
   const run = buildAndRun(m);
@@ -179,7 +179,7 @@ test("a failed compile's return code stops a chained line: BAZC BAD &TIMES runs 
   const m = boot(image, { tms: true, matrix: true });
   let mark = m.output.length;
   keys(m, "bazc times &times\r", "the good chain", () => /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
-  assert.match(m.text(mark), /COM written\r\n[^]*HELLO FROM BASIC ON TEC-OS\./, "TIMES ran after a good compile");
+  assert.match(m.text(mark), /COM written\r\n[^]*HELLO FROM BASIC ON Tecos\./, "TIMES ran after a good compile");
   keys(m, "TEC\r7\r", "the prompt", () => m.ready());
   mark = m.output.length;
   keys(m, "bazc bad &times\r", "the failed chain", () => (m.ready() && /A(:\S*)?>$/.test(m.text(mark))) || /WHAT IS YOUR NAME\? $/.test(m.text(mark)));

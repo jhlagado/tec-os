@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// tecvol: create, inspect and edit TEC-OS SD containers.
+// tecvol: create, inspect and edit Tecos SD containers.
 //
 //   tecvol create IMAGE --volume G1M:SYSTEM:A [--volume G8M:WORK:B:ro] [--align N] [--drives N]
 //                (more than 8 volumes, or --drives, makes a format 1.1 card)
@@ -10,12 +10,12 @@
 //   tecvol get IMAGE DRIVE CPMNAME [OUTFILE] [--user N] [--text]
 //   tecvol era IMAGE DRIVE CPMNAME [--user N] [--force]
 //                (put over, or era of, a file with the read-only attribute is
-//                refused, as TEC-OS refuses it, unless --force is given)
+//                refused, as Tecos refuses it, unless --force is given)
 //   tecvol recipe RECIPE.json IMAGE
 //   tecvol install IMAGE DEVICE --yes
 //
 // Every change is written to a temporary file beside IMAGE and renamed over
-// it only after the result validates. TEC-OS and the PC must not change the
+// it only after the result validates. Tecos and the PC must not change the
 // same card at the same time.
 
 import { readFileSync, writeFileSync, renameSync, existsSync, openSync, writeSync, closeSync } from "node:fs";

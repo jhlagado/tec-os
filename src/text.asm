@@ -8,8 +8,8 @@
 
 ; ---- boot.asm
 
-RAMMSG: DB 13,10,"TEC-OS needs 64K RAM",13,10,0
-BANNER: DB 13,10,"TEC-OS ",VERHI+'0','.',VERLO+'0'," for TEC-1G",13,10,0
+RAMMSG: DB 13,10,"Tecos needs 64K RAM",13,10,0
+BANNER: DB 13,10,"Tecos ",VERHI+'0','.',VERLO+'0'," for TEC-1G",13,10,0
 ROTXT: DB " (read-only)",0
 DGERR: DB "No volume mounted, error ",0
 DGPROM: DB "R retry> ",0
@@ -64,7 +64,7 @@ BADCHARS:
 
 ; ---- lcd.asm
 
-LCDBAN: DB "TEC-OS ",VERHI+'0','.',VERLO+'0',"  TEC-1G",0
+LCDBAN: DB "Tecos ",VERHI+'0','.',VERLO+'0',"  TEC-1G",0
 
 ; BDOS zero-terminated disk-error text.
 

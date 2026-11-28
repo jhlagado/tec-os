@@ -1260,7 +1260,7 @@ with the eastern passage open, before the demon encounter.
 ## Demon encounter — actual native emulator outcome
 
 The former live Viewer process had ended before EAST was submitted. Restored
-CHECK7 in the native TEC-OS ROM emulator and replayed recorded Viewer turns
+CHECK7 in the native Tecos ROM emulator and replayed recorded Viewer turns
 55–74. The reconstructed pre-fight state was room 20, moves 102, fatigue 8,
 RNG 541b7cad; compass, sword and candle carried, bomb consumed, door open.
 No RNG or live game state was edited. EAST entered room 19. Eleven successive
@@ -1300,13 +1300,13 @@ eleven sword attacks now defeated the demon at move 114; victory reset F% to
 zero. No reseeding or live-state editing was needed. The sword remains carried,
 with compass and candle; all four vault treasures remain on the ground.
 The externally captured post-victory state is available as CAVLOAD VAULT.
-This is a native TEC-OS emulator trial; Viewer and physical-board validation
+This is a native Tecos emulator trial; Viewer and physical-board validation
 of this revision remain outstanding.
 
 Evidence: [retry state and commands](evidence/caverns-scenarios/demon-review/fatigue-reset-result.json)
 and [retry output](evidence/caverns-scenarios/demon-review/fatigue-reset.log).
 
-## Checkpoint 8 return to the hut — completed in native TEC-OS emulator
+## Checkpoint 8 return to the hut — completed in native Tecos emulator
 
 Author requested only the four vault treasures, then a key-assisted return
 and deposit in the hut. Restored CHECK8; collected ring, pendant, grail and
@@ -1386,7 +1386,7 @@ saves; physical TEC-1G run; final human review of the revised release. The
 retained 230-action candle lifetime and random combat can still end a game.
 
 Browser qualification completed: system Chromium loaded the clean standalone
-Viewer built at 7dee8f3, with TEC-OS 2bd6b0a. Its fresh starter contains source,
+Viewer built at 7dee8f3, with Tecos 2bd6b0a. Its fresh starter contains source,
 not COM. Native compilation inside the browser produced the exact qualified
 COM, verified by downloading and comparing bytes. TAKE COMPASS confirmed the
 action; INVENTORY and the revised clearing description worked. The trial then

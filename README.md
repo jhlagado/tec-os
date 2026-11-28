@@ -1,6 +1,6 @@
-# TEC-OS
+# Tecos
 
-TEC-OS is a ROM-resident operating system for the TEC-1G. It runs CP/M 2.2
+Tecos is a ROM-resident operating system for the TEC-1G. It runs CP/M 2.2
 programs from SD-card volumes and gives them the TEC-1G's hardware through a
 ROM table at `C003h`.
 
@@ -16,7 +16,7 @@ ROM table at `C003h`.
   starter card with nothing loaded, its three drives' vectors taken; the card's
   `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 44,288, and 43,520
   with the GLCD's driver too.
-  EXPAND 1 is TEC-OS's own: its block cache. TEC-OS says so at boot and stops if either half
+  EXPAND 1 is Tecos's own: its block cache. Tecos says so at boot and stops if either half
   is missing.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
   with `tecvol`.
@@ -75,7 +75,7 @@ rather than replaced; `npm run inputs -- --refresh` moves it aside as
 `NAME.unpinned-HASH` and fetches the pinned file. Assembly uses local inputs
 and makes no downloads.
 
-The web page's browser tests moved to TEC-OS Viewer (KD-239), which owns the
+The web page's browser tests moved to Tecos Viewer (KD-239), which owns the
 page; no test here drives a browser. `playwright` stays pinned in
 `package.json` (KE-157) so that a browser can be driven against the local
 `web/` page that `npm start` serves; `npx playwright install chromium` fetches
@@ -153,12 +153,12 @@ node tools/tecvol.mjs install card.img /dev/rdiskN --yes
 ```
 
 `install` overwrites the device from its first block; the card is dedicated
-to TEC-OS. `put` over, or `era` of, a file with the read-only attribute is
-refused, as TEC-OS refuses it, unless `--force` is given. Never change a card on the PC while the TEC-1G is using it.
+to Tecos. `put` over, or `era` of, a file with the read-only attribute is
+refused, as Tecos refuses it, unless `--force` is given. Never change a card on the PC while the TEC-1G is using it.
 
 ## Using it
 
-TEC-OS starts on the PICO9918 when the card answers and the board's Matrix
+Tecos starts on the PICO9918 when the card answers and the board's Matrix
 switch is on, from the banner on, with no file needed. Otherwise it starts on the
 serial terminal and the 20 × 4 LCD, and the starter card's `STARTUP.CMD` moves
 the console to the GLCD when the Matrix switch is on. Otherwise it stays on the
@@ -239,7 +239,7 @@ Do not press the hex keypad while a CP/M program is running; see
 ## Documents
 
 The books, tutorials first, are published at [tec-os.org](https://tec-os.org/)
-from jhlagado/tec-os-books. The notes below are TEC-OS's own design records.
+from jhlagado/tec-os-books. The notes below are Tecos's own design records.
 
 - [Memory map](docs/memory-map.md), generated from the build
 - [Container format](docs/container-format.md)
@@ -262,7 +262,7 @@ the GLCD's driver. `tools/` holds the build, `tecvol` and the media script.
 [Assembly source style](docs/assembly-style.md) describes the current compact
 layout, comment contracts, 8.3 names and retained test profiles.
 
-TEC-OS is licensed under GPL-3.0-or-later.
+Tecos is licensed under GPL-3.0-or-later.
 
 Font sources, deliberate edits and legacy provenance limits are in [FONT-NOTICES](format/FONT-NOTICES.txt).
 The PICO9918 starts at 40 columns. Use `CON PICO 80` or `CON PICO 32` for another width. Bare `CON CRT` and `CON PICO` preserve the selected width.

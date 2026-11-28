@@ -91,7 +91,7 @@ test("the line comparison detects an extra matrix keystroke", () => {
   assert.equal(readLine({ leak: true }), "ABXC");
 });
 
-// TBUG.SVC is TBUG's, not a TEC-OS input: the case exists only when TBUG_SVC
+// TBUG.SVC is TBUG's, not a Tecos input: the case exists only when TBUG_SVC
 // names one, so a strict round without it registers no skip. TBUG runs it.
 if (process.env.TBUG_SVC) test("TBUG resident leaves a pending BDOS read alone, Ctrl+Esc included", () => {
     // The line editor takes the Esc typed during the read like any key.

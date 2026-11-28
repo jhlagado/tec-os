@@ -3,7 +3,7 @@
 // patching the ROM's or the service's bytes at a named routine.
 //
 // The reference is MON-3's own ROM, a pinned input (test/inputs.json), run on
-// the same pinned Debug80 runtime as TEC-OS: entered where its GO key clears
+// the same pinned Debug80 runtime as Tecos: entered where its GO key clears
 // the LCD, with the page of vectors and the defaults its reset would have
 // left in RAM.
 

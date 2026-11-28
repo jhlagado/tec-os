@@ -1,4 +1,4 @@
-// EXPAND 1, TEC-OS's own: one RAM check before the banner stops a board
+// EXPAND 1, Tecos's own: one RAM check before the banner stops a board
 // without it, cold boot clears it and warm boot leaves it, and the harness
 // sees a program's write there. Function 50, MOVE and XMOVE went in KS36a,
 // and with them MAIN 1's copy and EXPAND 1's warm-boot jump. The harness's
@@ -11,7 +11,7 @@ import { TEST_CLOCK, boot, romFor, standardCard } from "./lib/fixtures.mjs";
 
 const STUB = 0x0080;
 
-test("without EXPAND 1, cold boot says TEC-OS needs 64K and stops, before the banner", () => {
+test("without EXPAND 1, cold boot says Tecos needs 64K and stops, before the banner", () => {
   for (const mains of [1, 2]) {
     const { rom, symbols } = romFor();
     const m = new Machine({ rom, symbols, sdImage: standardCard(), ram96: true, mains, expands: 1, clock: TEST_CLOCK });
@@ -19,7 +19,7 @@ test("without EXPAND 1, cold boot says TEC-OS needs 64K and stops, before the ba
     const stop = m.cycles + 2_000_000;
     m.runUntil(() => m.cycles >= stop);
     assert.equal(m.pc, m.sym("RAMSTOP"));
-    assert.equal(m.serialText(), "\r\nTEC-OS needs 64K RAM\r\n", "nothing before it: no banner, no volumes");
+    assert.equal(m.serialText(), "\r\nTecos needs 64K RAM\r\n", "nothing before it: no banner, no volumes");
   }
 });
 
@@ -90,7 +90,7 @@ test("a program that ends with EXPAND 1 in view warm boots into EXPAND 0, and it
   m.cpu.cpu.sp = 0x8000; // clear of the record at 0080h
   m.cpu.cpu.pc = 0x0100;
   m.expect(/\r\nA(:\S*)?>$/, { from });
-  assert.doesNotMatch(m.text(from), /TEC-OS/, "a warm boot, not a cold one");
+  assert.doesNotMatch(m.text(from), /Tecos/, "a warm boot, not a cold one");
   assert.equal(m.sysCtrl & 0x04, 0, "EXPAND 0 in view");
   m.reset();
   m.expect(/\r\nA(:\S*)?>$/); // from the reset's mark: the prompt before it does not count
@@ -122,7 +122,7 @@ test("a matrix key the harness holds is let go only on KBLAST in the classic ban
   const head = m.pending[0];
   assert.ok(head.down, "the key is down");
   m.cpu.hardware.ioWrite(0xff, latch | 0x04);
-  m.write(kblast, head.key); // EXPAND 1's byte, as if TEC-OS had seen the key
+  m.write(kblast, head.key); // EXPAND 1's byte, as if Tecos had seen the key
   m.pumpInput();
   assert.equal(head.up, undefined, "not let go while EXPAND 1 is in");
   m.write(kblast, 0xff);

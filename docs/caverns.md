@@ -1,4 +1,4 @@
-# Caverns on TEC-OS
+# Caverns on Tecos
 
 The restored original prose and modern navigation are qualified in the native
 emulator and Chromium Viewer. See [the restoration record](caverns-prose-restoration.md)
@@ -9,7 +9,7 @@ qualification record before treating it as the public Viewer version.
 The starter card's GAMES volume holds **CAVERNS.COM**, compiled from
 **CAVERNS.BAS** by the pinned BAZC when the card is built, and its BASIC
 volume holds the source with BAZC and **CAVERNS.TXT**. `CD A:GAMES` then
-`CAVERNS` plays it. At the TEC-OS prompt, `TYPE CAVERNS.TXT` shows the legend of Svartalfheim
+`CAVERNS` plays it. At the Tecos prompt, `TYPE CAVERNS.TXT` shows the legend of Svartalfheim
 and the instructions. Rebuild the BASIC game with BAZC, after `CD A:BASIC`:
 
 ```
@@ -32,7 +32,7 @@ TED CAVBOOK.BAS
 ```
 
 Change the presentation banner (line 150 in this listing) from `DREAMCARDS presents...` to
-`TEC-OS Book presents`. Keep the line number, PRINT and quotation marks.
+`Tecos Book presents`. Keep the line number, PRINT and quotation marks.
 Ctrl-S saves, Ctrl-T B builds, and Ctrl-T R builds/runs. In the game, QUIT,
 then N, exits; dismiss TED's return pause to resume editing. Ctrl-Q leaves
 TED. Alternatively compile and run from the shell with `BAZC CAVBOOK` and
@@ -71,7 +71,7 @@ unchanged. See the separate spoiler records below for the exact revisions.
 
 ## Evidence and remaining work
 
-The current native TEC-OS test drives keyboard commands through a real native
+The current native Tecos test drives keyboard commands through a real native
 BAZC rebuild, completes a first-discovery 126-point quest, visits all 54 rooms,
 checks their displayed descriptions, walks back from the castle without the
 magic word, and verifies the homecoming. No host-side game-state or RNG writes

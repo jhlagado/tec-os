@@ -1,4 +1,4 @@
-// Read-only size/link audit on a disposable native TEC-OS card.
+// Read-only size/link audit on a disposable native Tecos card.
 // Usage: BAZC_BUILD_REPORT [BAZC_DIRECTORY [RTL_INCLUDE]].
 // Requires matching compiler/runtime artifacts; changes no game source.
 import fs from 'node:fs';

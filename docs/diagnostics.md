@@ -2,15 +2,15 @@
 
 The diagnostics are a small RAM program that the TEC-1G's own monitor,
 MON3, loads and runs. MON3 stays in the ROM socket. The program checks, on a
-real board, the hardware that TEC-OS assumes: above all the SD card, then RAM,
-the system latch, the clock and the devices TEC-OS looks for. It prints one
+real board, the hardware that Tecos assumes: above all the SD card, then RAM,
+the system latch, the clock and the devices Tecos looks for. It prints one
 line for each check on the serial port, so a board run gives a log that can be
 pasted back.
 
-TEC-OS's SD results so far all come from the Debug80 emulator. Its SD model
+Tecos's SD results so far all come from the Debug80 emulator. Its SD model
 answers at once, reports a version 2 card by default and never stalls. A real card
 answers slowly and differently from card to card, so the SD checks measure how
-much of each of TEC-OS's waits a real card uses.
+much of each of Tecos's waits a real card uses.
 
 **Emulator results are not board evidence.** `test/diag.test.mjs` runs the
 program on the Debug80 model. That proves the program's own logic and its
@@ -35,11 +35,11 @@ The build writes `build/diag/`:
 The image ID is the first 8 bytes of the SHA-256 of the image with the ID
 itself zero. The header line prints it, so a log names the image that ran.
 
-The sources are in `diag/`. They include TEC-OS's SD driver (`src/sd.asm`)
+The sources are in `diag/`. They include Tecos's SD driver (`src/sd.asm`)
 and its PICO9918 probe (`src/tms.asm`) instead of copying them, so the board
-runs exactly the code TEC-OS runs. `tools/diag.mjs` generates
+runs exactly the code Tecos runs. `tools/diag.mjs` generates
 `diag/gen/config.asm` and `diag/gen/fmt.asm`: the serial delays from the same
-derivation `tools/build.mjs` uses for TEC-OS, and the container format's
+derivation `tools/build.mjs` uses for Tecos, and the container format's
 fields from `format/format.json`. It assembles with TAS.
 
 ## Memory
@@ -81,8 +81,8 @@ line and send it again.
 **From a FAT32 SD card.** Copy `DIAG.HEX` to the root of a FAT32 card, fit it,
 and load it with MON3's Drive Access, Catalog (`Fn-F`). MON3 converts the
 HEX file as it loads. The program then asks for the card to test, so the
-FAT32 card can be swapped for the TEC-OS card first. This also checks that
-TEC-OS's driver starts a card that was changed after power-on.
+FAT32 card can be swapped for the Tecos card first. This also checks that
+Tecos's driver starts a card that was changed after power-on.
 
 Either way, start it from MON3's data entry mode with the address at `4000h`
 and `GO`. The program waits for `GO` before it sends anything (the LCD's last
@@ -121,24 +121,24 @@ SUMMARY pass=17 warn=1 fail=0 skip=1
 
 | Status | Meaning |
 | --- | --- |
-| `PASS` | The board did what TEC-OS relies on |
+| `PASS` | The board did what Tecos relies on |
 | `WARN` | It worked, with a figure worth a look, given in the line |
 | `FAIL` | It did not; the line says what was read |
 | `SKIP` | Not run: skipped by a key, nothing fitted, or an earlier check failed; `reason=` says which |
 
 The header's `sp=` is the stack pointer MON3 started the program with.
-Error codes are TEC-OS's own: `SDE*` from `src/sd.asm` (1 no card answered
+Error codes are Tecos's own: `SDE*` from `src/sd.asm` (1 no card answered
 CMD0, 2 ACMD41 never ready, 3 CMD58, 4 CMD16, 5 an R1 that was not 00h, 6 no
 data token, 7 write refused, 8 still busy, 9 SDSC range, 10 a data error
 token, 11 a wrong CMD8 echo), and `ME*` from `src/vol.asm` for SD7.
 
 ## The SD checks
 
-TEC-OS's driver keeps no counts of its waits. Where a check needs one, the
+Tecos's driver keeps no counts of its waits. Where a check needs one, the
 program repeats the driver's sequence with the driver's own routines
 (`SDCMD`, `SPIR`, `SPIW`, `SPIEND`, `SDRBLK`, `SDWBLK`) and counts each wait
 against the same bound. The counting loops take about as long a turn as
-TEC-OS's. Everything else calls `SDINIT`, `SDREAD` and `SDWRITE` directly.
+Tecos's. Everything else calls `SDINIT`, `SDREAD` and `SDWRITE` directly.
 
 The SD hardware is the TEC-1G GPIO board with an HW-125 style microSD
 module. It has no card-detect line, so a missing card shows only as a card
@@ -156,20 +156,20 @@ the card works.
 
 **SD2, initialisation.** First a counted run along `SDINIT`'s own path, then
 `SDINIT` itself, which decides the status. The line gives `err`, `SDINIT`'s
-code; `cmd0`, the CMD0 tries of TEC-OS's 10; `cmd8`, CMD8's R1; `r7`, the four
-R7 bytes, only after R1 01h; `acmd41`, the ACMD41 tries of TEC-OS's 256;
+code; `cmd0`, the CMD0 tries of Tecos's 10; `cmd8`, CMD8's R1; `r7`, the four
+R7 bytes, only after R1 01h; `acmd41`, the ACMD41 tries of Tecos's 256;
 `ocr`; `type`, SDHC for block addresses or SDSC for byte addresses; and
-`counted`, the counted run's code. A version 1 card rejects CMD8: TEC-OS then
+`counted`, the counted run's code. A version 1 card rejects CMD8: Tecos then
 goes on to ACMD41 without the R7 check and finds the type from the OCR, and
 so does this check. A counted run that fails where `SDINIT` passes is a
 `WARN`. With no card, CMD0 is never answered and the line is `FAIL err=1`,
 and SD3–SD9 skip with `reason=sd2`.
 
 **SD3, margins.** This is the key result. 64 counted reads of blocks 0–63
-give the most polls each wait used against TEC-OS's bound: `r1max` against 16
+give the most polls each wait used against Tecos's bound: `r1max` against 16
 R1 polls, `tokmax` against 65,536 data-token polls, and SD2's `acmd41` and
 `cmd0`. A `WARN` with `over=` names any wait that used more than a quarter of
-its bound: such a card works, but closer to TEC-OS's limit than a slower day
+its bound: such a card works, but closer to Tecos's limit than a slower day
 or an older card might allow. The write waits are measured in SD8.
 
 **SD4, CSD and CID.** The capacity in blocks from the CSD, and in MiB, then
@@ -186,7 +186,7 @@ agree with the CSD's version, v2 or v1. A mismatch is a `WARN` with
 **SD5, reads.** Block 0 is read 16 times and compared with the first copy.
 Then blocks 1–7, the container's last block, the middle of the card and its
 last block (from SD4) are each read twice and compared. `err` counts failures
-and differences, with the last one's block and code. On an SDSC card TEC-OS
+and differences, with the last one's block and code. On an SDSC card Tecos
 refuses blocks from 8,388,608 with `SDERNG`, and the line says how many were
 refused.
 
@@ -210,7 +210,7 @@ directory block must read (2Ch). The line gives the version, volume count,
 drives, the header's length, `lastvol`, the highest block a volume uses, and
 `free_from`, the first block past everything the container uses.
 
-**SD8, the write test.** TEC-OS writes the card, so this check writes it
+**SD8, the write test.** Tecos writes the card, so this check writes it
 too, under one rule: **it addresses only blocks SD7 proved free**, from
 `free_from` to the block before the card's last block. It never addresses
 blocks 0–7 or any volume's blocks, on any path: every check of blocks 0–7 only
@@ -256,11 +256,11 @@ that depends on the block number, reads it back and compares. For every block
 but those of the run of 32, it then reads blocks 0–7: a low block that reads
 as the pattern just written, on two reads, has been reached by the write.
 A low block that does not read is reported as `lowread`, not as an alias.
-Whatever happened, it then writes the saved data back with TEC-OS's
+Whatever happened, it then writes the saved data back with Tecos's
 `SDWRITE`, reads it and compares, up to three times.
 
 The pattern writes go through the counted copy of `SDWRITE`, which gives
-`busymax` against TEC-OS's 65,536 busy polls and `wrsmax` against its 16
+`busymax` against Tecos's 65,536 busy polls and `wrsmax` against its 16
 data-response polls; more than a quarter of either is a `WARN`. Each block
 gets a `# SD8 block` line with the outcome of both stages, the tries and the
 busy polls.
@@ -277,7 +277,7 @@ remaps in a way the checks did not see, so keep the backup until the run is
 over.
 
 **SD9, card removal.** Pull the card when asked and press `GO`. With no
-card-detect line, the program sees the card's absence as TEC-OS would: a read
+card-detect line, the program sees the card's absence as Tecos would: a read
 of block 0 fails, normally with `SDECMD` (5) since no R1 comes, and `SDINIT`
 fails, normally with `SDENOCD` (1) since CMD0 goes unanswered. On a module
 whose MISO floats low the codes can differ, for example `SDEDTOK` (10); any
@@ -295,7 +295,7 @@ complement, all read back after all are written, so a missing or shorted
 address line shows. The areas are `1A17h–3FFFh` after the variables and the
 stack, `6C82h–7FFFh` after the program, and the `8000h–BFFFh` window with
 EXPAND (latch bit 2) off and on. Then a tag written in each EXPAND setting must
-survive the other: TEC-OS keeps its block cache in EXPAND 1, so the two
+survive the other: Tecos keeps its block cache in EXPAND 1, so the two
 settings must select different RAM and both must hold data. PROTECT is off
 through MON3 meanwhile; MON3's EXPAND and PROTECT settings are put back. A
 failure gives the area, the address and the bytes written and read.
@@ -304,7 +304,7 @@ failure gives the area, the address and the bytes written and read.
 write to the first byte after the program must leave it unchanged. Then it is
 cleared and the write must land. The byte and MON3's setting are put back.
 
-**SHAD.** It runs first, before the SD checks. TEC-OS calls latch bit 0
+**SHAD.** It runs first, before the SD checks. Tecos calls latch bit 0
 `/SHADOW`: 1 removes the boot overlay, so `0000h–07FFh` is RAM, and 0 shows
 the ROM's first 2 KiB there. MON3 calls `01h` "shadow on". With interrupts
 off, the program writes the latch directly with bit 0 clear and set,
@@ -319,27 +319,27 @@ The line names the convention found, then what each setting gave, `rom` (no
 difference) or `ram`, with the count:
 `convention=tecos bit0=0:rom(0) bit0=1:ram(1932) mon3on:rom(0)`. `tecos` is
 `PASS`. `inverted` (bit 0 clear shows RAM, set the ROM) or `none` (no
-difference between them) is a `WARN`: TEC-OS's own boot would not work as
+difference between them) is a `WARN`: Tecos's own boot would not work as
 designed, but the other checks go on, using the latch value measured at the
 start. Keep off the keypad while it runs: the vectors at `0038h` and `0066h`
 are the ROM's while it shows.
 
 **CLK.** The CPU clock, from one second of the DS1302: the number of seconds
-reads in the second times their known cost, 1,274 T-states. TEC-OS's 4800-baud
+reads in the second times their known cost, 1,274 T-states. Tecos's 4800-baud
 serial and its SD timing assume 4 MHz. Outside 3.92–4.08 MHz is a `WARN`.
 
-**VDP.** The PICO9918 at `BEh`/`BFh`, found with TEC-OS's own probe
+**VDP.** The PICO9918 at `BEh`/`BFh`, found with Tecos's own probe
 (`TMSINIT`: a byte written to VRAM and read back). Then the status register's
 frame flag is timed over 8 frames, giving the frame in T-states and the rate
 in Hz at the measured clock (or at 4 MHz, `at=4mhz`, without the RTC).
 
 **LCD.** Two DDRAM addresses set through MON3 and read back from the busy
-flag's port, `04h`. TEC-OS only writes the LCD; a read-back shows it is there.
+flag's port, `04h`. Tecos only writes the LCD; a read-back shows it is there.
 
 **GLCD.** The ST7920 at `07h`: present if its busy flag clears within 256
 reads. Nothing is written to it.
 
-**RTC.** The DS1302 on port `FCh`, found as TEC-OS finds it (a seconds byte
+**RTC.** The DS1302 on port `FCh`, found as Tecos finds it (a seconds byte
 below `60h`). The seven time registers and the write-protect byte are read,
 not set; a field that is not valid BCD in range is a `WARN`. `ch=1` means the
 clock is halted.
@@ -350,7 +350,7 @@ turned on for about 0.2 s, and both are counted. `PASS` means IM 1
 interrupts reach `0892h`. If the frames arrive only as NMIs, as on the Debug80
 model, there is no IM 1 source to test, and the line is `SKIP
 reason=nmi-only`. The vectors are put back and the VDP's interrupt turned off;
-register 1 is left at `C0h`. TEC-OS itself never enables the VDP interrupt.
+register 1 is left at `C0h`. Tecos itself never enables the VDP interrupt.
 
 **KEYS.** Each keypad key pressed prints its MON3 code, and each matrix key
 going down prints its row, bit and code (row × 8 + bit, the row selected by a
@@ -358,10 +358,10 @@ low address line on `A8–A15` at port `FEh`). `AD` ends it.
 
 ## What it cannot check
 
-The program runs under MON3, so it cannot check TEC-OS's own power-on boot:
+The program runs under MON3, so it cannot check Tecos's own power-on boot:
 the reset overlay entry, the ROM's cold boot, the mount and the console with
-the TEC-OS ROM fitted. That stays part of the owner's smoke test with the
-TEC-OS ROM in the socket.
+the Tecos ROM fitted. That stays part of the owner's smoke test with the
+Tecos ROM in the socket.
 
 Other limits:
 
@@ -387,15 +387,15 @@ retired. Some of what it recorded still matters:
 
 - Port `03h` bit 6 (KDA, a keypad key down): the TEC-1G port list reads 0 as
   down, while the functional description says the 74C923 drives KDA high.
-  TEC-OS reads that bit once at cold boot for the startup file's skip. Which
+  Tecos reads that bit once at cold boot for the startup file's skip. Which
   is true on the board is still open.
-- The latch is write-only on the board; Debug80 lets it be read. TEC-OS
+- The latch is write-only on the board; Debug80 lets it be read. Tecos
   never reads it, and neither does this program.
 - The board's documents select the ROM, not the RAM, for writes to
-  `0000h–07FFh` while the overlay shows; Debug80 sends them to RAM. TEC-OS
+  `0000h–07FFh` while the overlay shows; Debug80 sends them to RAM. Tecos
   never writes there with the overlay on, and neither does this program.
 - Debug80 decodes latch bits 3–6 as a bank field for the window; the
-  documented board leaves them unconnected. TEC-OS and this program change
+  documented board leaves them unconnected. Tecos and this program change
   only bit 2 there.
 
 ## The emulator test

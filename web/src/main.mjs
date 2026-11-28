@@ -1,4 +1,4 @@
-// TEC-OS in the browser: the Debug80 TEC-1G runtime driving a TMS9918
+// Tecos in the browser: the Debug80 TEC-1G runtime driving a TMS9918
 // screen, the front-panel displays, a serial terminal and an SD card kept in
 // IndexedDB. The machine wrapper is the one the tests use.
 
@@ -416,7 +416,7 @@ function keyText(e) {
   return e.key;
 }
 
-// The TEC-1G matrix keyboard's own arrow keys; TEC-OS turns them into ESC [ A-D.
+// The TEC-1G matrix keyboard's own arrow keys; Tecos turns them into ESC [ A-D.
 const MATRIX_ARROWS = { ArrowUp: "\x03", ArrowDown: "\x04", ArrowLeft: "\x05", ArrowRight: "\x06" };
 
 function onKey(route) {

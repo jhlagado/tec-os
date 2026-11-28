@@ -1,4 +1,4 @@
-; TEC-OS ROM image, C000h-FFFFh: the
+; Tecos ROM image, C000h-FFFFh: the
 ; reset jump, the table, one block of
 ; read-only data and one block of code,
 ; with the free space at the end.

@@ -405,11 +405,11 @@ kbBad:
 ; 00h-3Fh, D the one before or FFh. Z
 ; for one key, or a key with Shift (0),
 ; Ctrl (1) or Fn (2). Clobbers A, BC
-; and HL. E goes to TEC-OS's KBLAST,
+; and HL. E goes to Tecos's KBLAST,
 ; as its own scan records the key: so
-; TEC-OS doesn't take a key held from a
+; Tecos doesn't take a key held from a
 ; program as new, and a host that holds
-; a key until TEC-OS reads it lets go.
+; a key until Tecos reads it lets go.
 
 mScan:
   ld l,$FF       ; a row's base, less 1

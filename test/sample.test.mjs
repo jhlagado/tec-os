@@ -1,4 +1,4 @@
-// SAMPLE.ASM (KD-177), the starter's first program: TAS builds it on TEC-OS
+// SAMPLE.ASM (KD-177), the starter's first program: TAS builds it on Tecos
 // at ABI 5, and it runs on the PICO9918 board: hello through the BDOS, the
 // screen's size from INFO, a line on the LCD, the digits and a beep, then the
 // prompt. Its table names are abi.inc's, at abi.inc's values. Emulator
@@ -23,7 +23,7 @@ test("SAMPLE.ASM's table names are abi.inc's, at abi.inc's values, and it fits t
   assert.ok(!SOURCE.includes("\t"), "spacing is independent of tab stops");
 });
 
-test("TAS builds SAMPLE on TEC-OS, and SAMPLE runs on the PICO9918 board and returns to the prompt", { skip: TAS.skip, timeout: 900_000 }, () => {
+test("TAS builds SAMPLE on Tecos, and SAMPLE runs on the PICO9918 board and returns to the prompt", { skip: TAS.skip, timeout: 900_000 }, () => {
   check(TAS);
   const image = standardCard();
   const a = volume(image, "A");
@@ -43,7 +43,7 @@ test("TAS builds SAMPLE on TEC-OS, and SAMPLE runs on the PICO9918 board and ret
   m.runUntilChecked(() => m.ready() && screen().some((l) => l === "Back to the prompt."), 400_000_000, "SAMPLE's run");
   m.cpu.hardware.ioWrite = io;
   const text = screen().join("\n");
-  assert.match(text, /Hello from TEC-OS\.\nScreen: 80 by 24\nBack to the prompt\.\n\nA(:\S*)?>/);
+  assert.match(text, /Hello from Tecos\.\nScreen: 80 by 24\nBack to the prompt\.\n\nA(:\S*)?>/);
   assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(20, 40)), "Hello from SAMPLE   ", "the LCD's second row");
   assert.ok(ports.filter((p) => p === 0x02).length >= 6 * 200, "the digits, 200 passes");
   assert.ok(ports.filter((p) => p === 0x01).length >= 800, "the beep and the digits' select");

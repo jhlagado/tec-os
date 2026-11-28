@@ -6,7 +6,7 @@
 implementation of the documented CP/M 2.2 interfaces written for ATOM. No
 Digital Research source is used.
 
-Changes made for ROM residency in TEC-OS:
+Changes made for ROM residency in Tecos:
 
 - The `ORG CCPBAS` and `ORG BDOSBAS` placements became labels; the build
   places both components in ROM after the BIOS.
@@ -33,7 +33,7 @@ Changes made for ROM residency in TEC-OS:
   DPH scratch word (`DUSAVE`, `LOGFAST`), as DR's BDOS keeps its equivalent.
   The allocation vector was already per drive and is maintained by the BDOS
   between logins.
-- `DIR` is rewritten for TEC-OS's displays: compact
+- `DIR` is rewritten for Tecos's displays: compact
   `NAME.EXT` entries in as many 13-character columns as the console width at
   `VWID` allows, followed by the file count and the free space on the listed
   drive (`PUTTRIM`, `PUTDEC`). It still hides system files and uses no TPA
@@ -50,7 +50,7 @@ Changes made for ROM residency in TEC-OS:
   is waiting for a key; the check made for every printed character must not.
 - The CCP has a built-in `CON` command that reports or sets the IOBYTE
   `CON:` field (TTY, CRT, BAT or UC1).
-- `COPY SOURCE DEST` is a TEC-OS built-in (`CMDCOPY`), with the steps and
+- `COPY SOURCE DEST` is a Tecos built-in (`CMDCOPY`), with the steps and
   messages of `test/programs/copy.asm`: open the source, erase and make the
   destination, copy record by record through the default DMA record, close,
   and print `COPIED nnnn` in hex. It keeps its state in the CCP's existing

@@ -1,4 +1,4 @@
-; SD7: a read-only check of the TEC-OS
+; SD7: a read-only check of the Tecos
 ; container: MOUNT's checks in
 ; src/vol.asm, in the same order and
 ; with its ME* codes

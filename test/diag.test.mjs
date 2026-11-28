@@ -257,7 +257,7 @@ test("a starter card passes every check, and SD8 leaves the card as it was", SLO
   // SHAD runs first, before any SD access.
   assert.ok(text.indexOf("SHAD PASS") < text.indexOf("SD1 "));
   assert.match(lines.get("SHAD").detail, /^convention=tecos bit0=0:rom\(0\) bit0=1:ram\(\d+\) mon3on:rom\(0\)$/);
-  // The answers the model gives, and the margins against TEC-OS's bounds.
+  // The answers the model gives, and the margins against Tecos's bounds.
   assert.match(lines.get("SD2").detail, /^err=0 cmd0=1\/10 cmd8=01 r7=000001AA acmd41=2\/256 ocr=C0000000 type=SDHC counted=0$/);
   assert.match(lines.get("SD3").detail, /^r1max=\d+\/16 tokmax=\d+\/65536 acmd41=2\/256 cmd0=1\/10 reads=64 err=0$/);
   assert.equal(fields(lines.get("SD4").detail).blocks, String(blocks));
@@ -295,7 +295,7 @@ test("a starter card passes every check, and SD8 leaves the card as it was", SLO
   assert.deepEqual(m.violations, []);
 });
 
-test("an SDSC card, byte-addressed, passes SD8 inside TEC-OS's range", SLOW, () => {
+test("an SDSC card, byte-addressed, passes SD8 inside Tecos's range", SLOW, () => {
   const { image, containerBlocks } = starterCard();
   const before = Uint8Array.from(image);
   const blocks = image.length / BLOCK;
@@ -620,7 +620,7 @@ test("a 1.1 card of 20 volumes, with a table block, passes SD7 and SD8 stays out
   assert.equal(Buffer.compare(image, before), 0);
 });
 
-test("with no card SD2 fails with TEC-OS's SDENOCD and the other SD checks skip", SLOW, () => {
+test("with no card SD2 fails with Tecos's SDENOCD and the other SD checks skip", SLOW, () => {
   const { lines } = run();
   assert.equal(lines.get("SD1").status, "PASS", "MISO idles high");
   assert.equal(lines.get("SD2").status, "FAIL");

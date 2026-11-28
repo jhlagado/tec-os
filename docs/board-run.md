@@ -15,14 +15,14 @@ power cut can leave a block changed. So:
    `sudo dd if=/dev/sdX of=card-backup.img bs=1M` on Linux or macOS (with the
    card's own device for `/dev/sdX`), or Read in Win32 Disk Imager on
    Windows.
-2. **Write the TEC-OS starter image to it**, `dist/starter.img` from
+2. **Write the Tecos starter image to it**, `dist/starter.img` from
    `npm run media`, with `tecvol install` or the same tools
    (`sudo dd if=dist/starter.img of=/dev/sdX bs=1M`, or Write in Win32 Disk
    Imager).
 3. **After the run**, if the log shows `SD8 FAIL alias`, `SD8 FAIL
    restore-failed`, or the note `restore it from your backup`, re-image the
    card before using it: write `dist/starter.img`, or your backup, back to it.
-   Do not run TEC-OS on the card first.
+   Do not run Tecos on the card first.
 
 ## What you need
 

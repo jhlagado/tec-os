@@ -1,10 +1,10 @@
 ; TEC-1G hardware diagnostics for
-; TEC-OS: a RAM program that MON3 loads
+; Tecos: a RAM program that MON3 loads
 ; and runs at 4000h
 ; (docs/diagnostics.md). Include order
 ; is assembly order: variables from
 ; 1000h, then code and tables from
-; 4000h. TEC-OS's SD driver and VDP
+; 4000h. Tecos's SD driver and VDP
 ; probe are included from src/, not
 ; copied.
 

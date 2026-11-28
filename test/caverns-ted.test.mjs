@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 import {ROOT,boot,fnPress,starterOn,volume} from './lib/fixtures.mjs';
 
 const source=readFileSync(resolve(ROOT,'programs/CAVERNS.BAS'),'utf8');
-const original='DREAMCARDS presents...',replacement='TEC-OS Book presents';
+const original='DREAMCARDS presents...',replacement='Tecos Book presents';
 const expected=source.replace(original,replacement);
 const bannerLine=source.split('\n').findIndex(l=>l.includes('PRINT \"DREAMCARDS presents...\"'))+1;
 const bannerNumber=source.split('\n')[bannerLine-1].split(' ')[0];

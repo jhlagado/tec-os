@@ -1,4 +1,4 @@
-// CP/M 2.2 directory and allocation on a TEC-OS volume payload.
+// CP/M 2.2 directory and allocation on a Tecos volume payload.
 //
 // A volume is the byte payload of one container volume and its geometry.
 // Records are numbered linearly from the start of the payload (OFF is 0), so

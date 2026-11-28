@@ -11,7 +11,7 @@ CAVLOAD CHECK8
 CAVLOAD is a testing clone of the qualified BASIC executable. It patches a three-byte jump at
 its opening banner to a native CP/M file loader appended before a relocated
 runtime footer, after normal array/runtime initialisation. It restores the scenario then enters ordinary game code. QUIT
-and Y reload that same scenario; N exits to TEC-OS. The separate in-game SAVE slot stays in RAM and survives Y.
+and Y reload that same scenario; N exits to Tecos. The separate in-game SAVE slot stays in RAM and survives Y.
 RESTORE or LOAD returns to that slot without reading a scenario file.
 The public starter disk supplies CAVERNS.BAS for the user to compile, not this
 loader or any scenarios. Repository binaries are verification/development files.

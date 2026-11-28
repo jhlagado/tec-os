@@ -1,12 +1,12 @@
-; A first program for TEC-OS. Build it
+; A first program for Tecos. Build it
 ; with TAS SAMPLE. Run it with SAMPLE.
 
 ; Say hello through CP/M BDOS, then
-; check for the TEC-OS ABI 5 table.
+; check for the Tecos ABI 5 table.
 ; Print the screen size, write to LCD
 ; row 2, show 123456 and beep.
 
-; TEC-OS's table and service numbers use
+; Tecos's table and service numbers use
 ; the names from abi.inc. ABITAB points
 ; to "TNA", then the major version.
 
@@ -51,7 +51,7 @@ START:
   ld de,HELLO
   call SAY
 
-; Is this TEC-OS? Its table starts
+; Is this Tecos? Its table starts
 ; "TNA", and this program needs major 5.
 
   ld hl,ABITAB   ; table's address
@@ -61,7 +61,7 @@ START:
 CHECK:
   ld a,(de)
   cp (hl)
-  jr nz,OTHER    ; not TEC-OS: stop
+  jr nz,OTHER    ; not Tecos: stop
   inc hl         ; next letter of each
   inc de
   djnz CHECK
@@ -187,10 +187,10 @@ PLACE3:
   ld a,d         ; what is left
   ret
 
-; TEC-OS's signature, text and patterns.
+; Tecos's signature, text and patterns.
 
 TNA:      DB    "TNA"
-HELLO:    DB    "Hello from TEC-OS."
+HELLO:    DB    "Hello from Tecos."
   DB 13,10,"$"
 
 ; The size, as "80 by 24".

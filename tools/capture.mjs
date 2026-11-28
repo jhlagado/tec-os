@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Runs TEC-OS on the host model and prints what the console showed, for the
+// Runs Tecos on the host model and prints what the console showed, for the
 // book's examples. It uses the same machine as the tests and the web page.
 //
 //   node tools/capture.mjs [options] [--] LINE...
@@ -16,7 +16,7 @@
 // On a board with the matrix keyboard, "@fn D" presses Fn with digit D, F1 to
 // F9 or, for 0, F10, and "@arrow KEYS" presses the matrix's arrow keys in turn,
 // each of KEYS U, D, L or R; like "@press", each goes on once the machine has
-// taken its keys. A key that TEC-OS's own scan doesn't take within a tenth
+// taken its keys. A key that Tecos's own scan doesn't take within a tenth
 // of a second, as when TBUG reads the matrix itself, is let go then, and
 // the run goes on for a quarter of a second more.
 //
@@ -124,7 +124,7 @@ for (const line of lines) {
       m.runUntil(() => (m.pumpInput(), !m.pending?.length || m.cycles >= until), LIMIT, line);
       const head = m.pending?.[0];
       if (!head || m.cycles < until) continue;
-      // Not taken by TEC-OS's scan: a program reading the matrix itself has
+      // Not taken by Tecos's scan: a program reading the matrix itself has
       // had it down for a tenth of a second, so let it go and move on.
       if (head.down) {
         m.tec1g.applyMatrixKey(head.combo.row, head.combo.col, false);

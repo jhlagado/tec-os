@@ -1,6 +1,6 @@
 # Container format, version 1.1
 
-A TEC-OS card holds one container: a contiguous image whose block 0 is the
+A Tecos card holds one container: a contiguous image whose block 0 is the
 header. The PC tool `tecvol` builds and edits it as an ordinary file and
 `tecvol install` writes it raw from card block 0. The format's field
 positions, limits and geometries are defined once, in `format/format.json`;
@@ -43,7 +43,7 @@ are relative to the start of the container.
 The drive letter is a mount assignment, not an identity; the volume id is
 the stable name.
 
-No volume carries a write-policy flag. TEC-OS retains per-drive pending
+No volume carries a write-policy flag. Tecos retains per-drive pending
 boundaries and prioritises dirty data cooperatively at OS calls (see
 [recovery.md](recovery.md)). Byte 15 once marked one volume written behind;
 it is reserved now. `tecvol` and the container library write it zero, and
@@ -136,4 +136,4 @@ end
 `DPHTAB` is a fixed 64 bytes, 16 for each of the four drives, whatever is
 mounted. Each mounted drive also costs an allocation vector in the classic
 bank, one bit for each block of its geometry: 64 bytes for G1M, up to 256.
-TEC-OS mounts up to four drives.
+Tecos mounts up to four drives.

@@ -1,4 +1,4 @@
-# Reading the TEC-OS source
+# Reading the Tecos source
 
 Start with the ROM's memory and entry points, then follow a console call and
 a disk request. This order explains the shared state before the larger CP/M

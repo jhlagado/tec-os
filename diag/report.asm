@@ -7,11 +7,11 @@
 ; the format.
 
 ; Send A as 8N2 at 4800 baud on port 01h
-; bit 6. The loop is TEC-OS's TXBYTE
+; bit 6. The loop is Tecos's TXBYTE
 ; (src/console.asm), and TXDLY/TXSTOP
 ; come from the derivation in
 ; tools/build.mjs, so the board runs
-; TEC-OS's own timing. Interrupts are
+; Tecos's own timing. Interrupts are
 ; already off. Changes AF/B/DE.
 
 TXBYTE:
@@ -25,7 +25,7 @@ TXB:
   sbc a,a        ; FFh for a 1 bit
   and $40        ; on the TX bit only
   out (DIGP),a   ; this bit on the line
-  nop            ; pads as TEC-OS does
+  nop            ; pads as Tecos does
   ld d,TXDLY     ; the rest of the bit
 
 TXD:

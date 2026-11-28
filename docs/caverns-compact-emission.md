@@ -19,7 +19,7 @@ The full BAZA native regression passed 712 cases, and the separate compatibility
 corpus passed 49 expectations. The compiler's retained evidence is in its
 `docs/evidence/compact-emission/` folder.
 
-TEC-OS qualification:
+Tecos qualification:
 
 - [480-command comparison in 36 scenarios](evidence/caverns-compact-emission/differential.json): output, all object locations, persistent fields and RNG state agree, including a complete treasure-return route.
 - [Game, checkpoint and TED tests](evidence/caverns-compact-emission/integration.log): 15 tests pass. TED edit/save/build/run/reopen is exercised with the new compiler.
@@ -45,7 +45,7 @@ version remain development artifacts, excluded from the starter disk.
 The refreshed Viewer passed [native/bundle checks](evidence/caverns-compact-emission/viewer-native-tests.log)
 and an [actual Chromium fresh-card build/play/checkpoint trial](evidence/caverns-compact-emission/viewer-result.json).
 The [qualification record](evidence/caverns-compact-emission/qualification.json)
-pins the exact compiler, TEC-OS and Viewer revisions. Physical TEC-1G testing
+pins the exact compiler, Tecos and Viewer revisions. Physical TEC-1G testing
 and public main/site deployment remain outstanding. Literal-print compaction,
 integer DATA payloads and native file channels are not implemented by this change.
 

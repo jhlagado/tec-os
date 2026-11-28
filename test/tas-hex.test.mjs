@@ -1,4 +1,4 @@
-// Emulator evidence: pinned TAS on TEC-OS, then relocated MON3.
+// Emulator evidence: pinned TAS on Tecos, then relocated MON3.
 // Host parsing is an independent oracle, never a HEX producer or loader.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -84,7 +84,7 @@ function compile(m, command) {
     const out = m.command(command, LONG);
     const result = { top, depth: top - low, samples, bdos, out };
     console.log(JSON.stringify({ command, ...result }));
-    assert.ok(samples > 0 && bdos > 0, "compiler calls actual TEC-OS BDOS with its user stack");
+    assert.ok(samples > 0 && bdos > 0, "compiler calls actual Tecos BDOS with its user stack");
     assert.ok(result.depth <= 400, `TAS user stack ${result.depth}/400`);
     return out;
   } finally { m.step = original; }

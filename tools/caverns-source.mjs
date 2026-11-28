@@ -1,5 +1,5 @@
 // Generate the reader-editable BASIC listing from labelled authoring source.
-// BAZC itself still compiles the generated BAS directly on TEC-OS.
+// BAZC itself still compiles the generated BAS directly on Tecos.
 import {readFileSync,writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import assert from 'node:assert/strict';

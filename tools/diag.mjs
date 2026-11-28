@@ -2,7 +2,7 @@
 // Build the TEC-1G diagnostics, a RAM program that MON3 loads and runs at
 // 4000h (docs/diagnostics.md).
 //
-// Generates diag/gen/config.asm (version, TEC-OS's serial delays, the
+// Generates diag/gen/config.asm (version, Tecos's serial delays, the
 // container format's fields) and diag/gen/fmt.asm (the magic and the
 // geometry table), assembles diag/diag.asm with TAS, checks the memory
 // layout, stores the image ID and writes build/diag/: DIAG.BIN, DIAG.HEX,

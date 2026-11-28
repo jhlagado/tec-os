@@ -282,7 +282,7 @@ test("a startup file whose program jumps to C000h warm boots once, as a program'
   };
   prompt(m);
   assert.equal(colds, 1, "the first cold boot only");
-  assert.equal((m.text(0).match(/TEC-OS /g) ?? []).length, 1, "one banner");
+  assert.equal((m.text(0).match(/Tecos /g) ?? []).length, 1, "one banner");
   assert.match(m.text(0), /A(:\S*)?>JUMP\r\r\n\r\nA(:\S*)?>$/);
 });
 

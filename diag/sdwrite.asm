@@ -1,6 +1,6 @@
 ; Checks SD8 and SD9: the write test on
 ; free blocks, and card removal. The
-; writes use TEC-OS's SDWRITE, but for
+; writes use Tecos's SDWRITE, but for
 ; SD8's pattern writes, which go through
 ; the counted MWRITE (sdcard.asm).
 
@@ -270,7 +270,7 @@ S8S:
 ; failure, a SKIP. Otherwise FAIL for a
 ; failure, and WARN when the busy wait
 ; or the response used more than a
-; quarter of TEC-OS's bound.
+; quarter of Tecos's bound.
 
 S8V:
   ld a,(S8STOP)
@@ -661,8 +661,8 @@ WO4:
   ld hl,WRTRY    ; try 1, 2 or 3
   inc (hl)       ; try 1, 2 or 3
   call LBABLK
-  ld hl,BUFS     ; TEC-OS's own write
-  call SDWRITE   ; TEC-OS's write
+  ld hl,BUFS     ; Tecos's own write
+  call SDWRITE   ; Tecos's write
   ld b,5         ; step 5: the write
   jr nz,WO5      ; failed
   call LBABLK
@@ -965,7 +965,7 @@ PA2:
 ; card-detect line, so a missing card
 ; shows only as commands with no answer:
 ; with the card out a read must fail as
-; TEC-OS would see it (R1 never comes,
+; Tecos would see it (R1 never comes,
 ; SDECMD), and SDINIT's CMD0 must go
 ; unanswered (SDENOCD). With the card
 ; back, SDINIT and a block 0 read must
@@ -996,7 +996,7 @@ S9A:
   call LBA16     ; SDLBA = 0
   ld hl,BUFA
   call SDREAD
-  ld (S9OR),a    ; TEC-OS's error
+  ld (S9OR),a    ; Tecos's error
   call SDINIT    ; and init's
   ld (S9OI),a    ; kept for the line
   ld de,HBACK    ; ask: card back

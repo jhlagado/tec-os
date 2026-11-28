@@ -43,7 +43,7 @@ the rewritten listing, without changing the case of game prose.
 4. **Readable identities.** Author rooms, items and connections with names;
    generate compact numeric IDs and line-number targets for the delivered BAS.
    IDs identify entities, not accidental arithmetic relationships. Distribute
-   the generated BAS so users can still compile it on TEC-OS without a host tool.
+   the generated BAS so users can still compile it on Tecos without a host tool.
 5. **Deliberate text and map data.** Keep descriptions beside the connection
    definitions they describe. Validate reverse routes, conditional gates and
    item placement during authoring. Distinguish a visible landmark's bearing

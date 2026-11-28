@@ -1,4 +1,4 @@
-; Public TEC-OS ABI 5.5: eight bytes at
+; Public Tecos ABI 5.5: eight bytes at
 ; C003h..C00Ah, containing TNA, major,
 ; minor and JP SVCDSP. Test TNA at
 ; ABITAB and major 5 at ABIMAJ before
@@ -368,7 +368,7 @@ LATEXP EQU $04   ; EXPAND: EXPAND 1 at
 
 LATCHV EQU $0040
 
-; TEC-OS's last matrix key: the
+; Tecos's last matrix key: the
 ; highest-numbered key down, row * 8 +
 ; column, FFh for none. Its scan takes
 ; a key as new only when it differs. A

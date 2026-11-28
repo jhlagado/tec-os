@@ -111,7 +111,7 @@ positions retain their state values when regenerated for the new executable.
 
 The pre-rewrite BAS, COM, debug fixture and native loader are frozen under
 `test/fixtures/caverns-baseline/`. Differential tests boot both real binaries
-in separate TEC-OS machines using equivalent externally encoded checkpoints,
+in separate Tecos machines using equivalent externally encoded checkpoints,
 then send the same keyboard commands. They compare output, every object,
 all thirteen persisted fields and the exact RNG state after each command.
 No live game state or random value is patched. The comparisons include seeded

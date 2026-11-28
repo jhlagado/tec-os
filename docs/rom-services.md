@@ -8,7 +8,7 @@ in place of its own copy. Like `TNGLYPH` it goes straight to its code, with no
 housekeeping first. Number 15, the font's table at ABI 5.1, is refused from 5.2. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, which `TAS DEMO` builds from the starter card's `DEMO.ASM`, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,144 bytes (`tecos`) and has 240 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,141 bytes (`tecos`) and has 243 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -43,7 +43,7 @@ built for ABI 4, is refused by the loader before its INIT runs.
 | `C007h` | `ABIMIN` | ABI minor version, 2: 1 added `TNFONT`, 2 adds `TNGLYPH` and refuses `TNFONT` |
 | `C008h` | `ABICALL` | `JP` to the service numbered in C |
 
-EXPAND 1 is TEC-OS's own, and no interface leaves it in view: `BF00h`, `BE00h`
+EXPAND 1 is Tecos's own, and no interface leaves it in view: `BF00h`, `BE00h`
 and `BD00h` free (the command history is `SHELL.SVC`'s, in its own pages),
 `BC00h` the block cache's table and
 `8000h–BBFFh` its 30 lines. Cold boot clears EXPAND 1, the cache with it; its
@@ -70,7 +70,7 @@ through the same routine, and the GLCD's driver asks for each glyph it draws; a 
 before ABI 5.2 refuses number 17 and the driver's `INIT` with it. Serial and the LCD
 need no font.
 
-The starter card carries a TEC-OS adaptation of the pinned Baza BOUNCE
+The starter card carries a Tecos adaptation of the pinned Baza BOUNCE
 example. Its font setup calls service 17 for each character from 32 to 127
 through an eight-byte string buffer. Media generation checks the upstream
 file's hash before changing those lines and converting it to CP/M text.
@@ -326,7 +326,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->240<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->243<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

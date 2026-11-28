@@ -10,7 +10,7 @@
   ORG $4000
 
 START:
-  di             ; TEC-OS's own
+  di             ; Tecos's own
                  ; discipline
   ld hl,0        ; the entry SP
   add hl,sp
@@ -113,7 +113,7 @@ EXIT:
 
 ; Keep MON3's latch state from its get
 ; calls, and make LATCHV the latch value
-; TEC-OS's SD routines write back. Bit 0
+; Tecos's SD routines write back. Bit 0
 ; is measured, 0 if the ROM shows at
 ; 0000h now, since MON3 may name it
 ; either way.

@@ -1,4 +1,4 @@
-// TEC-OS on the Debug80 TEC-1G model: boot, reset, diagnostics, the CCP,
+// Tecos on the Debug80 TEC-1G model: boot, reset, diagnostics, the CCP,
 // BDOS file functions and exchange with the PC tools. Emulator evidence.
 
 import { test } from "node:test";
@@ -19,7 +19,7 @@ function noViolations(m) {
 
 test("cold boot leaves the overlay off, the classic bank selected and the CCP prompting", () => {
   const m = boot(standardCard(), { ramFill: 0x76 });
-  assert.match(m.bootText, /TEC-OS \d+\.\d+ for TEC-1G\r\nA: SYSTEM\s+\r\nB: WORK\s+\r\n\r\nA(:\S*)?>$/);
+  assert.match(m.bootText, /Tecos \d+\.\d+ for TEC-1G\r\nA: SYSTEM\s+\r\nB: WORK\s+\r\n\r\nA(:\S*)?>$/);
   assert.equal(m.sysCtrl, 0x01);
   assert.equal(m.physicalBank, -1);
   const bdosVector = m.read(6) | (m.read(7) << 8);
@@ -36,7 +36,7 @@ test("reset from a non-default bank and a dirty latch boots cleanly, repeatedly"
   for (const latch of [0x0d, 0x45, 0x7f, 0x83]) {
     m.tec1g.ioHandlers.write(0xff, latch);
     m.reset();
-    assert.match(m.expect(/A(:\S*)?>$/, { maxCycles: 80_000_000 }), /TEC-OS/);
+    assert.match(m.expect(/A(:\S*)?>$/, { maxCycles: 80_000_000 }), /Tecos/);
     assert.equal(m.sysCtrl, 0x01);
   }
   noViolations(m);
@@ -127,7 +127,7 @@ test("without RAM at 8000h-BFFFh the boot says so on the serial console and stop
   m.runUntil(() => m.pc === m.sym("RAMSTOP"), 20_000_000, "RAMSTOP");
   const stop = m.cycles + 2_000_000;
   m.runUntil(() => m.cycles >= stop);
-  assert.equal(m.serialText(), "\r\nTEC-OS needs 64K RAM\r\n");
+  assert.equal(m.serialText(), "\r\nTecos needs 64K RAM\r\n");
   assert.equal(m.pc, m.sym("RAMSTOP"));
 });
 
@@ -248,7 +248,7 @@ test("DIR with only a drive lists that drive, and a file written to a drive name
   noViolations(m);
 });
 
-test("text and binary files cross between the PC and TEC-OS, and survive power loss", SLOW, async () => {
+test("text and binary files cross between the PC and Tecos, and survive power loss", SLOW, async () => {
   const image = withPut(standardCard());
   const a = volume(image, "A");
   const binary = new Uint8Array(5000).map((_, i) => (i * 37 + 11) & 0xff);
@@ -272,12 +272,12 @@ test("text and binary files cross between the PC and TEC-OS, and survive power l
 
   const b = volume(image, "B");
   assert.deepEqual(b.read("PATTERN.CPY").subarray(0, binary.length), binary);
-  assert.deepEqual(volume(image, "A").read("MEM.BIN"), putBytes(2), "the file TEC-OS wrote, read on the PC");
+  assert.deepEqual(volume(image, "A").read("MEM.BIN"), putBytes(2), "the file Tecos wrote, read on the PC");
   assert.equal(Buffer.from(volume(image, "A").read("NOTES.OLD", { text: true })).toString(), "First line\nSecond line\n");
   noViolations(m);
 });
 
-test("files over 16 KiB cross between TEC-OS and the PC on a volume whose entries hold two extents", SLOW, async () => {
+test("files over 16 KiB cross between Tecos and the PC on a volume whose entries hold two extents", SLOW, async () => {
   // B: is G8M: 4 KiB blocks, extent mask 1, so one directory entry holds 32 KiB.
   const data = new Uint8Array(40064).map((_, i) => (i * 7 + (i >> 7)) & 0xff);
   const image = standardCard();
@@ -288,8 +288,8 @@ test("files over 16 KiB cross between TEC-OS and the PC on a volume whose entrie
   const m = boot(image);
   assert.match(m.command("COPY DATA.BIN B:TEC.BIN", { maxCycles: 4_000_000_000 }), /COPIED 0139/);
   assert.match(m.command("COPY B:PC.BIN A:BACK.BIN", { maxCycles: 4_000_000_000 }), /COPIED 0139/);
-  assert.ok(Buffer.from(volume(image, "B").read("TEC.BIN")).equals(Buffer.from(data)), "TEC-OS's file on B: read on the PC");
-  assert.ok(Buffer.from(volume(image, "A").read("BACK.BIN")).equals(Buffer.from(data)), "the PC's file on B: read by TEC-OS");
+  assert.ok(Buffer.from(volume(image, "B").read("TEC.BIN")).equals(Buffer.from(data)), "Tecos's file on B: read on the PC");
+  assert.ok(Buffer.from(volume(image, "A").read("BACK.BIN")).equals(Buffer.from(data)), "the PC's file on B: read by Tecos");
   for (const d of ["A", "B"]) assert.deepEqual(volume(image, d).verify(), [], `${d}: verifies`);
   noViolations(m);
 });
@@ -363,14 +363,14 @@ test("sparse files and a block written after a reopen survive on both volumes", 
       }
       bdosCall(m, 16, FCB);
     }
-    // Read back on TEC-OS.
+    // Read back on Tecos.
     for (const [name, records] of [["SPARSE  DAT", sparse], ["REOPEN  DAT", [40, 127, 200]]]) {
       fcb(drive, name);
       bdosCall(m, 15, FCB);
       for (const r of records) {
         setR(r);
-        assert.equal(bdosCall(m, 33, FCB), 0, `${d}:${name.trim()} record ${r} on TEC-OS`);
-        assert.ok(holds(r), `${d}:${name.trim()} record ${r} on TEC-OS`);
+        assert.equal(bdosCall(m, 33, FCB), 0, `${d}:${name.trim()} record ${r} on Tecos`);
+        assert.ok(holds(r), `${d}:${name.trim()} record ${r} on Tecos`);
       }
     }
     // And on the PC.

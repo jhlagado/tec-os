@@ -1,6 +1,6 @@
 // KG65's differential harness. One driver program, test/programs/kg65drv.asm,
 // runs each input row on two machines of the same pinned runtime: MON-3's
-// own ROM (the reference), and TEC-OS with a MON3.SVC session that has
+// own ROM (the reference), and Tecos with a MON3.SVC session that has
 // loaded the driver and run it by GO. Each row records the registers, the
 // bytes of 0800h-0DFFh, the port writes in order with their cycles, the
 // serial bytes, and the latch.
@@ -191,7 +191,7 @@ export async function referenceSide({ matrix = false } = {}) {
   return side;
 }
 
-/** The session: TEC-OS with MON3.SVC (SVC) entered, the driver loaded as DRV.BIN and run by GO to START. */
+/** The session: Tecos with MON3.SVC (SVC) entered, the driver loaded as DRV.BIN and run by GO to START. */
 export async function sessionSide({ svc, matrix = false } = {}) {
   const { bytes, symbols } = await driver();
   const { m, svc: s } = await inSession({ "DRV.BIN": bytes }, { svc, machine: { matrix } });

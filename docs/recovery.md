@@ -21,12 +21,12 @@ selection. Power cycle restores the card's default drive assignments.
 
 ## The block cache
 
-TEC-OS keeps thirty full 512-byte card blocks in EXPAND1. Read hits still
+Tecos keeps thirty full 512-byte card blocks in EXPAND1. Read hits still
 avoid SD reads. Each changed block has one dirty-queue entry, identified by
 its complete absolute card-block tag. Updates already received merge into
 that block without duplicating its entry or moving its first-dirty position.
 New-allocation writes zero the untouched records; ordinary overwrites retain
-their neighbours. TEC-OS does not delay a ready write to await future updates.
+their neighbours. Tecos does not delay a ready write to await future updates.
 
 **Integrity takes priority at OS calls.** Each admitted outer BDOS, hardware
 service or returning BIOS call attempts one eligible dirty block before its
@@ -80,7 +80,7 @@ restrictions. A private worker stack does not make BDOS generally reentrant.
 Warm-boot flush failure also drops the remaining chained command text while
 retaining the failed data; it no longer drops data with `Write lost`.
 
-If the bootstrap disk reset or saved-drive selection fails, TEC-OS prints
+If the bootstrap disk reset or saved-drive selection fails, Tecos prints
 `Disk reset failed` and `Enter retries`. This is a recovery console. Press
 Enter to retry the disk reset; normal commands resume once the default disk
 state is valid. Other keys, including LF, do not retry it. Printing and
@@ -136,12 +136,12 @@ Reset or power loss can still interrupt an update:
    `tecvol create` and `tecvol put`, or from a recipe.
 4. Install the image with `tecvol install IMAGE DEVICE --yes`.
 
-The PC and TEC-OS must never write the same card at the same time. Remove it
+The PC and Tecos must never write the same card at the same time. Remove it
 from the TEC-1G, or hold the board in reset, while the PC has it.
 
 ## Three paths
 
-TEC-OS comes back from a program in one of three ways, and the hardware reset
+Tecos comes back from a program in one of three ways, and the hardware reset
 signal doesn't distinguish the last two.
 
 | Path | Volumes | Everything else |
@@ -150,7 +150,7 @@ signal doesn't distinguish the last two.
 | Recognised reset | The selection, each volume checked against the card | Rebuilt |
 | Unrecognised reset | The card's defaults | Rebuilt |
 
-A reset is recognised from what TEC-OS left in RAM: page zero's jumps, and the BDOS
+A reset is recognised from what Tecos left in RAM: page zero's jumps, and the BDOS
 entry stub at its address, jumping to this ROM's BDOS. The test reads and runs
 nothing old, and power-up RAM, or RAM from a build with another BDOS entry (`BENTRY`)
 or stub address (`STUBAD`), fails it. It doesn't read the drive table, so a
@@ -203,12 +203,12 @@ so logging the drive in passes over it, on drive A too. Reading that block says
 ## Card removal
 
 **A changed card needs a reset.** The TEC-1G has no card-detect line and
-TEC-OS initialises SD only at cold boot. Removing a running card causes I/O
+Tecos initialises SD only at cold boot. Removing a running card causes I/O
 failures; cache hits can still read and accepted writes can still enter RAM.
 Warm boot retains failed data and warns `Write pending`, but cannot restart
 the card or verify its identity. Inserting the same or another card does not
 make those writes safe or successful. Reset after changing cards discards
-that retained cache. TEC-OS does not read CID and deliberately avoids
+that retained cache. Tecos does not read CID and deliberately avoids
 reinitialising an inserted card and replaying data onto a possible stranger.
 
 Persistent refusal can fill the dirty cache. Reads that need a new line then

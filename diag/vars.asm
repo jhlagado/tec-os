@@ -9,7 +9,7 @@
 
 VARS:
 
-; TEC-OS's SD driver (src/sd.asm) keeps
+; Tecos's SD driver (src/sd.asm) keeps
 ; its state in these six names.
 
 LATCHV:   DS    1
@@ -46,7 +46,7 @@ M32T:     DS    4
 NUM:      DS    4
 
 ; SD answers and margins. Counts are the
-; polls used against TEC-OS's bounds.
+; polls used against Tecos's bounds.
 
 SDOK:     DS    1
 CIERR:    DS    1

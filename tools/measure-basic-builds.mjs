@@ -1,4 +1,4 @@
-// Compile the starter BASIC examples on native TEC-OS with an exact compiler.
+// Compile the starter BASIC examples on native Tecos with an exact compiler.
 // Usage: COMPILER_BUILD.json COMPILER_DIR OUTPUT_DIR
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';

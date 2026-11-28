@@ -33,7 +33,7 @@ peak. Stack high-water marks remain CCP 22/30, BDOS 32/54 and BIOS 16/38.
 Ctrl-W/Ctrl-N recall, editing recalled lines, ring wrap, warm-boot history
 and complete chained-line replay pass.
 
-The implementation preserves the current TEC-OS baseline. It compacts
+The implementation preserves the current Tecos baseline. It compacts
 parsing, directory state/paging, command dispatch and source handling,
 then shares the BDOS function/FCB call setup. It adds no user-facing
 features. The final descriptor helper preserves HL, B and A before BDOS,

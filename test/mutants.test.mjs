@@ -1,7 +1,7 @@
 // The mutant harness credits a mutant's catch only to a test that passes on the
 // tree unmutated (KE-162), and finds a mutant's text in the one source that
 // holds it when its file has gone (KS38's moves). A tree of two files stands
-// in for TEC-OS: a build that does nothing, and a test file with one test that
+// in for Tecos: a build that does nothing, and a test file with one test that
 // always fails and one that only the mutant breaks.
 
 import { test } from "node:test";

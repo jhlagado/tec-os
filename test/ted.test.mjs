@@ -1,4 +1,4 @@
-// TED, the editor of the other study's tools, on TEC-OS: it edits, saves and
+// TED, the editor of the other study's tools, on Tecos: it edits, saves and
 // reopens a file at every console's size, opens at a line, and runs the round
 // of F9, ^T D and F5 with TAS. Emulator evidence. TED.COM and TAS.COM are
 // pinned inputs (test/inputs.json). CURSOR and TEXCAP are TED's own words,
@@ -77,7 +77,7 @@ function editOnTecOs({ tms, cols = 80 }) {
 }
 
 for (const cols of [80, 40, 32]) {
-  test(`TED edits, saves and reopens a file on TEC-OS with the PICO9918 (${cols} x 24)`, { skip: TED.skip, timeout: 900_000 }, () => {
+  test(`TED edits, saves and reopens a file on Tecos with the PICO9918 (${cols} x 24)`, { skip: TED.skip, timeout: 900_000 }, () => {
     editOnTecOs({ tms: true, cols });
   });
 }

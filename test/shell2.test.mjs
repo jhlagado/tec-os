@@ -748,7 +748,7 @@ test("S2-11 the shell refuses a ROM before ABI 5.4, the qualified one", () => {
 test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
   // The qualified ROM is ABI 5.1, which this shell refuses: it parses with
   // TNPARSE, ABI 5.4's. Its readings are those taken with the last shell
-  // without it, TEC-OS 787068f's, on that ROM, fixed here.
+  // without it, Tecos 787068f's, on that ROM, fixed here.
   const qualifiedB = { nothing: 4962, worst: 8_798_992 }, qualifiedA = { nothing: 4953, worst: 9_258_862 };
   const b = bdos11("B"), a = bdos11("A");
   t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
@@ -1006,7 +1006,7 @@ test("S2-12 no mount.com", () => {
 test("S2-12 instruction", () => {
   const t = starterRecipe().instruction;
   for (const s of ["A:SYSTEM>", "CD ?", "CD NAME", "CD A:NAME", "CD A:SYSTEM", "B: (WORK) is your work disk", "C: is a spare drive", "Pending block writes get priority at OS calls and key waits.", "Acknowledged data stays in RAM for retry if its card write fails.", "Follow the program’s normal Save workflow and resolve write errors; browser saving is separate.", "Power cycle"]) assert.ok(t.includes(s), `the instruction says ${s}`);
-  assert.doesNotMatch(t, /whenever TEC-OS waits for a key everything is on the card/, "a key wait must not promise persistence after a refused write");
+  assert.doesNotMatch(t, /whenever Tecos waits for a key everything is on the card/, "a key wait must not promise persistence after a refused write");
   assert.doesNotMatch(t, /MOUNT/, "and teaches no MOUNT");
   assert.doesNotMatch(t, /(B:|WORK)[^.]*written behind/, "nor that B: or WORK is written behind");
   assert.doesNotMatch(t, /At A>/);
@@ -1074,7 +1074,7 @@ test("S2-13 docs", () => {
   for (const s of [
     "Each admitted outer BDOS, hardware service or returning BIOS call attempts one eligible dirty block before its normal work",
     "Updates already received merge into that block without duplicating its entry or moving its first-dirty position",
-    "TEC-OS does not delay a ready write to await future updates",
+    "Tecos does not delay a ready write to await future updates",
     "A frozen round records the eligible first-dirty order",
     "New arrivals join the next round; continuously arriving writes cannot indefinitely postpone a failed line's next retry",
     "Nested calls inherit that operation instead of starting another maintenance pass",

@@ -1,6 +1,6 @@
 # Release 1 status
 
-This branch is the TEC-OS release 1 candidate in Origo's release roadmap
+This branch is the Tecos release 1 candidate in Origo's release roadmap
 (P3: KD-258, KD-259, KD-262). It combines:
 
 - the debugger-support interfaces (KS40);
@@ -33,7 +33,7 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
   written behind, every other volume coalesces, and every key wait writes the
   cache out. `MOUNT.COM` has left the card.
 - Several statements on a line (KD-275): TAS from Thorium `f71cf3d` takes
-  them with a `\` between. TEC-OS's own sources keep one statement a line.
+  them with a `\` between. Tecos's own sources keep one statement a line.
 
 The boot R1 policy is decided: with a PICO installed, real boot writes the
 selected mode's R1 with the frame interrupt off (KD-258 D1). A ROM-owned

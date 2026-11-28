@@ -1,4 +1,4 @@
-// TEC-OS container images: header block, volume descriptors and payloads.
+// Tecos container images: header block, volume descriptors and payloads.
 // The checks here are a superset of the ROM's mount checks (src/vol.asm,
 // MOUNT), so an image this module accepts will mount: on every card the
 // descriptors are in ascending start order, and on a 1.1 card that names N

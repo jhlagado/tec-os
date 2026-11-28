@@ -472,21 +472,21 @@ names are the way in.
 `abi.inc` also publishes two workspace bytes:
 
 - `LATCHV` (`0040h`), the shadow copy of the write-only system latch.
-- `KBLAST` (`BFEFh`), TEC-OS's last matrix key: the highest-numbered key
-  down, row × 8 + column, FFh for none. TEC-OS's scan takes a key as new
+- `KBLAST` (`BFEFh`), Tecos's last matrix key: the highest-numbered key
+  down, row × 8 + column, FFh for none. Tecos's scan takes a key as new
   only when it differs from `KBLAST`, and skips a row that reads 00h, all
   eight keys down. A service that scans the matrix itself writes that key
   there, as `MON3.SVC` does, so a key held from a program isn't read again
-  when TEC-OS's scan resumes, and a host that holds a matrix key until
-  TEC-OS has read it lets it go. The build checks that `KBLAST` is the
+  when Tecos's scan resumes, and a host that holds a matrix key until
+  Tecos has read it lets it go. The build checks that `KBLAST` is the
   workspace's byte.
 
 ## The LCD's CGRAM
 
 The character LCD's eight user-defined characters, codes 00h to 07h, are the
-program's. Their contents are undefined at power-on, and TEC-OS never writes or
+program's. Their contents are undefined at power-on, and Tecos never writes or
 reads CGRAM: the ROM's LCD paths set a DDRAM address for every row they write,
-and no service on the card touches it. TEC-OS saves nothing there and restores
+and no service on the card touches it. Tecos saves nothing there and restores
 nothing, over a warm boot or a reset, so whatever a program defines stays until
 something else redefines it. A service that writes CGRAM while a program runs,
 such as a debugger on the LCD, saves the program's eight characters first and
@@ -526,7 +526,7 @@ source left on under the default `EI; RETI` repeats for ever, and a warm boot in
 Nothing in the ROM enables interrupts: cold boot and warm boot leave them off, and each
 routine that masks them restores what it found. A kept `0038h` therefore does nothing
 after a warm boot until a program or a service sets `EI`, and a warm-boot hook chains
-into `WBOOTR` with no service code after it. TEC-OS never selects MAIN 1 and gives
+into `WBOOTR` with no service code after it. Tecos never selects MAIN 1 and gives
 it no page zero.
 
 The ROM masks what an interrupt could split: `VPAIR` for each
